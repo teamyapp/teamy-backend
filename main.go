@@ -2,16 +2,21 @@ package main
 
 import (
 	"fmt"
-	"github.com/teamyapp/template-go/app"
 	"log"
+	"math/rand"
 	"net/http"
+	"time"
+
+	"github.com/teamyapp/template-go/app"
 )
 
 func main() {
+	rand.Seed(time.Now().Unix())
+
 	http.HandleFunc("/random", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 
-		sum := app.Add(app.RandInt(), app.RandInt())
+		sum := app.Add(rand.Int(), rand.Int())
 		writer.Write([]byte(fmt.Sprintf("%d\n", sum)))
 	})
 	fmt.Println("Server started at port 8080")

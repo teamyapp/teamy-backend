@@ -4,10 +4,10 @@ name: feature
 
 steps:
   - name: Run unit tests
-    image: golang
+    image: golang:1.16-alpine
     commands:
-      - unset SERVER_PORT
-      - go test -v ./app
+      - go mod download
+      - go test ./...
     when:
       branch:
         - master
