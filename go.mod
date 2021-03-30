@@ -1,3 +1,3 @@
-module go
+module goPro
 
 go 1.15
