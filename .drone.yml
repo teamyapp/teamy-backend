@@ -1,0 +1,15 @@
+kind: pipeline
+type: kubernetes
+name: feature
+
+steps:
+  - name: Run unit tests
+    image: golang
+    commands:
+      - unset SERVER_PORT
+      - go test -v ./app
+    when:
+      branch:
+        - master
+      event:
+        - pull_request
