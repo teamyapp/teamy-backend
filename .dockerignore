@@ -1,0 +1,6 @@
+# Documentation
+*.md
+
+# ignore files
+.gitignore
+.dockerignore
