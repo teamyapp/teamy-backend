@@ -1,0 +1,61 @@
+apiVersion: kubernetes-client.io/v1
+kind: ExternalSecret
+metadata:
+  name: harbor-cred
+  namespace: staging
+spec:
+  backendType: vault
+  vaultMountPoint: kubernetes
+  vaultRole: secrets-read-role
+  template:
+    type: kubernetes.io/dockerconfigjson
+  data:
+    - name: .dockerconfigjson
+      key: kv/data/secrets/harbor
+      property: docker-auth-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: staging
+  name: template-go
+  labels:
+    app: template-go
+  annotations:
+    # force policy will ensure that deployment is updated
+    # even when tag is unchanged (latest remains)
+    keel.sh/policy: force
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: template-go
+  template:
+    metadata:
+      labels:
+        app: template-go
+    spec:
+      containers:
+        - name: template-go
+          image: harbor.internal.teamyapp.com/internal/template-go:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+      imagePullSecrets:
+        - name: harbor-cred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: staging
+  name: template-go
+spec:
+  selector:
+    app: template-go
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
