@@ -59,3 +59,23 @@ spec:
     - name: http
       port: 80
       targetPort: 8080
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  namespace: staging
+  name: template-go
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`template-go.staging.teamyapp.com`)
+      services:
+        - kind: Service
+          name: template-go
+          namespace: staging
+          port: 80
+          passHostHeader: true
+  tls:
+    secretName: teamy-cert
