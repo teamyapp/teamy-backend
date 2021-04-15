@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: staging
+  namespace: testing
   name: template-go
   labels:
     app: template-go
@@ -34,7 +34,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: staging
+  namespace: testing
   name: template-go
 spec:
   selector:
@@ -47,19 +47,20 @@ spec:
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  namespace: staging
+  namespace: testing
   name: template-go
 spec:
   entryPoints:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`template-go.staging.teamyapp.com`)
+      match: Host(`template-go.testing.teamyapp.com`)
       services:
         - kind: Service
           name: template-go
-          namespace: staging
+          namespace: testing
           port: 80
           passHostHeader: true
   tls:
     secretName: teamy-cert
+
