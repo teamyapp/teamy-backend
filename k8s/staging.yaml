@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: template-go
-          image: harbor.internal.teamyapp.com/internal/template-go:latest
+          image: harbor.internal.teamyapp.com/internal/template-go-staging:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
