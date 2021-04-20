@@ -1,5 +1,27 @@
 kind: pipeline
 type: kubernetes
+name: testing
+
+steps:
+  - name: build image
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: DOCKER_USERNAME
+      password:
+        from_secret: DOCKER_PASSWORD
+      repo: harbor.internal.teamyapp.com/internal/template-go-testing
+      registry: harbor.internal.teamyapp.com
+      target: production
+      cache_from: harbor.internal.teamyapp.com/internal/template-go-testing
+trigger:
+  branch:
+    - testing
+  event:
+    - push
+---
+kind: pipeline
+type: kubernetes
 name: feature
 
 steps:
@@ -8,8 +30,54 @@ steps:
     commands:
       - go mod download
       - go test ./...
-    when:
-      branch:
-        - master
-      event:
-        - pull_request
+trigger:
+  branch:
+    - master
+    - main
+  event:
+    - pull_request
+---
+kind: pipeline
+type: kubernetes
+name: staging
+
+steps:
+  - name: build image
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: DOCKER_USERNAME
+      password:
+        from_secret: DOCKER_PASSWORD
+      repo: harbor.internal.teamyapp.com/internal/template-go-staging
+      registry: harbor.internal.teamyapp.com
+      target: production
+      cache_from: harbor.internal.teamyapp.com/internal/template-go-staging
+trigger:
+  branch:
+    - master
+    - main
+  event:
+    - push
+---
+kind: pipeline
+type: kubernetes
+name: production
+
+steps:
+  - name: build image
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: DOCKER_USERNAME
+      password:
+        from_secret: DOCKER_PASSWORD
+      repo: harbor.internal.teamyapp.com/internal/template-go
+      registry: harbor.internal.teamyapp.com
+      target: production
+      cache_from: harbor.internal.teamyapp.com/internal/template-go-staging
+trigger:
+  branch:
+    - production
+  event:
+    - push
