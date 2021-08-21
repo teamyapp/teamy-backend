@@ -1,4 +1,4 @@
-module github.com/teamyapp/template-go
+module github.com/teamyapp/teamy-backend
 
 go 1.17
 

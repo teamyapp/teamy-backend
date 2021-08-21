@@ -10,10 +10,10 @@ steps:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
-      repo: harbor.internal.teamyapp.com/internal/template-go-testing
+      repo: harbor.internal.teamyapp.com/internal/teamy-backend-testing
       registry: harbor.internal.teamyapp.com
       target: production
-      cache_from: harbor.internal.teamyapp.com/internal/template-go-testing
+      cache_from: harbor.internal.teamyapp.com/internal/teamy-backend-testing
 trigger:
   branch:
     - testing
@@ -49,10 +49,10 @@ steps:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
-      repo: harbor.internal.teamyapp.com/internal/template-go-staging
+      repo: harbor.internal.teamyapp.com/internal/teamy-backend-staging
       registry: harbor.internal.teamyapp.com
       target: production
-      cache_from: harbor.internal.teamyapp.com/internal/template-go-staging
+      cache_from: harbor.internal.teamyapp.com/internal/teamy-backend-staging
 trigger:
   branch:
     - master
@@ -72,10 +72,10 @@ steps:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
-      repo: harbor.internal.teamyapp.com/internal/template-go
+      repo: harbor.internal.teamyapp.com/internal/teamy-backend
       registry: harbor.internal.teamyapp.com
       target: production
-      cache_from: harbor.internal.teamyapp.com/internal/template-go-staging
+      cache_from: harbor.internal.teamyapp.com/internal/teamy-backend-staging
 trigger:
   branch:
     - production

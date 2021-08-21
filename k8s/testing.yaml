@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: testing
-  name: template-go
+  name: teamy-backend
   labels:
-    app: template-go
+    app: teamy-backend
   annotations:
     # force policy will ensure that deployment is updated
     # even when tag is unchanged (latest remains)
@@ -16,15 +16,15 @@ spec:
   revisionHistoryLimit: 3
   selector:
     matchLabels:
-      app: template-go
+      app: teamy-backend
   template:
     metadata:
       labels:
-        app: template-go
+        app: teamy-backend
     spec:
       containers:
-        - name: template-go
-          image: harbor.internal.teamyapp.com/internal/template-go-testing:latest
+        - name: teamy-backend
+          image: harbor.internal.teamyapp.com/internal/teamy-backend-testing:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -35,10 +35,10 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: testing
-  name: template-go
+  name: teamy-backend
 spec:
   selector:
-    app: template-go
+    app: teamy-backend
   ports:
     - name: http
       port: 80
@@ -48,16 +48,16 @@ apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
   namespace: testing
-  name: template-go
+  name: teamy-backend
 spec:
   entryPoints:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`template-go.testing.teamyapp.com`)
+      match: Host(`teamy-backend.testing.teamyapp.com`)
       services:
         - kind: Service
-          name: template-go
+          name: teamy-backend
           namespace: testing
           port: 80
           passHostHeader: true

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teamyapp/template-go/app"
+	"github.com/teamyapp/teamy-backend/app"
 )
 
 const version = 1
