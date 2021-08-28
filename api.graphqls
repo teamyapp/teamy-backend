@@ -1,0 +1,270 @@
+schema {
+    query: Query
+    mutation: Mutation
+    subscription: Subscription
+}
+
+type Query {
+    activeTeam: Team!
+    myTeams: [Team!]!
+}
+
+type Team {
+    id: ID!
+    members: [User!]!
+    projects: [Project!]!
+    tasks(filter: TaskFilter): [Task!]!
+    stories(filter: StoryFilterType): [Story!]!
+    activeSprint: Sprint
+    blockers: [Blocker!]!
+    sprintPlanningSession: SpringPlanningSession
+    retrospective: Retrospective
+    standUp: StandUp
+    availableFeedbackTopics: [StringTemplate!]!
+}
+
+type Blocker {
+    id: ID!
+    message: Message!
+    task: Task!
+    status: BlockerStatus!
+    createdAt: Time
+}
+
+enum BlockerStatus {
+    UN_PROCESSED
+    HAS_NEXT_STEP
+    RESOLVED
+}
+
+type Sprint {
+    id: ID!
+    sprintStartDate: Time!
+    sprintLength: Duration!
+    progress: Int!
+    stories(filter: StoryFilterType): [Story!]!
+    tasks(filter: TaskFilter): [Task!]!
+}
+
+enum StoryFilterType {
+    BACKLOG
+    UPCOMING
+    AWAITING
+    BLOCKED
+    DELIVERED
+}
+
+input TaskFilter {
+    taskFilterType: TaskFilterType
+    storyId: ID
+}
+
+enum TaskFilterType {
+    NEED_ATTENTION
+    UPCOMING
+    AWAITING
+    BLOCKED
+    DELIVERED
+    BACKLOG
+}
+
+type Retrospective {
+    activeSession: RetrospectiveSession
+    pastSessions: [RetrospectiveSession!]!
+}
+
+type StandUp {
+    activeSession: StandUpSession
+    pastSessions: [StandUpSession!]!
+}
+
+type Meeting {
+    id: ID!
+    invitedParticipants: [Participant!]!
+}
+
+type Participant {
+    id: ID!
+    user: User!
+    hasJoined: Boolean
+}
+
+type SpringPlanningSession {
+    meeting: Meeting
+    estimatedCapacity: Int
+    sprintStartDate: Time!
+    sprintLength: Duration!
+    selectedTasks: [Task!]!
+}
+
+type StandUpSession {
+    meeting: Meeting
+    blockersHasNextStep: [Blocker!]!
+    blockersResolved: [Blocker!]!
+}
+
+type RetrospectiveSession {
+    meeting: Meeting
+    feedbacks: [Feedback!]!
+}
+
+type Feedback {
+    project: Project
+    positive: [FeedbackTopic!]!
+    negative: [FeedbackTopic!]!
+}
+
+type StringTemplate {
+    id: String!
+    name: String
+}
+
+type FeedbackTopic {
+    id: ID!
+    template: StringTemplate!
+    name: String!
+    comments: [FeedbackComment!]!
+    numOfComments: Int!
+    actionItems: FeedbackActionItems!
+}
+
+type FeedbackComment {
+    id: ID!
+    message: Message!
+    topics: [FeedbackTopic!]!
+}
+
+type FeedbackActionItems {
+    continue: ActionItem
+    stop: ActionItem
+    start: ActionItem
+}
+
+type ActionItem {
+    id: ID!
+    message: String!
+    linkedStory: Story
+    isDone: Boolean!
+}
+
+type Project {
+    id: ID!
+    name: String!
+    totalValuePoints: Int!
+    stories: [Story!]!
+}
+
+type Story {
+    id: ID!
+    name: String
+    valueEstimator: Estimator
+    valuePoints: Int!
+    dueAt: Time
+    verifier: User!
+    successMetrics: [SuccessMetric!]
+    context: Context
+    tasks: [Task!]!
+}
+
+type Estimator {
+    id: ID!
+    questions: [Question!]!
+}
+
+interface Question {
+    id: ID!
+    type: QuestionType
+    description: String!
+}
+
+enum QuestionType {
+    SELECT_ONE
+    SELECT_MULTIPLE
+    FILL_IN_BLANK
+}
+
+enum RiskLevel {
+    HIGH
+    MEDIUM
+    LOW
+}
+
+type SuccessMetric {
+    id: ID!
+    name: String
+    isAchieved: Boolean!
+}
+
+type Context {
+    messages: [Message!]!
+    attachments: [Attachment!]!
+}
+
+type Attachment {
+    id: ID!
+    name: String
+    iconURL: String!
+    downloadURL: String!
+}
+
+type Message {
+    id: ID!
+    content: String
+    author: User!
+    createdAt: Time!
+    editedAt: Time
+}
+
+type Mutation {
+}
+
+type Subscription {
+}
+
+type Task {
+    id: String!
+    parentStory: Story
+    goal: String!
+    dueAt: Time
+    status: TaskStatus
+    effortPoints: Int!
+    riskLevel: RiskLevel!
+    dependsOn: [Task!]!
+    tags: [String!]!
+    assignedTo: [User!]!
+    availableActions: [TaskAction!]!
+}
+
+enum TaskStatus {
+    BLOCKED
+}
+
+enum TaskAction {
+    START
+    MARK_BLOCKED
+}
+
+type Pipeline {
+    activeStage: Int!
+    totalStages: Int!
+    stages: [Stage!]!
+}
+
+type Stage {
+    name: String!
+    status: StageStatus!
+}
+
+enum StageStatus {
+    NOT_STARTED
+    IN_PROGRESS
+    COMPLETED
+}
+
+type User {
+    id: ID!
+    profileURL: String
+}
+
+scalar Duration
+scalar Time
