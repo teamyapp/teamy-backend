@@ -20,6 +20,7 @@ input TaskInput {
     dueAt: Date
     effort: Int
     context: String
+    ownerUserID: ID
 }
 
 type Task {
@@ -28,7 +29,14 @@ type Task {
     dueAt: Date
     effort: Int
     context: String
+    owner: User
     availableActions: [TaskAction]
+}
+
+type User {
+    id: ID!
+    name: String!
+    profileUrl: String
 }
 
 enum TaskAction {
