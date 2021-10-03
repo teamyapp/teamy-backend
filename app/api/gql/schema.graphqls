@@ -5,14 +5,14 @@ schema {
 
 type Query {
     needAttention: Task
-    upcoming: [Task]
-    delivered: [Task]
+    upcoming: [Task!]!
+    delivered: [Task!]!
 }
 
 type Mutation {
-    createTask(task: TaskInput): ID
+    createTask(task: TaskInput!): ID!
     deleteTask(taskId: ID!): Void
-    updateTask(taskId: ID, task: TaskInput): Void
+    updateTask(taskId: ID!, task: TaskInput!): Void
 }
 
 input TaskInput {
