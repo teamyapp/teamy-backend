@@ -1,0 +1,43 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+type Query {
+    needAttention: Task
+    upcoming: [Task]
+    delivered: [Task]
+}
+
+type Mutation {
+    createTask(task: TaskInput): ID
+    deleteTask(taskId: ID!): Void
+    updateTask(taskId: ID, task: TaskInput): Void
+}
+
+input TaskInput {
+    goal: String
+    dueAt: Date
+    effort: Int
+    context: String
+}
+
+type Task {
+    id: ID!
+    goal: String
+    dueAt: Date
+    effort: Int
+    context: String
+    availableActions: [TaskAction]
+}
+
+enum TaskAction {
+    START
+    DELETE
+    ASSIGN_OWNER
+    REPORT_BLOCKED
+    COMPLETE
+}
+
+scalar Date
+scalar Void
