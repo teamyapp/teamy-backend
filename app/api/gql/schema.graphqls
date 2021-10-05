@@ -1,77 +1,77 @@
 schema {
-    query: Query
-    mutation: Mutation
+	query: Query
+	mutation: Mutation
 }
 
 type Query {
-    executionMode: ExecutionMode!
-    task(taskId: ID!): Task
+	executionMode: ExecutionMode!
+	task(taskId: ID!): Task
 }
 
 type Mutation {
-    createTask(task: TaskInput!): ID!
-    deleteTask(taskId: ID!): Void
-    updateTask(taskId: ID!, task: TaskInput!): Void
-    performTaskAction(taskId: ID!, action: TaskAction!): Void
+	createTask(task: TaskInput!): ID!
+	deleteTask(taskId: ID!): Void
+	updateTask(taskId: ID!, task: TaskInput!): Void
+	performTaskAction(taskId: ID!, action: TaskAction!): Void
 }
 
 input TaskInput {
-    goal: String
-    dueAt: Date
-    context: String
-    ownerUserID: ID
-    numOfUnknowns: Int
-    domainExpertUserIDs: [ID!]!
+	goal: String
+	dueAt: Date
+	context: String
+	ownerUserID: ID
+	numOfUnknowns: Int
+	domainExpertUserIDs: [ID!]!
 }
 
 type ExecutionMode {
-    myStatus: PersonalStatus!
-    teamStatus: TeamStatus!
+	myStatus: PersonalStatus!
+	teamStatus: TeamStatus!
 }
 
 type PersonalStatus {
-    needAttentionTask: Task
-    upcomingTasks: [Task!]!
-    deliveredTasks: [Task!]!
+	needAttentionTask: Task
+	upcomingTasks: [Task!]!
+	deliveredTasks: [Task!]!
 }
 
 type TeamStatus {
-    upcomingTasks: [Task!]!
-    inProgressTasks: [Task!]!
-    deliveredTasks: [Task!]!
+	upcomingTasks: [Task!]!
+	inProgressTasks: [Task!]!
+	deliveredTasks: [Task!]!
 }
 
 type Option {
-    value: Int
-    label: String
+	value: Int
+	label: String
 }
 
 type Task {
-    id: ID!
-    goal: String
-    dueAt: Date
-    context: String
-    owner: User
-    workScope: Option
-    effort: Int
-    dependsOn: [Task!]!
-    numOfUnknowns: Int
-    availableActions: [TaskAction!]
-    availableScopes: [Option!]!
+	id: ID!
+	goal: String
+	dueAt: Date
+	context: String
+	owner: User
+	workScope: Option
+	effort: Int
+	dependsOn: [Task!]!
+	numOfUnknowns: Int
+	availableActions: [TaskAction!]
+	availableScopes: [Option!]!
 }
 
 type User {
-    id: ID!
-    name: String!
-    profileUrl: String
+	id: ID!
+	name: String!
+	profileUrl: String
 }
 
 enum TaskAction {
-    START
-    DELETE
-    ASSIGN_OWNER
-    REPORT_BLOCKED
-    COMPLETE
+	START
+	DELETE
+	ASSIGN_OWNER
+	REPORT_BLOCKED
+	COMPLETE
 }
 
 scalar Date
