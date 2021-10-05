@@ -4,9 +4,9 @@ schema {
 }
 
 type Query {
-    needAttention: Task
-    upcoming: [Task!]!
-    delivered: [Task!]!
+    needAttentionTask: Task
+    upcomingTasks: [Task!]!
+    deliveredTasks: [Task!]!
     task(taskId: ID!): Task
 }
 
