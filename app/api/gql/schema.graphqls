@@ -4,9 +4,7 @@ schema {
 }
 
 type Query {
-    needAttentionTask: Task
-    upcomingTasks: [Task!]!
-    deliveredTasks: [Task!]!
+    executionMode: ExecutionMode!
     task(taskId: ID!): Task
 }
 
@@ -24,6 +22,23 @@ input TaskInput {
     ownerUserID: ID
     numOfUnknowns: Int
     domainExpertUserIDs: [ID!]!
+}
+
+type ExecutionMode {
+    myStatus: PersonalStatus!
+    teamStatus: TeamStatus!
+}
+
+type PersonalStatus {
+    needAttentionTask: Task
+    upcomingTasks: [Task!]!
+    deliveredTasks: [Task!]!
+}
+
+type TeamStatus {
+    upcomingTasks: [Task!]!
+    inProgressTasks: [Task!]!
+    deliveredTasks: [Task!]!
 }
 
 type Option {
