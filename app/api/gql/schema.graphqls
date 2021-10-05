@@ -20,8 +20,9 @@ input TaskInput {
 	dueAt: Time
 	context: String
 	ownerUserID: ID
+	workScope: Int
+	dependsOnTaskIds: [ID!]
 	numOfUnknowns: Int
-	domainExpertUserIDs: [ID!]!
 }
 
 interface Entity {
