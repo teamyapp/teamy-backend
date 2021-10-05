@@ -52,7 +52,7 @@ type Task {
     dueAt: Date
     context: String
     owner: User
-    scope: Option
+    workScope: Option
     effort: Int
     dependsOn: [Task!]!
     numOfUnknowns: Int
