@@ -17,11 +17,17 @@ type Mutation {
 
 input TaskInput {
 	goal: String
-	dueAt: Date
+	dueAt: Time
 	context: String
 	ownerUserID: ID
 	numOfUnknowns: Int
 	domainExpertUserIDs: [ID!]!
+}
+
+interface Entity {
+	id: ID!
+	createdAt: Time!
+	updatedAt: Time
 }
 
 type ExecutionMode {
@@ -46,10 +52,10 @@ type Option {
 	label: String
 }
 
-type Task {
+type Task implements Entity {
 	id: ID!
 	goal: String
-	dueAt: Date
+	dueAt: Time
 	context: String
 	owner: User
 	workScope: Option
@@ -58,12 +64,16 @@ type Task {
 	numOfUnknowns: Int
 	availableActions: [TaskAction!]
 	availableScopes: [Option!]!
+	createdAt: Time!
+	updatedAt: Time
 }
 
-type User {
+type User implements Entity {
 	id: ID!
 	name: String!
 	profileUrl: String
+	createdAt: Time!
+	updatedAt: Time
 }
 
 enum TaskAction {
@@ -74,5 +84,5 @@ enum TaskAction {
 	COMPLETE
 }
 
-scalar Date
+scalar Time
 scalar Void
