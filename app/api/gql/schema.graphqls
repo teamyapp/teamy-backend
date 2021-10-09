@@ -10,9 +10,9 @@ type Query {
 
 type Mutation {
 	createTask(task: TaskInput!): ID!
-	deleteTask(taskId: ID!): Void
-	updateTask(taskId: ID!, task: TaskInput!): Void
-	performTaskAction(taskId: ID!, action: TaskAction!): Void
+	deleteTask(taskId: ID!): Boolean!
+	updateTask(taskId: ID!, task: TaskInput!): Boolean!
+	performTaskAction(taskId: ID!, action: TaskAction!): Boolean!
 }
 
 input TaskInput {
@@ -20,7 +20,7 @@ input TaskInput {
 	dueAt: Time
 	context: String
 	ownerUserID: ID
-	workScope: Int
+	workScopeIndex: Int
 	dependsOnTaskIds: [ID!]
 	numOfUnknowns: Int
 }
@@ -32,12 +32,12 @@ interface Entity {
 }
 
 type ExecutionMode {
-	myStatus: PersonalStatus!
+	currUserStatus: PersonalStatus!
 	teamStatus: TeamStatus!
 }
 
 type PersonalStatus {
-	needAttentionTask: Task
+	needAttention: Task
 	upcomingTasks: [Task!]!
 	deliveredTasks: [Task!]!
 }
@@ -49,22 +49,22 @@ type TeamStatus {
 }
 
 type Option {
-	value: Int
-	label: String
+	value: Int!
+	label: String!
 }
 
 type Task implements Entity {
 	id: ID!
-	goal: String
+	goal: String!
 	dueAt: Time
 	context: String
 	owner: User
-	workScope: Option
+	workScope: Option!
 	effort: Int
 	dependsOn: [Task!]!
 	numOfUnknowns: Int
-	availableActions: [TaskAction!]
-	availableScopes: [Option!]!
+	availableActions: [TaskAction!]!
+	availableWorkScopes: [Option!]!
 	createdAt: Time!
 	updatedAt: Time
 }
@@ -72,7 +72,7 @@ type Task implements Entity {
 type User implements Entity {
 	id: ID!
 	name: String!
-	profileUrl: String
+	profileUrl: String!
 	createdAt: Time!
 	updatedAt: Time
 }
@@ -86,4 +86,3 @@ enum TaskAction {
 }
 
 scalar Time
-scalar Void
