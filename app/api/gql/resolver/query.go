@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/identity"
 	"github.com/teamyapp/teamy-backend/app/service"
+	"github.com/teamyapp/teamy-backend/identity"
 )
 
 type Query struct {

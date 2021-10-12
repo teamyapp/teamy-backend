@@ -9,8 +9,8 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
-	"github.com/teamyapp/teamy-backend/app/identity"
 	"github.com/teamyapp/teamy-backend/app/service"
+	"github.com/teamyapp/teamy-backend/identity"
 )
 
 //go:embed schema.graphqls
