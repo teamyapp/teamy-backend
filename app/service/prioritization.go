@@ -7,10 +7,14 @@ import (
 type Prioritization struct {
 }
 
-func (p Prioritization) PrioritizeTasks(inputTasks []entity.Task) []entity.Task {
+func (p Prioritization) prioritizeTasks(inputTasks []entity.Task) []entity.Task {
 	return inputTasks
 }
 
 func (p Prioritization) SelectNeedAttention() *entity.Task {
 	panic("not implemented")
+}
+
+func NewPrioritization() Prioritization {
+	return Prioritization{}
 }
