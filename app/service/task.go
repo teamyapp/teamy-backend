@@ -7,7 +7,7 @@ import (
 type Task struct {
 }
 
-func (t Task) GetTask(taskID int) (entity.Task, error) {
+func (t Task) GetTask(taskID entity.ID) (entity.Task, error) {
 	panic("not implemented")
 }
 
@@ -15,7 +15,7 @@ func (t Task) CreateTask(task entity.Task) error {
 	panic("not implemented")
 }
 
-func (t Task) DeleteTask(taskID int) error {
+func (t Task) DeleteTask(taskID entity.ID) error {
 	panic("not implemented")
 }
 
@@ -23,6 +23,6 @@ func (t Task) UpdateTask(task entity.Task) error {
 	panic("not implemented")
 }
 
-func (t Task) PerformTaskAction(taskID int, action entity.TaskAction) error {
+func (t Task) PerformTaskAction(taskID entity.ID, action entity.TaskAction) error {
 	panic("not implemented")
 }
