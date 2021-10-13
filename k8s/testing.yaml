@@ -27,7 +27,7 @@ spec:
           image: harbor.internal.teamyapp.com/internal/teamy-backend-testing:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 9000
       imagePullSecrets:
         - name: harbor-cred
 ---
@@ -42,7 +42,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8080
+      targetPort: 9000
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
