@@ -5,7 +5,7 @@ import (
 )
 
 type Entity struct {
-	ID        int
+	ID        ID
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 }
