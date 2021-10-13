@@ -8,10 +8,10 @@ type Task struct {
 	Entity
 	Goal             string
 	DueAt            *time.Time
-	Context          string
-	OwnerUserId      int
+	Context          *string
+	OwnerUserId      *int
 	WorkScopeIndex   int
-	Effort           int
+	Effort           *int
 	DependsOnTaskIDs []int
-	NumOfUnknowns    int
+	NumOfUnknowns    *int
 }
