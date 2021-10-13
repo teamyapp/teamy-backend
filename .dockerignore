@@ -4,3 +4,4 @@
 # ignore files
 .gitignore
 .dockerignore
+.env
