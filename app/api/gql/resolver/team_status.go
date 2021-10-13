@@ -1,16 +1,21 @@
 package resolver
 
+import (
+	"github.com/teamyapp/teamy-backend/app/entity"
+)
+
 type TeamStatus struct {
+	teamStatus entity.TeamStatus
 }
 
 func (t TeamStatus) UpcomingTasks() []Task {
-	panic("not implemented")
+	return toGraphQLTasks(t.teamStatus.UpcomingTasks)
 }
 
 func (t TeamStatus) InProgressTasks() []Task {
-	panic("not implemented")
+	return toGraphQLTasks(t.teamStatus.InProgressTasks)
 }
 
 func (t TeamStatus) DeliveredTasks() []Task {
-	panic("not implemented")
+	return toGraphQLTasks(t.teamStatus.DeliveredTasks)
 }
