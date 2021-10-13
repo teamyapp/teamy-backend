@@ -1,20 +1,24 @@
 package resolver
 
 import (
+	"fmt"
+
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Entity struct {
+	entity entity.Entity
 }
 
 func (e Entity) ID() graphql.ID {
-	panic("not implemented")
+	return graphql.ID(fmt.Sprintf("%d", int(e.entity.ID)))
 }
 
 func (e Entity) CreatedAt() graphql.Time {
-	panic("not implemented")
+	return graphql.Time{Time: e.entity.CreatedAt}
 }
 
 func (e Entity) UpdatedAt() *graphql.Time {
-	panic("not implemented")
+	return toGraphQLTime(e.entity.UpdatedAt)
 }

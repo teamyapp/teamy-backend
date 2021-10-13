@@ -3,7 +3,11 @@ module github.com/teamyapp/teamy-backend
 go 1.17
 
 require (
+	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.2.0
+	github.com/joho/godotenv v1.4.0
+	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/lib/pq v1.10.3
 	github.com/stretchr/testify v1.7.0
 )
 
