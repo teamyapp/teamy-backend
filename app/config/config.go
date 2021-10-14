@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	DbHost         string `envconfig:"DB_HOST" default:"localhost"`
-	DbPort         int    `envconfig:"DB_PORT" default:"5432"`
-	DbUser         string `envconfig:"DB_USER"`
+	DBHost         string `envconfig:"DB_HOST" default:"localhost"`
+	DBPort         int    `envconfig:"DB_PORT" default:"5432"`
+	DBUser         string `envconfig:"DB_USER"`
 	DBName         string `envconfig:"DB_NAME" default:"teamy"`
-	DbPassword     string `envconfig:"DB_PASSWORD"`
+	DBPassword     string `envconfig:"DB_PASSWORD"`
+	DBSSLMode      string `envconfig:"DB_SSL_MODE" default:"require"`
 	GraphQLAPIPort int    `envconfig:"GRAPH_QL_API_PORT" default:"9000"`
 }
 
