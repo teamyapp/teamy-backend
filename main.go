@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 
 	"github.com/teamyapp/teamy-backend/app/api/gql"
@@ -20,23 +21,15 @@ func main() {
 		panic(err)
 	}
 
-	sqlDB, err := db.Connect(cfg)
-	if err != nil {
-		panic(err)
-	}
-	defer sqlDB.Close()
+	panic(db.WithDB(cfg, func(sqlDB *sql.DB) error {
+		executionService := dep.InitExecutionService(sqlDB)
+		server, err := gql.NewServer(executionService, cfg.GraphQLAPIPort)
+		if err != nil {
+			panic(err)
+		}
 
-	err = sqlDB.Ping()
-	if err != nil {
-		panic(err)
-	}
-
-	executionService := dep.InitExecutionService(sqlDB)
-	server, err := gql.NewServer(executionService, cfg.GraphQLAPIPort)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIPort)
-	panic(server.ListenAndServe())
+		log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIPort)
+		panic(server.ListenAndServe())
+		return nil
+	}))
 }

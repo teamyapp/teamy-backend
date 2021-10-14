@@ -83,8 +83,6 @@ INSERT INTO team_member (team_id, user_id)
 VALUES (3, 7);
 INSERT INTO team_member (team_id, user_id)
 VALUES (3, 8);
-INSERT INTO team_member (team_id, user_id)
-VALUES (3, 9);
 
 -- Task statuses
 INSERT INTO task_status (value, name)
