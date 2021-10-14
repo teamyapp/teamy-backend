@@ -26,10 +26,7 @@ func main() {
 	}
 	defer sqlDB.Close()
 
-	err = sqlDB.Ping()
-	if err != nil {
-		panic(err)
-	}
+	db.WaitUntilReady(sqlDB)
 
 	executionService := dep.InitExecutionService(sqlDB)
 	server, err := gql.NewServer(executionService, cfg.GraphQLAPIPort)
