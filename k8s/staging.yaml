@@ -54,7 +54,7 @@ spec:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`teamy-backend.staging.teamyapp.com`)
+      match: Host(`backend.staging.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend
