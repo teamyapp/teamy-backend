@@ -20,14 +20,22 @@
 - [staging](https://teamy-backend.staging.teamyapp.com)
 - [production](https://teamy-backend.teamyapp.com)
 
-## Migrate DB
+## DB
+
+### Seed
 
 ```bash
-./script/migrate_db.sh [user] [password] [dbName] [up/down] [steps]
+go run cli/* db migrate --steps [steps]
 ```
 
 Eg.
 
 ```bash
-./script/migrate_db.sh postgres password teamy up 1
+go run cli/* db migrate --steps 1
+```
+
+### Migrate
+
+```bash
+ggo run cli/* db seed
 ```
