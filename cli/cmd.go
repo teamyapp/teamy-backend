@@ -9,6 +9,7 @@ import (
 
 var migrationSteps int
 var migrationDir string
+var migrationFileName string
 
 var seedFilePath string
 
@@ -34,8 +35,24 @@ var seedCmd = &cobra.Command{
 	},
 }
 
+var newMigrationCmd = &cobra.Command{
+	Use: "new",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return newMigration(migrationDir, migrationFileName)
+	},
+}
+
 func init() {
-	migrateCmd.Flags().StringVarP(
+	newMigrationCmd.Flags().StringVarP(
+		&migrationFileName,
+		"fileName",
+		"f",
+		"",
+		"name of data migration file")
+	newMigrationCmd.MarkFlagRequired("fileName")
+	migrateCmd.AddCommand(newMigrationCmd)
+
+	migrateCmd.PersistentFlags().StringVarP(
 		&migrationDir,
 		"migrationDir",
 		"d",
