@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -66,4 +68,33 @@ func withDB(action func(sqlDB *sql.DB) error) error {
 		return err
 	}
 	return db.WithDB(cfg, action)
+}
+
+func newMigration(migrationDir string, fileName string) error {
+	now := time.Now()
+	prefix := fmt.Sprintf(
+		"%04d%02d%02d%02d%02d%02d_%s",
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		now.Hour(),
+		now.Minute(),
+		now.Second(),
+		fileName)
+	fileNameFormats := []string{
+		"%s.up.sql",
+		"%s.down.sql",
+	}
+
+	for _, fileNameFormat := range fileNameFormats {
+		fileName = fmt.Sprintf(fileNameFormat, prefix)
+		filePath := filepath.Join(migrationDir, fileName)
+		file, err := os.Create(filePath)
+		if err != nil {
+			return err
+		}
+		file.Close()
+	}
+
+	return nil
 }
