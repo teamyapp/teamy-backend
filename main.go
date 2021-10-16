@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"log"
 
+	"github.com/teamyapp/one/db"
 	"github.com/teamyapp/teamy-backend/app/api/gql"
 	"github.com/teamyapp/teamy-backend/app/config"
 	"github.com/teamyapp/teamy-backend/app/dep"
-	"github.com/teamyapp/teamy-backend/app/repo/db"
 )
 
 func init() {
@@ -21,7 +21,7 @@ func main() {
 		panic(err)
 	}
 
-	panic(db.WithDB(cfg, func(sqlDB *sql.DB) error {
+	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
 		executionService := dep.InitExecutionService(sqlDB)
 		server, err := gql.NewServer(executionService, cfg.GraphQLAPIPort)
 		if err != nil {

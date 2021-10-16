@@ -3,6 +3,7 @@ package service
 import (
 	"log"
 
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/repo"
 )
@@ -13,11 +14,11 @@ type Execution struct {
 	taskRepo              repo.Task
 }
 
-func (e Execution) GetPersonalStatus(userID entity.ID) (entity.PersonalStatus, error) {
+func (e Execution) GetPersonalStatus(userID oneEntity.ID) (entity.PersonalStatus, error) {
 	panic("not implemented")
 }
 
-func (e Execution) GetActiveTeamStatus(userID entity.ID) (entity.TeamStatus, error) {
+func (e Execution) GetActiveTeamStatus(userID oneEntity.ID) (entity.TeamStatus, error) {
 	if err := userID.IsValid(); err != nil {
 		log.Println(err)
 		return entity.TeamStatus{}, err

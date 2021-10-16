@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -14,7 +15,7 @@ var sqlTaskStatues = map[entity.TaskStatus]int{
 }
 
 type Task interface {
-	FindTasksForTeam(teamID entity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
+	FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
 }
 
 type SQLTask struct {
@@ -23,7 +24,7 @@ type SQLTask struct {
 
 var _ Task = (*SQLTask)(nil)
 
-func (S SQLTask) FindTasksForTeam(teamID entity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
+func (S SQLTask) FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
 	rows, err := S.db.Query(`
 SELECT
        task.id,

@@ -2,10 +2,12 @@ package entity
 
 import (
 	"time"
+
+	oneEntity "github.com/teamyapp/one/entity"
 )
 
 type Task struct {
-	Entity
+	oneEntity.Entity
 	Goal             string
 	DueAt            *time.Time
 	Context          *string
