@@ -23,7 +23,7 @@ var dbCmd = &cobra.Command{
 
 var newDBCmd = &cobra.Command{
 	Use:   "new",
-	Short: "Generate credentials for new database",
+	Short: "Generate SQL to create new database",
 	Run: func(cmd *cobra.Command, args []string) {
 		newDB(dbName)
 	},
