@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entity"
+	oneEntity "github.com/teamyapp/one/entity"
 )
 
 type Entity struct {
-	entity entity.Entity
+	entity oneEntity.Entity
 }
 
 func (e Entity) ID() graphql.ID {

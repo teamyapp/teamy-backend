@@ -3,10 +3,10 @@ package errs
 import (
 	"fmt"
 
-	"github.com/teamyapp/teamy-backend/app/entity"
+	oneEntity "github.com/teamyapp/one/entity"
 )
 
-type NoActiveTeam entity.ID
+type NoActiveTeam oneEntity.ID
 
 var _ error = (*NoActiveTeam)(nil)
 

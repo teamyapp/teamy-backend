@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"log"
 
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/errs"
 )
 
 type Team interface {
-	GetActiveTeam(userID entity.ID) (entity.Team, error)
+	GetActiveTeam(userID oneEntity.ID) (entity.Team, error)
 }
 
 type SQLTeam struct {
@@ -18,7 +19,7 @@ type SQLTeam struct {
 
 var _ Team = (*SQLTeam)(nil)
 
-func (S SQLTeam) GetActiveTeam(userID entity.ID) (entity.Team, error) {
+func (S SQLTeam) GetActiveTeam(userID oneEntity.ID) (entity.Team, error) {
 	team := entity.Team{}
 	err := S.db.
 		QueryRow(`

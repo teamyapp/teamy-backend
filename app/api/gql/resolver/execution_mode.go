@@ -3,12 +3,12 @@ package resolver
 import (
 	"log"
 
-	"github.com/teamyapp/teamy-backend/app/entity"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 type ExecutionMode struct {
-	userID           entity.ID
+	userID           oneEntity.ID
 	executionService service.Execution
 }
 

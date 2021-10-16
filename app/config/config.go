@@ -2,43 +2,21 @@ package config
 
 import (
 	"log"
-	"os"
 
-	"github.com/joho/godotenv"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/teamyapp/one/config"
 )
 
 type Config struct {
-	DBHost         string `envconfig:"DB_HOST" default:"localhost"`
-	DBPort         int    `envconfig:"DB_PORT" default:"5432"`
-	DBUser         string `envconfig:"DB_USER"`
-	DBName         string `envconfig:"DB_NAME" default:"teamy"`
-	DBPassword     string `envconfig:"DB_PASSWORD"`
-	DBSSLMode      string `envconfig:"DB_SSL_MODE" default:"require"`
-	GraphQLAPIPort int    `envconfig:"GRAPH_QL_API_PORT" default:"9000"`
+	OneConfig      config.Config
+	GraphQLAPIPort int `envconfig:"GRAPH_QL_API_PORT" default:"9000"`
 }
 
 func FromEnv() (Config, error) {
-	err := autoLoadEnv()
+	cfg := Config{}
+	err := config.FromEnv(&cfg)
 	if err != nil {
 		log.Println(err)
 		return Config{}, err
 	}
-
-	config := Config{}
-	err = envconfig.Process("", &config)
-	if err != nil {
-		log.Println(err)
-		return Config{}, err
-	}
-	return config, nil
-}
-
-func autoLoadEnv() error {
-	_, err := os.Stat(".env")
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	return godotenv.Load()
+	return cfg, nil
 }
