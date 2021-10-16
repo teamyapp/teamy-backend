@@ -22,6 +22,18 @@
 
 ## DB
 
+### Generate SQL to create new DB
+
+```bash
+go run cli/* db new -n [dbName]
+```
+
+Eg.
+
+```bash
+go run cli/* db new -n testing
+```
+
 ### Seed
 
 ```bash
