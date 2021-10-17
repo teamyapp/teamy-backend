@@ -1,3 +1,23 @@
+apiVersion: kubernetes-client.io/v1
+kind: ExternalSecret
+metadata:
+  namespace: production
+  name: teamy
+spec:
+  backendType: vault
+  vaultMountPoint: kubernetes
+  vaultRole: secrets-read-role
+  data:
+    - name: user
+      key: kv/data/secrets/db/postgres/teamy/prod
+      property: user
+    - name: password
+      key: kv/data/secrets/db/postgres/teamy/prod
+      property: password
+    - name: db-name
+      key: kv/data/secrets/db/postgres/teamy/prod
+      property: db-name
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,6 +48,19 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 9000
+          env:
+            - name: DB_HOST
+              value: postgres.db.svc.cluster.local
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
+                  key: password
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
+                  key: db-name
       imagePullSecrets:
         - name: harbor-cred
 ---
