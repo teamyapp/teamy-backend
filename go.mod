@@ -6,7 +6,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/stretchr/testify v1.7.0
-	github.com/teamyapp/one v0.0.0-20211016202800-b5a8ccd9f3e5
+	github.com/teamyapp/one v0.0.0-20211016205730-99d53fa5f44c
 )
 
 //replace github.com/teamyapp/one => ../one
