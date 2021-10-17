@@ -6,10 +6,6 @@ steps:
   - name: build image
     image: plugins/docker
     settings:
-      username:
-        from_secret: DOCKER_USERNAME
-      password:
-        from_secret: DOCKER_PASSWORD
       repo: harbor.internal.teamyapp.com/internal/teamy-backend-testing
       registry: harbor.internal.teamyapp.com
       target: production

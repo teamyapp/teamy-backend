@@ -2,10 +2,17 @@ FROM golang:1.17-alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache git bash
+RUN apk add git bash
 
 # Install dependencies
 COPY go.mod go.sum ./
+
+#ARG GITHUB_USERNAME
+
+#ARG GITHUB_PERSONAL_ACCESS_TOKEN
+
+#RUN git config --global url."https://${GITHUB_USERNAME}:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com".insteadOf "https://github.com"
+
 RUN go mod download
 
 # Verify dependencies
