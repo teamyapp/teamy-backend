@@ -509,8 +509,8 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
-github.com/teamyapp/one v0.0.0-20211016202800-b5a8ccd9f3e5 h1:vFqiLTDJkIQemjYlnXVgV06eBgb5SV5oX5RRAHuW2jE=
-github.com/teamyapp/one v0.0.0-20211016202800-b5a8ccd9f3e5/go.mod h1:tKO/v8OqXJGb8lLREFpD9BDU5KO+icQS91mFJNMGp8A=
+github.com/teamyapp/one v0.0.0-20211016205730-99d53fa5f44c h1:libqjCHpFEXADr0kK7hYPDqfg4oMR/eOkc3exvkWXWo=
+github.com/teamyapp/one v0.0.0-20211016205730-99d53fa5f44c/go.mod h1:tKO/v8OqXJGb8lLREFpD9BDU5KO+icQS91mFJNMGp8A=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/xanzy/go-gitlab v0.15.0/go.mod h1:8zdQa/ri1dfn8eS3Ir1SyfvOKlw7WBJ8DVThkpGiXrs=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
