@@ -37,7 +37,7 @@ func enableCORS(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		writer.Header().Set("Access-Control-Allow-Origin", "*")
 		writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, OPTIONS, DELETE")
 		writer.Header().Set("Access-Control-Allow-Headers",
-			"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization") // Decorator
+			"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
 		if request.Method == http.MethodOptions {
 			return
 		}
