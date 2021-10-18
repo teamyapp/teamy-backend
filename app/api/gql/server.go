@@ -31,16 +31,17 @@ func NewServer(executionService service.Execution, port int) (http.Server, error
 	return http.Server{Addr: addr, Handler: &mux}, nil
 }
 
-func enableCORS(handlerFunc http.HandlerFunc) http.HandlerFunc { // Closure
-	return func(writer http.ResponseWriter, request *http.Request) { // Closure
-		writer.Header().Set("Access-Control-Allow-Origin", "*")                                // Decorator
-		writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, OPTIONS, DELETE") // Decorator
+func enableCORS(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	// TODO: move into [One] to encourage reuse
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Access-Control-Allow-Origin", "*")
+		writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, OPTIONS, DELETE")
 		writer.Header().Set("Access-Control-Allow-Headers",
 			"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization") // Decorator
-		if request.Method == http.MethodOptions { // Decorator
-			return // Decorator
+		if request.Method == http.MethodOptions {
+			return
 		}
 
-		handlerFunc(writer, request) // Closure, Decorator
+		handlerFunc(writer, request)
 	}
 }
