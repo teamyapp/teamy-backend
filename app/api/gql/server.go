@@ -26,7 +26,22 @@ func NewServer(executionService service.Execution, port int) (http.Server, error
 
 	handler := identity.WithMiddleware(&relay.Handler{Schema: schema})
 	mux := http.ServeMux{}
-	mux.Handle("/graphql", handler)
+	mux.HandleFunc("/graphql", enableCORS(handler.ServeHTTP))
 	addr := fmt.Sprintf(":%d", port)
 	return http.Server{Addr: addr, Handler: &mux}, nil
+}
+
+func enableCORS(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	// TODO: move into [One] to encourage reuse
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Access-Control-Allow-Origin", "*")
+		writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, OPTIONS, DELETE")
+		writer.Header().Set("Access-Control-Allow-Headers",
+			"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+		if request.Method == http.MethodOptions {
+			return
+		}
+
+		handlerFunc(writer, request)
+	}
 }
