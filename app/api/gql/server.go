@@ -16,8 +16,8 @@ import (
 //go:embed schema.graphqls
 var rawSchema string
 
-//go:embed GraphiQL.html
-var graphiQLHTML string
+//go:embed GraphQLIDE.html
+var graphIDEHTML []byte
 
 func NewServer(executionService service.Execution, port int) (http.Server, error) {
 	res := resolver.NewResolver(executionService)
@@ -53,7 +53,7 @@ func includeGraphiQLIDE(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method == http.MethodGet {
 			writer.WriteHeader(http.StatusOK)
-			writer.Write([]byte(graphiQLHTML))
+			writer.Write(graphIDEHTML)
 			return
 		}
 
