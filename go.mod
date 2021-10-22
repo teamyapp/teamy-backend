@@ -6,14 +6,14 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/stretchr/testify v1.7.0
-	github.com/teamyapp/one v0.0.0-20211016205730-99d53fa5f44c
+	github.com/teamyapp/one v0.0.0-20211022034051-071441019727
 )
 
-//replace github.com/teamyapp/one => ../one
+// replace github.com/teamyapp/one => ../one
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/golang-migrate/migrate/v4 v4.15.0 // indirect
+	github.com/golang-migrate/migrate/v4 v4.15.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
