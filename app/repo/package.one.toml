@@ -1,0 +1,12 @@
+[[target]]
+name = "config"
+type = "goLibrary"
+src = [
+    "*.go",
+]
+dep = [
+	"(@):module",
+	"(teamyapp/tool/oneFramework)/config",
+	"(@)/app/entity",
+	"(@)/app/errs",
+]

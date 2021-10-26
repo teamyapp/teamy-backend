@@ -1,0 +1,7 @@
+[[target]]
+name = "api"
+type = "goLibrary"
+dep = [
+	"(@):module",
+    "(@)/app/api/gql"
+]
