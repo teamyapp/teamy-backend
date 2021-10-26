@@ -16,6 +16,8 @@ var sqlTaskStatues = map[entity.TaskStatus]int{
 
 type Task interface {
 	FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
+	FindTasksForUser(userID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
+	FindTaskNeedAttentionForUser(userID oneEntity.ID) (*entity.Task, error)
 }
 
 type SQLTask struct {
@@ -76,6 +78,14 @@ WHERE team_id = $1 AND task_status = $2`,
 	}
 
 	return tasks, nil
+}
+
+func (S SQLTask) FindTasksForUser(userID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
+	panic("not implemented")
+}
+
+func (S SQLTask) FindTaskNeedAttentionForUser(userID oneEntity.ID) (*entity.Task, error) {
+	panic("not implemented")
 }
 
 func NewSQLTask(db *sql.DB) SQLTask {
