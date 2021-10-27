@@ -1,0 +1,8 @@
+[[target]]
+name = "app"
+type = "goLibrary"
+src = "no_active_team.go"
+dep = [
+	"(@):module",
+    "(teamyapp/tool/oneFramework)/entity"
+]

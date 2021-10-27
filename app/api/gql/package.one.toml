@@ -1,0 +1,16 @@
+[[target]]
+name = "gql"
+type = "goLibrary"
+src = [
+    "GraphQLIDE.html",
+    "schema.graphqls",
+    "*.go",
+]
+dep = [
+    "resolver",
+	"(github.com/graph-gophers/graphql-go)",
+	"(github.com/graph-gophers/graphql-go)/relay",
+	"(github.com/teamyapp/one)/identity",
+	"(@)/app/service",
+	"(@)/app/api/gql/resolver",
+]
