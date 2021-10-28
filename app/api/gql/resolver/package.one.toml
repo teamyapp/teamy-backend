@@ -8,5 +8,5 @@ dep = [
 	"(github.com/graph-gophers/graphql-go)",
 	"(github.com/teamyapp/one)/entity",
 	"(github.com/teamyapp/one)/identity",
-	"../../../service",
+	"(@)/app/service",
 ]
