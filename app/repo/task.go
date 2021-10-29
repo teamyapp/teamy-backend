@@ -52,7 +52,6 @@ WHERE team_id = $1
 	defer rows.Close()
 
 	tasks := make([]entity.Task, 0)
-
 	for rows.Next() {
 		task := entity.Task{}
 		err = rows.Scan(
@@ -108,7 +107,6 @@ WHERE team_task.team_id = $1
 	defer rows.Close()
 
 	tasks := make([]entity.Task, 0)
-
 	for rows.Next() {
 		task := entity.Task{}
 		err = rows.Scan(
