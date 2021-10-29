@@ -32,7 +32,7 @@ interface Entity {
 }
 
 type ExecutionMode {
-	currUserStatus: PersonalStatus!
+	personalStatus: PersonalStatus!
 	teamStatus: TeamStatus!
 }
 

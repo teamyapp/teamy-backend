@@ -14,25 +14,31 @@ type Execution struct {
 	taskRepo              repo.Task
 }
 
-func (e Execution) GetPersonalStatus(userID oneEntity.ID) (entity.PersonalStatus, error) {
+func (e Execution) GetPersonalStatusForActiveTeam(userID oneEntity.ID) (entity.PersonalStatus, error) {
 	if err := userID.IsValid(); err != nil {
 		log.Println(err)
 		return entity.PersonalStatus{}, err
 	}
 
-	upcomingTasks, err := e.taskRepo.FindTasksForUser(userID, entity.TaskStatusUpcoming)
+	activeTeam, err := e.teamService.GetActiveTeam(userID)
 	if err != nil {
 		log.Println(err)
 		return entity.PersonalStatus{}, err
 	}
 
-	taskNeedAttention, err := e.taskRepo.FindTaskNeedAttentionForUser(userID)
+	upcomingTasks, err := e.taskRepo.FindTasksForUser(userID, activeTeam.ID, entity.TaskStatusUpcoming)
 	if err != nil {
 		log.Println(err)
 		return entity.PersonalStatus{}, err
 	}
 
-	deliveredTasks, err := e.taskRepo.FindTasksForUser(userID, entity.TaskStatusDelivered)
+	taskNeedAttention, err := e.taskRepo.FindTaskNeedAttentionForUser(userID, activeTeam.ID)
+	if err != nil {
+		log.Println(err)
+		return entity.PersonalStatus{}, err
+	}
+
+	deliveredTasks, err := e.taskRepo.FindTasksForUser(userID, activeTeam.ID, entity.TaskStatusDelivered)
 	if err != nil {
 		log.Println(err)
 		return entity.PersonalStatus{}, err
