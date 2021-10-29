@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 
 	oneEntity "github.com/teamyapp/one/entity"
@@ -16,8 +17,8 @@ var sqlTaskStatues = map[entity.TaskStatus]int{
 
 type Task interface {
 	FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
-	FindTasksForUser(userID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
-	FindTaskNeedAttentionForUser(userID oneEntity.ID) (*entity.Task, error)
+	FindTasksForUser(userID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
+	FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error)
 }
 
 type SQLTask struct {
@@ -41,7 +42,8 @@ SELECT
        task.updated_at
 FROM team_task
 INNER JOIN task ON team_task.task_id = task.id
-WHERE team_id = $1 AND task_status = $2`,
+WHERE team_id = $1
+  AND task_status = $2`,
 		int(teamID), sqlTaskStatues[taskStatus])
 	if err != nil {
 		log.Println(err)
@@ -50,7 +52,6 @@ WHERE team_id = $1 AND task_status = $2`,
 	defer rows.Close()
 
 	tasks := make([]entity.Task, 0)
-
 	for rows.Next() {
 		task := entity.Task{}
 		err = rows.Scan(
@@ -80,12 +81,100 @@ WHERE team_id = $1 AND task_status = $2`,
 	return tasks, nil
 }
 
-func (S SQLTask) FindTasksForUser(userID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
-	panic("not implemented")
+func (S SQLTask) FindTasksForUser(userID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
+	rows, err := S.db.Query(`
+SELECT
+       task.id,
+       task.goal,
+       task.due_at,
+       task.context,
+       task.owner_user_id,
+       task.work_scope_index,
+       task.effort,
+       task.num_of_unknowns,
+       task.created_at,
+       task.updated_at
+FROM team_task
+INNER JOIN task ON team_task.task_id = task.id
+WHERE team_task.team_id = $1
+  AND team_task.task_status = $2
+  AND task.owner_user_id = $3;`,
+		int(teamID), sqlTaskStatues[taskStatus], int(userID))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	tasks := make([]entity.Task, 0)
+	for rows.Next() {
+		task := entity.Task{}
+		err = rows.Scan(
+			&task.ID,
+			&task.Goal,
+			&task.DueAt,
+			&task.Context,
+			&task.OwnerUserId,
+			&task.WorkScopeIndex,
+			&task.Effort,
+			&task.NumOfUnknowns,
+			&task.CreatedAt,
+			&task.UpdatedAt)
+		if err != nil {
+			log.Println(err)
+			return tasks, err
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return tasks, err
+	}
+
+	return tasks, nil
 }
 
-func (S SQLTask) FindTaskNeedAttentionForUser(userID oneEntity.ID) (*entity.Task, error) {
-	panic("not implemented")
+func (S SQLTask) FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error) {
+	row := S.db.QueryRow(`
+SELECT
+       task.id,
+       task.goal,
+       task.due_at,
+       task.context,
+       task.owner_user_id,
+       task.work_scope_index,
+       task.effort,
+       task.num_of_unknowns,
+       task.created_at,
+       task.updated_at
+FROM team_member
+INNER JOIN task ON team_member.need_attention_task_id = task.id
+WHERE team_member.user_id = $1
+  AND team_member.team_id = $2;
+`, int(userID), int(teamID))
+	task := entity.Task{}
+	err := row.Scan(
+		&task.ID,
+		&task.Goal,
+		&task.DueAt,
+		&task.Context,
+		&task.OwnerUserId,
+		&task.WorkScopeIndex,
+		&task.Effort,
+		&task.NumOfUnknowns,
+		&task.CreatedAt,
+		&task.UpdatedAt)
+	if err == nil {
+		return &task, nil
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	return nil, err
 }
 
 func NewSQLTask(db *sql.DB) SQLTask {

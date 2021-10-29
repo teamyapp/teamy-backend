@@ -12,8 +12,12 @@ type ExecutionMode struct {
 	executionService service.Execution
 }
 
-func (e ExecutionMode) CurrUserStatus() PersonalStatus {
-	panic("not implemented")
+func (e ExecutionMode) PersonalStatus() (PersonalStatus, error) {
+	personalStatus, err := e.executionService.GetPersonalStatusForActiveTeam(e.userID)
+	if err != nil {
+		log.Println(err)
+	}
+	return PersonalStatus{personalStatus: personalStatus}, err
 }
 
 func (e ExecutionMode) TeamStatus() (TeamStatus, error) {
