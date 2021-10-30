@@ -31,7 +31,17 @@ var _ Task = (*SQLTask)(nil)
 func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
 	ts := entity.Task{}
 	err := S.db.QueryRow(`
-	SELECT id, goal, due_at, context, owner_user_id, work_scope_index, effort, num_of_unknowns, created_at, updated_at
+	SELECT
+	       id,
+	       goal,
+	       due_at,
+	       context,
+	       owner_user_id,
+	       work_scope_index,
+	       effort,
+	       num_of_unknowns,
+	       created_at,
+	       updated_at
 	FROM task
 	WHERE id = $1;
 `, int(taskID)).
