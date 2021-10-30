@@ -82,7 +82,7 @@ enum TaskAction {
 	DELETE
 	ASSIGN_OWNER
 	REPORT_BLOCKED
-	COMPLETE
+	MARK_COMPLETE
 }
 
 scalar Time
