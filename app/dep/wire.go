@@ -6,6 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
+	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
@@ -17,12 +18,14 @@ var repoSet = wire.NewSet(
 	repo.NewSQLTask,
 )
 
-func InitExecutionService(sqlDB *sql.DB) service.Execution {
+func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	wire.Build(
 		repoSet,
 		service.NewPrioritization,
 		service.NewTeam,
+		service.NewTask,
 		service.NewExecution,
+		resolver.NewResolver,
 	)
-	return service.Execution{}
+	return resolver.Resolver{}
 }

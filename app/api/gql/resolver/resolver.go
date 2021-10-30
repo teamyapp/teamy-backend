@@ -9,8 +9,8 @@ type Resolver struct {
 	Mutation
 }
 
-func NewResolver(executionService service.Execution) Resolver {
+func NewResolver(taskService service.Task, executionService service.Execution) Resolver {
 	return Resolver{
-		Query: NewQuery(executionService),
+		Query: NewQuery(taskService, executionService),
 	}
 }

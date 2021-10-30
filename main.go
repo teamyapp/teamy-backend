@@ -22,8 +22,8 @@ func main() {
 	}
 
 	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
-		executionService := dep.InitExecutionService(sqlDB)
-		server, err := gql.NewServer(executionService, cfg.GraphQLAPIPort)
+		gqlResolver := dep.InitGraphQLResolver(sqlDB)
+		server, err := gql.NewServer(gqlResolver, cfg.GraphQLAPIPort)
 		if err != nil {
 			panic(err)
 		}
