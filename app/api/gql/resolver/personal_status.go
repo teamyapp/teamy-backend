@@ -8,7 +8,7 @@ type PersonalStatus struct {
 	personalStatus entity.PersonalStatus
 }
 
-func (p PersonalStatus) NeedAttention() *Task {
+func (p PersonalStatus) TaskNeedAttention() *Task {
 	if p.personalStatus.TaskNeedAttention == nil {
 		return nil
 	}
