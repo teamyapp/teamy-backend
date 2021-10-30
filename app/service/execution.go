@@ -22,6 +22,15 @@ var availableActions = taskActionMap{
 		entity.TaskActionAssignOwner,
 		entity.TaskActionDelete,
 	},
+	entity.TaskStatusInProgress: {
+		entity.TaskActionMarkComplete,
+		entity.TaskActionReportBlocked,
+		entity.TaskActionAssignOwner,
+		entity.TaskActionDelete,
+	},
+	entity.TaskStatusDelivered: {
+		entity.TaskActionDelete,
+	},
 }
 
 type Execution struct {
