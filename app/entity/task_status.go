@@ -3,7 +3,8 @@ package entity
 type TaskStatus int
 
 const (
-	TaskStatusUpcoming TaskStatus = iota
+	TaskStatusNeedAttention TaskStatus = iota
+	TaskStatusUpcoming
 	TaskStatusInProgress
 	TaskStatusDelivered
 )

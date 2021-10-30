@@ -43,7 +43,7 @@ func (t Task) NumOfUnknowns() *int32 {
 }
 
 func (t Task) AvailableActions() []TaskAction {
-	panic("not implemented")
+	return toGraphQLTaskActions(t.task.AvailableActions)
 }
 
 func (t Task) AvailableWorkScopes() []Option {

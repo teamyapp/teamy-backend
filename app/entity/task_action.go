@@ -7,5 +7,5 @@ const (
 	TaskActionDelete
 	TaskActionAssignOwner
 	TaskActionReportBlocked
-	TaskActionComplete
+	TaskActionMarkComplete
 )

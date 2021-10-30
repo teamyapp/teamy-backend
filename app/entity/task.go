@@ -16,4 +16,5 @@ type Task struct {
 	Effort           *int
 	DependsOnTaskIDs []int
 	NumOfUnknowns    *int
+	AvailableActions []TaskAction
 }

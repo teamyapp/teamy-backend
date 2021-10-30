@@ -8,6 +8,22 @@ import (
 	"github.com/teamyapp/teamy-backend/app/repo"
 )
 
+type taskActionMap = map[entity.TaskStatus][]entity.TaskAction
+
+var availableActions = taskActionMap{
+	entity.TaskStatusUpcoming: {
+		entity.TaskActionStart,
+		entity.TaskActionDelete,
+		entity.TaskActionAssignOwner,
+	},
+	entity.TaskStatusNeedAttention: {
+		entity.TaskActionMarkComplete,
+		entity.TaskActionReportBlocked,
+		entity.TaskActionAssignOwner,
+		entity.TaskActionDelete,
+	},
+}
+
 type Execution struct {
 	teamService           Team
 	prioritizationService Prioritization
@@ -31,11 +47,17 @@ func (e Execution) GetPersonalStatusForActiveTeam(userID oneEntity.ID) (entity.P
 		log.Println(err)
 		return entity.PersonalStatus{}, err
 	}
+	upcomingTasks = e.prioritizationService.prioritizeTasks(upcomingTasks)
+	upcomingTasks = tasksWithAvailableActions(upcomingTasks, entity.TaskStatusUpcoming)
 
 	taskNeedAttention, err := e.taskRepo.FindTaskNeedAttentionForUser(userID, activeTeam.ID)
 	if err != nil {
 		log.Println(err)
 		return entity.PersonalStatus{}, err
+	}
+	if taskNeedAttention != nil {
+		task := taskWithAvailableActions(*taskNeedAttention, entity.TaskStatusNeedAttention)
+		taskNeedAttention = &task
 	}
 
 	deliveredTasks, err := e.taskRepo.FindTasksForUser(userID, activeTeam.ID, entity.TaskStatusDelivered)
@@ -43,10 +65,11 @@ func (e Execution) GetPersonalStatusForActiveTeam(userID oneEntity.ID) (entity.P
 		log.Println(err)
 		return entity.PersonalStatus{}, err
 	}
+	deliveredTasks = tasksWithAvailableActions(deliveredTasks, entity.TaskStatusDelivered)
 
 	return entity.PersonalStatus{
 		TaskNeedAttention: taskNeedAttention,
-		UpcomingTasks:     e.prioritizationService.prioritizeTasks(upcomingTasks),
+		UpcomingTasks:     upcomingTasks,
 		DeliveredTasks:    deliveredTasks,
 	}, nil
 }
@@ -68,24 +91,43 @@ func (e Execution) GetActiveTeamStatus(userID oneEntity.ID) (entity.TeamStatus, 
 		log.Println(err)
 		return entity.TeamStatus{}, err
 	}
+	upcomingTasks = e.prioritizationService.prioritizeTasks(upcomingTasks)
+	upcomingTasks = tasksWithAvailableActions(upcomingTasks, entity.TaskStatusUpcoming)
 
 	inProgressTasks, err := e.taskRepo.FindTasksForTeam(activeTeam.ID, entity.TaskStatusInProgress)
 	if err != nil {
 		log.Println(err)
 		return entity.TeamStatus{}, err
 	}
+	inProgressTasks = tasksWithAvailableActions(inProgressTasks, entity.TaskStatusInProgress)
 
 	deliveredTasks, err := e.taskRepo.FindTasksForTeam(activeTeam.ID, entity.TaskStatusDelivered)
 	if err != nil {
 		log.Println(err)
 		return entity.TeamStatus{}, err
 	}
+	deliveredTasks = tasksWithAvailableActions(deliveredTasks, entity.TaskStatusDelivered)
 
 	return entity.TeamStatus{
-		UpcomingTasks:   e.prioritizationService.prioritizeTasks(upcomingTasks),
+		UpcomingTasks:   upcomingTasks,
 		InProgressTasks: inProgressTasks,
 		DeliveredTasks:  deliveredTasks,
 	}, nil
+}
+
+func tasksWithAvailableActions(tasks []entity.Task, taskStatus entity.TaskStatus) []entity.Task {
+	newTasks := make([]entity.Task, 0)
+	for _, task := range tasks {
+		newTasks = append(newTasks, taskWithAvailableActions(task, taskStatus))
+	}
+	return newTasks
+}
+
+func taskWithAvailableActions(task entity.Task, taskStatus entity.TaskStatus) entity.Task {
+	if actions, ok := availableActions[taskStatus]; ok {
+		task.AvailableActions = actions
+	}
+	return task
 }
 
 func NewExecution(
