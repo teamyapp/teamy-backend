@@ -79,6 +79,7 @@ CREATE TABLE user_state
 	active_team_id INTEGER REFERENCES team ON UPDATE CASCADE
 );
 
+
 -- ====================================== Seed tables ======================================
 -- Users
 INSERT INTO "user" (name, profile_url)
@@ -99,23 +100,23 @@ INSERT INTO "user" (name, profile_url)
 VALUES ('Kyle Armster ', 'http://static.teamyapp.com/user/8/profile.png');
 
 -- Tasks
-INSERT INTO task (goal)
-VALUES ('Draft need attention, upcoming, and delivered API');
-INSERT INTO task (goal, due_at)
-VALUES ('Create/Delete/Edit task', '2021-10-31');
-INSERT INTO task (goal, due_at)
+INSERT INTO task (goal, owner_user_id)
+VALUES ('Draft need attention, upcoming, and delivered API', 1);
+INSERT INTO task (goal, due_at, owner_user_id)
+VALUES ('Create/Delete/Edit task', '2021-10-31', 1);
+INSERT INTO task (goal, due_at, owner_user_id)
 VALUES ('To implement the repository storing the graph structures',
-		'2021-10-31');
-INSERT INTO task (goal)
-VALUES ('Add unit tests to identity service core logic');
+		'2021-10-31', 1);
+INSERT INTO task (goal, owner_user_id)
+VALUES ('Add unit tests to identity service core logic', 1);
 INSERT INTO task (goal)
 VALUES ('Move Identity service code into official Identity service repo');
 INSERT INTO task (goal)
 VALUES ('Productionise the core algorithm for graph based access control system');
-INSERT INTO task (goal)
-VALUES ('Refactor identity service prototype with  PubSub interface');
-INSERT INTO task (goal)
-VALUES ('Write sample code for structural design pattern');
+INSERT INTO task (goal, owner_user_id)
+VALUES ('Refactor identity service prototype with  PubSub interface', 1);
+INSERT INTO task (goal, owner_user_id)
+VALUES ('Write sample code for structural design pattern', 1);
 INSERT INTO task (goal)
 VALUES ('Create a Typescript client lib for identity service');
 INSERT INTO task (goal)
@@ -144,8 +145,8 @@ INSERT INTO team (name, logo_url)
 VALUES ('Microsoft', 'http://static.teamyapp.com/team/6/logo.png');
 
 -- Team members
-INSERT INTO team_member (team_id, user_id)
-VALUES (1, 1);
+INSERT INTO team_member (team_id, user_id, need_attention_task_id)
+VALUES (1, 1, 5);
 INSERT INTO team_member (team_id, user_id)
 VALUES (1, 2);
 INSERT INTO team_member (team_id, user_id, need_attention_task_id)
@@ -164,6 +165,8 @@ INSERT INTO team_member (team_id, user_id)
 VALUES (3, 7);
 INSERT INTO team_member (team_id, user_id)
 VALUES (3, 8);
+INSERT INTO team_member (team_id, user_id)
+VALUES (3, 9);
 
 -- Task statuses
 INSERT INTO task_status (value, name)
@@ -187,13 +190,13 @@ VALUES (1, 5, 2);
 INSERT INTO team_task (team_id, task_id, task_status)
 VALUES (1, 6, 2);
 INSERT INTO team_task (team_id, task_id, task_status)
-VALUES (1, 7, 2);
+VALUES (1, 7, 3);
 INSERT INTO team_task (team_id, task_id, task_status)
 VALUES (1, 8, 3);
 INSERT INTO team_task (team_id, task_id, task_status)
-VALUES (2, 9, 1);
+VALUES (3, 9, 1);
 INSERT INTO team_task (team_id, task_id, task_status)
-VALUES (2, 10, 1);
+VALUES (3, 10, 1);
 
 -- User state
 INSERT INTO user_state (user_id, active_team_id)
@@ -207,14 +210,56 @@ VALUES (8, 3);
 
 -- ====================================== Queries ======================================
 -- Select active team
-SELECT *
+SELECT team.id, team.name, team.logo_url, created_at, updated_at
 FROM user_state
 		 INNER JOIN team ON user_state.active_team_id = team.id
 WHERE user_id = 1;
 
 -- Find tasks for a given team
-SELECT *
+SELECT task.id,
+	   task.goal,
+	   task.due_at,
+	   task.context,
+	   task.owner_user_id,
+	   task.work_scope_index,
+	   task.effort,
+	   task.num_of_unknowns,
+	   task.created_at,
+	   task.updated_at
 FROM team_task
 		 INNER JOIN task ON team_task.task_id = task.id
 WHERE team_id = 1
   AND task_status = 1;
+
+-- Select task need attention
+SELECT task.id,
+	   task.goal,
+	   task.due_at,
+	   task.context,
+	   task.owner_user_id,
+	   task.work_scope_index,
+	   task.effort,
+	   task.num_of_unknowns,
+	   task.created_at,
+	   task.updated_at
+FROM team_member
+		 INNER JOIN task ON team_member.need_attention_task_id = task.id
+WHERE team_member.user_id = 1
+  AND team_member.team_id = 1;
+
+-- Select task delivered by user
+SELECT task.id,
+	   task.goal,
+	   task.due_at,
+	   task.context,
+	   task.owner_user_id,
+	   task.work_scope_index,
+	   task.effort,
+	   task.num_of_unknowns,
+	   task.created_at,
+	   task.updated_at
+FROM team_task
+		 INNER JOIN task ON team_task.task_id = task.id
+WHERE team_task.team_id = 1
+  AND team_task.task_status = 3
+  AND task.owner_user_id = 1;
