@@ -1,16 +1,12 @@
 package resolver
 
-import (
-	"github.com/teamyapp/teamy-backend/app/service"
-)
-
 type Resolver struct {
 	Query
 	Mutation
 }
 
-func NewResolver(executionService service.Execution) Resolver {
+func NewResolver(query Query) Resolver {
 	return Resolver{
-		Query: NewQuery(executionService),
+		Query: query,
 	}
 }

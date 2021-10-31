@@ -19,6 +19,7 @@ type Task interface {
 	FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
 	FindTasksForUser(userID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
 	FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error)
+	FindTaskByID(taskID oneEntity.ID) (entity.Task, error)
 }
 
 type SQLTask struct {
@@ -26,6 +27,40 @@ type SQLTask struct {
 }
 
 var _ Task = (*SQLTask)(nil)
+
+func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
+	ts := entity.Task{}
+	err := S.db.QueryRow(`
+	SELECT
+	       id,
+	       goal,
+	       due_at,
+	       context,
+	       owner_user_id,
+	       work_scope_index,
+	       effort,
+	       num_of_unknowns,
+	       created_at,
+	       updated_at
+	FROM task
+	WHERE id = $1;
+`, int(taskID)).
+		Scan(
+			&ts.ID,
+			&ts.Goal,
+			&ts.DueAt,
+			&ts.Context,
+			&ts.OwnerUserId,
+			&ts.WorkScopeIndex,
+			&ts.Effort,
+			&ts.NumOfUnknowns,
+			&ts.CreatedAt,
+			&ts.UpdatedAt)
+	if err != nil {
+		log.Println(err)
+	}
+	return ts, err
+}
 
 func (S SQLTask) FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
 	rows, err := S.db.Query(`
@@ -43,7 +78,7 @@ SELECT
 FROM team_task
 INNER JOIN task ON team_task.task_id = task.id
 WHERE team_id = $1
-  AND task_status = $2`,
+  AND task_status = $2;`,
 		int(teamID), sqlTaskStatues[taskStatus])
 	if err != nil {
 		log.Println(err)
@@ -53,24 +88,24 @@ WHERE team_id = $1
 
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
-		task := entity.Task{}
+		ts := entity.Task{}
 		err = rows.Scan(
-			&task.ID,
-			&task.Goal,
-			&task.DueAt,
-			&task.Context,
-			&task.OwnerUserId,
-			&task.WorkScopeIndex,
-			&task.Effort,
-			&task.NumOfUnknowns,
-			&task.CreatedAt,
-			&task.UpdatedAt)
+			&ts.ID,
+			&ts.Goal,
+			&ts.DueAt,
+			&ts.Context,
+			&ts.OwnerUserId,
+			&ts.WorkScopeIndex,
+			&ts.Effort,
+			&ts.NumOfUnknowns,
+			&ts.CreatedAt,
+			&ts.UpdatedAt)
 		if err != nil {
 			log.Println(err)
 			return tasks, err
 		}
 
-		tasks = append(tasks, task)
+		tasks = append(tasks, ts)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -108,24 +143,24 @@ WHERE team_task.team_id = $1
 
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
-		task := entity.Task{}
+		ts := entity.Task{}
 		err = rows.Scan(
-			&task.ID,
-			&task.Goal,
-			&task.DueAt,
-			&task.Context,
-			&task.OwnerUserId,
-			&task.WorkScopeIndex,
-			&task.Effort,
-			&task.NumOfUnknowns,
-			&task.CreatedAt,
-			&task.UpdatedAt)
+			&ts.ID,
+			&ts.Goal,
+			&ts.DueAt,
+			&ts.Context,
+			&ts.OwnerUserId,
+			&ts.WorkScopeIndex,
+			&ts.Effort,
+			&ts.NumOfUnknowns,
+			&ts.CreatedAt,
+			&ts.UpdatedAt)
 		if err != nil {
 			log.Println(err)
 			return tasks, err
 		}
 
-		tasks = append(tasks, task)
+		tasks = append(tasks, ts)
 	}
 
 	if err = rows.Err(); err != nil {

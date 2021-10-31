@@ -10,7 +10,6 @@ import (
 	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
-	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 //go:embed schema.graphqls
@@ -19,8 +18,7 @@ var rawSchema string
 //go:embed GraphQLIDE.html
 var graphIDEHTML []byte
 
-func NewServer(executionService service.Execution, port int) (http.Server, error) {
-	res := resolver.NewResolver(executionService)
+func NewServer(res resolver.Resolver, port int) (http.Server, error) {
 	schema, err := graphql.ParseSchema(rawSchema, &res)
 	if err != nil {
 		log.Println(err)

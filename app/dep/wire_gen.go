@@ -9,19 +9,23 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
+	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 // Injectors from wire.go:
 
-func InitExecutionService(sqlDB *sql.DB) service.Execution {
+func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
+	sqlTask := repo.NewSQLTask(sqlDB)
+	task := service.NewTask(sqlTask)
 	sqlTeam := repo.NewSQLTeam(sqlDB)
 	team := service.NewTeam(sqlTeam)
 	prioritization := service.NewPrioritization()
-	sqlTask := repo.NewSQLTask(sqlDB)
 	execution := service.NewExecution(team, prioritization, sqlTask)
-	return execution
+	query := resolver.NewQuery(task, execution)
+	resolverResolver := resolver.NewResolver(query)
+	return resolverResolver
 }
 
 // wire.go:
