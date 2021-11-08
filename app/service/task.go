@@ -22,7 +22,11 @@ func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
 }
 
 func (t Task) CreateTask(task entity.Task) error {
-	panic("not implemented")
+	err := t.taskRepo.CreateTask(task)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }
 
 func (t Task) DeleteTask(taskID oneEntity.ID) error {

@@ -20,6 +20,7 @@ type Task interface {
 	FindTasksForUser(userID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
 	FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error)
 	FindTaskByID(taskID oneEntity.ID) (entity.Task, error)
+	CreateTask(task entity.Task) error
 }
 
 type SQLTask struct {
@@ -27,6 +28,10 @@ type SQLTask struct {
 }
 
 var _ Task = (*SQLTask)(nil)
+
+func (S SQLTask) CreateTask(task entity.Task) error {
+	panic("implement me")
+}
 
 func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
 	ts := entity.Task{}
