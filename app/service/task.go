@@ -22,6 +22,7 @@ func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
 }
 
 func (t Task) CreateTask(task entity.Task) error {
+	// TODO: generate unique id before adding to DB
 	err := t.taskRepo.CreateTask(task)
 	if err != nil {
 		log.Println(err)
