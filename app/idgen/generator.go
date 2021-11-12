@@ -2,10 +2,13 @@ package idgen
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/repo"
 )
+
+const maxUserID = math.MaxInt32
 
 type idRange struct {
 	rangeStart   entity.ID
@@ -38,6 +41,11 @@ func (i IDGenerator) NextUniqueID(resourceType string) (entity.ID, error) {
 }
 
 func (i IDGenerator) RegisterResourceType(resourceType string) error {
+	err := i.idRangeRepo.SetAllocationEnd(resourceType, -1)
+	if err != nil {
+		return err
+	}
+
 	newRange, err := i.allocateIDRange(resourceType)
 	if err != nil {
 		return err
@@ -56,14 +64,25 @@ func (i IDGenerator) allocateIDRange(resourceType string) (idRange, error) {
 	if err != nil {
 		return idRange{}, err
 	}
+	if rangeEnd == maxUserID {
+		return idRange{}, fmt.Errorf("out of ID to allocate")
+	}
 	newRangeStart := rangeEnd + 1
-	newRangeEnd := int(rangeEnd) + i.rangeLength - 1
+	newRangeEnd := max(int(rangeEnd) + i.rangeLength - 1, maxUserID)
 	err = i.idRangeRepo.SetAllocationEnd(resourceType, rangeEnd)
 	return idRange{
 		rangeStart:   newRangeStart,
 		rangeEnd:     entity.ID(newRangeEnd),
 		nextUniqueID: newRangeStart,
 	}, err
+}
+
+func max(num1 int, num2 int) int {
+	if num1 >= num2 {
+		return num1
+	} else {
+		return num2
+	}
 }
 
 func newIDGenerator(idRangeRepo repo.IDRange, rangeLength int) IDGenerator {
