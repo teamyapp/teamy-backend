@@ -7,4 +7,5 @@ import (
 type IDRange interface {
 	GetAllocationEnd(resourceType string) (entity.ID, error)
 	SetAllocationEnd(resourceType string, allocationEnd entity.ID) error
+	ListAllResourceTypes() ([]string, error)
 }

@@ -2,13 +2,16 @@ package repo_test
 
 import (
 	"fmt"
-
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/repo"
 )
 
 type FakeIDRange struct {
 	idRangeEnds map[string]int
+}
+
+func (f FakeIDRange) ListAllResourceTypes() ([]string, error) {
+	panic("implement me")
 }
 
 func (f FakeIDRange) GetAllocationEnd(resourceType string) (oneEntity.ID, error) {
