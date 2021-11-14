@@ -39,13 +39,11 @@ func (S SQLTask) CreateTask(task entity.Task) error {
 		 owner_user_id,
 		 work_scope_index,
 		 effort,
-		 num_of_unknowns,
-		 created_at,
-		 updated_at
+		 num_of_unknowns
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 `
-	_, err := S.db.Exec(statement, int(task.ID), task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns, task.CreatedAt, task.UpdatedAt)
+	_, err := S.db.Exec(statement, int(task.ID), task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns)
 	if err != nil {
 		log.Println(err)
 	}
