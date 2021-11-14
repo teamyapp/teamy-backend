@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
         - name: teamy-backend
-          image: harbor.internal.teamyapp.com/internal/teamy-backend:latest
+          image: registry.digitalocean.com/teamyapp/teamy-backend:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 9000
@@ -66,8 +66,6 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: db-name
-      imagePullSecrets:
-        - name: harbor-cred
 ---
 apiVersion: v1
 kind: Service
