@@ -32,7 +32,6 @@ var _ Task = (*SQLTask)(nil)
 func (S SQLTask) CreateTask(task entity.Task) error {
 	statement := `
 	INSERT INTO task(
-		 id,
 		 goal,
 		 due_at,
 		 context,
@@ -41,9 +40,9 @@ func (S SQLTask) CreateTask(task entity.Task) error {
 		 effort,
 		 num_of_unknowns
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+	VALUES ($1, $2, $3, $4, $5, $6, $7);
 `
-	_, err := S.db.Exec(statement, int(task.ID), task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns)
+	_, err := S.db.Exec(statement, task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns)
 	if err != nil {
 		log.Println(err)
 	}
