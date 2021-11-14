@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
         - name: teamy-backend
-          image: harbor.internal.teamyapp.com/internal/teamy-backend-testing:latest
+          image: registry.digitalocean.com/teamyapp/teamy-backend-testing:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 9000
