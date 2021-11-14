@@ -67,6 +67,8 @@ func (i *IDGenerator) RegisterResourceType(resourceType string) error {
 }
 
 func (i *IDGenerator) UnregisterResourceType(resourceType string) {
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
 	delete(i.allocatedRanges, resourceType)
 }
 
