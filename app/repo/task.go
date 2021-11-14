@@ -30,7 +30,26 @@ type SQLTask struct {
 var _ Task = (*SQLTask)(nil)
 
 func (S SQLTask) CreateTask(task entity.Task) error {
-	panic("implement me")
+	statement := `
+	INSERT INTO task(
+		 id,
+		 goal,
+		 due_at,
+		 context,
+		 owner_user_id,
+		 work_scope_index,
+		 effort,
+		 num_of_unknowns,
+		 created_at,
+		 updated_at
+	)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+`
+	_, err := S.db.Exec(statement, int(task.ID), task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns, task.CreatedAt, task.UpdatedAt)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }
 
 func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
