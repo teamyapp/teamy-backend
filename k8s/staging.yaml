@@ -1,3 +1,23 @@
+apiVersion: kubernetes-client.io/v1
+kind: ExternalSecret
+metadata:
+  namespace: staging
+  name: teamy
+spec:
+  backendType: vault
+  vaultMountPoint: kubernetes
+  vaultRole: secrets-read-role
+  data:
+    - name: user
+      key: kv/data/secrets/db/postgres/teamy/staging
+      property: user
+    - name: password
+      key: kv/data/secrets/db/postgres/teamy/staging
+      property: password
+    - name: db-name
+      key: kv/data/secrets/db/postgres/teamy/staging
+      property: db-name
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,12 +44,28 @@ spec:
     spec:
       containers:
         - name: teamy-backend
-          image: harbor.internal.teamyapp.com/internal/teamy-backend-staging:latest
+          image: registry.digitalocean.com/teamyapp/teamy-backend-staging:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
-      imagePullSecrets:
-        - name: harbor-cred
+            - containerPort: 9000
+          env:
+            - name: DB_HOST
+              value: postgres.db.svc.cluster.local
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
+                  key: user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
+                  key: password
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
+                  key: db-name
 ---
 apiVersion: v1
 kind: Service
@@ -42,7 +78,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8080
+      targetPort: 9000
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
@@ -54,7 +90,7 @@ spec:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`teamy-backend.staging.teamyapp.com`)
+      match: Host(`backend.staging.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend

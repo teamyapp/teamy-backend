@@ -1,35 +1,35 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
 	"log"
-	"math/rand"
-	"net/http"
-	"strings"
-	"time"
 
-	"github.com/teamyapp/teamy-backend/app"
+	"github.com/teamyapp/one/db"
+	"github.com/teamyapp/teamy-backend/app/api/gql"
+	"github.com/teamyapp/teamy-backend/app/config"
+	"github.com/teamyapp/teamy-backend/app/dep"
 )
 
-const version = 1
+func init() {
+	log.SetFlags(log.LstdFlags | log.Llongfile)
+}
 
 func main() {
-	rand.Seed(time.Now().Unix())
+	cfg, err := config.FromEnv()
+	if err != nil {
+		log.Println(err)
+		panic(err)
+	}
 
-	http.HandleFunc("/random", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusOK)
+	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
+		gqlResolver := dep.InitGraphQLResolver(sqlDB)
+		server, err := gql.NewServer(gqlResolver, cfg.GraphQLAPIPort)
+		if err != nil {
+			panic(err)
+		}
 
-		randIntA := rand.Int()
-		randIntB := rand.Int()
-
-		sum := app.Add(randIntA, randIntB)
-		writer.Write([]byte(fmt.Sprintf(
-			strings.TrimPrefix(`
-Version = %d
-Random Int A = %d
-Random Int B = %d
-Sum = %d`, "\n"), version, randIntA, randIntB, sum)))
-	})
-	fmt.Println("Server started at port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+		log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIPort)
+		panic(server.ListenAndServe())
+		return nil
+	}))
 }

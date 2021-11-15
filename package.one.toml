@@ -1,0 +1,29 @@
+[[target]]
+name = "module"
+type = "goModule"
+src = [
+    "go.mod",
+    "go.sum"
+]
+
+[[target]]
+name = "main"
+type = "goBinary"
+src = [
+    "main.go"
+]
+dep = [
+	":module",
+    "(@)/app"
+]
+
+[[target]]
+name = "container"
+type = "dockerImage"
+src = [
+    "Dockerfile",
+    ".dockerignore"
+]
+dep = [
+    ":main"
+]

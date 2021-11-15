@@ -5,15 +5,23 @@ name: testing
 steps:
   - name: build image
     image: plugins/docker
+    environment:
+      GITHUB_USERNAME:
+        from_secret: GITHUB_USERNAME
+      GITHUB_PERSONAL_ACCESS_TOKEN:
+        from_secret: GITHUB_PERSONAL_ACCESS_TOKEN
     settings:
       username:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
-      repo: harbor.internal.teamyapp.com/internal/teamy-backend-testing
-      registry: harbor.internal.teamyapp.com
+      repo: registry.digitalocean.com/teamyapp/teamy-backend-testing
+      build_args_from_env:
+        - GITHUB_USERNAME
+        - GITHUB_PERSONAL_ACCESS_TOKEN
+      registry: registry.digitalocean.com
       target: production
-      cache_from: harbor.internal.teamyapp.com/internal/teamy-backend-testing
+      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-testing
 trigger:
   branch:
     - testing
@@ -44,15 +52,23 @@ name: staging
 steps:
   - name: build image
     image: plugins/docker
+    environment:
+      GITHUB_USERNAME:
+        from_secret: GITHUB_USERNAME
+      GITHUB_PERSONAL_ACCESS_TOKEN:
+        from_secret: GITHUB_PERSONAL_ACCESS_TOKEN
     settings:
       username:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
-      repo: harbor.internal.teamyapp.com/internal/teamy-backend-staging
-      registry: harbor.internal.teamyapp.com
+      repo: registry.digitalocean.com/teamyapp/teamy-backend-staging
+      build_args_from_env:
+        - GITHUB_USERNAME
+        - GITHUB_PERSONAL_ACCESS_TOKEN
+      registry: registry.digitalocean.com
       target: production
-      cache_from: harbor.internal.teamyapp.com/internal/teamy-backend-staging
+      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-staging
 trigger:
   branch:
     - master
@@ -67,15 +83,23 @@ name: production
 steps:
   - name: build image
     image: plugins/docker
+    environment:
+      GITHUB_USERNAME:
+        from_secret: GITHUB_USERNAME
+      GITHUB_PERSONAL_ACCESS_TOKEN:
+        from_secret: GITHUB_PERSONAL_ACCESS_TOKEN
     settings:
       username:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
-      repo: harbor.internal.teamyapp.com/internal/teamy-backend
-      registry: harbor.internal.teamyapp.com
+      repo: registry.digitalocean.com/teamyapp/teamy-backend
+      build_args_from_env:
+        - GITHUB_USERNAME
+        - GITHUB_PERSONAL_ACCESS_TOKEN
+      registry: registry.digitalocean.com
       target: production
-      cache_from: harbor.internal.teamyapp.com/internal/teamy-backend-staging
+      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-staging
 trigger:
   branch:
     - production

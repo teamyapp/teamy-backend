@@ -1,0 +1,88 @@
+schema {
+	query: Query
+	mutation: Mutation
+}
+
+type Query {
+	executionMode: ExecutionMode!
+	task(id: ID!): Task!
+}
+
+type Mutation {
+	createTask(task: TaskInput!): ID!
+	deleteTask(taskId: ID!): Boolean!
+	updateTask(taskId: ID!, task: TaskInput!): Boolean!
+	performTaskAction(taskId: ID!, action: TaskAction!): Boolean!
+}
+
+input TaskInput {
+	goal: String
+	dueAt: Time
+	context: String
+	ownerUserID: ID
+	workScopeIndex: Int
+	dependsOnTaskIds: [ID!]
+	numOfUnknowns: Int
+}
+
+interface Entity {
+	id: ID!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type ExecutionMode {
+	personalStatus: PersonalStatus!
+	teamStatus: TeamStatus!
+}
+
+type PersonalStatus {
+	taskNeedAttention: Task
+	upcomingTasks: [Task!]!
+	deliveredTasks: [Task!]!
+}
+
+type TeamStatus {
+	upcomingTasks: [Task!]!
+	inProgressTasks: [Task!]!
+	deliveredTasks: [Task!]!
+}
+
+type Option {
+	value: Int!
+	label: String!
+}
+
+type Task implements Entity {
+	id: ID!
+	goal: String!
+	dueAt: Time
+	context: String
+	owner: User
+	workScope: Option!
+	effort: Int
+	dependsOn: [Task!]!
+	numOfUnknowns: Int
+	availableActions: [TaskAction!]!
+	availableWorkScopes: [Option!]!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type User implements Entity {
+	id: ID!
+	name: String!
+	profileUrl: String!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+enum TaskAction {
+	START
+	DELETE
+	ASSIGN_OWNER
+	REPORT_BLOCKED
+	MARK_COMPLETE
+}
+
+scalar Time

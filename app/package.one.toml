@@ -1,0 +1,13 @@
+[[target]]
+name = "app"
+type = "goLibrary"
+dep = [
+	"(@):module",
+    "(@)/app/api",
+    "(@)/app/config",
+    "(@)/app/dep",
+    "(@)/app/entity",
+    "(@)/app/errs",
+    "(@)/app/repo",
+    "(@)/app/service"
+]
