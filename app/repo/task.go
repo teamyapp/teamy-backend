@@ -20,7 +20,8 @@ type Task interface {
 	FindTasksForUser(userID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
 	FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error)
 	FindTaskByID(taskID oneEntity.ID) (entity.Task, error)
-	CreateTask(task entity.Task) error
+	CreateTask(task entity.Task) (oneEntity.ID, error)
+	AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error
 }
 
 type SQLTask struct {
@@ -29,7 +30,23 @@ type SQLTask struct {
 
 var _ Task = (*SQLTask)(nil)
 
-func (S SQLTask) CreateTask(task entity.Task) error {
+func (S SQLTask) AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error {
+	statement := `
+	INSERT INTO team_task(
+		team_id,
+		task_id,
+	    taskStatus
+	)
+	VALUES ($1, $2, $3);
+`
+	_, err := S.db.Exec(statement, taskID, teamID, taskStatus)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 	statement := `
 	INSERT INTO task(
 		 goal,
@@ -42,11 +59,16 @@ func (S SQLTask) CreateTask(task entity.Task) error {
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7);
 `
-	_, err := S.db.Exec(statement, task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns)
+	result, err := S.db.Exec(statement, task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+	id, err := result.LastInsertId()
 	if err != nil {
 		log.Println(err)
 	}
-	return err
+	return oneEntity.ID(id), err
 }
 
 func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
