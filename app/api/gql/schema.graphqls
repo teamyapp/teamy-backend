@@ -9,7 +9,7 @@ type Query {
 }
 
 type Mutation {
-	createTask(task: TaskInput!): ID!
+	createTask(task: TaskInput!): Boolean!
 	deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Boolean!
 	performTaskAction(taskId: ID!, action: TaskAction!): Boolean!

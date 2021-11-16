@@ -11,10 +11,10 @@ type Task struct {
 	Goal             string
 	DueAt            *time.Time
 	Context          *string
-	OwnerUserId      *int
-	WorkScopeIndex   int
+	OwnerUserId      *oneEntity.ID
+	WorkScopeIndex   *int
 	Effort           *int
-	DependsOnTaskIDs []int
+	DependsOnTaskIDs []oneEntity.ID
 	NumOfUnknowns    *int
 	AvailableActions []TaskAction
 }

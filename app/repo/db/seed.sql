@@ -8,6 +8,7 @@ INSERT INTO "user" (name, profile_url) VALUES ('Martin Hitler ', 'http://static.
 INSERT INTO "user" (name, profile_url) VALUES ('Myrnin Parker ', 'http://static.teamyapp.com/user/6/profile.png');
 INSERT INTO "user" (name, profile_url) VALUES ('Jade Alpin ', 'http://static.teamyapp.com/user/7/profile.png');
 INSERT INTO "user" (name, profile_url) VALUES ('Kyle Armster ', 'http://static.teamyapp.com/user/8/profile.png');
+
 -- Tasks
 INSERT INTO task (goal, owner_user_id) VALUES ('Draft need attention, upcoming, and delivered API', 1);
 INSERT INTO task (goal, due_at, owner_user_id) VALUES ('Create/Delete/Edit task', '2021-10-31', 1);

@@ -7,7 +7,6 @@ package dep
 
 import (
 	"database/sql"
-
 	"github.com/google/wire"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
@@ -24,7 +23,8 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	prioritization := service.NewPrioritization()
 	execution := service.NewExecution(team, prioritization, sqlTask)
 	query := resolver.NewQuery(task, execution)
-	resolverResolver := resolver.NewResolver(query)
+	mutation := resolver.NewMutation(task)
+	resolverResolver := resolver.NewResolver(query, mutation)
 	return resolverResolver
 }
 
