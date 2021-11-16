@@ -34,7 +34,7 @@ func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) error {
 		return err
 	}
 
-	err = t.taskRepo.AssignTaskToTeam(task.ID,activeTeam.ID, entity.TaskStatusUpcoming)
+	err = t.taskRepo.AssignTaskToTeam(task.ID, activeTeam.ID, entity.TaskStatusUpcoming)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -55,8 +55,9 @@ func (t Task) PerformTaskAction(taskID oneEntity.ID, action entity.TaskAction) e
 	panic("not implemented")
 }
 
-func NewTask(taskRepo repo.Task) Task {
+func NewTask(taskRepo repo.Task, teamRepo repo.Team) Task {
 	return Task{
 		taskRepo: taskRepo,
+		teamRepo: teamRepo,
 	}
 }
