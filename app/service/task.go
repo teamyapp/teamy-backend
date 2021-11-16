@@ -10,6 +10,7 @@ import (
 
 type Task struct {
 	taskRepo repo.Task
+	teamRepo repo.Team
 }
 
 func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
@@ -21,12 +22,24 @@ func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
 	return task, nil
 }
 
-func (t Task) CreateTask(task entity.Task) error {
-	// TODO: generate unique id before adding to DB
+func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) error {
 	_, err := t.taskRepo.CreateTask(task)
 	if err != nil {
 		log.Println(err)
 	}
+
+	activeTeam, err := t.teamRepo.GetActiveTeam(userId)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	err = t.taskRepo.AssignTaskToTeam(task.ID,activeTeam.ID, entity.TaskStatusUpcoming)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	return nil
 }
 
