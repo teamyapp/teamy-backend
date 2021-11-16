@@ -21,6 +21,7 @@ type Task interface {
 	FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error)
 	FindTaskByID(taskID oneEntity.ID) (entity.Task, error)
 	CreateTask(task entity.Task) (oneEntity.ID, error)
+	AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error
 }
 
 type SQLTask struct {
@@ -28,6 +29,22 @@ type SQLTask struct {
 }
 
 var _ Task = (*SQLTask)(nil)
+
+func (S SQLTask) AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error {
+	statement := `
+	INSERT INTO team_task(
+		team_id,
+		task_id,
+	    taskStatus
+	)
+	VALUES ($1, $2, $3);
+`
+	_, err := S.db.Exec(statement, taskID, teamID, taskStatus)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
 
 func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 	statement := `
