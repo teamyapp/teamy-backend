@@ -21,14 +21,13 @@ func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
 	return task, nil
 }
 
-func (t Task) CreateTask(task entity.Task) (oneEntity.ID, error) {
+func (t Task) CreateTask(task entity.Task) error {
 	// TODO: generate unique id before adding to DB
-	id, err := t.taskRepo.CreateTask(task)
+	_, err := t.taskRepo.CreateTask(task)
 	if err != nil {
 		log.Println(err)
-		return 0, err
 	}
-	return id, nil
+	return nil
 }
 
 func (t Task) DeleteTask(taskID oneEntity.ID) error {
