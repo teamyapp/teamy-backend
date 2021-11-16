@@ -42,7 +42,15 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7);
 `
-	result, err := S.db.Exec(statement, task.Goal, task.DueAt, task.Context, task.OwnerUserId, task.WorkScopeIndex, task.Effort, task.NumOfUnknowns)
+	result, err := S.db.Exec(
+		statement,
+		task.Goal,
+		task.DueAt,
+		task.Context,
+		task.OwnerUserId,
+		task.WorkScopeIndex,
+		task.Effort,
+		task.NumOfUnknowns)
 	if err != nil {
 		log.Println(err)
 		return 0, err
