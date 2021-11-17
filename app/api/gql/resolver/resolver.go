@@ -5,8 +5,9 @@ type Resolver struct {
 	Mutation
 }
 
-func NewResolver(query Query) Resolver {
+func NewResolver(query Query, mutation Mutation) Resolver {
 	return Resolver{
-		Query: query,
+		Query:    query,
+		Mutation: mutation,
 	}
 }

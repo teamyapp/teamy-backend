@@ -57,9 +57,11 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 		 effort,
 		 num_of_unknowns
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7);
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
+	RETURNING id;
 `
-	result, err := S.db.Exec(
+	id := 0
+	err := S.db.QueryRow(
 		statement,
 		task.Goal,
 		task.DueAt,
@@ -67,15 +69,10 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 		task.OwnerUserId,
 		task.WorkScopeIndex,
 		task.Effort,
-		task.NumOfUnknowns)
+		task.NumOfUnknowns).Scan(&id)
 	if err != nil {
 		log.Println(err)
 		return 0, err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		log.Println(err)
 	}
 
 	return oneEntity.ID(id), err

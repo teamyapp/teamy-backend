@@ -24,7 +24,8 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	prioritization := service.NewPrioritization()
 	execution := service.NewExecution(team, prioritization, sqlTask)
 	query := resolver.NewQuery(task, execution)
-	resolverResolver := resolver.NewResolver(query)
+	mutation := resolver.NewMutation(task)
+	resolverResolver := resolver.NewResolver(query, mutation)
 	return resolverResolver
 }
 

@@ -26,6 +26,7 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 		service.NewTask,
 		service.NewExecution,
 		resolver.NewQuery,
+		resolver.NewMutation,
 		resolver.NewResolver,
 	)
 	return resolver.Resolver{}

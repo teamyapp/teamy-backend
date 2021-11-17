@@ -1,8 +1,11 @@
 package resolver
 
 import (
+	"strconv"
 	"time"
 
+	"github.com/opentracing/opentracing-go/log"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -44,4 +47,86 @@ func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 		actions = append(actions, taskActionMap[action])
 	}
 	return actions
+}
+
+func fromGraphQLTime(graphqlTime *graphql.Time) *time.Time {
+	if graphqlTime == nil {
+		return nil
+	}
+	return &graphqlTime.Time
+}
+
+func fromGraphQLIDPtr(graphqlID *graphql.ID) (*oneEntity.ID, error) {
+	if graphqlID == nil {
+		return nil, nil
+	}
+
+	id, err := fromGraphQLID(*graphqlID)
+	if err != nil {
+		log.Error(err)
+	}
+	return &id, err
+}
+
+func fromGraphQLID(graphqlID graphql.ID) (oneEntity.ID, error) {
+	id, err := strconv.Atoi(string(graphqlID))
+	if err != nil {
+		log.Error(err)
+	}
+	return (oneEntity.ID)(id), err
+}
+
+func fromGraphQLIDs(graphqlIDs *[]graphql.ID) ([]oneEntity.ID, error) {
+	if graphqlIDs == nil || len(*graphqlIDs) == 0 {
+		return nil, nil
+	}
+
+	ids := make([]oneEntity.ID, 0)
+	for _, graphqlID := range *graphqlIDs {
+		id, err := fromGraphQLID(graphqlID)
+		if err != nil {
+			return ids, err
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
+func fromInt32(num *int32) *int {
+	if num == nil {
+		return nil
+	}
+	intNum := int(*num)
+	return &intNum
+}
+
+func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error) {
+	goal := ""
+	if taskInput.Goal != nil {
+		goal = *taskInput.Goal
+	}
+
+	ownerId, err := fromGraphQLIDPtr(taskInput.OwnerUserID)
+	if err != nil {
+		log.Error(err)
+		return entity.Task{}, err
+	}
+
+	dependentTaskIds, err := fromGraphQLIDs(taskInput.DependsOnTaskIds)
+	if err != nil {
+		log.Error(err)
+		return entity.Task{}, err
+	}
+
+	task := entity.Task{
+		Goal:             goal,
+		DueAt:            fromGraphQLTime(taskInput.DueAt),
+		Context:          taskInput.Context,
+		OwnerUserId:      ownerId,
+		WorkScopeIndex:   fromInt32(taskInput.WorkScopeIndex),
+		DependsOnTaskIDs: dependentTaskIds,
+		NumOfUnknowns:    fromInt32(taskInput.NumOfUnknowns),
+	}
+	return task, nil
 }
