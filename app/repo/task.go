@@ -33,9 +33,9 @@ var _ Task = (*SQLTask)(nil)
 func (S SQLTask) AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error {
 	statement := `
 	INSERT INTO team_task(
+	    task_id,
 		team_id,
-		task_id,
-	    taskStatus
+	    task_status
 	)
 	VALUES ($1, $2, $3);
 `
