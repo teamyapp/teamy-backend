@@ -23,9 +23,10 @@ func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
 }
 
 func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) error {
-	_, err := t.taskRepo.CreateTask(task)
+	taskId, err := t.taskRepo.CreateTask(task)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 
 	activeTeam, err := t.teamRepo.GetActiveTeam(userId)
@@ -34,7 +35,7 @@ func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) error {
 		return err
 	}
 
-	err = t.taskRepo.AssignTaskToTeam(task.ID, activeTeam.ID, entity.TaskStatusUpcoming)
+	err = t.taskRepo.AssignTaskToTeam(taskId, activeTeam.ID, entity.TaskStatusUpcoming)
 	if err != nil {
 		log.Println(err)
 		return err
