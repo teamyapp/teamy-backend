@@ -1,10 +1,11 @@
 package resolver
 
 import (
-	"github.com/opentracing/opentracing-go/log"
-	oneEntity "github.com/teamyapp/one/entity"
 	"strconv"
 	"time"
+
+	"github.com/opentracing/opentracing-go/log"
+	oneEntity "github.com/teamyapp/one/entity"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -49,7 +50,7 @@ func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 	return actions
 }
 
-func fromGraphQLTime (graphqlTime *graphql.Time) *time.Time {
+func fromGraphQLTime(graphqlTime *graphql.Time) *time.Time {
 	if graphqlTime == nil {
 		return nil
 	}
@@ -85,7 +86,7 @@ func fromGraphQLIDs(graphqlIDs *[]graphql.ID) ([]oneEntity.ID, error) {
 	for _, graphqlID := range *graphqlIDs {
 		id, err := fromGraphQLID(graphqlID)
 		if err != nil {
-			return nil, err
+			return ids, err
 		}
 		ids = append(ids, id)
 	}
@@ -93,7 +94,7 @@ func fromGraphQLIDs(graphqlIDs *[]graphql.ID) ([]oneEntity.ID, error) {
 	return ids, nil
 }
 
-func fromInt32 (num *int32) *int {
+func fromInt32(num *int32) *int {
 	if num == nil {
 		return nil
 	}
@@ -101,7 +102,7 @@ func fromInt32 (num *int32) *int {
 	return &intNum
 }
 
-func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error){
+func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error) {
 	goal := ""
 	if taskInput.Goal != nil {
 		goal = *taskInput.Goal

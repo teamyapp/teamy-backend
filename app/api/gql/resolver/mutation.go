@@ -2,10 +2,11 @@ package resolver
 
 import (
 	"context"
+	"log"
+
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/service"
-	"log"
 )
 
 type Mutation struct {
@@ -13,7 +14,7 @@ type Mutation struct {
 }
 
 func (m Mutation) CreateTask(ctx context.Context, args struct {
-	Task   TaskInput
+	Task TaskInput
 }) (bool, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
@@ -21,7 +22,7 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		return false, err
 	}
 
-	task, err:= fromGraphQLTaskInput(args.Task)
+	task, err := fromGraphQLTaskInput(args.Task)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -50,7 +51,7 @@ func (m Mutation) PerformTaskAction(ctx context.Context, args struct {
 	panic("not implemented")
 }
 
-func NewMutation(taskService service.Task) Mutation{
+func NewMutation(taskService service.Task) Mutation {
 	return Mutation{
 		taskService: taskService,
 	}

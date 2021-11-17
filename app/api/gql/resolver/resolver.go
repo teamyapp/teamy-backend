@@ -7,7 +7,7 @@ type Resolver struct {
 
 func NewResolver(query Query, mutation Mutation) Resolver {
 	return Resolver{
-		Query: query,
+		Query:    query,
 		Mutation: mutation,
 	}
 }
