@@ -6,7 +6,6 @@ import (
 
 	"github.com/opentracing/opentracing-go/log"
 	oneEntity "github.com/teamyapp/one/entity"
-
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
