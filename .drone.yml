@@ -36,6 +36,7 @@ steps:
   - name: Run unit tests
     image: golang:1.17
     commands:
+      - which git
       - go mod download
       - go test ./...
 trigger:
