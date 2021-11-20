@@ -49,7 +49,6 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 	err = m.taskService.DeleteTask(taskID, userID)
 	if err != nil {
 		log.Println(err)
-		return false, err
 	}
 
 	return true, nil
