@@ -63,7 +63,6 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 	err = t.taskRepo.DeleteTeamTask(taskID, activeTeam.ID)
 	if err != nil {
 		log.Println(err)
-		return err
 	}
 
 	return nil
