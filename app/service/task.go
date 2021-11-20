@@ -52,7 +52,7 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 	// Delete record from team_task table
 	// TODO: not delete record from task table yet
 	// TODO: Delete record from team_member table (if task is need-attention task)
-	// TODO: Delete record from task_dependency table (clean up dependency)
+	// TODO: clean up the task from task dependency graph for the active team
 
 	activeTeam, err := t.teamRepo.GetActiveTeam(userID)
 	if err != nil {
