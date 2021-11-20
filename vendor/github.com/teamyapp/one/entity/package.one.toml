@@ -1,0 +1,7 @@
+[[target]]
+name = "entity"
+type = "goLibrary"
+src = "*.go"
+dep = [
+	"(@):module"
+]

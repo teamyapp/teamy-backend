@@ -1,0 +1,75 @@
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/golang-migrate/migrate/v4 v4.15.1
+## explicit; go 1.16
+github.com/golang-migrate/migrate/v4
+github.com/golang-migrate/migrate/v4/database
+github.com/golang-migrate/migrate/v4/database/multistmt
+github.com/golang-migrate/migrate/v4/database/postgres
+github.com/golang-migrate/migrate/v4/internal/url
+github.com/golang-migrate/migrate/v4/source
+github.com/golang-migrate/migrate/v4/source/file
+github.com/golang-migrate/migrate/v4/source/iofs
+# github.com/google/wire v0.5.0
+## explicit; go 1.12
+github.com/google/wire
+# github.com/graph-gophers/graphql-go v1.2.0
+## explicit; go 1.13
+github.com/graph-gophers/graphql-go
+github.com/graph-gophers/graphql-go/decode
+github.com/graph-gophers/graphql-go/errors
+github.com/graph-gophers/graphql-go/internal/common
+github.com/graph-gophers/graphql-go/internal/exec
+github.com/graph-gophers/graphql-go/internal/exec/packer
+github.com/graph-gophers/graphql-go/internal/exec/resolvable
+github.com/graph-gophers/graphql-go/internal/exec/selected
+github.com/graph-gophers/graphql-go/internal/query
+github.com/graph-gophers/graphql-go/internal/schema
+github.com/graph-gophers/graphql-go/internal/validation
+github.com/graph-gophers/graphql-go/introspection
+github.com/graph-gophers/graphql-go/log
+github.com/graph-gophers/graphql-go/relay
+github.com/graph-gophers/graphql-go/trace
+github.com/graph-gophers/graphql-go/types
+# github.com/hashicorp/errwrap v1.1.0
+## explicit
+github.com/hashicorp/errwrap
+# github.com/hashicorp/go-multierror v1.1.1
+## explicit; go 1.13
+github.com/hashicorp/go-multierror
+# github.com/joho/godotenv v1.4.0
+## explicit; go 1.12
+github.com/joho/godotenv
+# github.com/kelseyhightower/envconfig v1.4.0
+## explicit
+github.com/kelseyhightower/envconfig
+# github.com/lib/pq v1.10.4
+## explicit; go 1.13
+github.com/lib/pq
+github.com/lib/pq/oid
+github.com/lib/pq/scram
+# github.com/opentracing/opentracing-go v1.2.0
+## explicit; go 1.14
+github.com/opentracing/opentracing-go
+github.com/opentracing/opentracing-go/ext
+github.com/opentracing/opentracing-go/log
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v1.7.0
+## explicit; go 1.13
+github.com/stretchr/testify/assert
+# github.com/teamyapp/one v0.0.0-20211107052442-dd702673447c
+## explicit; go 1.17
+github.com/teamyapp/one/config
+github.com/teamyapp/one/db
+github.com/teamyapp/one/entity
+github.com/teamyapp/one/identity
+github.com/teamyapp/one/io
+# go.uber.org/atomic v1.9.0
+## explicit; go 1.13
+go.uber.org/atomic
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+## explicit
+gopkg.in/yaml.v3

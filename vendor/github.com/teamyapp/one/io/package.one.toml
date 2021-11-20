@@ -1,0 +1,7 @@
+[[target]]
+name = "io"
+type = "goLibrary"
+src = "*.go"
+dep = [
+	"(@):module"
+]
