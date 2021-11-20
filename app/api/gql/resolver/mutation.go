@@ -51,7 +51,7 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 		log.Println(err)
 	}
 
-	return true, nil
+	return true, err
 }
 
 func (m Mutation) UpdateTask(ctx context.Context, args struct {
