@@ -50,7 +50,7 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 	// UI:
 	//		delete task from all active team view
 	// Delete record from team_task table
-	// TODO: not delete record from task table yet
+	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
 	// TODO: Delete record from team_member table (if task is need-attention task)
 	// TODO: clean up the task from task dependency graph for the active team
 
