@@ -65,7 +65,7 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 		log.Println(err)
 	}
 
-	return nil
+	return err
 }
 
 func (t Task) UpdateTask(task entity.Task) error {
