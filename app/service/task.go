@@ -67,7 +67,6 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 	if err != nil {
 		log.Println(err)
 	}
-
 	return err
 }
 
