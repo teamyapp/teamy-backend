@@ -35,7 +35,7 @@ var _ Task = (*SQLTask)(nil)
 func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error {
 	statement := `
 	UPDATE team_member
-	SET need_attention_task_id = null
+	SET need_attention_task_id = NULL
 	WHERE need_attention_task_id = $1 AND user_id = $2 AND team_id = $3;
 `
 	_, err := S.db.Exec(statement, taskID, userID, teamID)
@@ -44,7 +44,6 @@ func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.I
 	}
 	return err
 }
-
 
 func (S SQLTask) DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error {
 	statement := `

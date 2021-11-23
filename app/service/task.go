@@ -41,7 +41,6 @@ func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) error {
 		log.Println(err)
 		return err
 	}
-
 	return nil
 }
 
@@ -51,7 +50,6 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 	//		delete task from all active team view
 	// Delete record from team_task table
 	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
-	// TODO: delete task from need attention table
 	// TODO: clean up the task from task dependency graph for the active team
 
 	activeTeam, err := t.teamRepo.GetActiveTeam(userID)
