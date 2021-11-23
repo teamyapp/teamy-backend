@@ -23,7 +23,7 @@ type Task interface {
 	CreateTask(task entity.Task) (oneEntity.ID, error)
 	AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error
 	DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error
-	DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID) error
+	DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error
 }
 
 type SQLTask struct {
@@ -32,12 +32,13 @@ type SQLTask struct {
 
 var _ Task = (*SQLTask)(nil)
 
-func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID) error {
+func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error {
 	statement := `
-	DELETE FROM team_member
-	WHERE need_attention_task_id = $1 AND user_id = $2;
+	UPDATE team_member
+	SET need_attention_task_id = null
+	WHERE need_attention_task_id = $1 AND user_id = $2 AND team_id = $3;
 `
-	_, err := S.db.Exec(statement, taskID, userID)
+	_, err := S.db.Exec(statement, taskID, userID, teamID)
 	if err != nil {
 		log.Println(err)
 	}

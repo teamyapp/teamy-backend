@@ -65,7 +65,7 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 		log.Println(err)
 	}
 
-	err = t.taskRepo.DeleteNeedAttentionTask(taskID, userID)
+	err = t.taskRepo.DeleteNeedAttentionTask(taskID, userID, activeTeam.ID)
 	if err != nil {
 		log.Println(err)
 	}
