@@ -41,12 +41,33 @@ func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) error {
 		log.Println(err)
 		return err
 	}
-
 	return nil
 }
 
-func (t Task) DeleteTask(taskID oneEntity.ID) error {
-	panic("not implemented")
+func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
+	// Check if taskID exists - no need, we can only delete task that we can see
+	// UI:
+	//		delete task from all active team view
+	// Delete record from team_task table
+	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
+	// TODO: clean up the task from task dependency graph for the active team
+
+	activeTeam, err := t.teamRepo.GetActiveTeam(userID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	err = t.taskRepo.DeleteTeamTask(taskID, activeTeam.ID)
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = t.taskRepo.DeleteNeedAttentionTask(taskID, userID, activeTeam.ID)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }
 
 func (t Task) UpdateTask(task entity.Task) error {
