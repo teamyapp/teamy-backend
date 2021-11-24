@@ -24,6 +24,8 @@ type Task interface {
 	AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error
 	DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error
 	DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error
+	SetNeedAttentionTask(taskID *oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) (oneEntity.ID, error)
+	SetTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error
 }
 
 type SQLTask struct {
@@ -31,6 +33,40 @@ type SQLTask struct {
 }
 
 var _ Task = (*SQLTask)(nil)
+
+func (S SQLTask) SetTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error {
+	statement := `
+	UPDATE team_task
+	SET task_status = $1
+	WHERE team_id = $2 AND task_id = $3;
+`
+	_, err := S.db.Exec(statement, teamStatus, teamID, taskID)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+func (S SQLTask) SetNeedAttentionTask(taskID *oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) (oneEntity.ID, error) {
+	statement := `
+	UPDATE team_member AS updated
+	SET need_attention_task_id = $1
+	FROM (
+	    SELECT need_attention_task_id, user_id, team_id
+	    FROM team_member
+	    WHERE user_id = $2 AND team_id = $3
+	    FOR UPDATE
+	) AS previous
+	WHERE updated.user_id = previous.user_id AND updated.team_id = previous.team_id
+	RETURNING previous.need_attention_task_id;
+`
+	var needAttentionTaskID int
+	err := S.db.QueryRow(statement, taskID, userID, teamID).Scan(&needAttentionTaskID)
+	if err != nil {
+		log.Println(err)
+	}
+	return oneEntity.ID(needAttentionTaskID), err
+}
 
 func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error {
 	statement := `
@@ -87,7 +123,7 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 	VALUES ($1, $2, $3, $4, $5, $6, $7)
 	RETURNING id;
 `
-	id := 0
+	var id int
 	err := S.db.QueryRow(
 		statement,
 		task.Goal,

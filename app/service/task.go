@@ -74,6 +74,39 @@ func (t Task) UpdateTask(task entity.Task) error {
 	panic("not implemented")
 }
 
+func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
+	///*
+	//	UI:
+	//		Personal: move startTask to need attention
+	//                  bring down need attention task to upcoming
+	//		Team: move startTask to In Progress
+	//			  move need attention task back to upcoming
+	// */
+	//
+	activeTeam, err := t.teamRepo.GetActiveTeam(userID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	prevNeedAttentionTaskID, err := t.taskRepo.SetNeedAttentionTask(&startTaskID, userID, activeTeam.ID)
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = t.taskRepo.SetTaskStatus(startTaskID, activeTeam.ID, entity.TaskStatusInProgress)
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = t.taskRepo.SetTaskStatus(prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return err
+}
+
 func (t Task) PerformTaskAction(taskID oneEntity.ID, action entity.TaskAction) error {
 	panic("not implemented")
 }
