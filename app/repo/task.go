@@ -25,7 +25,7 @@ type Task interface {
 	DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error
 	DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error
 	SetNeedAttentionTask(taskID *oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) (*oneEntity.ID, error)
-	SetTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error
+	SetTeamTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error
 }
 
 type SQLTask struct {
