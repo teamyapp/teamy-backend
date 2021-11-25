@@ -34,7 +34,7 @@ type SQLTask struct {
 
 var _ Task = (*SQLTask)(nil)
 
-func (S SQLTask) SetTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error {
+func (S SQLTask) SetTeamTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error {
 	statement := `
 	UPDATE team_task
 	SET task_status = $1

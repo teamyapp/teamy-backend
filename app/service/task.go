@@ -86,24 +86,24 @@ func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
 	prevNeedAttentionTaskID, err := t.taskRepo.SetNeedAttentionTask(&startTaskID, userID, activeTeam.ID)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 
-	err = t.taskRepo.SetTaskStatus(startTaskID, activeTeam.ID, entity.TaskStatusInProgress)
+	err = t.taskRepo.SetTeamTaskStatus(startTaskID, activeTeam.ID, entity.TaskStatusInProgress)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 
 	if prevNeedAttentionTaskID != nil {
-			err = t.taskRepo.SetTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
-	        if err != nil {
-		        log.Println(err)
-		        return err
-	        }
+		err = t.taskRepo.SetTeamTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 	}
-	
-	return nil
 
-	return err
+	return nil
 }
 
 func (t Task) PerformTaskAction(taskID oneEntity.ID, action entity.TaskAction) error {
