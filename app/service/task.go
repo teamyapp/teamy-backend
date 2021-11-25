@@ -102,7 +102,11 @@ func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
 		log.Println(err)
 	}
 
-	err = t.taskRepo.SetTaskStatus(prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
+	if prevNeedAttentionTaskID == nil {
+		return nil
+	}
+
+	err = t.taskRepo.SetTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
 	if err != nil {
 		log.Println(err)
 	}
