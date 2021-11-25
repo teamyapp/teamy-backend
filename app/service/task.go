@@ -75,14 +75,6 @@ func (t Task) UpdateTask(task entity.Task) error {
 }
 
 func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
-	///*
-	//	UI:
-	//		Personal: move startTask to need attention
-	//                  bring down need attention task to upcoming
-	//		Team: move startTask to In Progress
-	//			  move need attention task back to upcoming
-	// */
-	//
 
 	// TODO: a user starts others' task will assign that task to the himself
 	// TODO: need a modal to confirm above
