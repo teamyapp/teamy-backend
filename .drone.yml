@@ -1,9 +1,25 @@
 kind: pipeline
 type: kubernetes
+name: feature
+
+steps:
+  - name: Run unit tests
+    image: golang:1.17
+    commands:
+      - go test ./...
+trigger:
+  branch:
+    - master
+    - main
+  event:
+    - pull_request
+---
+kind: pipeline
+type: kubernetes
 name: testing
 
 steps:
-  - name: build image
+  - name: build & publish Docker image
     image: plugins/docker
     settings:
       username:
@@ -32,26 +48,10 @@ trigger:
 ---
 kind: pipeline
 type: kubernetes
-name: feature
-
-steps:
-  - name: Run unit tests
-    image: golang:1.17
-    commands:
-      - go test ./...
-trigger:
-  branch:
-    - master
-    - main
-  event:
-    - pull_request
----
-kind: pipeline
-type: kubernetes
 name: staging
 
 steps:
-  - name: build image
+  - name: build & publish Docker image
     image: plugins/docker
     environment:
     settings:
@@ -85,7 +85,7 @@ type: kubernetes
 name: production
 
 steps:
-  - name: build image
+  - name: build & publish Docker image
     image: plugins/docker
     settings:
       username:
