@@ -60,12 +60,12 @@ func (S SQLTask) SetNeedAttentionTask(taskID *oneEntity.ID, userID oneEntity.ID,
 	WHERE updated.user_id = previous.user_id AND updated.team_id = previous.team_id
 	RETURNING previous.need_attention_task_id;
 `
-	var needAttentionTaskID int
+	var needAttentionTaskID sql.NullInt64
 	err := S.db.QueryRow(statement, taskID, userID, teamID).Scan(&needAttentionTaskID)
 	if err != nil {
 		log.Println(err)
 	}
-	return oneEntity.ID(needAttentionTaskID), err
+	return oneEntity.ID(needAttentionTaskID.Int64), err
 }
 
 func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error {
