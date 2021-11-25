@@ -93,14 +93,15 @@ func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
 		log.Println(err)
 	}
 
-	if prevNeedAttentionTaskID == nil {
-		return nil
+	if prevNeedAttentionTaskID != nil {
+			err = t.taskRepo.SetTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
+	        if err != nil {
+		        log.Println(err)
+		        return err
+	        }
 	}
-
-	err = t.taskRepo.SetTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
-	if err != nil {
-		log.Println(err)
-	}
+	
+	return nil
 
 	return err
 }
