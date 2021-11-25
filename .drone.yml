@@ -34,7 +34,6 @@ steps:
     image: plugins/webhook
     settings:
       urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
-      content_type: application/json
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
@@ -67,7 +66,6 @@ steps:
     image: plugins/webhook
     settings:
       urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
-      content_type: application/json
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
@@ -100,7 +98,6 @@ steps:
     image: plugins/webhook
     settings:
       urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
-      content_type: application/json
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend",
