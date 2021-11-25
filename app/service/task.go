@@ -75,7 +75,6 @@ func (t Task) UpdateTask(task entity.Task) error {
 }
 
 func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
-
 	// TODO: a user starts others' task will assign that task to the himself
 	// TODO: show a modal to confirm task should be reassigned.
 	activeTeam, err := t.teamRepo.GetActiveTeam(userID)
