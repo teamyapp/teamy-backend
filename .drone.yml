@@ -14,6 +14,16 @@ steps:
       registry: registry.digitalocean.com
       target: production
       cache_from: registry.digitalocean.com/teamyapp/teamy-backend-testing
+  - name: notify image update
+    image: plugins/webhook
+    settings:
+      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      content_type: application/json
+      template: |
+        {
+          "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
+          "tag": "latest"
+        }
 trigger:
   branch:
     - testing
@@ -53,6 +63,16 @@ steps:
       registry: registry.digitalocean.com
       target: production
       cache_from: registry.digitalocean.com/teamyapp/teamy-backend-staging
+  - name: notify image update
+    image: plugins/webhook
+    settings:
+      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      content_type: application/json
+      template: |
+        {
+          "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
+          "tag": "latest"
+        }
 trigger:
   branch:
     - master
@@ -76,8 +96,19 @@ steps:
       registry: registry.digitalocean.com
       target: production
       cache_from: registry.digitalocean.com/teamyapp/teamy-backend
+  - name: notify image update
+    image: plugins/webhook
+    settings:
+      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      content_type: application/json
+      template: |
+        {
+          "name": "registry.digitalocean.com/teamyapp/teamy-backend",
+          "tag": "latest"
+        }
 trigger:
   branch:
     - production
   event:
     - push
+
