@@ -1,0 +1,24 @@
+type User {
+	# core information
+    id: ID!
+	name: String!
+	profileUrl: String!
+    """
+    All tasks relates to this user, 
+    be it a creator or assignee or commenter, or any kinds of participants, 
+    sort by relevance.
+    Relevance will be defined later.
+    """
+    tasks:             [Task!]!
+    taskNeedAttention: Task
+	upcomingTasks:     [Task!]!
+	deliveredTasks:    [Task!]!
+    # time flow
+	lifetimeEvents: [LifetimeEvent!]!
+}
+
+input UserInput {
+    id: ID!
+    "full text search patterns"
+    name: String!
+}

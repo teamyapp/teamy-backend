@@ -1,0 +1,37 @@
+type Task {
+	# core information
+    id: ID!
+	goal: String!    # is this title?
+	context: String! # content?
+    mentioned:  [Mentionable!]!
+	creator: User!
+    comments:  [Comment!]!
+    "the owner or the person who is responsible of. Usually 1 primary owner and sometimes 2 owners."
+    assignee: [User!]!
+	dependsOn: [Task!]!
+    # time flow
+    dueAt: Time
+    lifetimeEvents: [TaskLifetimeEvent!]!
+}
+
+union TaskLifetimeEvent = TaskAction | LifetimeEvent
+
+input TaskFilter {
+    id: ID!
+    "full text search patterns that searches across goal and context"
+    content: String!
+    "related user ids"
+    relatedTo: [ID!]!
+}
+
+type Comment {
+    commenter:  User!
+    content:    String!
+    mentioned:  [Mentionable!]!
+}
+
+"""
+Mentionable is a backend computed value according to text content of task or comments
+so that frontend doesn't need to compute is again.
+"""
+union Mentionable = User | Task
