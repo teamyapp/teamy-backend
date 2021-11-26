@@ -7,7 +7,7 @@ type Task {
 	creator: User!
     comments:  [Comment!]!
     "the owner or the person who is responsible of. Usually 1 primary owner and sometimes 2 owners."
-    assignee: [User!]!
+    assignees: [User!]!
 	dependsOn: [Task!]!
     # time flow
     dueAt: Time
