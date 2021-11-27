@@ -2,13 +2,12 @@ package gqlv2
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/graph-gophers/graphql-go"
 )
 
 //go:embed graphiql.html
@@ -110,8 +109,18 @@ func (t Task) Creator() (User, error) {
 	user.dep = t.deps
 	return user, err
 }
-func (t Task) Assignees() []User                   { return []User{} }
-func (t Task) LifetimeEvents() []TaskLifetimeEvent { return []TaskLifetimeEvent{} }
+func (t Task) Assignees() []User { return []User{} }
+func (t Task) LifetimeEvents() []LifetimeEvent {
+	events := t.deps.Data.FilterLifetimeEvents(func(e LifetimeEvent) bool {
+		fmt.Printf("filter lifetime event %+v\n", e)
+		return e.EventType.Creation != nil
+	})
+	for i := range events {
+		events[i].deps = t.deps
+		events[i].EventType.dep = t.deps
+	}
+	return events
+}
 
 type Mentionable struct {
 	dep  Dependencies
@@ -174,83 +183,67 @@ func (u User) DeliveredTasks() []Task {
 	return nil
 }
 
-type TaskLifetimeEvent struct{}
+type LifetimeEventEnum string
 
-//
-// In Memory Database
-type Data struct {
-	lock  *sync.Mutex
-	file  string
-	Tasks map[int32]Task
-	Users map[int32]User
+const (
+	Creation    LifetimeEventEnum = "Creation"
+	AssignOwner LifetimeEventEnum = "AssignOwner"
+)
+
+type LifetimeEvent struct {
+	deps       Dependencies
+	ID         int32
+	ActorID    int32
+	HappensAt_ time.Time
+	// GraphQL fields
+	EventType LifetimeEventType
 }
 
-func (d Data) GetTasks(ids []int32) []Task {
-	var tasks []Task
-	for _, id := range ids {
-		task, ok := d.Tasks[id]
-		if ok {
-			tasks = append(tasks, task)
-		}
-	}
-	return tasks
+func (e LifetimeEvent) Actor() (User, error) {
+	return e.deps.Data.GetUser(e.ActorID)
 }
 
-func (d Data) FilterTasks(filter func(t Task) bool) []Task {
-	var tasks []Task
-	for _, task := range d.Tasks {
-		if filter(task) {
-			tasks = append(tasks, task)
-		}
-	}
-	return tasks
+func (e LifetimeEvent) HappensAt() graphql.Time {
+	t := graphql.Time{}
+	t.Time = e.HappensAt_
+	return t
 }
 
-func (d Data) CreateTask(task TaskInput, creatorID int32) (Task, error) {
-	newID := int32(len(d.Tasks)) + 1
-	context := ""
-	if task.Context != nil {
-		context = *task.Context
-	}
-	d.Tasks[newID] = Task{
-		ID:        newID,
-		Goal:      task.Goal,
-		Context:   context,
-		CreatorID: creatorID,
-	}
-	return d.Tasks[newID], d.Write()
+type LifetimeEventType struct {
+	dep         Dependencies
+	Type        LifetimeEventEnum
+	Creation    *EventCreation
+	AssignOwner *EventAssignOwner
 }
 
-func (d Data) GetUser(id int32) (User, error) {
-	user, ok := d.Users[id]
-	if !ok {
-		return User{}, fmt.Errorf("user %v not found", id)
+func (e LifetimeEventType) ToCreation() (*EventCreation, bool) {
+	if e.Creation != nil {
+		e.Creation.dep = e.dep
 	}
-	return user, nil
+	return e.Creation, e.Creation != nil
 }
 
-func (d Data) Write() error {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
-	bytes, err := json.MarshalIndent(d, "", "  ")
-	if err != nil {
-		return err
+func (e LifetimeEventType) ToAssignOwner() (*EventAssignOwner, bool) {
+	if e.AssignOwner != nil {
+		e.AssignOwner.dep = e.dep
 	}
-	return os.WriteFile(d.file, bytes, os.ModePerm)
+	return e.AssignOwner, e.AssignOwner != nil
 }
 
-func Read(path string) *Data {
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	data := Data{}
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		panic(err)
-	}
-	data.file = path
-	data.lock = &sync.Mutex{}
-	return &data
+type EventCreation struct {
+	dep    Dependencies
+	TaskID int32
+}
+
+func (e EventCreation) Task() (Task, error) {
+	return e.dep.Data.GetTask(e.TaskID)
+}
+
+type EventAssignOwner struct {
+	dep     Dependencies
+	ownerID int32
+}
+
+func (e EventAssignOwner) Owner() (User, error) {
+	return e.dep.Data.GetUser(e.ownerID)
 }

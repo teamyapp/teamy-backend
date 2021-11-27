@@ -11,30 +11,22 @@ type Query {
 }
 
 type LifetimeEvent {
-    eventType: LifetimeEventEventType!
+    id: Int!
+    eventType: LifetimeEventType!
     "who did it"
     actor:     User!
     happensAt: Time!
 }
 
-enum LifetimeEventEventType {
-    creation
-    change
-    close
-    archive
-    delete
+union LifetimeEventType = Creation | AssignOwner
+
+type Creation {
+    task: Task!
 }
 
-# enum TaskAction {
-# 	START
-# 	DELETE
-# 	ASSIGN_OWNER
-# 	REPORT_BLOCKED
-# 	MARK_COMPLETE
-# }
-
-scalar Time
-
+type AssignOwner {
+    Owner: User!
+}
 
 type User {
 	# core information
@@ -54,12 +46,6 @@ type User {
     # time flow
 	# lifetimeEvents: [LifetimeEvent!]!
 }
-
-input UserInput {
-    id: ID!
-    "full text search patterns"
-    name: String!
-}
 type Task {
 	# core information
     id: Int!
@@ -73,10 +59,8 @@ type Task {
 	dependsOn: [Task!]!
     # time flow
     # dueAt: Time
-    # lifetimeEvents: [TaskLifetimeEvent!]!
+    lifetimeEvents: [LifetimeEvent!]!
 }
-
-# union TaskLifetimeEvent = TaskAction | LifetimeEvent
 
 input TaskFilter {
     id: ID!
@@ -108,3 +92,12 @@ input TaskInput {
     goal: String!
     context: String
 }
+
+input UserInput {
+    id: ID!
+    "full text search patterns"
+    name: String!
+}
+
+
+scalar Time
