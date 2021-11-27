@@ -10,7 +10,7 @@ require (
 	github.com/teamyapp/one v0.0.0-20211107052442-dd702673447c
 )
 
-//replace github.com/teamyapp/one => ../../tool/oneFramework
+replace github.com/teamyapp/one => ../../tool/oneFramework
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

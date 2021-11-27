@@ -23,7 +23,7 @@ func main() {
 
 	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
 		gqlResolver := dep.InitGraphQLResolver(sqlDB)
-		server, err := gql.NewServer(gqlResolver, cfg.GraphQLAPIPort)
+		server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.GraphQLAPIPort)
 		if err != nil {
 			panic(err)
 		}

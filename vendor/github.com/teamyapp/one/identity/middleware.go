@@ -1,7 +1,10 @@
 package identity
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,6 +14,7 @@ import (
 )
 
 type Middleware struct {
+	verifyTokenURL string
 	handler http.Handler
 }
 
@@ -41,8 +45,21 @@ func (w Middleware) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 
 func getUserID(bearerToken string) (entity.ID, error) {
 	// TODO: invoke Identity service API
-	num, err := strconv.Atoi(bearerToken)
-	return entity.ID(num), err
+	res, err := http.Post(
+		"http://localhost:9500/identity/verify-token",
+		"text/plain", bytes.NewReader([]byte(bearerToken)))
+	if err != nil {
+		return 0, err
+	}
+	if res.StatusCode == http.StatusUnauthorized {
+		return -1, errors.New("invalid access token")
+	}
+	buf, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return -1, err
+	}
+	userID, err := strconv.Atoi(string(buf))
+	return entity.ID(userID), err
 }
 
 func getBearerToken(request *http.Request) (string, error) {
@@ -66,6 +83,10 @@ func getBearerToken(request *http.Request) (string, error) {
 	return parts[1], nil
 }
 
-func WithMiddleware(handler http.Handler) Middleware {
-	return Middleware{handler: handler}
+func WithMiddleware(identityAPIEndpoint string, handler http.Handler) Middleware {
+	verifyTokenURL := fmt.Sprintf("%s/identity/verify-token", identityAPIEndpoint)
+	return Middleware{
+		verifyTokenURL: verifyTokenURL,
+		handler: handler,
+	}
 }
