@@ -6,6 +6,7 @@ schema {
 type Query {
 	tasks(input: [TaskFilter!]!): [Task!]!
     users(input: [UserFilter!]!): [User!]!
+    me: User!
 }
 
 type LifetimeEvent {
