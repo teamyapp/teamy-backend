@@ -40,8 +40,10 @@ func (r Root) Tasks(args struct{ ID int32 }) ([]Task, error) {
 	return tasks, nil
 }
 
-func (r Root) Me() User {
-	return User{}
+func (r Root) Me() (User, error) {
+	u, err := r.Deps.Data.GetUser(1)
+	u.deps = r.Deps
+	return u, err
 }
 
 type TaskInput struct {
@@ -106,14 +108,14 @@ func (t Task) Comments() []Comment { return []Comment{} }
 func (t Task) DependsOn() []Task   { return []Task{} }
 func (t Task) Creator() (User, error) {
 	user, err := t.deps.Data.GetUser(t.CreatorID)
-	user.dep = t.deps
+	user.deps = t.deps
 	return user, err
 }
 func (t Task) Assignees() []User { return []User{} }
 func (t Task) LifetimeEvents() []LifetimeEvent {
 	events := t.deps.Data.FilterLifetimeEvents(func(e LifetimeEvent) bool {
-		fmt.Printf("filter lifetime event %+v\n", e)
-		return e.EventType.Creation != nil
+		fmt.Println(e.EventType.Creation.TaskID, t.ID)
+		return e.EventType.Creation.TaskID == t.ID
 	})
 	for i := range events {
 		events[i].deps = t.deps
@@ -157,15 +159,18 @@ func (t Comment) Mentioned() []Mentionable {
 	return []Mentionable{}
 }
 
+//////////
+// User //
+//////////
 type User struct {
-	dep        Dependencies
+	deps       Dependencies
 	ID         int32
 	Name       string
 	ProfileUrl string
 }
 
 func (u User) Tasks() []Task {
-	tasks := u.dep.Data.FilterTasks(func(t Task) bool {
+	tasks := u.deps.Data.FilterTasks(func(t Task) bool {
 		return t.CreatorID == u.ID
 	})
 	return tasks
@@ -183,6 +188,20 @@ func (u User) DeliveredTasks() []Task {
 	return nil
 }
 
+func (t User) LifetimeEvents() []LifetimeEvent {
+	events := t.deps.Data.FilterLifetimeEvents(func(e LifetimeEvent) bool {
+		return e.ActorID == t.ID
+	})
+	for i := range events {
+		events[i].deps = t.deps
+		events[i].EventType.dep = t.deps
+	}
+	return events
+}
+
+/////////////////////
+// Lifetime Events //
+/////////////////////
 type LifetimeEventEnum string
 
 const (

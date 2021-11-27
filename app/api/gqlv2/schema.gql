@@ -44,7 +44,7 @@ type User {
 	upcomingTasks:     [Task!]!
 	deliveredTasks:    [Task!]!
     # time flow
-	# lifetimeEvents: [LifetimeEvent!]!
+	lifetimeEvents: [LifetimeEvent!]!
 }
 type Task {
 	# core information
@@ -82,8 +82,9 @@ so that frontend doesn't need to compute is again.
 """
 union Mentionable = User | Task
 
-
-# mutation
+"""
+Mutation
+"""
 type Mutation {
     CreateTask(input: TaskInput!): Task!
 }
