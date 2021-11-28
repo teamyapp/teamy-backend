@@ -70,6 +70,7 @@ type Task implements Entity {
 	createdAt: Time!
 	updatedAt: Time
 	lifetimeEvents: [LifetimeEvent!]!
+	mentions: [Mention!]!
 }
 
 type User implements Entity {
@@ -102,4 +103,22 @@ type LifetimeEvent {
 	actorID:   ID!
     happensAt: Time!
 }
+
+"""
+Mention is a backend computed value according to text content of task or comments
+so that frontend doesn't need to compute is again.
+"""
+type Mention {
+	# todo: will add when v2 User & Task is merged into v1
+	# mentionable: Mentionable!
+	"""
+	offset is the 0-based index of the starting of the mentioned text.
+	The frontend can use this information to heightlight/replace/hyperlink the substring
+	"""
+	offset: Int!
+	"the length of the mentioned text"
+	limit: Int!
+}
+
+union Mentionable = User | Task
 

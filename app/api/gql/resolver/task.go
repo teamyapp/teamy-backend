@@ -41,7 +41,7 @@ func (t Task) Creator() (User, error) {
 	}
 
 	return User{
-		ID: rs[0].UserID,
+		ID: rs[0].UserID, // todo: use v2 User
 	}, nil
 }
 
@@ -78,6 +78,13 @@ func (t Task) LifetimeEvents() []resolver.LifetimeEvent {
 		events[i].EventType.Dep(t.dep)
 	}
 	return events
+}
+
+func (t Task) Mentions() ([]resolver.Mention, error) {
+	if t.Context() == nil {
+		return nil, nil
+	}
+	return resolver.ParseMentions(*t.Context()), nil
 }
 
 func newTask(task entity.Task) Task {
