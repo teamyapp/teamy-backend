@@ -87,7 +87,7 @@ func (d Data) GetUser(id graphql.ID) (User, error) {
 func (d *Data) FilterLifetimeEvents(filter func(LifetimeEvent) bool) []LifetimeEvent {
 	var events []LifetimeEvent
 	fmt.Println(&d, "FilterLifetimeEvents", d.LifetimeEvents)
-  
+
 	for _, e := range d.LifetimeEvents {
 		if filter(e) {
 			events = append(events, e)

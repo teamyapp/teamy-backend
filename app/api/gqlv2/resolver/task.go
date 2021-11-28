@@ -26,7 +26,7 @@ type Task struct {
 // Mentioned could be a function of Goal and Context
 func (t Task) Mentioned() []Mentionable {
 	fmt.Println("task/Mentioned", t.deps)
-  
+
 	parseMentioned := func(input string) (m []Mentionable) {
 		chunks := strings.Split(input, " ")
 		for _, chunk := range chunks {

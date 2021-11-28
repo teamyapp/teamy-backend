@@ -19,8 +19,8 @@ var rawSchema string
 var graphIDEHTML []byte
 
 func NewServer(res resolver.Resolver, port int) (http.Server, error) {
-	schema, err := graphql.ParseSchema(rawSchema, &res, 
-		graphql.UseFieldResolvers(), 
+	schema, err := graphql.ParseSchema(rawSchema, &res,
+		graphql.UseFieldResolvers(),
 		graphql.UseStringDescriptions())
 	if err != nil {
 		log.Println(err)
