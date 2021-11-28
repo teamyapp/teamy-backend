@@ -12,7 +12,6 @@ import (
 	"github.com/graph-gophers/graphql-go"
 )
 
-//
 // In Memory Database
 type Data struct {
 	lock           *sync.Mutex
