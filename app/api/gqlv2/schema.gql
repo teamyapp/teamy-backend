@@ -52,6 +52,7 @@ type Task {
     id: ID!
 	goal: String!    # is this title?
 	context: String! # content?
+    mentioned:  [Mentionable!]!
 	creator: User!
     "the owner or the person who is responsible of. Usually 1 primary owner and sometimes 2 owners."
     assignees: [User!]!
@@ -68,6 +69,12 @@ input TaskFilter {
     "related user ids"
     relatedTo: [ID!]!
 }
+
+"""
+Mentionable is a backend computed value according to text content of task or comments
+so that frontend doesn't need to compute is again.
+"""
+union Mentionable = User | Task
 
 """
 Mutation

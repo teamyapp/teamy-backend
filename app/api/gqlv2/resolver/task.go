@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
@@ -20,6 +21,39 @@ type Task struct {
 
 	// foreign keys
 	CreatorID graphql.ID
+}
+
+// Mentioned could be a function of Goal and Context
+func (t Task) Mentioned() []Mentionable {
+	fmt.Println("task/Mentioned", t.deps)
+	parseMentioned := func(input string) (m []Mentionable) {
+		chunks := strings.Split(input, " ")
+		for _, chunk := range chunks {
+			if len(chunk) == 0 {
+				continue
+			}
+			var id graphql.ID
+			err := id.UnmarshalGraphQL(chunk[1:])
+			if err != nil {
+				continue
+			}
+			if chunk[0] == '@' {
+				m = append(m, Mentionable{
+					dep:  t.deps,
+					Type: "User",
+					ID:   id,
+				})
+			} else if chunk[0] == '#' {
+				m = append(m, Mentionable{
+					dep:  t.deps,
+					Type: "Task",
+					ID:   id,
+				})
+			}
+		}
+		return
+	}
+	return parseMentioned(t.Context)
 }
 
 func (t Task) DependsOn() []Task { return []Task{} }
