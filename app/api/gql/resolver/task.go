@@ -1,6 +1,9 @@
 package resolver
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -24,8 +27,22 @@ func (t Task) Context() *string {
 	return t.task.Context
 }
 
-func (t Task) Owner() *User {
-	panic("not implemented")
+func (t Task) Owner() (*User, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (t Task) Creator() (User, error) {
+
+	rs := t.dep.Data.FilterCreationRelation(func(cr resolver.CreationRelation) bool {
+		return t.ID() == cr.TaskID
+	})
+	if len(rs) == 0 {
+		return User{}, fmt.Errorf("this task %v has no creator recorded", t.ID())
+	}
+
+	return User{
+		ID: rs[0].UserID,
+	}, nil
 }
 
 func (t Task) WorkScope() Option {

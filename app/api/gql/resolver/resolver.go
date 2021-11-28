@@ -9,7 +9,7 @@ type Resolver struct {
 
 func NewResolver(query Query, mutation Mutation, dep *resolver.Dependencies) Resolver {
 	query.dep = dep
-	mutation.data = dep.Data
+	mutation.dep = dep
 	return Resolver{
 		Query:    query,
 		Mutation: mutation,

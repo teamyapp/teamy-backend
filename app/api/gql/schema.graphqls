@@ -9,7 +9,7 @@ type Query {
 }
 
 type Mutation {
-	createTask(task: TaskInput!): Boolean!
+	createTask(task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Boolean!
 	startTask(taskId: ID!): Boolean!
@@ -60,6 +60,7 @@ type Task implements Entity {
 	dueAt: Time
 	context: String
 	owner: User
+	creator: User!
 	workScope: Option!
 	effort: Int
 	dependsOn: [Task!]!

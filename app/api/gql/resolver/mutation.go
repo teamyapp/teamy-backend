@@ -12,32 +12,32 @@ import (
 )
 
 type Mutation struct {
-	data        *resolver.Data
+	dep         *resolver.Dependencies
 	taskService service.Task
 }
 
 func (m Mutation) CreateTask(ctx context.Context, args struct {
 	Task TaskInput
-}) (bool, error) {
+}) (Task, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)
-		return false, err
+		return Task{}, err
 	}
 
 	task, err := fromGraphQLTaskInput(args.Task)
 	if err != nil {
 		log.Println(err)
-		return false, err
+		return Task{}, err
 	}
 
 	taskID, err := m.taskService.CreateTask(task, userID)
 	if err != nil {
 		log.Println(err)
-		return false, err
+		return Task{}, err
 	}
 
-	err = m.data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), resolver.LifetimeEventType{
+	err = m.dep.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), resolver.LifetimeEventType{
 		Type: resolver.Creation,
 		Creation: &resolver.EventCreation{
 			TaskID: graphql.ID(fmt.Sprint(taskID)),
@@ -47,7 +47,21 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		log.Println(err)
 	}
 
-	return true, nil
+	task, err = m.taskService.FindTask(taskID)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	taskResolver := newTask(task)
+	taskResolver.dep = m.dep
+
+	m.dep.Data.CreationRelations = append(m.dep.Data.CreationRelations, resolver.CreationRelation{
+		TaskID: taskResolver.ID(),
+		UserID: graphql.ID(fmt.Sprint(userID)),
+	})
+
+	return taskResolver, nil
 }
 
 func (m Mutation) StartTask(ctx context.Context, args struct {

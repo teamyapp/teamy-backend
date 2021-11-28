@@ -1,7 +1,10 @@
 package resolver
 
+import "github.com/graph-gophers/graphql-go"
+
 type User struct {
 	Entity
+	ID graphql.ID
 }
 
 func (u User) Name() string {
