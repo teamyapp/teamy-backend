@@ -7,7 +7,6 @@ package dep
 
 import (
 	"database/sql"
-
 	"github.com/google/wire"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
@@ -23,7 +22,9 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	team := service.NewTeam(sqlTeam)
 	prioritization := service.NewPrioritization()
 	execution := service.NewExecution(team, prioritization, sqlTask)
-	query := resolver.NewQuery(task, execution)
+	sqlUser := repo.NewSQLUser(sqlDB)
+	user := service.NewUser(sqlUser, sqlTeam)
+	query := resolver.NewQuery(task, execution, user)
 	mutation := resolver.NewMutation(task)
 	resolverResolver := resolver.NewResolver(query, mutation)
 	return resolverResolver
@@ -31,4 +32,4 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 
 // wire.go:
 
-var repoSet = wire.NewSet(wire.Bind(new(repo.Team), new(repo.SQLTeam)), wire.Bind(new(repo.Task), new(repo.SQLTask)), repo.NewSQLTeam, repo.NewSQLTask)
+var repoSet = wire.NewSet(wire.Bind(new(repo.Team), new(repo.SQLTeam)), wire.Bind(new(repo.Task), new(repo.SQLTask)), wire.Bind(new(repo.User), new(repo.SQLUser)), repo.NewSQLTeam, repo.NewSQLTask, repo.NewSQLUser)

@@ -14,7 +14,7 @@ func (t Team) CreateTeam(ownerUserID oneEntity.ID, team entity.Team) error {
 	panic("not implemented")
 }
 
-func (t Team) GetActiveTeam(userID oneEntity.ID) (entity.Team, error) {
+func (t Team) GetActiveTeam(userID oneEntity.ID) (*entity.Team, error) {
 	return t.teamRepo.GetActiveTeam(userID)
 }
 

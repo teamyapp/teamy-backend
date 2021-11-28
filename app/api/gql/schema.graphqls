@@ -6,6 +6,7 @@ schema {
 type Query {
 	executionMode: ExecutionMode!
 	task(id: ID!): Task!
+	activeTeam: Team
 }
 
 type Mutation {
@@ -30,6 +31,10 @@ interface Entity {
 	id: ID!
 	createdAt: Time!
 	updatedAt: Time
+}
+
+type Team {
+	members: [User!]!
 }
 
 type ExecutionMode {

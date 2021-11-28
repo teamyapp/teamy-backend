@@ -1,12 +1,13 @@
 package resolver
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/graph-gophers/graphql-go"
 	"github.com/opentracing/opentracing-go/log"
 	oneEntity "github.com/teamyapp/one/entity"
-	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -34,6 +35,18 @@ func toGraphQLInt(num *int) *int32 {
 	return &gqlInt
 }
 
+func toGraphQLID(id oneEntity.ID) graphql.ID {
+	return graphql.ID(fmt.Sprintf("%d", int(id)))
+}
+
+func toGraphQLIDs(ids []oneEntity.ID) []graphql.ID {
+	graphqlIDs := make([]graphql.ID, 0)
+	for _, id := range ids {
+		graphqlIDs = append(graphqlIDs, toGraphQLID(id))
+	}
+	return graphqlIDs
+}
+
 func toGraphQLTime(time *time.Time) *graphql.Time {
 	if time == nil {
 		return nil
@@ -47,6 +60,18 @@ func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 		actions = append(actions, taskActionMap[action])
 	}
 	return actions
+}
+
+func toGraphQLUsers(users []entity.User) []User {
+	if users == nil {
+		return nil
+	}
+
+	gqlUsers := make([]User, 0)
+	for _, user := range users {
+		gqlUsers = append(gqlUsers, newUser(user))
+	}
+	return gqlUsers
 }
 
 func fromGraphQLTime(graphqlTime *graphql.Time) *time.Time {
