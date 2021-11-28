@@ -4,8 +4,8 @@ type TaskAction string
 
 const (
 	TaskActionStart         TaskAction = "START"
-	TaskActionDelete                   = "DELETE"
-	TaskActionAssignOwner              = "ASSIGN_OWNER"
-	TaskActionReportBlocked            = "REPORT_BLOCKED"
-	TaskActionMarkComplete             = "MARK_COMPLETE"
+	TaskActionDelete        TaskAction = "DELETE"
+	TaskActionAssignOwner   TaskAction = "ASSIGN_OWNER"
+	TaskActionReportBlocked TaskAction = "REPORT_BLOCKED"
+	TaskActionMarkComplete  TaskAction = "MARK_COMPLETE"
 )
