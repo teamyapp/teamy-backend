@@ -31,7 +31,7 @@ func includeGraphiQLIDE(handlerFunc http.Handler) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method == http.MethodGet {
 			writer.WriteHeader(http.StatusOK)
-			writer.Write(resolver.QraphiQL())
+			_, _ = writer.Write(resolver.QraphiQL())
 			return
 		}
 

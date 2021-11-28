@@ -6,7 +6,7 @@ steps:
   - name: Run unit tests
     image: golang:1.17
     commands:
-      - go test ./...
+      - go test ./app/...
 trigger:
   branch:
     - master

@@ -53,7 +53,7 @@ func includeGraphiQLIDE(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method == http.MethodGet {
 			writer.WriteHeader(http.StatusOK)
-			writer.Write(graphIDEHTML)
+			_, _ = writer.Write(graphIDEHTML)
 			return
 		}
 
