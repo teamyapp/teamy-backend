@@ -89,7 +89,6 @@ enum TaskAction {
 
 scalar Time
 
-
 """
 LifetimeEvent
 """
