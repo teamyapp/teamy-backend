@@ -4,9 +4,7 @@ schema {
 }
 
 type Query {
-	# tasks(input: [TaskFilter!]!): [Task!]!
     tasks(id: ID!): [Task!]!
-    # users(input: [UserFilter!]!): [User!]!
     me: User!
 }
 
