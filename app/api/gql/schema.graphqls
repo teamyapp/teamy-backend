@@ -68,6 +68,7 @@ type Task implements Entity {
 	availableWorkScopes: [Option!]!
 	createdAt: Time!
 	updatedAt: Time
+	lifetimeEvents: [LifetimeEvent!]!
 }
 
 type User implements Entity {
@@ -87,3 +88,17 @@ enum TaskAction {
 }
 
 scalar Time
+
+"""
+LifetimeEvent
+"""
+type LifetimeEvent {
+    id: ID!
+	# todo: will add eventType & actor when v1 is merged with v2
+    # eventType: LifetimeEventType!
+    "who did it"
+    # actor:     User!
+	actorID:   ID!
+    happensAt: Time!
+}
+

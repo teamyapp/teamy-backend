@@ -94,5 +94,4 @@ input UserInput {
     name: String!
 }
 
-
 scalar Time

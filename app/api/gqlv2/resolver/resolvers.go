@@ -36,7 +36,7 @@ type Mentionable struct {
 
 func (m Mentionable) ToUser() (*User, bool) {
 	fmt.Println("Mentionable: m.dep", m.dep)
-     if m.Type != "User" {
+  if m.Type != "User" {
 		return nil, false
 	}
 	u, err := m.dep.Data.GetUser(m.ID)
@@ -47,9 +47,9 @@ func (m Mentionable) ToUser() (*User, bool) {
 }
 
 func (m Mentionable) ToTask() (*Task, bool) {
-    if m.Type != "Task" {
-        return nil, false
-    }
+  if m.Type != "Task" {
+    return nil, false
+  }
 	tasks := m.dep.Data.GetTasks([]graphql.ID{m.ID})
 	if len(tasks) == 0 {
 		return nil, false
