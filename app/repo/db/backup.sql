@@ -122,7 +122,7 @@ VALUES ('Create a Typescript client lib for identity service');
 INSERT INTO task (goal)
 VALUES ('Build a prototype of identity service with oauth working');
 
--- Task dependencies
+-- Task *Dependencies
 INSERT INTO task_dependency (need_before, need_after)
 VALUES (5, 2);
 INSERT INTO task_dependency (need_before, need_after)

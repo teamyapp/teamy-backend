@@ -3,9 +3,13 @@ package resolver
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/graph-gophers/graphql-go"
 )
 
 //
@@ -13,12 +17,12 @@ import (
 type Data struct {
 	lock           *sync.Mutex
 	file           string
-	Tasks          map[int32]Task
-	Users          map[int32]User
+	Tasks          map[graphql.ID]Task
+	Users          map[graphql.ID]User
 	LifetimeEvents []LifetimeEvent
 }
 
-func (d Data) GetTask(id int32) (Task, error) {
+func (d Data) GetTask(id graphql.ID) (Task, error) {
 	task, ok := d.Tasks[id]
 	if ok {
 		return task, nil
@@ -26,7 +30,7 @@ func (d Data) GetTask(id int32) (Task, error) {
 	return task, fmt.Errorf("can not find task %v", id)
 }
 
-func (d Data) GetTasks(ids []int32) []Task {
+func (d Data) GetTasks(ids []graphql.ID) []Task {
 	var tasks []Task
 	for _, id := range ids {
 		task, ok := d.Tasks[id]
@@ -47,8 +51,8 @@ func (d Data) FilterTasks(filter func(t Task) bool) []Task {
 	return tasks
 }
 
-func (d Data) CreateTask(task TaskInput, creatorID int32) (Task, error) {
-	newID := int32(len(d.Tasks)) + 1
+func (d Data) CreateTask(task TaskInput, creatorID graphql.ID) (Task, error) {
+	newID := graphql.ID(strconv.FormatInt(int64(len(d.Tasks))+1, 10))
 	context := ""
 	if task.Context != nil {
 		context = *task.Context
@@ -60,7 +64,7 @@ func (d Data) CreateTask(task TaskInput, creatorID int32) (Task, error) {
 		CreatorID: creatorID,
 	}
 	d.LifetimeEvents = append(d.LifetimeEvents, LifetimeEvent{
-		ID:         int32(len(d.LifetimeEvents)),
+		ID:         graphql.ID(strconv.FormatInt(int64(len(d.LifetimeEvents)), 10)),
 		ActorID:    creatorID,
 		HappensAt_: time.Now(),
 		EventType: LifetimeEventType{
@@ -73,7 +77,7 @@ func (d Data) CreateTask(task TaskInput, creatorID int32) (Task, error) {
 	return d.Tasks[newID], d.Write()
 }
 
-func (d Data) GetUser(id int32) (User, error) {
+func (d Data) GetUser(id graphql.ID) (User, error) {
 	user, ok := d.Users[id]
 	if !ok {
 		return User{}, fmt.Errorf("user %v not found", id)
@@ -81,8 +85,9 @@ func (d Data) GetUser(id int32) (User, error) {
 	return user, nil
 }
 
-func (d Data) FilterLifetimeEvents(filter func(LifetimeEvent) bool) []LifetimeEvent {
+func (d *Data) FilterLifetimeEvents(filter func(LifetimeEvent) bool) []LifetimeEvent {
 	var events []LifetimeEvent
+	fmt.Println(&d, d.LifetimeEvents)
 	for _, e := range d.LifetimeEvents {
 		if filter(e) {
 			events = append(events, e)
@@ -91,9 +96,24 @@ func (d Data) FilterLifetimeEvents(filter func(LifetimeEvent) bool) []LifetimeEv
 	return events
 }
 
+func (d *Data) CreateLifetimeEvent(creatorID graphql.ID, eventType LifetimeEventType) error {
+	d.LifetimeEvents = append(d.LifetimeEvents, LifetimeEvent{
+		ID:         graphql.ID(strconv.FormatInt(int64(len(d.LifetimeEvents)), 10)),
+		ActorID:    creatorID,
+		HappensAt_: time.Now(),
+		EventType:  eventType,
+	})
+	fmt.Println(&d, "CreateLifetimeEvent", d.LifetimeEvents)
+	return d.Write()
+}
+
 func (d Data) Write() error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
+	if d.file == "" {
+		log.Println("this data object has no persisted layer, skip file writes")
+		return nil
+	}
 
 	bytes, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
@@ -103,16 +123,26 @@ func (d Data) Write() error {
 }
 
 func Read(path string) *Data {
+	data := Data{}
+	defer func() {
+		data.lock = &sync.Mutex{}
+		if data.Tasks == nil {
+			data.Tasks = make(map[graphql.ID]Task)
+		}
+		if data.Users == nil {
+			data.Users = make(map[graphql.ID]User)
+		}
+	}()
 	bytes, err := os.ReadFile(path)
 	if err != nil {
-		panic(err)
+		log.Println(err, ", fail to load data from json, skip persistence")
+		return &data
 	}
-	data := Data{}
 	err = json.Unmarshal(bytes, &data)
 	if err != nil {
-		panic(err)
+		log.Println(err, "fail to load data from json, skip persistence")
+		return &data
 	}
 	data.file = path
-	data.lock = &sync.Mutex{}
 	return &data
 }

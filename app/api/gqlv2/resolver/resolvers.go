@@ -3,7 +3,6 @@ package resolver
 import (
 	_ "embed"
 	"fmt"
-	"time"
 
 	"github.com/graph-gophers/graphql-go"
 )
@@ -19,14 +18,20 @@ type Dependencies struct {
 	Data *Data
 }
 
+func NewDependencies() *Dependencies {
+	return &Dependencies{
+		Data: Read("./data.json"),
+	}
+}
+
 type Root struct {
-	Deps Dependencies
+	Deps *Dependencies
 }
 
 type Mentionable struct {
-	dep  Dependencies
+	dep  *Dependencies
 	Type string
-	ID   int32
+	ID   graphql.ID
 }
 
 func (m Mentionable) ToUser() (*User, bool) {
@@ -39,7 +44,7 @@ func (m Mentionable) ToUser() (*User, bool) {
 }
 
 func (m Mentionable) ToTask() (*Task, bool) {
-	tasks := m.dep.Data.GetTasks([]int32{m.ID})
+	tasks := m.dep.Data.GetTasks([]graphql.ID{m.ID})
 	if len(tasks) == 0 || m.Type != "Task" {
 		return nil, false
 	}
@@ -64,8 +69,8 @@ func (t Comment) Mentioned() []Mentionable {
 // User //
 //////////
 type User struct {
-	deps       Dependencies
-	ID         int32
+	deps       *Dependencies
+	ID         graphql.ID
 	Name       string
 	ProfileUrl string
 }
@@ -97,76 +102,8 @@ func (t User) LifetimeEvents() []LifetimeEvent {
 		return e.ActorID == t.ID
 	})
 	for i := range events {
-		events[i].deps = t.deps
+		events[i].Deps = t.deps
 		events[i].EventType.dep = t.deps
 	}
 	return events
-}
-
-/////////////////////
-// Lifetime Events //
-/////////////////////
-type LifetimeEventEnum string
-
-const (
-	Creation    LifetimeEventEnum = "Creation"
-	AssignOwner LifetimeEventEnum = "AssignOwner"
-)
-
-type LifetimeEvent struct {
-	deps       Dependencies
-	ID         int32
-	ActorID    int32
-	HappensAt_ time.Time
-	// GraphQL fields
-	EventType LifetimeEventType
-}
-
-func (e LifetimeEvent) Actor() (User, error) {
-	return e.deps.Data.GetUser(e.ActorID)
-}
-
-func (e LifetimeEvent) HappensAt() graphql.Time {
-	t := graphql.Time{}
-	t.Time = e.HappensAt_
-	return t
-}
-
-type LifetimeEventType struct {
-	dep         Dependencies
-	Type        LifetimeEventEnum
-	Creation    *EventCreation
-	AssignOwner *EventAssignOwner
-}
-
-func (e LifetimeEventType) ToCreation() (*EventCreation, bool) {
-	if e.Creation != nil {
-		e.Creation.dep = e.dep
-	}
-	return e.Creation, e.Creation != nil
-}
-
-func (e LifetimeEventType) ToAssignOwner() (*EventAssignOwner, bool) {
-	if e.AssignOwner != nil {
-		e.AssignOwner.dep = e.dep
-	}
-	return e.AssignOwner, e.AssignOwner != nil
-}
-
-type EventCreation struct {
-	dep    Dependencies
-	TaskID int32
-}
-
-func (e EventCreation) Task() (Task, error) {
-	return e.dep.Data.GetTask(e.TaskID)
-}
-
-type EventAssignOwner struct {
-	dep     Dependencies
-	ownerID int32
-}
-
-func (e EventAssignOwner) Owner() (User, error) {
-	return e.dep.Data.GetUser(e.ownerID)
 }

@@ -2,14 +2,17 @@ package resolver
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 type Mutation struct {
+	data        *resolver.Data
 	taskService service.Task
 }
 
@@ -28,7 +31,23 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		return false, err
 	}
 
-	return true, m.taskService.CreateTask(task, userID)
+	taskID, err := m.taskService.CreateTask(task, userID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	err = m.data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), resolver.LifetimeEventType{
+		Type: resolver.Creation,
+		Creation: &resolver.EventCreation{
+			TaskID: graphql.ID(fmt.Sprint(taskID)),
+		},
+	})
+	if err != nil {
+		log.Println(err)
+	}
+
+	return true, nil
 }
 
 func (m Mutation) StartTask(ctx context.Context, args struct {

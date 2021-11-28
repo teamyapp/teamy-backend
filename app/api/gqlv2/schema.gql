@@ -5,13 +5,16 @@ schema {
 
 type Query {
 	# tasks(input: [TaskFilter!]!): [Task!]!
-    tasks(id: Int!): [Task!]!
+    tasks(id: ID!): [Task!]!
     # users(input: [UserFilter!]!): [User!]!
     me: User!
 }
 
+"""
+LifetimeEvent
+"""
 type LifetimeEvent {
-    id: Int!
+    id: ID!
     eventType: LifetimeEventType!
     "who did it"
     actor:     User!
@@ -25,12 +28,12 @@ type Creation {
 }
 
 type AssignOwner {
-    Owner: User!
+    owner: User!
 }
 
 type User {
 	# core information
-    id: Int!
+    id: ID!
 	name: String!
 	profileUrl: String!
     """
@@ -48,7 +51,7 @@ type User {
 }
 type Task {
 	# core information
-    id: Int!
+    id: ID!
 	goal: String!    # is this title?
 	context: String! # content?
     mentioned:  [Mentionable!]!

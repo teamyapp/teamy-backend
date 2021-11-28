@@ -8,10 +8,12 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 type Query struct {
+	dep              *resolver.Dependencies
 	taskService      service.Task
 	executionService service.Execution
 }
@@ -37,7 +39,9 @@ func (q Query) Task(args struct {
 		return Task{}, err
 	}
 	ts, err := q.taskService.FindTask(oneEntity.ID(id))
-	return newTask(ts), err
+	task := newTask(ts)
+	task.dep = q.dep
+	return task, err
 }
 
 func NewQuery(taskService service.Task, executionService service.Execution) Query {

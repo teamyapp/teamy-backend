@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/wire"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
+	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
@@ -28,6 +29,7 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 		resolver.NewQuery,
 		resolver.NewMutation,
 		resolver.NewResolver,
+		resolver2.NewDependencies,
 	)
 	return resolver.Resolver{}
 }
