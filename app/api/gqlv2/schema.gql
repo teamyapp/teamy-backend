@@ -1,0 +1,91 @@
+schema {
+	query: Query
+	mutation: Mutation
+}
+
+type Query {
+    tasks(id: ID!): [Task!]!
+    me: User!
+}
+
+"""
+LifetimeEvent
+"""
+type LifetimeEvent {
+    id: ID!
+    eventType: LifetimeEventType!
+    "who did it"
+    actor:     User!
+    happensAt: Time!
+}
+
+union LifetimeEventType = Creation | AssignOwner
+
+type Creation {
+    task: Task!
+}
+
+type AssignOwner {
+    owner: User!
+}
+
+type User {
+	# core information
+    id: ID!
+	name: String!
+	profileUrl: String!
+    """
+    All tasks relates to this user, 
+    be it a creator or assignee or commenter, or any kinds of participants, 
+    sort by relevance.
+    Relevance will be defined later.
+    """
+    tasks:             [Task!]!
+    taskNeedAttention: Task
+	upcomingTasks:     [Task!]!
+	deliveredTasks:    [Task!]!
+    # time flow
+	lifetimeEvents: [LifetimeEvent!]!
+}
+type Task {
+	# core information
+    id: ID!
+	goal: String!    # is this title?
+	context: String! # content?
+	creator: User!
+    "the owner or the person who is responsible of. Usually 1 primary owner and sometimes 2 owners."
+    assignees: [User!]!
+	dependsOn: [Task!]!
+    # time flow
+    # dueAt: Time
+    lifetimeEvents: [LifetimeEvent!]!
+}
+
+input TaskFilter {
+    id: ID!
+    "full text search patterns that searches across goal and context"
+    content: String!
+    "related user ids"
+    relatedTo: [ID!]!
+}
+
+"""
+Mutation
+"""
+type Mutation {
+    CreateTask(input: TaskInput!): Task!
+}
+
+input TaskInput {
+    goal: String!
+    context: String
+}
+
+input UserInput {
+    id: ID!
+    "full text search patterns"
+    name: String!
+}
+
+
+scalar Time
