@@ -102,12 +102,3 @@ type LifetimeEvent {
     happensAt: Time!
 }
 
-# union LifetimeEventType = Creation
-
-# type Creation {
-#     task: Task!
-# }
-
-# type AssignOwner {
-#     owner: User!
-# }
