@@ -36,8 +36,11 @@ type Mentionable struct {
 
 func (m Mentionable) ToUser() (*User, bool) {
 	fmt.Println("Mentionable: m.dep", m.dep)
+     if m.Type != "User" {
+		return nil, false
+	}
 	u, err := m.dep.Data.GetUser(m.ID)
-	if err != nil || m.Type != "User" {
+	if err != nil {
 		return nil, false
 	}
 	return &u, true
