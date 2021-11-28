@@ -72,6 +72,7 @@ type Task struct {
 
 // Mentioned could be a function of Goal and Context
 func (t Task) Mentioned() []Mentionable {
+	fmt.Println("task", t.deps)
 	parseMentioned := func(input string) (m []Mentionable) {
 		chunks := strings.Split(input, " ")
 		for _, chunk := range chunks {
@@ -131,8 +132,9 @@ type Mentionable struct {
 }
 
 func (m Mentionable) ToUser() (*User, bool) {
+	fmt.Println("m.dep", m.dep)
 	u, err := m.dep.Data.GetUser(m.ID)
-	if err != nil {
+	if err != nil || m.Type != "User" {
 		return nil, false
 	}
 	return &u, true
@@ -140,7 +142,7 @@ func (m Mentionable) ToUser() (*User, bool) {
 
 func (m Mentionable) ToTask() (*Task, bool) {
 	tasks := m.dep.Data.GetTasks([]int32{m.ID})
-	if len(tasks) == 0 {
+	if len(tasks) == 0 || m.Type != "Task" {
 		return nil, false
 	}
 	return &tasks[0], true
@@ -156,6 +158,7 @@ func (c Comment) Content() string {
 	return ""
 }
 func (t Comment) Mentioned() []Mentionable {
+	fmt.Println("comment")
 	return []Mentionable{}
 }
 
@@ -173,6 +176,9 @@ func (u User) Tasks() []Task {
 	tasks := u.deps.Data.FilterTasks(func(t Task) bool {
 		return t.CreatorID == u.ID
 	})
+	for i := range tasks {
+		tasks[i].deps = u.deps
+	}
 	return tasks
 }
 
