@@ -47,8 +47,11 @@ func (m Mentionable) ToUser() (*User, bool) {
 }
 
 func (m Mentionable) ToTask() (*Task, bool) {
+    if m.Type != "Task" {
+        return nil, false
+    }
 	tasks := m.dep.Data.GetTasks([]graphql.ID{m.ID})
-	if len(tasks) == 0 || m.Type != "Task" {
+	if len(tasks) == 0 {
 		return nil, false
 	}
 	return &tasks[0], true
