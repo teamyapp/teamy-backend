@@ -22,26 +22,26 @@ func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
 	return task, nil
 }
 
-func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) error {
+func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) (oneEntity.ID, error) {
 	taskID, err := t.taskRepo.CreateTask(task)
 	if err != nil {
 		log.Println(err)
-		return err
+		return taskID, err
 	}
 
 	activeTeam, err := t.teamRepo.GetActiveTeam(userId)
 	if err != nil {
 		log.Println(err)
-		return err
+		return taskID, err
 	}
 
 	err = t.taskRepo.AssignTaskToTeam(taskID, activeTeam.ID, entity.TaskStatusUpcoming)
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return taskID, err
 	}
-	return nil
+	return taskID, nil
 }
 
 func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
