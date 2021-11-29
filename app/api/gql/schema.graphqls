@@ -21,7 +21,7 @@ input TaskInput {
 	goal: String
 	dueAt: Time
 	context: String
-	ownerUserID: ID
+	ownerUserId: ID
 	workScopeIndex: Int
 	dependsOnTaskIds: [ID!]
 	numOfUnknowns: Int
