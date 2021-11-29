@@ -1,6 +1,3 @@
-# github.com/davecgh/go-spew v1.1.1
-## explicit
-github.com/davecgh/go-spew/spew
 # github.com/golang-migrate/migrate/v4 v4.15.1
 ## explicit; go 1.16
 github.com/golang-migrate/migrate/v4
@@ -54,13 +51,7 @@ github.com/lib/pq/scram
 github.com/opentracing/opentracing-go
 github.com/opentracing/opentracing-go/ext
 github.com/opentracing/opentracing-go/log
-# github.com/pmezard/go-difflib v1.0.0
-## explicit
-github.com/pmezard/go-difflib/difflib
-# github.com/stretchr/testify v1.7.0
-## explicit; go 1.13
-github.com/stretchr/testify/assert
-# github.com/teamyapp/one v0.0.0-20211107052442-dd702673447c
+# github.com/teamyapp/one v0.0.0-20211129061644-ce35cf86ab9f
 ## explicit; go 1.17
 github.com/teamyapp/one/config
 github.com/teamyapp/one/db
@@ -72,4 +63,3 @@ github.com/teamyapp/one/io
 go.uber.org/atomic
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
-gopkg.in/yaml.v3

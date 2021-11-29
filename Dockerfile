@@ -6,6 +6,8 @@ COPY . .
 
 RUN go build -o bin/main main.go
 
+RUN sh ./scripts/prepare_env.sh
+
 FROM alpine:3.13 as production
 
 WORKDIR /app
@@ -13,5 +15,7 @@ WORKDIR /app
 RUN apk add --no-cache bash
 
 COPY --from=builder /app/bin/main ./bin/main
+
+COPY --from=builder /app/.repo.env ./bin/.repo.env
 
 CMD ["/app/bin/main"]
