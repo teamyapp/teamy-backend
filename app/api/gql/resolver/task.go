@@ -3,8 +3,10 @@ package resolver
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/graph-gophers/graphql-go"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -39,10 +41,14 @@ func (t Task) Creator() (User, error) {
 	if len(rs) == 0 {
 		return User{}, fmt.Errorf("this task %v has no creator recorded", t.ID())
 	}
-
+	id, err := strconv.Atoi(string(rs[0].UserID))
 	return User{
-		ID: rs[0].UserID, // todo: use v2 User
-	}, nil
+		Entity: Entity{
+			entity: oneEntity.Entity{
+				ID: oneEntity.ID(id),
+			},
+		},
+	}, err
 }
 
 func (t Task) WorkScope() Option {
