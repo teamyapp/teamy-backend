@@ -2,7 +2,7 @@
 
 GIT_LONG_COMMIT_HASH=$(git rev-parse HEAD)
 REPO_OWNER=teamyapp
-REPO_NAME=teamyBackend
+REPO_NAME=teamy-backend
 
 cat > .repo.env <<EOF
 GIT_LONG_COMMIT_HASH=$GIT_LONG_COMMIT_HASH
