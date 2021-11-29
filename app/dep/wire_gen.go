@@ -25,7 +25,9 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	team := service.NewTeam(sqlTeam)
 	prioritization := service.NewPrioritization()
 	execution := service.NewExecution(team, prioritization, sqlTask)
-	query := resolver.NewQuery(task, execution)
+	sqlUser := repo.NewSQLUser(sqlDB)
+	user := service.NewUser(sqlUser, sqlTeam)
+	query := resolver.NewQuery(task, execution, user)
 	mutation := resolver.NewMutation(task)
 	dependencies := resolver2.NewDependencies()
 	resolverResolver := resolver.NewResolver(query, mutation, dependencies)
@@ -34,4 +36,4 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 
 // wire.go:
 
-var repoSet = wire.NewSet(wire.Bind(new(repo.Team), new(repo.SQLTeam)), wire.Bind(new(repo.Task), new(repo.SQLTask)), repo.NewSQLTeam, repo.NewSQLTask)
+var repoSet = wire.NewSet(wire.Bind(new(repo.Team), new(repo.SQLTeam)), wire.Bind(new(repo.Task), new(repo.SQLTask)), wire.Bind(new(repo.User), new(repo.SQLUser)), repo.NewSQLTeam, repo.NewSQLTask, repo.NewSQLUser)

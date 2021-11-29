@@ -15,8 +15,10 @@ import (
 var repoSet = wire.NewSet(
 	wire.Bind(new(repo.Team), new(repo.SQLTeam)),
 	wire.Bind(new(repo.Task), new(repo.SQLTask)),
+	wire.Bind(new(repo.User), new(repo.SQLUser)),
 	repo.NewSQLTeam,
 	repo.NewSQLTask,
+	repo.NewSQLUser,
 )
 
 func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
@@ -25,6 +27,7 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 		service.NewPrioritization,
 		service.NewTeam,
 		service.NewTask,
+		service.NewUser,
 		service.NewExecution,
 		resolver.NewQuery,
 		resolver.NewMutation,

@@ -39,6 +39,14 @@ type Execution struct {
 	taskRepo              repo.Task
 }
 
+func (e Execution) GetActiveTeam(userID oneEntity.ID) (*entity.Team, error) {
+	activeTeam, err := e.teamService.GetActiveTeam(userID)
+	if err != nil {
+		log.Println(err)
+	}
+	return activeTeam, nil
+}
+
 func (e Execution) GetPersonalStatusForActiveTeam(userID oneEntity.ID) (entity.PersonalStatus, error) {
 	if err := userID.IsValid(); err != nil {
 		log.Println(err)

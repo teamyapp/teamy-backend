@@ -16,6 +16,7 @@ type Query struct {
 	dep              *resolver.Dependencies
 	taskService      service.Task
 	executionService service.Execution
+	userService      service.User
 }
 
 func (q Query) ExecutionMode(ctx context.Context) (ExecutionMode, error) {
@@ -44,6 +45,34 @@ func (q Query) Task(args struct {
 	return task, err
 }
 
-func NewQuery(taskService service.Task, executionService service.Execution) Query {
-	return Query{taskService: taskService, executionService: executionService}
+func (q Query) ActiveTeam(ctx context.Context) (*Team, error) {
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	team, err := q.executionService.GetActiveTeam(userID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if team == nil {
+		return nil, nil
+	}
+
+	gqlTeam := newTeam(*team, q.userService)
+	return &gqlTeam, nil
+}
+
+func NewQuery(
+	taskService service.Task,
+	executionService service.Execution,
+	userService service.User) Query {
+	return Query{
+		taskService:      taskService,
+		executionService: executionService,
+		userService:      userService,
+	}
 }
