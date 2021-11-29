@@ -25,7 +25,6 @@ func (S SQLTeam) ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error) 
 	FROM team_member
 	WHERE team_id = $1
 `, int(teamID))
-
 	if err != nil {
 		log.Println(err)
 		return nil, err
