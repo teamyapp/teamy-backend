@@ -14,7 +14,7 @@ import (
 type Query struct {
 	taskService      service.Task
 	executionService service.Execution
-	userService service.User
+	userService      service.User
 }
 
 func (q Query) ExecutionMode(ctx context.Context) (ExecutionMode, error) {
@@ -67,10 +67,8 @@ func NewQuery(
 	executionService service.Execution,
 	userService service.User) Query {
 	return Query{
-		taskService: taskService,
+		taskService:      taskService,
 		executionService: executionService,
-		userService: userService,
+		userService:      userService,
 	}
 }
-
-

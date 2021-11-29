@@ -1,10 +1,11 @@
 package service
 
 import (
+	"log"
+
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/repo"
-	"log"
 )
 
 type User struct {
@@ -34,5 +35,3 @@ func NewUser(userRepo repo.User, teamRepo repo.Team) User {
 		teamRepo: teamRepo,
 	}
 }
-
-

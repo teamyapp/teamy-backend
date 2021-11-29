@@ -6,7 +6,6 @@ import (
 
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
-	"github.com/teamyapp/teamy-backend/app/errs"
 )
 
 type Team interface {
@@ -40,6 +39,7 @@ func (S SQLTeam) ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error) 
 		err = rows.Scan(&id)
 		if err != nil {
 			log.Println(id, err)
+			continue
 		}
 		ids = append(ids, id)
 	}
@@ -58,10 +58,10 @@ WHERE user_id = $1`,
 			int(userID)).
 		Scan(&team.ID, &team.Name, &team.LogoURL, &team.CreatedAt, &team.UpdatedAt)
 	if err != nil {
-		log.Println(err) // member does not pick active team, suggest log as INFO
 		if err == sql.ErrNoRows {
-			return nil, errs.NoActiveTeam(userID)
+			return nil, nil
 		} else {
+			log.Println(err)
 			return nil, err
 		}
 	}

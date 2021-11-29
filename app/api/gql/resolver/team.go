@@ -1,14 +1,15 @@
 package resolver
 
 import (
+	"log"
+
 	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/service"
-	"log"
 )
 
 type Team struct {
 	Entity
-	team entity.Team
+	team        entity.Team
 	userService service.User
 }
 
@@ -23,9 +24,8 @@ func (t Team) Members() ([]User, error) {
 
 func newTeam(team entity.Team, userService service.User) Team {
 	return Team{
-		Entity: Entity{entity: team.Entity},
-		team: team,
+		Entity:      Entity{entity: team.Entity},
+		team:        team,
 		userService: userService,
 	}
 }
-

@@ -3,10 +3,12 @@ package repo
 import (
 	"database/sql"
 	"fmt"
-	oneEntity "github.com/teamyapp/one/entity"
-	"github.com/teamyapp/teamy-backend/app/entity"
 	"log"
 	"strconv"
+	"strings"
+
+	oneEntity "github.com/teamyapp/one/entity"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type User interface {
@@ -21,22 +23,19 @@ type SQLUser struct {
 var _ User = (*SQLUser)(nil)
 
 func (S SQLUser) GetUsers(ids []oneEntity.ID) ([]entity.User, error) {
-	var idsString string
+	idStrings := make([]string, 0)
 	for _, singleID := range ids {
-		idsString += strconv.Itoa(int(singleID)) + ","
+		idStrings = append(idStrings, strconv.Itoa(int(singleID)))
 	}
-	idsString = idsString[:len(idsString) - 1]
+	idsString := strings.Join(idStrings, ",")
 
-	query := fmt.Sprintf("SELECT * FROM \"user\" WHERE id IN (%s)", idsString)
+	query := fmt.Sprintf(`SELECT * FROM "user" WHERE id IN (%s)`, idsString)
 
 	rows, err := S.db.Query(query)
-
-
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	var users []entity.User
@@ -53,7 +52,7 @@ func (S SQLUser) GetUsers(ids []oneEntity.ID) ([]entity.User, error) {
 }
 
 func (S SQLUser) GetUser(userID oneEntity.ID) (entity.User, error) {
-	query := fmt.Sprintf("SELECT * FROM \"user\" WHERE id = (%s)", strconv.Itoa(int(userID)))
+	query := fmt.Sprintf(`SELECT * FROM "user" WHERE id = (%s)`, strconv.Itoa(int(userID)))
 
 	var user entity.User
 	err := S.db.QueryRow(query).Scan(&user.ID, &user.Name, &user.ProfileURL, &user.CreatedAt, &user.UpdatedAt)
