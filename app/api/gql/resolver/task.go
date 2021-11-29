@@ -1,7 +1,12 @@
 package resolver
 
 import (
+	"errors"
+	"fmt"
+	"strconv"
+
 	"github.com/graph-gophers/graphql-go"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -24,8 +29,26 @@ func (t Task) Context() *string {
 	return t.task.Context
 }
 
-func (t Task) Owner() *User {
-	panic("not implemented")
+func (t Task) Owner() (*User, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (t Task) Creator() (User, error) {
+
+	rs := t.dep.Data.FilterCreationRelation(func(cr resolver.CreationRelation) bool {
+		return t.ID() == cr.TaskID
+	})
+	if len(rs) == 0 {
+		return User{}, fmt.Errorf("this task %v has no creator recorded", t.ID())
+	}
+	id, err := strconv.Atoi(string(rs[0].UserID))
+	return User{
+		Entity: Entity{
+			entity: oneEntity.Entity{
+				ID: oneEntity.ID(id),
+			},
+		},
+	}, err
 }
 
 func (t Task) WorkScope() Option {
@@ -61,6 +84,13 @@ func (t Task) LifetimeEvents() []resolver.LifetimeEvent {
 		events[i].EventType.Dep(t.dep)
 	}
 	return events
+}
+
+func (t Task) Mentions() ([]resolver.Mention, error) {
+	if t.Context() == nil {
+		return nil, nil
+	}
+	return resolver.ParseMentions(*t.Context()), nil
 }
 
 func newTask(task entity.Task) Task {

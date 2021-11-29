@@ -12,13 +12,20 @@ import (
 	"github.com/graph-gophers/graphql-go"
 )
 
+// Temperary SQL like struct for v2 migration purpose.
+type CreationRelation struct {
+	TaskID graphql.ID
+	UserID graphql.ID
+}
+
 // In Memory Database
 type Data struct {
-	lock           *sync.Mutex
-	file           string
-	Tasks          map[graphql.ID]Task
-	Users          map[graphql.ID]User
-	LifetimeEvents []LifetimeEvent
+	lock              *sync.Mutex
+	file              string
+	Tasks             map[graphql.ID]Task
+	Users             map[graphql.ID]User
+	LifetimeEvents    []LifetimeEvent
+	CreationRelations []CreationRelation
 }
 
 func (d Data) GetTask(id graphql.ID) (Task, error) {
@@ -107,6 +114,18 @@ func (d *Data) CreateLifetimeEvent(creatorID graphql.ID, eventType LifetimeEvent
 	return d.Write()
 }
 
+func (d *Data) FilterCreationRelation(f func(CreationRelation) bool) (rs []CreationRelation) {
+	for _, r := range d.CreationRelations {
+		if f(r) {
+			rs = append(rs, r)
+		}
+	}
+	return
+}
+
+/////////////////
+// Persistance //
+/////////////////
 func (d Data) Write() error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
