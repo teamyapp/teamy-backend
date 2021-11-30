@@ -7,10 +7,10 @@ require (
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.7.0
-	github.com/teamyapp/one v0.0.0-20211107052442-dd702673447c
+	github.com/teamyapp/one v0.0.0-20211130090716-6ada6cbb3254
 )
 
-replace github.com/teamyapp/one => ../../tool/oneFramework
+// replace github.com/teamyapp/one => ../../tool/oneFramework
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
