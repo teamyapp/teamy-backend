@@ -18,7 +18,6 @@ var rawSchema string
 //go:embed GraphQLIDE.html
 var graphIDEHTML []byte
 
-
 func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (http.Server, error) {
 	schema, err := graphql.ParseSchema(rawSchema, &res,
 		graphql.UseFieldResolvers(),
