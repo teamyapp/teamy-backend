@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+
 	"github.com/graph-gophers/graphql-go"
 	"github.com/opentracing/opentracing-go/log"
 	oneEntity "github.com/teamyapp/one/entity"
@@ -19,10 +21,10 @@ var taskActionMap = map[entity.TaskAction]TaskAction{
 	entity.TaskActionMarkComplete:  TaskActionMarkComplete,
 }
 
-func toGraphQLTasks(tasks []entity.Task) []Task {
+func toGraphQLTasks(deps *Dependencies, prototypeDeps *resolver.Dependencies, tasks []entity.Task) []Task {
 	gqlTasks := make([]Task, 0)
 	for _, task := range tasks {
-		gqlTasks = append(gqlTasks, newTask(task))
+		gqlTasks = append(gqlTasks, newTask(deps, prototypeDeps, task))
 	}
 	return gqlTasks
 }
