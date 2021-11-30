@@ -7,8 +7,14 @@ type User struct {
 	user entity.User
 }
 
-func (u User) Name() string {
-	return u.user.Name
+func (u User) FirstName() string {
+	// TODO: replace with real first name
+	return "Firstname"
+}
+
+func (u User) LastName() string {
+	// TODO: replace with real last name
+	return "Lastname"
 }
 
 func (u User) ProfileURL() string {

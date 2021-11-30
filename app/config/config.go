@@ -7,9 +7,9 @@ import (
 )
 
 type Config struct {
-	OneConfig      config.Config
+	OneConfig           config.Config
 	IdentityAPIEndpoint string `envconfig:"IDENTITY_API_ENDPOINT" default:"http://localhost:9500"`
-	GraphQLAPIPort int `envconfig:"GRAPH_QL_API_PORT" default:"9000"`
+	GraphQLAPIPort      int    `envconfig:"GRAPH_QL_API_PORT" default:"9000"`
 }
 
 func FromEnv() (Config, error) {
