@@ -26,7 +26,6 @@ func main() {
 		cfg.OneConfig.RepoName,
 		cfg.OneConfig.GitLongCommitHash)
 
-
 	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
 		gqlResolver := dep.InitGraphQLResolver(sqlDB)
 		server, err := gql.NewServer(gqlResolver, cfg.GraphQLAPIPort)

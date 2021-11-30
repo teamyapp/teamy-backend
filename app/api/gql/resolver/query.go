@@ -14,10 +14,8 @@ import (
 )
 
 type Query struct {
-	dep              *resolver.Dependencies
-	taskService      service.Task
-	executionService service.Execution
-	userService      service.User
+	deps          *Dependencies
+	prototypeDeps *resolver.Dependencies
 }
 
 func (q Query) ExecutionMode(ctx context.Context) (ExecutionMode, error) {
@@ -26,10 +24,7 @@ func (q Query) ExecutionMode(ctx context.Context) (ExecutionMode, error) {
 		log.Println(err)
 		return ExecutionMode{}, err
 	}
-	return ExecutionMode{
-		userID:           userID,
-		executionService: q.executionService,
-	}, nil
+	return newExecutionMode(q.deps, q.prototypeDeps, userID), nil
 }
 
 func (q Query) Task(args struct {
@@ -40,9 +35,8 @@ func (q Query) Task(args struct {
 		log.Println(err)
 		return Task{}, err
 	}
-	ts, err := q.taskService.FindTask(oneEntity.ID(id))
-	task := newTask(ts)
-	task.dep = q.dep
+	ts, err := q.deps.taskService.FindTask(oneEntity.ID(id))
+	task := newTask(q.deps, q.prototypeDeps, ts)
 	return task, err
 }
 
@@ -53,7 +47,7 @@ func (q Query) ActiveTeam(ctx context.Context) (*Team, error) {
 		return nil, err
 	}
 
-	team, err := q.executionService.GetActiveTeam(userID)
+	team, err := q.deps.executionService.GetActiveTeam(userID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -63,7 +57,7 @@ func (q Query) ActiveTeam(ctx context.Context) (*Team, error) {
 		return nil, nil
 	}
 
-	gqlTeam := newTeam(*team, q.userService)
+	gqlTeam := newTeam(q.deps, q.prototypeDeps, *team)
 	return &gqlTeam, nil
 }
 
@@ -75,13 +69,9 @@ func (q Query) Me(ctx context.Context) (User, error) {
 	}, nil
 }
 
-func NewQuery(
-	taskService service.Task,
-	executionService service.Execution,
-	userService service.User) Query {
+func NewQuery(deps *Dependencies, prototypeDeps *resolver.Dependencies) Query {
 	return Query{
-		taskService:      taskService,
-		executionService: executionService,
-		userService:      userService,
+		deps:          deps,
+		prototypeDeps: prototypeDeps,
 	}
 }
