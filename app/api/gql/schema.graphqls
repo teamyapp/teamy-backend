@@ -81,7 +81,8 @@ type Task implements Entity {
 
 type User implements Entity {
 	id: ID!
-	name: String!
+	lastName: String!
+	firstName: String!
 	profileUrl: String!
 	createdAt: Time!
 	activeTeam: Team
