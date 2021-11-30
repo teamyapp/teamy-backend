@@ -6,10 +6,11 @@ schema {
 type Query {
 	executionMode: ExecutionMode!
 	task(id: ID!): Task!
+	activeTeam: Team
 }
 
 type Mutation {
-	createTask(task: TaskInput!): Boolean!
+	createTask(task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Boolean!
 	startTask(taskId: ID!): Boolean!
@@ -20,7 +21,7 @@ input TaskInput {
 	goal: String
 	dueAt: Time
 	context: String
-	ownerUserID: ID
+	ownerUserId: ID
 	workScopeIndex: Int
 	dependsOnTaskIds: [ID!]
 	numOfUnknowns: Int
@@ -30,6 +31,10 @@ interface Entity {
 	id: ID!
 	createdAt: Time!
 	updatedAt: Time
+}
+
+type Team {
+	members: [User!]!
 }
 
 type ExecutionMode {
@@ -60,6 +65,7 @@ type Task implements Entity {
 	dueAt: Time
 	context: String
 	owner: User
+	creator: User!
 	workScope: Option!
 	effort: Int
 	dependsOn: [Task!]!
@@ -68,6 +74,8 @@ type Task implements Entity {
 	availableWorkScopes: [Option!]!
 	createdAt: Time!
 	updatedAt: Time
+	lifetimeEvents: [LifetimeEvent!]!
+	mentions: [Mention!]!
 }
 
 type User implements Entity {
@@ -87,3 +95,35 @@ enum TaskAction {
 }
 
 scalar Time
+
+"""
+LifetimeEvent
+"""
+type LifetimeEvent {
+    id: ID!
+	# todo: will add eventType & actor when v1 is merged with v2
+    # eventType: LifetimeEventType!
+    "who did it"
+    # actor:     User!
+	actorID:   ID!
+    happensAt: Time!
+}
+
+"""
+Mention is a backend computed value according to text content of task or comments
+so that frontend doesn't need to compute is again.
+"""
+type Mention {
+	# todo: will add when v2 User & Task is merged into v1
+	# mentionable: Mentionable!
+	"""
+	offset is the 0-based index of the starting of the mentioned text.
+	The frontend can use this information to heightlight/replace/hyperlink the substring
+	"""
+	offset: Int!
+	"the length of the mentioned text"
+	limit: Int!
+}
+
+union Mentionable = User | Task
+

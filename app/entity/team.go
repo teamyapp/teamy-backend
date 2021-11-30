@@ -1,12 +1,12 @@
 package entity
 
 import (
-	oneEntity "github.com/teamyapp/one/entity"
+	"github.com/teamyapp/one/entity"
 )
 
 type Team struct {
-	oneEntity.Entity
-	Name          string
-	LogoURL       string
-	MemberUserIds []int
+	entity.Entity
+	Name      string
+	LogoURL   string
+	MemberIDs []entity.ID
 }

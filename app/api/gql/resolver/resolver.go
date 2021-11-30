@@ -1,13 +1,15 @@
 package resolver
 
+import "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+
 type Resolver struct {
 	Query
 	Mutation
 }
 
-func NewResolver(query Query, mutation Mutation) Resolver {
+func NewResolver(deps *Dependencies, prototypeDeps *resolver.Dependencies) Resolver {
 	return Resolver{
-		Query:    query,
-		Mutation: mutation,
+		Query:    NewQuery(deps, prototypeDeps),
+		Mutation: NewMutation(deps, prototypeDeps),
 	}
 }

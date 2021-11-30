@@ -18,8 +18,11 @@ var rawSchema string
 //go:embed GraphQLIDE.html
 var graphIDEHTML []byte
 
+
 func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (http.Server, error) {
-	schema, err := graphql.ParseSchema(rawSchema, &res)
+	schema, err := graphql.ParseSchema(rawSchema, &res,
+		graphql.UseFieldResolvers(),
+		graphql.UseStringDescriptions())
 	if err != nil {
 		log.Println(err)
 		return http.Server{}, err
@@ -51,7 +54,7 @@ func includeGraphiQLIDE(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method == http.MethodGet {
 			writer.WriteHeader(http.StatusOK)
-			writer.Write(graphIDEHTML)
+			_, _ = writer.Write(graphIDEHTML)
 			return
 		}
 

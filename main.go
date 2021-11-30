@@ -20,6 +20,11 @@ func main() {
 		log.Println(err)
 		panic(err)
 	}
+	log.Printf(
+		"Git Commit: https://github.com/%s/%s/commit/%s\n",
+		cfg.OneConfig.RepoOwner,
+		cfg.OneConfig.RepoName,
+		cfg.OneConfig.GitLongCommitHash)
 
 	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
 		gqlResolver := dep.InitGraphQLResolver(sqlDB)

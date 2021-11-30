@@ -2,33 +2,64 @@ package resolver
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
-	"github.com/teamyapp/teamy-backend/app/service"
+	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 )
 
 type Mutation struct {
-	taskService service.Task
+	deps          *Dependencies
+	prototypeDeps *resolver.Dependencies
 }
 
 func (m Mutation) CreateTask(ctx context.Context, args struct {
 	Task TaskInput
-}) (bool, error) {
+}) (Task, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)
-		return false, err
+		return Task{}, err
 	}
 
 	task, err := fromGraphQLTaskInput(args.Task)
 	if err != nil {
 		log.Println(err)
-		return false, err
+		return Task{}, err
 	}
 
-	return true, m.taskService.CreateTask(task, userID)
+	taskID, err := m.deps.taskService.CreateTask(task, userID)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	err = m.prototypeDeps.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), resolver.LifetimeEventType{
+		Type: resolver.Creation,
+		Creation: &resolver.EventCreation{
+			TaskID: graphql.ID(fmt.Sprint(taskID)),
+		},
+	})
+	if err != nil {
+		log.Println(err)
+	}
+
+	task, err = m.deps.taskService.FindTask(taskID)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	taskResolver := newTask(m.deps, m.prototypeDeps, task)
+
+	m.prototypeDeps.Data.CreationRelations = append(m.prototypeDeps.Data.CreationRelations, resolver.CreationRelation{
+		TaskID: taskResolver.ID(),
+		UserID: graphql.ID(fmt.Sprint(userID)),
+	})
+
+	return taskResolver, nil
 }
 
 func (m Mutation) StartTask(ctx context.Context, args struct {
@@ -46,7 +77,7 @@ func (m Mutation) StartTask(ctx context.Context, args struct {
 		return false, err
 	}
 
-	err = m.taskService.StartTask(taskID, userID)
+	err = m.deps.taskService.StartTask(taskID, userID)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -69,7 +100,7 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 		return false, err
 	}
 
-	err = m.taskService.DeleteTask(taskID, userID)
+	err = m.deps.taskService.DeleteTask(taskID, userID)
 	if err != nil {
 		log.Println(err)
 	}
@@ -91,8 +122,9 @@ func (m Mutation) PerformTaskAction(ctx context.Context, args struct {
 	panic("not implemented")
 }
 
-func NewMutation(taskService service.Task) Mutation {
+func NewMutation(deps *Dependencies, prototypeDeps *resolver.Dependencies) Mutation {
 	return Mutation{
-		taskService: taskService,
+		deps:          deps,
+		prototypeDeps: prototypeDeps,
 	}
 }

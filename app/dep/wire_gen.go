@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/wire"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
+	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
@@ -17,18 +18,20 @@ import (
 // Injectors from wire.go:
 
 func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
-	sqlTask := repo.NewSQLTask(sqlDB)
+	sqlUser := repo.NewSQLUser(sqlDB)
 	sqlTeam := repo.NewSQLTeam(sqlDB)
+	user := service.NewUser(sqlUser, sqlTeam)
+	sqlTask := repo.NewSQLTask(sqlDB)
 	task := service.NewTask(sqlTask, sqlTeam)
 	team := service.NewTeam(sqlTeam)
 	prioritization := service.NewPrioritization()
 	execution := service.NewExecution(team, prioritization, sqlTask)
-	query := resolver.NewQuery(task, execution)
-	mutation := resolver.NewMutation(task)
-	resolverResolver := resolver.NewResolver(query, mutation)
+	dependencies := resolver.NewDependencies(user, task, team, execution)
+	resolverDependencies := resolver2.NewDependencies()
+	resolverResolver := resolver.NewResolver(dependencies, resolverDependencies)
 	return resolverResolver
 }
 
 // wire.go:
 
-var repoSet = wire.NewSet(wire.Bind(new(repo.Team), new(repo.SQLTeam)), wire.Bind(new(repo.Task), new(repo.SQLTask)), repo.NewSQLTeam, repo.NewSQLTask)
+var repoSet = wire.NewSet(wire.Bind(new(repo.Team), new(repo.SQLTeam)), wire.Bind(new(repo.Task), new(repo.SQLTask)), wire.Bind(new(repo.User), new(repo.SQLUser)), repo.NewSQLTeam, repo.NewSQLTask, repo.NewSQLUser)

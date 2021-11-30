@@ -1,7 +1,4 @@
-# github.com/davecgh/go-spew v1.1.1
-## explicit
-github.com/davecgh/go-spew/spew
-# github.com/golang-migrate/migrate/v4 v4.15.1
+# github.com/golang-migrate/migrate/v4 v4.15.0
 ## explicit; go 1.16
 github.com/golang-migrate/migrate/v4
 github.com/golang-migrate/migrate/v4/database
@@ -32,11 +29,11 @@ github.com/graph-gophers/graphql-go/log
 github.com/graph-gophers/graphql-go/relay
 github.com/graph-gophers/graphql-go/trace
 github.com/graph-gophers/graphql-go/types
-# github.com/hashicorp/errwrap v1.1.0
+# github.com/hashicorp/errwrap v1.0.0
 ## explicit
 github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.1.1
-## explicit; go 1.13
+# github.com/hashicorp/go-multierror v1.1.0
+## explicit; go 1.14
 github.com/hashicorp/go-multierror
 # github.com/joho/godotenv v1.4.0
 ## explicit; go 1.12
@@ -44,7 +41,7 @@ github.com/joho/godotenv
 # github.com/kelseyhightower/envconfig v1.4.0
 ## explicit
 github.com/kelseyhightower/envconfig
-# github.com/lib/pq v1.10.4
+# github.com/lib/pq v1.10.3
 ## explicit; go 1.13
 github.com/lib/pq
 github.com/lib/pq/oid
@@ -54,23 +51,17 @@ github.com/lib/pq/scram
 github.com/opentracing/opentracing-go
 github.com/opentracing/opentracing-go/ext
 github.com/opentracing/opentracing-go/log
-# github.com/pmezard/go-difflib v1.0.0
-## explicit
-github.com/pmezard/go-difflib/difflib
 # github.com/stretchr/testify v1.7.0
 ## explicit; go 1.13
-github.com/stretchr/testify/assert
-# github.com/teamyapp/one v0.0.0-20211107052442-dd702673447c => ../../tool/oneFramework
+# github.com/teamyapp/one v0.0.0-20211130090716-6ada6cbb3254
 ## explicit; go 1.17
 github.com/teamyapp/one/config
 github.com/teamyapp/one/db
 github.com/teamyapp/one/entity
 github.com/teamyapp/one/identity
 github.com/teamyapp/one/io
-# go.uber.org/atomic v1.9.0
+# go.uber.org/atomic v1.7.0
 ## explicit; go 1.13
 go.uber.org/atomic
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
-gopkg.in/yaml.v3
-# github.com/teamyapp/one => ../../tool/oneFramework

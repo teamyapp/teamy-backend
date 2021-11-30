@@ -15,12 +15,12 @@ import (
 
 type Middleware struct {
 	verifyTokenURL string
-	handler http.Handler
+	handler        http.Handler
 }
 
 var _ http.Handler = (*Middleware)(nil)
 
-func (w Middleware) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (m Middleware) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	token, err := getBearerToken(request)
 	if err != nil {
 		log.Println(err)
@@ -29,7 +29,7 @@ func (w Middleware) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	}
 
 	if len(token) > 0 {
-		userID, err := getUserID(token)
+		userID, err := m.getUserID(token)
 		if err != nil {
 			log.Println(err)
 			writer.WriteHeader(http.StatusUnauthorized)
@@ -40,14 +40,14 @@ func (w Middleware) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		request = request.WithContext(ctx)
 	}
 
-	w.handler.ServeHTTP(writer, request)
+	m.handler.ServeHTTP(writer, request)
 }
 
-func getUserID(bearerToken string) (entity.ID, error) {
-	// TODO: invoke Identity service API
+func (m Middleware) getUserID(bearerToken string) (entity.ID, error) {
 	res, err := http.Post(
-		"http://localhost:9500/identity/verify-token",
-		"text/plain", bytes.NewReader([]byte(bearerToken)))
+		m.verifyTokenURL,
+		"text/plain",
+		bytes.NewReader([]byte(bearerToken)))
 	if err != nil {
 		return 0, err
 	}
@@ -87,6 +87,6 @@ func WithMiddleware(identityAPIEndpoint string, handler http.Handler) Middleware
 	verifyTokenURL := fmt.Sprintf("%s/identity/verify-token", identityAPIEndpoint)
 	return Middleware{
 		verifyTokenURL: verifyTokenURL,
-		handler: handler,
+		handler:        handler,
 	}
 }

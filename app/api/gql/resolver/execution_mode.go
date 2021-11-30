@@ -3,17 +3,19 @@ package resolver
 import (
 	"log"
 
+	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+
 	oneEntity "github.com/teamyapp/one/entity"
-	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 type ExecutionMode struct {
-	userID           oneEntity.ID
-	executionService service.Execution
+	deps          *Dependencies
+	prototypeDeps *resolver.Dependencies
+	userID        oneEntity.ID
 }
 
 func (e ExecutionMode) PersonalStatus() (PersonalStatus, error) {
-	personalStatus, err := e.executionService.GetPersonalStatusForActiveTeam(e.userID)
+	personalStatus, err := e.deps.executionService.GetPersonalStatusForActiveTeam(e.userID)
 	if err != nil {
 		log.Println(err)
 	}
@@ -21,11 +23,19 @@ func (e ExecutionMode) PersonalStatus() (PersonalStatus, error) {
 }
 
 func (e ExecutionMode) TeamStatus() (TeamStatus, error) {
-	teamStatus, err := e.executionService.GetActiveTeamStatus(e.userID)
+	teamStatus, err := e.deps.executionService.GetActiveTeamStatus(e.userID)
 	if err != nil {
 		log.Println(err)
 	}
 	return TeamStatus{
 		teamStatus: teamStatus,
 	}, err
+}
+
+func newExecutionMode(deps *Dependencies, prototypeDeps *resolver.Dependencies, userID oneEntity.ID) ExecutionMode {
+	return ExecutionMode{
+		deps:          deps,
+		prototypeDeps: prototypeDeps,
+		userID:        userID,
+	}
 }
