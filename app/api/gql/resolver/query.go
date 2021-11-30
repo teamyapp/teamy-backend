@@ -9,6 +9,7 @@ import (
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Query struct {
@@ -57,6 +58,14 @@ func (q Query) ActiveTeam(ctx context.Context) (*Team, error) {
 
 	gqlTeam := newTeam(q.deps, q.prototypeDeps, *team)
 	return &gqlTeam, nil
+}
+
+func (q Query) Me(ctx context.Context) (User, error) {
+	return User{
+		user: entity.User{
+			Name: "public viewer",
+		},
+	}, nil
 }
 
 func NewQuery(deps *Dependencies, prototypeDeps *resolver.Dependencies) Query {
