@@ -18,7 +18,7 @@ var rawSchema string
 //go:embed GraphQLIDE.html
 var graphIDEHTML []byte
 
-func NewServer(res resolver.Resolver, port int) (http.Server, error) {
+func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (http.Server, error) {
 	schema, err := graphql.ParseSchema(rawSchema, &res,
 		graphql.UseFieldResolvers(),
 		graphql.UseStringDescriptions())
@@ -27,7 +27,7 @@ func NewServer(res resolver.Resolver, port int) (http.Server, error) {
 		return http.Server{}, err
 	}
 
-	handler := identity.WithMiddleware(&relay.Handler{Schema: schema})
+	handler := identity.WithMiddleware(identityAPIEndpoint, &relay.Handler{Schema: schema})
 	mux := http.ServeMux{}
 	mux.HandleFunc("/graphql", enableCORS(includeGraphiQLIDE(handler.ServeHTTP)))
 	addr := fmt.Sprintf(":%d", port)
