@@ -7,11 +7,9 @@ type Resolver struct {
 	Mutation
 }
 
-func NewResolver(query Query, mutation Mutation, dep *resolver.Dependencies) Resolver {
-	query.dep = dep
-	mutation.dep = dep
+func NewResolver(deps *Dependencies, prototypeDeps *resolver.Dependencies) Resolver {
 	return Resolver{
-		Query:    query,
-		Mutation: mutation,
+		Query:    NewQuery(deps, prototypeDeps),
+		Mutation: NewMutation(deps, prototypeDeps),
 	}
 }
