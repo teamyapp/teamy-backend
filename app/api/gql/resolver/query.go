@@ -10,7 +10,6 @@ import (
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/entity"
-	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 type Query struct {

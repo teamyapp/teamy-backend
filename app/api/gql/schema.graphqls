@@ -32,7 +32,6 @@ input TaskInput {
 interface Entity {
 	id: ID!
 	createdAt: Time!
-	updatedAt: Time
 }
 
 type Team {
@@ -85,7 +84,6 @@ type User implements Entity {
 	name: String!
 	profileUrl: String!
 	createdAt: Time!
-	updatedAt: Time
 	activeTeam: Team
 }
 
