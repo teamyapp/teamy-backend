@@ -66,6 +66,8 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: db-name
+            - name: IDENTITY_API_ENDPOINT
+              value: identity.production.svc.cluster.local
 ---
 apiVersion: v1
 kind: Service
