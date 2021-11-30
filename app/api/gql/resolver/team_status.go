@@ -8,7 +8,7 @@ import (
 type TeamStatus struct {
 	deps          *Dependencies
 	prototypeDeps *resolver.Dependencies
-	teamStatus entity.TeamStatus
+	teamStatus    entity.TeamStatus
 }
 
 func (t TeamStatus) UpcomingTasks() []Task {

@@ -53,7 +53,6 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 	}
 
 	taskResolver := newTask(m.deps, m.prototypeDeps, task)
-	taskResolver.prototypeDeps = m.prototypeDeps
 
 	m.prototypeDeps.Data.CreationRelations = append(m.prototypeDeps.Data.CreationRelations, resolver.CreationRelation{
 		TaskID: taskResolver.ID(),

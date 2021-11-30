@@ -35,7 +35,6 @@ func (q Query) Task(args struct {
 	}
 	ts, err := q.deps.taskService.FindTask(oneEntity.ID(id))
 	task := newTask(q.deps, q.prototypeDeps, ts)
-	task.prototypeDeps = q.prototypeDeps
 	return task, err
 }
 
