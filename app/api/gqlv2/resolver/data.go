@@ -20,12 +20,25 @@ type CreationRelation struct {
 
 // In Memory Database
 type Data struct {
+	persister         Persister
 	lock              *sync.Mutex
 	file              string
 	Tasks             map[graphql.ID]Task
 	Users             map[graphql.ID]User
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation
+}
+
+func NewData(p Persister) *Data {
+	return &Data{
+		persister: p,
+	}
+}
+
+// Persister persists a Data instance
+type Persister interface {
+	Write(*Data) error
+	Read(path string) *Data
 }
 
 func (d Data) GetTask(id graphql.ID) (Task, error) {
@@ -80,7 +93,7 @@ func (d Data) CreateTask(task TaskInput, creatorID graphql.ID) (Task, error) {
 			},
 		},
 	})
-	return d.Tasks[newID], d.Write()
+	return d.Tasks[newID], d.persister.Write(&d)
 }
 
 func (d Data) GetUser(id graphql.ID) (User, error) {
@@ -111,7 +124,7 @@ func (d *Data) CreateLifetimeEvent(creatorID graphql.ID, eventType LifetimeEvent
 		EventType:  eventType,
 	})
 	fmt.Println(&d, "CreateLifetimeEvent", d.LifetimeEvents)
-	return d.Write()
+	return d.persister.Write(d)
 }
 
 func (d *Data) FilterCreationRelation(f func(CreationRelation) bool) (rs []CreationRelation) {
@@ -126,7 +139,10 @@ func (d *Data) FilterCreationRelation(f func(CreationRelation) bool) (rs []Creat
 /////////////////
 // Persistance //
 /////////////////
-func (d Data) Write() error {
+
+type JsonPersister struct{}
+
+func (p JsonPersister) Write(d *Data) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if d.file == "" {

@@ -15,6 +15,11 @@ func (u User) ProfileURL() string {
 	return u.user.ProfileURL
 }
 
+func (u User) ActiveTeam() *Team {
+	// todo: implement it
+	return nil
+}
+
 func newUser(user entity.User) User {
 	return User{
 		Entity: Entity{entity: user.Entity},

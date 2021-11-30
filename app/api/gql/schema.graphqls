@@ -4,9 +4,11 @@ schema {
 }
 
 type Query {
-	executionMode: ExecutionMode!
+	executionMode: ExecutionMode! @deprecated(reason: "during refactor")
 	task(id: ID!): Task!
-	activeTeam: Team
+	activeTeam: Team @deprecated(reason: "Use `me { activeTeam }`")
+	"the current logged in user. If not logged in, show default public viewer"
+	me: User!
 }
 
 type Mutation {
@@ -84,6 +86,7 @@ type User implements Entity {
 	profileUrl: String!
 	createdAt: Time!
 	updatedAt: Time
+	activeTeam: Team
 }
 
 enum TaskAction {
