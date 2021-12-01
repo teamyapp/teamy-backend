@@ -16,7 +16,7 @@ type Team struct {
 }
 
 func (t Team) Members() ([]User, error) {
-	members, err := t.deps.userService.ListTeamMembers(t.team.ID)
+	members, err := t.deps.teamService.ListTeamMembers(t.team.ID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
