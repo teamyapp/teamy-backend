@@ -1,0 +1,792 @@
+commit ed0ee4186becd6c67b8c218055e4f0f49e2f4b95
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Tue Nov 30 02:10:14 2021 -0800
+
+    Temporarily fix User schema (#76)
+
+commit 6b726ec10f0c52a423f995de62efd203148cf588
+Author: 哲の王 <8919794+CreatCodeBuild@users.noreply.github.com>
+Date:   Tue Nov 30 17:33:33 2021 +0800
+
+    add me: User to GraphQL (#73)
+    
+    * add me: User to GraphQL
+    
+    * remove updated at
+
+commit b7c420a424cc1eab80cad8bba97a72b36c6d210b
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Tue Nov 30 01:33:21 2021 -0800
+
+    Fix identity endpoint (#75)
+
+commit f4c4f1c031866ac0aaab202d05b2ca5e14f56791
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Tue Nov 30 01:21:38 2021 -0800
+
+    Integrate with identity service (#74)
+    
+    * Integrate Identity service
+    
+    * Update One
+    
+    * Clean up code
+    
+    * Update k8s config
+
+commit 930fb50b5413cdceafca2171f3fd64293bf403e7
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Mon Nov 29 23:55:59 2021 -0800
+
+    Refactor GraphQL resolvers to use aggregated dependencies (#72)
+    
+    * Refactor GraphQL resolvers to use aggregated dependencies
+    
+    * Code clean
+
+commit 66423dbdc9a5d5f981aa9a145c88471fc26336a5
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Mon Nov 29 01:10:51 2021 -0800
+
+    Fix GraphQL ID naming (#71)
+
+commit 23f6244eab35e36d56bbd2ba4bf01d54cf53398c
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Nov 28 23:39:04 2021 -0800
+
+    Fix repo name in Github commit link (#70)
+
+commit 3e616b37cfefff2f6b661d420249628f877c6379
+Author: 哲の王 <8919794+CreatCodeBuild@users.noreply.github.com>
+Date:   Mon Nov 29 15:31:50 2021 +0800
+
+    Add creator to task (#64)
+    
+    * add creator to task
+    
+    * fmt
+    
+    * use oneEntity.ID
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit 54bdda2f05da95e1a13a96cc0d3e52f72ef76743
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Nov 28 23:31:21 2021 -0800
+
+    Fix empty Git commit hash in log (#69)
+    
+    * Fix repo variable display
+    
+    * Install Git in Docker
+
+commit f413ecd67154477435bfe19e4f19f4200d559859
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Nov 28 22:25:28 2021 -0800
+
+    Log Git commit link on server start up (#68)
+
+commit 3e3a9d559cf26b9235169394e221b0b424727c36
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Sun Nov 28 18:39:17 2021 -0800
+
+    Add list active team members backend API (#67)
+    
+    * Add list active Team members backend API
+    
+    * Address codereview comment
+
+commit 37ac22a58ed8d7d8089e8ee1cee3706620b769e9
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Nov 28 11:40:27 2021 -0800
+
+    Clean up code (#66)
+
+commit 69faa9939f163f8d131c34e41d61668fdeecfd4a
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Nov 28 11:15:34 2021 -0800
+
+    Format code (#65)
+
+commit 6c5859536ca5ca4ce9c97480ccea42b6fe286724
+Author: 哲の王 <8919794+CreatCodeBuild@users.noreply.github.com>
+Date:   Sun Nov 28 19:00:24 2021 +0800
+
+    Integrate lifetime event with gql v1 (#63)
+    
+    * pass ci
+    
+    * ignore json
+    
+    * remove mentioned & comment
+    
+    * remove comment
+    
+    * rm
+    
+    * integrate lifetime event with gql v1
+    
+    * Update app/api/gql/schema.graphqls
+    
+    * Update app/api/gql/schema.graphqls
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit 3e9ae180bff3157526a5278a491d07fe508f05a0
+Author: 哲の王 <8919794+CreatCodeBuild@users.noreply.github.com>
+Date:   Sun Nov 28 18:53:06 2021 +0800
+
+    Implement mentionable API for GraphQL v2 (#62)
+    
+    * pass ci
+    
+    * ignore json
+    
+    * remove mentioned & comment
+    
+    * remove comment
+    
+    * rm
+    
+    * Update app/api/gqlv2/resolver/resolvers.go
+    
+    * Update app/api/gqlv2/resolver/resolvers.go
+    
+    * Update app/api/gqlv2/resolver/resolvers.go
+    
+    * Update app/api/gqlv2/resolver/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit 439af5afd482320e8647be1303c0fac1478c42e5
+Author: 哲の王 <8919794+CreatCodeBuild@users.noreply.github.com>
+Date:   Sun Nov 28 18:44:22 2021 +0800
+
+    GraphQL Version2 (#61)
+    
+    * pass ci
+    
+    * ignore json
+    
+    * remove mentioned & comment
+    
+    * Update app/api/gqlv2/resolver/data.go
+    
+    * Update app/api/gqlv2/resolver/data.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit ab2d131014049750db29900ce22d289d9d3f08fb
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Wed Nov 24 23:59:59 2021 -0800
+
+    Add start task API (#56)
+    
+    * Add Start Task API
+    
+    * Add TODO for StartTask
+    
+    * Get null with no NeedAttentionTask
+    
+    * Change to needAttentionTaskID to pointer
+    
+    * Update app/repo/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Clean up code
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit 507a3e4f656d882b308550e89f5c00891c04874b
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Nov 24 23:10:04 2021 -0800
+
+    Clean up config (#59)
+
+commit 101291ce768fda13938e5a1181ea428003fc3468
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Nov 24 23:04:10 2021 -0800
+
+    Clean up code (#58)
+
+commit 83eace856545d21e8dc7b34f4651719f79a6350b
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Nov 24 22:54:10 2021 -0800
+
+    Notify Keel to deploy updated Docker images (#57)
+    
+    * Invoke deployment hook
+    
+    * Fix deployment webhook URL
+
+commit 4ec3dbecaf4d2fae5a263b8ba72a0e62e1744bf7
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Mon Nov 22 20:47:56 2021 -0800
+
+    Add DeleteTask API (#51)
+    
+    * Add DeleteTask API
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/api/gql/resolver/mutation.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/api/gql/resolver/mutation.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Update app/service/task.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * Remove task in NeedAttention
+    
+    * Update taskId to null when deleting NeedAttentionTask
+    
+    * Clean up code
+    
+    * Clean up code
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit becc94302848b9706f9ff51f30942db597ef0512
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Nov 20 16:11:49 2021 -0800
+
+    Clean up Drone config (#55)
+
+commit 46669a6ac70a7008cf6e3927c26965f1a803635f
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Fri Nov 19 17:54:21 2021 -0800
+
+    Merge pull request #54 from teamyapp/magicoder/vendor
+    
+    Version control dependencies
+
+commit 10f59672b0b7b649444d8a80046a2c670b7d24f5
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Wed Nov 17 01:31:35 2021 -0800
+
+    Add CreateTask GraphQL API (#46)
+    
+    * Add CreateTask GraphQL API
+    
+    * Format code and return partial ids from graphQLIds
+    
+    * Update app/api/gql/resolver/types.go
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit caae60677998a5439a35f684525ea11a3bcff2cb
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Wed Nov 17 00:26:23 2021 -0800
+
+    Fix return bug and task id bug in CreateTask (#50)
+
+commit 71510a8ca9486640a8279a7eb63581e80ab34f19
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Wed Nov 17 00:00:43 2021 -0800
+
+    Fix bug in AssignTaskToTeam (#48)
+
+commit 4d62521b8c3ff0998ca14aa664d8c4ca30903ca0
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Tue Nov 16 22:29:55 2021 -0800
+
+    Change id to autoincrement in sql seed (#47)
+
+commit a5e6ef24ae88279ee70561bb14425ef1b0338f3d
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Mon Nov 15 21:04:50 2021 -0800
+
+    Move new task to team's upcoming list (#45)
+    
+    * Assign a task to a team after creating it
+    
+    * Add teamRepo when NewTask
+
+commit 2a4198d0dec04a5b13272672c1a2c19f1d2da360
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Mon Nov 15 20:38:39 2021 -0800
+
+    Add AssignTaskToTeam in repo (#44)
+
+commit e9aa8618c92f72df198851b7d2d96956fea305ee
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Mon Nov 15 20:22:22 2021 -0800
+
+    Return task ID when a new task is created (#43)
+    
+    * Return task ID after task creation
+    
+    * Modify CreateTask API in service
+    
+    * Change back CreateTask Service API
+    
+    * Format db statement in CreateTask Repo
+
+commit 4abdd2bc587995ced8992c6d64ac8458f5e19b21
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Nov 14 16:05:07 2021 -0800
+
+    Fix k8s deployment secret (#40)
+
+commit b7ac8e89c6ca6819e5d99ad293972819c08dbbe4
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Nov 14 15:45:23 2021 -0800
+
+    Migrate from harbor to Digitalocean (#39)
+
+commit 89edce4ca29be8f8bf946b05d735d600a6505b50
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Sun Nov 14 00:27:25 2021 -0800
+
+    Use auto increment ID provided by DB (#38)
+
+commit e4a80ca4b3467a33377b5892d008396d73aa72b5
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Sat Nov 13 19:27:51 2021 -0800
+
+    Add SQL Command for CreateTask (#37)
+    
+    * Add SQL Command for CreateTask
+    
+    * Ignore createdAt and updatedAt when CreateTask
+
+commit dd3a0a2f5898cf6daabbe8f32d9d647ee2215bb1
+Author: yijiacc <76569613+yijia-cc@users.noreply.github.com>
+Date:   Sat Nov 13 17:34:22 2021 -0800
+
+    Add CreateTask API to task service (#35)
+    
+    * Add CreateTask API
+    
+    * Add TODO for id generation
+
+commit defafacff04f1f9fa9677467de04c3b36f25c107
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 30 17:01:09 2021 -0700
+
+    Add find task by ID API (#34)
+    
+    * Add find task by ID API
+    
+    * Clean up code
+    
+    * Clean up code
+
+commit 3fe3ba37f9653911339a6aa74540b8d795387163
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 30 11:42:22 2021 -0700
+
+    Add available actions for in progress & delivered tasks (#33)
+
+commit 02b8f3fa4af6c2f65f2d15e7a32007145f4cee52
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 30 01:56:53 2021 -0700
+
+    Support rendering task actions (#32)
+
+commit a9c9e299818beddff18b3af2b7b7849580f793d3
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 30 00:42:23 2021 -0700
+
+    Update DB seeding SQL (#31)
+    
+    * Update DB seeding SQL
+    
+    * Clean up
+
+commit 21916cfb905b6ab0af147ab5f4cda3b23100c551
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Fri Oct 29 20:35:11 2021 -0700
+
+    Rename needAttention to taskNeedAttention API (#30)
+
+commit 3ed5f0ee8b9d5691a8daace75c33d97a4dac979a
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Fri Oct 29 03:16:01 2021 -0700
+
+    Support getting personal status for active team (#29)
+    
+    * Add core logic for personal status
+    
+    * Support getting personal status for active team
+    
+    * Clean up code
+
+commit e596eb6081e87bf64f9912298842a2b081e1f394
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Thu Oct 28 19:55:52 2021 -0700
+
+    Fix package configs (#28)
+
+commit c325abce1af22fa169c5454a2caa4c67fb51ebe2
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Tue Oct 26 22:08:55 2021 -0700
+
+    Add package configs (#27)
+
+commit 62d3e93163b973dfa0cbf571f3afc185fb6f787f
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Tue Oct 26 01:14:58 2021 -0700
+
+    Add core logic for personal status (#26)
+
+commit 4c7b6485c20aced1f5cb9b233fb1e7ff694f8f10
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Thu Oct 21 23:26:05 2021 -0700
+
+    Enable GraphQLPlayground as online IDE (#25)
+    
+    * Enable GraphiQL IDE
+    
+    * Update version for One fw
+    
+    * Switch from GraphiQL to GraphQLPlayground
+
+commit 735f9866b6f7b10484f550ab6643f5974bb3a55f
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Oct 20 01:16:44 2021 -0700
+
+    Enable CORS (#23)
+    
+    * Enable CORS
+    
+    * Clean up code
+    
+    * Clean up code
+
+commit 7963eee9c06b38db8d66ea3d56aa296816be27a3
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Oct 17 00:36:52 2021 -0700
+
+    Fix k8s DB envs (#22)
+
+commit 3114c11e336d5eb2d0c0ae46e9b526ec81e4da91
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sun Oct 17 00:33:15 2021 -0700
+
+    Fix private Go module auth error (#21)
+
+commit 771a3fc2ebf422a466744bfa178285a7dc31520e
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 16 14:03:32 2021 -0700
+
+    Update dependencies (#19)
+
+commit 4b1a7bf5af2c7954e1055cf4b68ba07f6bf266c5
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 16 13:34:31 2021 -0700
+
+    Clean up README (#18)
+
+commit f4a18ba69bded30650b9e2147053b1ec0d59182f
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 16 13:31:53 2021 -0700
+
+    Update to latest one framework (#17)
+
+commit d4fdd5341f7380f8721359cfef174e57483909e8
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 16 11:53:33 2021 -0700
+
+    Generate SQL to create new DB (#16)
+    
+    * Generate SQL to create new DB
+    
+    * Clean up
+
+commit 75f8113a2ea88e70fe86851b7b1c5ed20bc602cb
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 16 11:01:08 2021 -0700
+
+    Add DB migration creation command (#15)
+
+commit da2d6182affa916677771fd47a20857426019931
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Thu Oct 14 01:53:51 2021 -0700
+
+    Update domain name (#14)
+
+commit dcdb3484c7eff593418c2102803dde085891b3d8
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Thu Oct 14 01:49:17 2021 -0700
+
+    Add DB migration & seeding tools (#13)
+    
+    * Add DB migration & seeding tools
+    
+    * Remove invalid DB seed team member
+
+commit c0565623cf4d969fed10a534a45b994961d2ed88
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Thu Oct 14 01:35:01 2021 -0700
+
+    Add auto retry when failed to connect to DB instead of crashing (#12)
+    
+    * Wait for DB to be ready instead of crashing the app
+    
+    * Add auto retry when failed to connect to DB
+
+commit 6f80a2189489e49394c127b42b375196477c8837
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Oct 13 06:20:50 2021 -0700
+
+    Add configs & script (#11)
+
+commit 59a6e74f9a581e359a98f944541fe3bef7887db5
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Oct 13 06:15:28 2021 -0700
+
+    Fill in GraphQL APIs (#10)
+    
+    * Fill in GraphQL APIs
+    
+    * Add GraphQL API to show team status
+    
+    * Add dependencies
+
+commit 9827c2d37aa7fe749bd7fc0fcf4c193b6a411143
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Oct 13 05:38:06 2021 -0700
+
+    Add GetActiveTeamStatus API to Execution service (#9)
+
+commit 924f0027c144a0b474efdfbc9329d7fc7a8cc68f
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Oct 13 05:01:20 2021 -0700
+
+    Add repos (#8)
+
+commit ad1c72e3369787879bc996bba1c6c208eb0f1f45
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Oct 13 04:37:47 2021 -0700
+
+    Update core data model (#7)
+
+commit 28103ad94ee08877285940575f02782f3e62412e
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Wed Oct 13 04:33:08 2021 -0700
+
+    Add SQL (#6)
+
+commit c6da8afcdaef52add0eea8d63cd1d9984c1d301b
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 9 19:03:18 2021 -0700
+
+    Outline core services (#4)
+    
+    * Outline core services
+    
+    * Update task, team and user entity
+
+commit 3c198b431a57167e59260c7eadcf1f99708b1b23
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Sat Oct 9 15:47:29 2021 -0700
+
+    Setup empty GraphQL APIs (#3)
+    
+    * Setup empty GraphQL APIs
+    
+    * Format code
+
+commit 3cba0b7b1942c98fd3594b65364022117d01b57f
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Tue Oct 5 00:40:53 2021 -0700
+
+    Merge pull request #2 from teamyapp/magicoder/graphql-api
+    
+    GraphQL API for MVP
+
+commit 1a173159f6e956acec638d8f28bc7bf3df3b9ad2
+Author: Harry Liu <magicoder20@gmail.com>
+Date:   Fri Aug 20 22:28:07 2021 -0700
+
+    Trigger deployment
+
+commit 09a027eca943fb1b193cfd8dae40149065f9e1cd
+Author: Harry Liu <magicoder20@gmail.com>
+Date:   Fri Aug 20 22:00:07 2021 -0700
+
+    Trigger deployment
+
+commit aac96c6af6a97d70fa39c5602328381c5b349c93
+Author: Harry Liu <magicoder20@gmail.com>
+Date:   Fri Aug 20 21:46:03 2021 -0700
+
+    Initialize repository
+
+commit b566116184097baac2d85d1fba620e913a3d0283
+Author: Magic Coder <magicoder20@gmail.com>
+Date:   Fri Aug 20 21:38:29 2021 -0700
+
+    Merge pull request #11 from teamyapp/magicoder10/update-go
+    
+    Update Golang version
+
+commit c8e413878f279b469e965b00175841b41942c02f
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Mon Apr 19 22:19:08 2021 -0400
+
+    Test continuous delivery pipelines (#9)
+    
+    * Verify continous delivery
+    
+    * Update README
+
+commit 8e96fe98c8b72486f81cef9569aadd473f9bc978
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Mon Apr 19 21:43:13 2021 -0400
+
+    Fix image tag suffix (#8)
+
+commit fa96567a555088d1c8a668eff444f28c91215166
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Mon Apr 19 21:32:10 2021 -0400
+
+    Configure Drone pipeline for testing, feature, staging, production. (#7)
+    
+    * Add TODO for testing branch
+    
+    * build docker image when target events triggered in branches
+    
+    * update name
+    
+    * Configure pipelines for testing, feature, production, staging workflow
+    
+    * Add branch filters for pipelines and steps
+    
+    * Add event filters for pipelines
+    
+    * Fix indentation
+
+commit 97ac7a383486d630b08f85e3bf8cba419e70a721
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Thu Apr 15 01:28:29 2021 -0400
+
+    add k8s config for production and testing (#5)
+
+commit 42f6a9c89fcfdb57b6acef11d342dd2c9c02bf9c
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Thu Apr 15 00:37:31 2021 -0400
+
+    Configure domain name for staging app (#6)
+
+commit 85757ab246ad1076acc63b9f4eccade41219e752
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Sat Apr 3 16:39:11 2021 -0400
+
+    Configure staging environment for template-go (#3)
+    
+    * update argocd staging config
+    
+    * update image
+    
+    * update namespace
+
+commit c785f0ae52b1e7231176f1dd98b4a84efd61f4bf
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Thu Apr 1 00:59:03 2021 -0400
+
+    Add Dockerfile for staging & production container (#2)
+    
+    * add docker file
+    
+    * clean up
+    
+    * update to client side compile
+    
+    * Apply suggestions from code review
+    
+    update dir from build to bin
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+    
+    * enable localost running
+    
+    Co-authored-by: Magic Coder <magicoder20@gmail.com>
+
+commit e770c30a1e0c311e8d7b7a619c1a3fd3f1da6b22
+Merge: 42849bc 5469dbf
+Author: Alina <huihuijiang0619@gmail.com>
+Date:   Tue Mar 30 20:01:44 2021 -0400
+
+    Merge pull request #1 from teamyapp/alina/unit-test
+    
+    Add sample unit test
+
+commit 5469dbf865466f73611afc75884266ac73b35181
+Author: TinaLand <huihuijiang0619@gmail.com>
+Date:   Tue Mar 30 19:57:05 2021 -0400
+
+    Update go image version
+
+commit 0a39eaec78185d5d6171da995abcecad8a668b08
+Author: TinaLand <huihuijiang0619@gmail.com>
+Date:   Tue Mar 30 19:51:38 2021 -0400
+
+    Add sample unit test
+
+commit e148fa5092c31846980012c7c4a3ded550f1a054
+Author: TinaLand <huihuijiang0619@gmail.com>
+Date:   Tue Mar 30 19:32:57 2021 -0400
+
+    update config
+
+commit 613d4f10558b0187a7550e755579c4b2ee6c8087
+Author: TinaLand <huihuijiang0619@gmail.com>
+Date:   Tue Mar 30 19:32:46 2021 -0400
+
+    update test case
+
+commit 9dc2bf5bb1d7c5c8845ab185158aee4629ffa478
+Author: TinaLand <huihuijiang0619@gmail.com>
+Date:   Tue Mar 30 17:53:54 2021 -0400
+
+    added sample test case
+
+commit 98e8fa0efbf84d8fff05517ff7678c62eaf00c71
+Author: TinaLand <huihuijiang0619@gmail.com>
+Date:   Tue Mar 30 11:31:16 2021 -0400
+
+    changed module name, added sample test
+
+commit 42849bc21e59e0dd8228a1272bfc444a427bef83
+Author: Harry Liu <magicoder20@gmail.com>
+Date:   Sat Feb 6 18:50:55 2021 -0800
+
+    Initialize Go service
