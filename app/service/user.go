@@ -29,6 +29,16 @@ func (u User) ListTeamMembers(teamID oneEntity.ID) ([]entity.User, error) {
 	return members, nil
 }
 
+func (u User) FindUser(userID oneEntity.ID) (entity.User, error) {
+	user, err := u.userRepo.GetUser(userID)
+	if err != nil {
+		log.Println(err)
+		return entity.User{}, err
+	}
+
+	return user, nil
+}
+
 func NewUser(userRepo repo.User, teamRepo repo.Team) User {
 	return User{
 		userRepo: userRepo,

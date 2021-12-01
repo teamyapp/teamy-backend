@@ -8,6 +8,7 @@ package dep
 
 import (
 	"database/sql"
+
 	"github.com/google/wire"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
