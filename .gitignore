@@ -6,3 +6,4 @@
 .repo.env
 
 *.json
+*.log
