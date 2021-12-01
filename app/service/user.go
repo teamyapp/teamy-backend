@@ -1,32 +1,12 @@
 package service
 
 import (
-	"log"
-
-	oneEntity "github.com/teamyapp/one/entity"
-	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/repo"
 )
 
 type User struct {
 	userRepo repo.User
 	teamRepo repo.Team
-}
-
-func (u User) ListTeamMembers(teamID oneEntity.ID) ([]entity.User, error) {
-	ids, err := u.teamRepo.ListTeamMemberIDs(teamID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	members, err := u.userRepo.GetUsers(ids)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	return members, nil
 }
 
 func (u User) FindUser(userID oneEntity.ID) (entity.User, error) {
