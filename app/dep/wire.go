@@ -24,7 +24,7 @@ var repoSet = wire.NewSet(
 func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	wire.Build(
 		repoSet,
-		wire.Bind(new(resolver2.Persister), new(*resolver2.JSONPersister)),
+		wire.Bind(new(resolver2.Persister), new(resolver2.JSONPersister)),
 
 		service.NewPrioritization,
 		service.NewTeam,
@@ -35,6 +35,7 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 		resolver.NewDependencies,
 		resolver2.NewJSONPersister,
 		resolver2.NewDependencies,
+		resolver2.NewDataStore,
 	)
 	return resolver.Resolver{}
 }
