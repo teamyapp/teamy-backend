@@ -14,12 +14,12 @@ func QraphiQL() []byte {
 }
 
 type Dependencies struct {
-	Data *Data
+	Data *DataStore
 }
 
-func NewDependencies() *Dependencies {
+func NewDependencies(dataStore *DataStore) *Dependencies {
 	return &Dependencies{
-		Data: Read("./data.json"),
+		Data: dataStore,
 	}
 }
 
@@ -33,7 +33,8 @@ type Root struct {
 type User struct {
 	deps       *Dependencies
 	ID         graphql.ID
-	Name       string
+	FirstName  string
+	LastName   string
 	ProfileUrl string
 }
 

@@ -19,29 +19,41 @@ type CreationRelation struct {
 }
 
 // In Memory Database
+type DataStore struct {
+	persister Persister
+	lock      *sync.Mutex
+	Data
+}
+
 type Data struct {
-	persister         Persister
-	lock              *sync.Mutex
-	file              string
 	Tasks             map[graphql.ID]Task
 	Users             map[graphql.ID]User
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation
 }
 
-func NewData(p Persister) *Data {
-	return &Data{
+func NewDataStore(p Persister) *DataStore {
+	ds := DataStore{
+		Data:      *p.Read(),
 		persister: p,
 	}
+	ds.lock = &sync.Mutex{}
+	if ds.Tasks == nil {
+		ds.Tasks = make(map[graphql.ID]Task)
+	}
+	if ds.Users == nil {
+		ds.Users = make(map[graphql.ID]User)
+	}
+	return &ds
 }
 
 // Persister persists a Data instance
 type Persister interface {
 	Write(*Data) error
-	Read(path string) *Data
+	Read() *Data
 }
 
-func (d Data) GetTask(id graphql.ID) (Task, error) {
+func (d DataStore) GetTask(id graphql.ID) (Task, error) {
 	task, ok := d.Tasks[id]
 	if ok {
 		return task, nil
@@ -49,7 +61,7 @@ func (d Data) GetTask(id graphql.ID) (Task, error) {
 	return task, fmt.Errorf("can not find task %v", id)
 }
 
-func (d Data) GetTasks(ids []graphql.ID) []Task {
+func (d DataStore) GetTasks(ids []graphql.ID) []Task {
 	var tasks []Task
 	for _, id := range ids {
 		task, ok := d.Tasks[id]
@@ -60,7 +72,7 @@ func (d Data) GetTasks(ids []graphql.ID) []Task {
 	return tasks
 }
 
-func (d Data) FilterTasks(filter func(t Task) bool) []Task {
+func (d DataStore) FilterTasks(filter func(t Task) bool) []Task {
 	var tasks []Task
 	for _, task := range d.Tasks {
 		if filter(task) {
@@ -70,7 +82,7 @@ func (d Data) FilterTasks(filter func(t Task) bool) []Task {
 	return tasks
 }
 
-func (d Data) CreateTask(task TaskInput, creatorID graphql.ID) (Task, error) {
+func (d DataStore) CreateTask(task TaskInput, creatorID graphql.ID) (Task, error) {
 	newID := graphql.ID(strconv.FormatInt(int64(len(d.Tasks))+1, 10))
 	context := ""
 	if task.Context != nil {
@@ -93,10 +105,10 @@ func (d Data) CreateTask(task TaskInput, creatorID graphql.ID) (Task, error) {
 			},
 		},
 	})
-	return d.Tasks[newID], d.persister.Write(&d)
+	return d.Tasks[newID], d.persister.Write(&d.Data)
 }
 
-func (d Data) GetUser(id graphql.ID) (User, error) {
+func (d DataStore) GetUser(id graphql.ID) (User, error) {
 	user, ok := d.Users[id]
 	if !ok {
 		return User{}, fmt.Errorf("user %v not found", id)
@@ -104,7 +116,7 @@ func (d Data) GetUser(id graphql.ID) (User, error) {
 	return user, nil
 }
 
-func (d *Data) FilterLifetimeEvents(filter func(LifetimeEvent) bool) []LifetimeEvent {
+func (d *DataStore) FilterLifetimeEvents(filter func(LifetimeEvent) bool) []LifetimeEvent {
 	var events []LifetimeEvent
 	fmt.Println(&d, "FilterLifetimeEvents", d.LifetimeEvents)
 
@@ -116,7 +128,7 @@ func (d *Data) FilterLifetimeEvents(filter func(LifetimeEvent) bool) []LifetimeE
 	return events
 }
 
-func (d *Data) CreateLifetimeEvent(creatorID graphql.ID, eventType LifetimeEventType) error {
+func (d *DataStore) CreateLifetimeEvent(creatorID graphql.ID, eventType LifetimeEventType) error {
 	d.LifetimeEvents = append(d.LifetimeEvents, LifetimeEvent{
 		ID:         graphql.ID(strconv.FormatInt(int64(len(d.LifetimeEvents)), 10)),
 		ActorID:    creatorID,
@@ -124,10 +136,10 @@ func (d *Data) CreateLifetimeEvent(creatorID graphql.ID, eventType LifetimeEvent
 		EventType:  eventType,
 	})
 	fmt.Println(&d, "CreateLifetimeEvent", d.LifetimeEvents)
-	return d.persister.Write(d)
+	return d.persister.Write(&d.Data)
 }
 
-func (d *Data) FilterCreationRelation(f func(CreationRelation) bool) (rs []CreationRelation) {
+func (d *DataStore) FilterCreationRelation(f func(CreationRelation) bool) (rs []CreationRelation) {
 	for _, r := range d.CreationRelations {
 		if f(r) {
 			rs = append(rs, r)
@@ -139,13 +151,20 @@ func (d *Data) FilterCreationRelation(f func(CreationRelation) bool) (rs []Creat
 /////////////////
 // Persistance //
 /////////////////
+type JSONPersister struct {
+	File string
+}
 
-type JsonPersister struct{}
+var _ Persister = (*JSONPersister)(nil)
 
-func (p JsonPersister) Write(d *Data) error {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-	if d.file == "" {
+func NewJSONPersister() JSONPersister {
+	return JSONPersister{
+		File: "./data.json",
+	}
+}
+
+func (p JSONPersister) Write(d *Data) error {
+	if p.File == "" {
 		log.Println("this data object has no persisted layer, skip file writes")
 		return nil
 	}
@@ -154,30 +173,20 @@ func (p JsonPersister) Write(d *Data) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(d.file, bytes, os.ModePerm)
+	return os.WriteFile(p.File, bytes, os.ModePerm)
 }
 
-func Read(path string) *Data {
-	data := Data{}
-	defer func() {
-		data.lock = &sync.Mutex{}
-		if data.Tasks == nil {
-			data.Tasks = make(map[graphql.ID]Task)
-		}
-		if data.Users == nil {
-			data.Users = make(map[graphql.ID]User)
-		}
-	}()
-	bytes, err := os.ReadFile(path)
+func (p JSONPersister) Read() *Data {
+	data := &Data{}
+	bytes, err := os.ReadFile(p.File)
 	if err != nil {
 		log.Println(err, ", fail to load data from json, skip persistence")
-		return &data
+		return data
 	}
-	err = json.Unmarshal(bytes, &data)
+	err = json.Unmarshal(bytes, data)
 	if err != nil {
 		log.Println(err, "fail to load data from json, skip persistence")
-		return &data
+		return data
 	}
-	data.file = path
-	return &data
+	return data
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"log"
 
 	oneEntity "github.com/teamyapp/one/entity"
@@ -23,13 +24,16 @@ func (t Task) FindTask(taskID oneEntity.ID) (entity.Task, error) {
 }
 
 func (t Task) CreateTask(task entity.Task, userId oneEntity.ID) (oneEntity.ID, error) {
-	taskID, err := t.taskRepo.CreateTask(task)
+	activeTeam, err := t.teamRepo.GetActiveTeam(userId)
 	if err != nil {
 		log.Println(err)
-		return taskID, err
+		return 0, err
+	}
+	if activeTeam == nil {
+		return 0, fmt.Errorf("user %v does not have an active team", userId)
 	}
 
-	activeTeam, err := t.teamRepo.GetActiveTeam(userId)
+	taskID, err := t.taskRepo.CreateTask(task)
 	if err != nil {
 		log.Println(err)
 		return taskID, err

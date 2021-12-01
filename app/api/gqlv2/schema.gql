@@ -32,7 +32,8 @@ type AssignOwner {
 type User {
 	# core information
 	id: ID!
-	name: String!
+	firstName String!
+	lastName: String!
 	profileUrl: String!
 	"""
 	All tasks relates to this user,

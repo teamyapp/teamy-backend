@@ -63,7 +63,7 @@ func (q Query) ActiveTeam(ctx context.Context) (*Team, error) {
 func (q Query) Me(ctx context.Context) (User, error) {
 	return User{
 		user: entity.User{
-			Name: "public viewer",
+			FirstName: "public viewer",
 		},
 	}, nil
 }

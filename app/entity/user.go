@@ -6,6 +6,7 @@ import (
 
 type User struct {
 	oneEntity.Entity
-	Name       string
+	FirstName  string
+	LastName   string
 	ProfileURL string
 }

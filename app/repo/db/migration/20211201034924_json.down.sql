@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS
+	json_persister

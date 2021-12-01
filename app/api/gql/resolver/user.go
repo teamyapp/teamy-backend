@@ -9,12 +9,12 @@ type User struct {
 
 func (u User) FirstName() string {
 	// TODO: replace with real first name
-	return "Firstname"
+	return u.user.FirstName
 }
 
 func (u User) LastName() string {
 	// TODO: replace with real last name
-	return "Lastname"
+	return u.user.LastName
 }
 
 func (u User) ProfileURL() string {
