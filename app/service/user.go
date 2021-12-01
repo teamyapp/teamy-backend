@@ -1,7 +1,10 @@
 package service
 
 import (
+	oneEntity "github.com/teamyapp/one/entity"
+	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/repo"
+	"log"
 )
 
 type User struct {
