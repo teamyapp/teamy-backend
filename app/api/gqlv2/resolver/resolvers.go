@@ -17,9 +17,9 @@ type Dependencies struct {
 	Data *Data
 }
 
-func NewDependencies() *Dependencies {
+func NewDependencies(persister Persister) *Dependencies {
 	return &Dependencies{
-		Data: Read("./data.json"),
+		Data: persister.Read("./data.json"),
 	}
 }
 
@@ -33,7 +33,8 @@ type Root struct {
 type User struct {
 	deps       *Dependencies
 	ID         graphql.ID
-	Name       string
+	FirstName string
+	LastName       string
 	ProfileUrl string
 }
 

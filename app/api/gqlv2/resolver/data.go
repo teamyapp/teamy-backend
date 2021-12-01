@@ -140,9 +140,11 @@ func (d *Data) FilterCreationRelation(f func(CreationRelation) bool) (rs []Creat
 // Persistance //
 /////////////////
 
-type JsonPersister struct{}
+type JSONPersister struct{}
 
-func (p JsonPersister) Write(d *Data) error {
+var _ Persister = (*JSONPersister)(nil)
+
+func (p JSONPersister) Write(d *Data) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if d.file == "" {
@@ -157,8 +159,8 @@ func (p JsonPersister) Write(d *Data) error {
 	return os.WriteFile(d.file, bytes, os.ModePerm)
 }
 
-func Read(path string) *Data {
-	data := Data{}
+func (p *JSONPersister) Read(path string) *Data {
+	data := NewData(p)
 	defer func() {
 		data.lock = &sync.Mutex{}
 		if data.Tasks == nil {
@@ -171,13 +173,17 @@ func Read(path string) *Data {
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		log.Println(err, ", fail to load data from json, skip persistence")
-		return &data
+		return data
 	}
-	err = json.Unmarshal(bytes, &data)
+	err = json.Unmarshal(bytes, data)
 	if err != nil {
 		log.Println(err, "fail to load data from json, skip persistence")
-		return &data
+		return data
 	}
 	data.file = path
-	return &data
+	return data
+}
+
+func NewJSONPersister() *JSONPersister {
+	return &JSONPersister{}
 }

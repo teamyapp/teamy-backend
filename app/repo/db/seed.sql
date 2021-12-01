@@ -1,13 +1,13 @@
 -- Seed tables
 -- Users
-INSERT INTO "user" (name, profile_url) VALUES ('Luke Walker', 'http://static.teamyapp.com/user/1/profile.png');
-INSERT INTO "user" (name, profile_url) VALUES ('Mason Eyler', 'http://static.teamyapp.com/user/2/profile.png');
-INSERT INTO "user" (name, profile_url) VALUES ('Milton Cutler', 'http://static.teamyapp.com/user/3/profile.png');
-INSERT INTO "user" (name, profile_url) VALUES ('Milan Fender', 'http://static.teamyapp.com/user/4/profile.png');
-INSERT INTO "user" (name, profile_url) VALUES ('Martin Hitler ', 'http://static.teamyapp.com/user/5/profile.png');
-INSERT INTO "user" (name, profile_url) VALUES ('Myrnin Parker ', 'http://static.teamyapp.com/user/6/profile.png');
-INSERT INTO "user" (name, profile_url) VALUES ('Jade Alpin ', 'http://static.teamyapp.com/user/7/profile.png');
-INSERT INTO "user" (name, profile_url) VALUES ('Kyle Armster ', 'http://static.teamyapp.com/user/8/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Luke', 'Walker', 'http://static.teamyapp.com/user/1/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Mason','Eyler', 'http://static.teamyapp.com/user/2/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Milton', 'Cutler', 'http://static.teamyapp.com/user/3/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Milan', 'Fender', 'http://static.teamyapp.com/user/4/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Martin', 'Hitler ', 'http://static.teamyapp.com/user/5/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Myrnin', 'Parker ', 'http://static.teamyapp.com/user/6/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Jade', 'Alpin ', 'http://static.teamyapp.com/user/7/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Kyle', 'Armster ', 'http://static.teamyapp.com/user/8/profile.png');
 
 -- Tasks
 INSERT INTO task (goal, owner_user_id) VALUES ('Draft need attention, upcoming, and delivered API', 1);

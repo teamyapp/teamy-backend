@@ -1,7 +1,8 @@
 CREATE TABLE "user"
 (
 	id          SERIAL PRIMARY KEY,
-	name        VARCHAR(100) NOT NULL,
+	first_name  VARCHAR(100) NOT NULL,
+	last_name   VARCHAR(100) NOT NULL,
 	profile_url VARCHAR(2048),
 	created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	updated_at  TIMESTAMP

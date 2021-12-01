@@ -41,7 +41,7 @@ func (S SQLUser) GetUsers(ids []oneEntity.ID) ([]entity.User, error) {
 	var users []entity.User
 	for rows.Next() {
 		var user entity.User
-		err = rows.Scan(&user.ID, &user.Name, &user.ProfileURL, &user.CreatedAt, &user.UpdatedAt)
+		err = rows.Scan(&user.ID, &user.FirstName, &user.LastName,&user.ProfileURL, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			log.Println(user.ID, err)
 		}
@@ -55,7 +55,7 @@ func (S SQLUser) GetUser(userID oneEntity.ID) (entity.User, error) {
 	query := fmt.Sprintf(`SELECT * FROM "user" WHERE id = (%s)`, strconv.Itoa(int(userID)))
 
 	var user entity.User
-	err := S.db.QueryRow(query).Scan(&user.ID, &user.Name, &user.ProfileURL, &user.CreatedAt, &user.UpdatedAt)
+	err := S.db.QueryRow(query).Scan(&user.ID, &user.FirstName, &user.LastName, &user.ProfileURL, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		log.Println(user.ID, err)
 		return entity.User{}, err
