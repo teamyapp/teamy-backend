@@ -108,6 +108,29 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 	return true, err
 }
 
+func (m Mutation) CompleteTask(ctx context.Context, args struct {
+	TaskID graphql.ID
+}) (bool, error) {
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	err = m.deps.taskService.CompleteTask(taskID, userID)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return true, err
+}
+
 func (m Mutation) UpdateTask(ctx context.Context, args struct {
 	TaskID graphql.ID
 	Task   TaskInput

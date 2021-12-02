@@ -74,11 +74,7 @@ func (t Task) DeleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 	return err
 }
 
-func (t Task) UpdateTask(task entity.Task) error {
-	panic("not implemented")
-}
-
-func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
+func (t Task) StartTask(taskID oneEntity.ID, userID oneEntity.ID) error {
 	// TODO: a user starts others' task will assign that task to the himself
 	// TODO: show a modal to confirm task should be reassigned.
 	activeTeam, err := t.teamRepo.GetActiveTeam(userID)
@@ -87,13 +83,13 @@ func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
 		return err
 	}
 
-	prevNeedAttentionTaskID, err := t.taskRepo.SetNeedAttentionTask(&startTaskID, userID, activeTeam.ID)
+	prevNeedAttentionTaskID, err := t.taskRepo.SetNeedAttentionTask(&taskID, userID, activeTeam.ID)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	err = t.taskRepo.SetTeamTaskStatus(startTaskID, activeTeam.ID, entity.TaskStatusInProgress)
+	err = t.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusInProgress)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -110,7 +106,39 @@ func (t Task) StartTask(startTaskID oneEntity.ID, userID oneEntity.ID) error {
 	return nil
 }
 
-func (t Task) PerformTaskAction(taskID oneEntity.ID, action entity.TaskAction) error {
+func (t Task) CompleteTask(taskID oneEntity.ID, userID oneEntity.ID) error {
+	activeTeam, err := t.teamRepo.GetActiveTeam(userID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	needAttentionTask, err := t.taskRepo.FindTaskNeedAttentionForUser(userID, activeTeam.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if needAttentionTask.ID != taskID {
+		return nil
+	}
+
+	_, err = t.taskRepo.SetNeedAttentionTask(nil, userID, activeTeam.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	err = t.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusDelivered)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (t Task) UpdateTask(task entity.Task) error {
 	panic("not implemented")
 }
 
