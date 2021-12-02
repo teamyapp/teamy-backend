@@ -8,8 +8,9 @@ type Resolver struct {
 }
 
 func NewResolver(deps *Dependencies, prototypeDeps *resolver.Dependencies) Resolver {
+	query := NewQuery(deps, prototypeDeps)
 	return Resolver{
 		Query:    NewQuery(deps, prototypeDeps),
-		Mutation: NewMutation(deps, prototypeDeps),
+		Mutation: NewMutation(deps, prototypeDeps, &query),
 	}
 }

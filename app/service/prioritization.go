@@ -7,7 +7,7 @@ import (
 type Prioritization struct {
 }
 
-func (p Prioritization) prioritizeTasks(inputTasks []entity.Task) []entity.Task {
+func (p Prioritization) PrioritizeTasks(inputTasks []entity.Task) []entity.Task {
 	return inputTasks
 }
 
