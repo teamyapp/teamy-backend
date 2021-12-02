@@ -32,7 +32,7 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		return Task{}, err
 	}
 
-	activeTeam, err := m.deps.teamRepo.GetActiveTeam(userID)
+	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
@@ -100,7 +100,7 @@ func (m Mutation) StartTask(ctx context.Context, args struct {
 
 	// TODO: a user starts others' task will assign that task to the himself
 	// TODO: show a modal to confirm task should be reassigned.
-	activeTeam, err := m.deps.teamRepo.GetActiveTeam(userID)
+	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -151,7 +151,7 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
 	// TODO: clean up the task from task dependency graph for the active team
 
-	activeTeam, err := m.deps.teamRepo.GetActiveTeam(userID)
+	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -187,7 +187,7 @@ func (m Mutation) CompleteTask(ctx context.Context, args struct {
 		return false, err
 	}
 
-	activeTeam, err := m.deps.teamRepo.GetActiveTeam(userID)
+	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
 	if err != nil {
 		log.Println(err)
 		return false, err

@@ -50,7 +50,7 @@ func (q Query) Me(ctx context.Context) (User, error) {
 		return User{}, err
 	}
 
-	user, err := q.deps.userRepo.GetUser(userID)
+	user, err := q.deps.userRepo.FindUser(userID)
 	if err != nil {
 		log.Println(err)
 		return User{}, err

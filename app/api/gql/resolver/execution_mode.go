@@ -46,7 +46,7 @@ func (e ExecutionMode) PersonalStatus() (PersonalStatus, error) {
 		return PersonalStatus{}, err
 	}
 
-	activeTeam, err := e.deps.teamRepo.GetActiveTeam(e.userID)
+	activeTeam, err := e.deps.teamRepo.FindActiveTeam(e.userID)
 	if err != nil {
 		log.Println(err)
 		return PersonalStatus{}, err
@@ -90,7 +90,7 @@ func (e ExecutionMode) TeamStatus() (TeamStatus, error) {
 		return TeamStatus{}, err
 	}
 
-	activeTeam, err := e.deps.teamRepo.GetActiveTeam(e.userID)
+	activeTeam, err := e.deps.teamRepo.FindActiveTeam(e.userID)
 	if err != nil {
 		log.Println(err)
 		return TeamStatus{}, err

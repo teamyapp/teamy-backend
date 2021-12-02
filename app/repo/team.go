@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	oneEntity "github.com/teamyapp/one/entity"
@@ -9,7 +10,9 @@ import (
 )
 
 type Team interface {
-	GetActiveTeam(userID oneEntity.ID) (*entity.Team, error)
+	FindActiveTeam(userID oneEntity.ID) (*entity.Team, error)
+	FindAllTeamIDs(userID oneEntity.ID) ([]oneEntity.ID, error)
+	FindTeams(teamIDs []oneEntity.ID) ([]entity.Team, error)
 	ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error)
 }
 
@@ -46,7 +49,7 @@ func (S SQLTeam) ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error) 
 	return ids, nil
 }
 
-func (S SQLTeam) GetActiveTeam(userID oneEntity.ID) (*entity.Team, error) {
+func (S SQLTeam) FindActiveTeam(userID oneEntity.ID) (*entity.Team, error) {
 	team := entity.Team{}
 	err := S.db.
 		QueryRow(`
@@ -65,6 +68,60 @@ WHERE user_id = $1`,
 		}
 	}
 	return &team, err
+}
+
+func (S SQLTeam) FindAllTeamIDs(userID oneEntity.ID) ([]oneEntity.ID, error) {
+	rows, err := S.db.Query(`
+	SELECT team_id
+	FROM team_member
+	WHERE user_id = $1;
+`, int(userID))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var ids []oneEntity.ID
+	var id oneEntity.ID
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			log.Println(id, err)
+			continue
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
+func (S SQLTeam) FindTeams(teamIDs []oneEntity.ID) ([]entity.Team, error) {
+	idsString := toIDsString(teamIDs)
+	query := fmt.Sprintf(`
+SELECT id, name, logo_url, created_at, updated_at
+FROM team
+WHERE id IN (%s);`, idsString)
+	rows, err := S.db.Query(query)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var teams []entity.Team
+	for rows.Next() {
+		var team entity.Team
+		err = rows.Scan(&team.ID, &team.Name, &team.LogoURL, &team.CreatedAt, &team.UpdatedAt)
+		if err != nil {
+			log.Println(team.ID, err)
+			continue
+		}
+		teams = append(teams, team)
+	}
+
+	return teams, nil
 }
 
 func NewSQLTeam(db *sql.DB) SQLTeam {
