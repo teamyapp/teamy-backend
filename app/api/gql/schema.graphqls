@@ -15,6 +15,7 @@ type Mutation {
 	deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Boolean!
 	startTask(taskId: ID!): Boolean!
+	completeTask(taskId: ID!): Boolean!
 }
 
 input TaskInput {
