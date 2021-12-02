@@ -64,14 +64,14 @@ func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 	return actions
 }
 
-func toGraphQLUsers(users []entity.User) []User {
+func toGraphQLUsers(deps *Dependencies, prototypeDeps *resolver.Dependencies, users []entity.User) []User {
 	if users == nil {
 		return nil
 	}
 
 	gqlUsers := make([]User, 0)
 	for _, user := range users {
-		gqlUsers = append(gqlUsers, newUser(user))
+		gqlUsers = append(gqlUsers, newUser(deps, prototypeDeps, user))
 	}
 	return gqlUsers
 }

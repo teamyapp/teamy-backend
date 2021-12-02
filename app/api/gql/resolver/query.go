@@ -38,27 +38,6 @@ func (q Query) Task(args struct {
 	return task, err
 }
 
-func (q Query) ActiveTeam(ctx context.Context) (*Team, error) {
-	userID, err := identity.FromContext(ctx)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	team, err := q.deps.executionService.GetActiveTeam(userID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	if team == nil {
-		return nil, nil
-	}
-
-	gqlTeam := newTeam(q.deps, q.prototypeDeps, *team)
-	return &gqlTeam, nil
-}
-
 func (q Query) Me(ctx context.Context) (User, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
@@ -72,7 +51,7 @@ func (q Query) Me(ctx context.Context) (User, error) {
 		return User{}, err
 	}
 
-	return newUser(user), nil
+	return newUser(q.deps, q.prototypeDeps, user), nil
 }
 
 func NewQuery(deps *Dependencies, prototypeDeps *resolver.Dependencies) Query {

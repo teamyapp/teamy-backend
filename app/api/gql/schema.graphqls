@@ -6,7 +6,6 @@ schema {
 type Query {
 	executionMode: ExecutionMode! @deprecated(reason: "during refactor")
 	task(id: ID!): Task!
-	activeTeam: Team @deprecated(reason: "Use `me { activeTeam }`")
 	"the current logged in user. If not logged in, show default public viewer"
 	me: User!
 }
@@ -33,7 +32,9 @@ interface Entity {
 	createdAt: Time!
 }
 
-type Team {
+type Team implements Entity {
+	id: ID!
+	createdAt: Time!
 	members: [User!]!
 }
 

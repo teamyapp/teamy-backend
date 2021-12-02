@@ -52,7 +52,7 @@ func (S SQLUser) GetUsers(ids []oneEntity.ID) ([]entity.User, error) {
 }
 
 func (S SQLUser) GetUser(userID oneEntity.ID) (entity.User, error) {
-	query := fmt.Sprintf(`SELECT * FROM "user" WHERE id = (%s)`, strconv.Itoa(int(userID)))
+	query := fmt.Sprintf(`SELECT id, first_name, last_name, profile_url, created_at, updated_at FROM "user" WHERE id = (%s)`, strconv.Itoa(int(userID)))
 
 	var user entity.User
 	err := S.db.QueryRow(query).Scan(&user.ID, &user.FirstName, &user.LastName, &user.ProfileURL, &user.CreatedAt, &user.UpdatedAt)
