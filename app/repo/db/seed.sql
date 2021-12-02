@@ -1,13 +1,13 @@
 -- Seed tables
 -- Users
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Luke', 'Walker', 'http://static.teamyapp.com/user/1/profile.png');
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Mason','Eyler', 'http://static.teamyapp.com/user/2/profile.png');
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Milton', 'Cutler', 'http://static.teamyapp.com/user/3/profile.png');
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Milan', 'Fender', 'http://static.teamyapp.com/user/4/profile.png');
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Martin', 'Hitler ', 'http://static.teamyapp.com/user/5/profile.png');
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Myrnin', 'Parker ', 'http://static.teamyapp.com/user/6/profile.png');
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Jade', 'Alpin ', 'http://static.teamyapp.com/user/7/profile.png');
-INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Kyle', 'Armster ', 'http://static.teamyapp.com/user/8/profile.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Luke', 'Walker', '/profiles/boy1.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Mason','Eyler', '/profiles/boy2.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Milton', 'Cutler', '/profiles/boy3.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Milan', 'Fender', '/profiles/boy1.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Martin', 'Hitler ', '/profiles/boy2.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Myrnin', 'Parker ', 'h/profiles/boy3.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Jade', 'Alpin ', '/profiles/girl1.png');
+INSERT INTO "user" (first_name, last_name, profile_url) VALUES ('Kyle', 'Armster ', '/profiles/girl3.png');
 
 -- Tasks
 INSERT INTO task (goal, owner_user_id) VALUES ('Draft need attention, upcoming, and delivered API', 1);
@@ -27,12 +27,12 @@ INSERT INTO task_dependency (need_before, need_after) VALUES (4, 3);
 INSERT INTO task_dependency (need_before, need_after) VALUES (1, 5);
 
 -- Teams
-INSERT INTO team (name, logo_url) VALUES ('Teamy', 'http://static.teamyapp.com/team/1/logo.png');
-INSERT INTO team (name, logo_url) VALUES ('Google', 'http://static.teamyapp.com/team/2/logo.png');
-INSERT INTO team (name, logo_url) VALUES ('Apple', 'http://static.teamyapp.com/team/3/logo.png');
-INSERT INTO team (name, logo_url) VALUES ('Amazon', 'http://static.teamyapp.com/team/4/logo.png');
-INSERT INTO team (name, logo_url) VALUES ('Netflix', 'http://static.teamyapp.com/team/5/logo.png');
-INSERT INTO team (name, logo_url) VALUES ('Microsoft', 'http://static.teamyapp.com/team/6/logo.png');
+INSERT INTO team (name, logo_url) VALUES ('Teamy', '/teams/teamy.svg');
+INSERT INTO team (name, logo_url) VALUES ('Google', '/teams/google.svg');
+INSERT INTO team (name, logo_url) VALUES ('Apple', '/teams/apple.svg');
+INSERT INTO team (name, logo_url) VALUES ('Amazon', '/teams/amazon.svg');
+INSERT INTO team (name, logo_url) VALUES ('Netflix', '/teams/netflix.svg');
+INSERT INTO team (name, logo_url) VALUES ('Microsoft', '/teams/microsoft.svg');
 
 -- Team members
 INSERT INTO team_member (team_id, user_id, need_attention_task_id) VALUES (1, 1, 5);
