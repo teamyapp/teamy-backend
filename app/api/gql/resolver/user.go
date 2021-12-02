@@ -29,7 +29,7 @@ func (u User) ProfileURL() string {
 }
 
 func (u User) ActiveTeam() (*Team, error) {
-	team, err := u.deps.teamRepo.GetActiveTeam(u.user.ID)
+	team, err := u.deps.teamRepo.FindActiveTeam(u.user.ID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -41,6 +41,27 @@ func (u User) ActiveTeam() (*Team, error) {
 
 	gqlTeam := newTeam(u.deps, u.prototypeDeps, *team)
 	return &gqlTeam, nil
+}
+
+func (u User) Teams() ([]Team, error) {
+	teamIDs, err := u.deps.teamRepo.FindAllTeamIDs(u.user.ID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	teams, err := u.deps.teamRepo.FindTeams(teamIDs)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	var gqlTeams = make([]Team, 0)
+	for _, team := range teams {
+		gqlTeam := newTeam(u.deps, u.prototypeDeps, team)
+		gqlTeams = append(gqlTeams, gqlTeam)
+	}
+	return gqlTeams, nil
 }
 
 func newUser(deps *Dependencies, prototypeDeps *resolver.Dependencies, user entity.User) User {

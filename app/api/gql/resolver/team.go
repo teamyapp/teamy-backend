@@ -15,6 +15,14 @@ type Team struct {
 	team          entity.Team
 }
 
+func (t Team) Name() string {
+	return t.team.Name
+}
+
+func (t Team) LogoURL() *string {
+	return t.team.LogoURL
+}
+
 func (t Team) Members() ([]User, error) {
 	ids, err := t.deps.teamRepo.ListTeamMemberIDs(t.team.ID)
 	if err != nil {
@@ -22,7 +30,7 @@ func (t Team) Members() ([]User, error) {
 		return nil, err
 	}
 
-	members, err := t.deps.userRepo.GetUsers(ids)
+	members, err := t.deps.userRepo.FindUsers(ids)
 	if err != nil {
 		log.Println(err)
 		return nil, err
