@@ -77,11 +77,14 @@ func (e ExecutionMode) PersonalStatus() (PersonalStatus, error) {
 	}
 
 	deliveredTasks = tasksWithAvailableActions(deliveredTasks, entity.TaskStatusDelivered)
-	return PersonalStatus{personalStatus: entity.PersonalStatus{
-		TaskNeedAttention: taskNeedAttention,
-		UpcomingTasks:     upcomingTasks,
-		DeliveredTasks:    deliveredTasks,
-	}}, nil
+	return PersonalStatus{
+		deps:          e.deps,
+		prototypeDeps: e.prototypeDeps,
+		personalStatus: entity.PersonalStatus{
+			TaskNeedAttention: taskNeedAttention,
+			UpcomingTasks:     upcomingTasks,
+			DeliveredTasks:    deliveredTasks,
+		}}, nil
 }
 
 func (e ExecutionMode) TeamStatus() (TeamStatus, error) {
@@ -119,6 +122,8 @@ func (e ExecutionMode) TeamStatus() (TeamStatus, error) {
 
 	deliveredTasks = tasksWithAvailableActions(deliveredTasks, entity.TaskStatusDelivered)
 	return TeamStatus{
+		deps:          e.deps,
+		prototypeDeps: e.prototypeDeps,
 		teamStatus: entity.TeamStatus{
 			UpcomingTasks:   upcomingTasks,
 			InProgressTasks: inProgressTasks,
