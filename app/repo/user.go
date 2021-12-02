@@ -13,6 +13,7 @@ import (
 type User interface {
 	FindUsers([]oneEntity.ID) ([]entity.User, error)
 	FindUser(oneEntity.ID) (entity.User, error)
+	UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity.ID) (*oneEntity.ID, error)
 }
 
 type SQLUser struct {
@@ -60,6 +61,28 @@ func (S SQLUser) FindUser(userID oneEntity.ID) (entity.User, error) {
 	}
 
 	return user, nil
+}
+
+func (S SQLUser) UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity.ID) (*oneEntity.ID, error) {
+	statement := `
+	UPDATE user_state AS updated
+	SET active_team_id = $1
+	FROM (
+	    SELECT user_id, active_team_id
+	    FROM user_state
+	    WHERE user_id = $2
+	    FOR UPDATE
+	) AS previous
+	WHERE updated.user_id = previous.user_id
+	RETURNING previous.active_team_id;
+`
+	var previousActiveTeamID *int
+	err := S.db.QueryRow(statement, activeTeamID, userID).Scan(&previousActiveTeamID)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return (*oneEntity.ID)(previousActiveTeamID), err
 }
 
 func NewSQLUser(db *sql.DB) SQLUser {

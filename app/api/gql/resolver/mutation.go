@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -218,11 +219,49 @@ func (m Mutation) CompleteTask(ctx context.Context, args struct {
 	return true, nil
 }
 
+func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
+	TeamID graphql.ID
+}) (bool, error) {
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	teamIDs, err := m.deps.teamRepo.FindAllTeamIDs(userID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	if !contains(teamIDs, teamID) {
+		return false, fmt.Errorf("activeTeamID not found in teamIDs: activeTeamId=%v teamIDs=%v", teamID, teamIDs)
+	}
+
+	_, err = m.deps.userRepo.UpdateActiveTeamId(userID, &teamID)
+	return true, err
+}
+
 func (m Mutation) UpdateTask(ctx context.Context, args struct {
 	TaskID graphql.ID
 	Task   TaskInput
 }) bool {
 	panic("not implemented")
+}
+
+func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
+	for _, e := range arr {
+		if e == element {
+			return true
+		}
+	}
+	return false
 }
 
 func NewMutation(deps *Dependencies, prototypeDeps *resolver.Dependencies, query *Query) Mutation {
