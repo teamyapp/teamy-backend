@@ -1,8 +1,8 @@
 package resolver
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/graph-gophers/graphql-go"
@@ -15,7 +15,8 @@ type Task struct {
 	deps          *Dependencies
 	prototypeDeps *resolver.Dependencies
 	Entity
-	task entity.Task
+	task  entity.Task
+	query Query
 }
 
 func (t Task) Goal() string {
@@ -31,12 +32,18 @@ func (t Task) Context() *string {
 }
 
 func (t Task) Owner() (*User, error) {
-	userID := t.task.OwnerUserId
-	if userID == nil {
+	if t.task.OwnerUserId == nil {
 		return nil, nil
 	}
 
-	return nil, errors.New("not implemented")
+	user, err := t.deps.userRepo.FindUser(*t.task.OwnerUserId)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	gqlUser := newUser(t.deps, t.prototypeDeps, user)
+	return &gqlUser, nil
 }
 
 func (t Task) Creator() (User, error) {
@@ -47,13 +54,15 @@ func (t Task) Creator() (User, error) {
 		return User{}, fmt.Errorf("this task %v has no creator recorded", t.ID())
 	}
 	id, err := strconv.Atoi(string(rs[0].UserID))
-	return User{
-		Entity: Entity{
-			entity: oneEntity.Entity{
-				ID: oneEntity.ID(id),
-			},
-		},
-	}, err
+
+	user, err := t.deps.userRepo.FindUser(oneEntity.ID(id))
+	if err != nil {
+		log.Println(err)
+		return User{}, err
+	}
+
+	gqlUser := newUser(t.deps, t.prototypeDeps, user)
+	return gqlUser, nil
 }
 
 func (t Task) WorkScope() Option {
