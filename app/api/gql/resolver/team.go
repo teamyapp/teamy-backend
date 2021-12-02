@@ -21,7 +21,7 @@ func (t Team) Members() ([]User, error) {
 		log.Println(err)
 		return nil, err
 	}
-	return toGraphQLUsers(members), nil
+	return toGraphQLUsers(t.deps, t.prototypeDeps, members), nil
 }
 
 func newTeam(deps *Dependencies, prototypeDeps *resolver.Dependencies, team entity.Team) Team {

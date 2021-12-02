@@ -1,10 +1,17 @@
 package resolver
 
-import "github.com/teamyapp/teamy-backend/app/entity"
+import (
+	"log"
+
+	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+	"github.com/teamyapp/teamy-backend/app/entity"
+)
 
 type User struct {
 	Entity
-	user entity.User
+	deps          *Dependencies
+	prototypeDeps *resolver.Dependencies
+	user          entity.User
 }
 
 func (u User) FirstName() string {
@@ -21,14 +28,26 @@ func (u User) ProfileURL() string {
 	return u.user.ProfileURL
 }
 
-func (u User) ActiveTeam() *Team {
-	// todo: implement it
-	return nil
+func (u User) ActiveTeam() (*Team, error) {
+	team, err := u.deps.executionService.GetActiveTeam(u.user.ID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if team == nil {
+		return nil, nil
+	}
+
+	gqlTeam := newTeam(u.deps, u.prototypeDeps, *team)
+	return &gqlTeam, nil
 }
 
-func newUser(user entity.User) User {
+func newUser(deps *Dependencies, prototypeDeps *resolver.Dependencies, user entity.User) User {
 	return User{
-		Entity: Entity{entity: user.Entity},
-		user:   user,
+		Entity:        Entity{entity: user.Entity},
+		deps:          deps,
+		prototypeDeps: prototypeDeps,
+		user:          user,
 	}
 }
