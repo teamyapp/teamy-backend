@@ -16,11 +16,18 @@ type Team struct {
 }
 
 func (t Team) Members() ([]User, error) {
-	members, err := t.deps.teamService.ListTeamMembers(t.team.ID)
+	ids, err := t.deps.teamRepo.ListTeamMemberIDs(t.team.ID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
+	members, err := t.deps.userRepo.GetUsers(ids)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
 	return toGraphQLUsers(t.deps, t.prototypeDeps, members), nil
 }
 

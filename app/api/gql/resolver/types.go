@@ -13,7 +13,7 @@ import (
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
-var taskActionMap = map[entity.TaskAction]TaskAction{
+var gqlTaskActionMap = map[entity.TaskAction]TaskAction{
 	entity.TaskActionStart:         TaskActionStart,
 	entity.TaskActionDelete:        TaskActionDelete,
 	entity.TaskActionAssignOwner:   TaskActionAssignOwner,
@@ -59,7 +59,7 @@ func toGraphQLTime(time *time.Time) *graphql.Time {
 func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 	actions := make([]TaskAction, 0)
 	for _, action := range taskActions {
-		actions = append(actions, taskActionMap[action])
+		actions = append(actions, gqlTaskActionMap[action])
 	}
 	return actions
 }

@@ -29,7 +29,7 @@ func (u User) ProfileURL() string {
 }
 
 func (u User) ActiveTeam() (*Team, error) {
-	team, err := u.deps.executionService.GetActiveTeam(u.user.ID)
+	team, err := u.deps.teamRepo.GetActiveTeam(u.user.ID)
 	if err != nil {
 		log.Println(err)
 		return nil, err

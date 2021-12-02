@@ -27,10 +27,6 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 		wire.Bind(new(resolver2.Persister), new(resolver2.JSONPersister)),
 
 		service.NewPrioritization,
-		service.NewTeam,
-		service.NewTask,
-		service.NewUser,
-		service.NewExecution,
 		resolver.NewResolver,
 		resolver.NewDependencies,
 		resolver2.NewJSONPersister,

@@ -1,24 +1,27 @@
 package resolver
 
-import "github.com/teamyapp/teamy-backend/app/service"
+import (
+	"github.com/teamyapp/teamy-backend/app/repo"
+	"github.com/teamyapp/teamy-backend/app/service"
+)
 
 type Dependencies struct {
-	userService      service.User
-	taskService      service.Task
-	teamService      service.Team
-	executionService service.Execution
+	userRepo              repo.User
+	taskRepo              repo.Task
+	teamRepo              repo.Team
+	prioritizationService service.Prioritization
 }
 
 func NewDependencies(
-	userService service.User,
-	taskService service.Task,
-	teamService service.Team,
-	executionService service.Execution,
+	userRepo repo.User,
+	taskRepo repo.Task,
+	teamRepo repo.Team,
+	prioritizationService service.Prioritization,
 ) *Dependencies {
 	return &Dependencies{
-		userService:      userService,
-		taskService:      taskService,
-		teamService:      teamService,
-		executionService: executionService,
+		userRepo:              userRepo,
+		taskRepo:              taskRepo,
+		teamRepo:              teamRepo,
+		prioritizationService: prioritizationService,
 	}
 }

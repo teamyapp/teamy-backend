@@ -33,9 +33,14 @@ func (q Query) Task(args struct {
 		log.Println(err)
 		return Task{}, err
 	}
-	ts, err := q.deps.taskService.FindTask(oneEntity.ID(id))
-	task := newTask(q.deps, q.prototypeDeps, ts)
-	return task, err
+
+	task, err := q.deps.taskRepo.FindTaskByID(oneEntity.ID(id))
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	return newTask(q.deps, q.prototypeDeps, task), nil
 }
 
 func (q Query) Me(ctx context.Context) (User, error) {
@@ -45,7 +50,11 @@ func (q Query) Me(ctx context.Context) (User, error) {
 		return User{}, err
 	}
 
-	user, err := q.deps.userService.FindUser(userID)
+	user, err := q.deps.userRepo.GetUser(userID)
+	if err != nil {
+		log.Println(err)
+		return User{}, err
+	}
 	if err != nil {
 		log.Println(err)
 		return User{}, err
