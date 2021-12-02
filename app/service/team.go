@@ -1,10 +1,11 @@
 package service
 
 import (
+	"log"
+
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/repo"
-	"log"
 )
 
 type Team struct {
