@@ -115,13 +115,6 @@ func (m Mutation) UpdateTask(ctx context.Context, args struct {
 	panic("not implemented")
 }
 
-func (m Mutation) PerformTaskAction(ctx context.Context, args struct {
-	TaskID graphql.ID
-	Action TaskAction
-}) bool {
-	panic("not implemented")
-}
-
 func NewMutation(deps *Dependencies, prototypeDeps *resolver.Dependencies) Mutation {
 	return Mutation{
 		deps:          deps,
