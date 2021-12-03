@@ -63,6 +63,9 @@ func (t Task) Creator() (User, error) {
 		return User{}, fmt.Errorf("this task %v has no creator recorded", t.ID())
 	}
 	id, err := strconv.Atoi(string(rs[0].UserID))
+	if err != nil {
+		return User{}, err
+	}
 
 	user, err := t.deps.userRepo.FindUser(oneEntity.ID(id))
 	if err != nil {
@@ -122,7 +125,7 @@ const (
 )
 
 func (t Task) Status() (TaskStatus, error) {
-    // TODO: add status to task
+	// TODO: add status to task
 	return UPCOMING, nil
 }
 

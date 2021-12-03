@@ -42,11 +42,6 @@ type Team implements Entity {
 	tasks(input: TaskFilter): [Task!]!
 }
 
-type ExecutionMode {
-	personalStatus: PersonalStatus!
-	teamStatus: TeamStatus!
-}
-
 type PersonalStatus {
 	taskNeedAttention: Task
 	upcomingTasks: [Task!]!
