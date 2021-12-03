@@ -7,7 +7,6 @@ type Query {
 	"the current logged in user. If not logged in, show default public viewer"
 	me: User!
 	task(id: ID!): Task!
-	executionMode: ExecutionMode! @deprecated(reason: "during refactor")
 }
 
 type Mutation {
@@ -40,6 +39,7 @@ type Team implements Entity {
 	logoUrl: String
 	createdAt: Time!
 	members: [User!]!
+	tasks(input: TaskFilter): [Task!]!
 }
 
 type ExecutionMode {
@@ -67,20 +67,17 @@ type Option {
 type Task implements Entity {
 	id: ID!
 	goal: String!
-	dueAt: Time
-	context: String
-	owner: User
+	context: String!
 	creator: User!
-	workScope: Option!
-	effort: Int
+	owner: User
+	status: TaskStatus!
+	# Relationships with other entities
 	dependsOn: [Task!]!
-	numOfUnknowns: Int
-	availableActions: [TaskAction!]!
-	availableWorkScopes: [Option!]!
-	createdAt: Time!
-	updatedAt: Time
-	lifetimeEvents: [LifetimeEvent!]!
 	mentions: [Mention!]!
+	# Time Flow
+	createdAt: Time!
+	dueAt: Time
+	lifetimeEvents: [LifetimeEvent!]!
 }
 
 type User implements Entity {
@@ -91,6 +88,15 @@ type User implements Entity {
 	createdAt: Time!
 	activeTeam: Team
 	teams: [Team!]!
+	"If input is null, return all related tasks"
+	tasks(input: TaskFilter): [Task!]!
+}
+
+input TaskFilter {
+	id: ID
+	"a string filter that searches in both goal and context. Not Implemented."
+	text: String
+	status: TaskStatus
 }
 
 enum TaskAction {
@@ -99,6 +105,12 @@ enum TaskAction {
 	ASSIGN_OWNER
 	REPORT_BLOCKED
 	MARK_COMPLETE
+}
+
+enum TaskStatus {
+	UPCOMING
+	IN_PROGRESS
+	DELIVERED
 }
 
 scalar Time

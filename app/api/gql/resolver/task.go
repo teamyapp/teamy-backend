@@ -15,8 +15,13 @@ type Task struct {
 	deps          *Dependencies
 	prototypeDeps *resolver.Dependencies
 	Entity
-	task  entity.Task
-	query Query
+	task entity.Task
+}
+
+type TaskFilter struct {
+	ID     *graphql.ID
+	Text   *string
+	Status *TaskStatus
 }
 
 func (t Task) Goal() string {
@@ -27,8 +32,12 @@ func (t Task) DueAt() *graphql.Time {
 	return toGraphQLTime(t.task.DueAt)
 }
 
-func (t Task) Context() *string {
-	return t.task.Context
+func (t Task) Context() string {
+	c := t.task.Context
+	if c != nil {
+		return *c
+	}
+	return ""
 }
 
 func (t Task) Owner() (*User, error) {
@@ -101,10 +110,20 @@ func (t Task) LifetimeEvents() []resolver.LifetimeEvent {
 }
 
 func (t Task) Mentions() ([]resolver.Mention, error) {
-	if t.Context() == nil {
-		return nil, nil
-	}
-	return resolver.ParseMentions(*t.Context()), nil
+	return resolver.ParseMentions(t.Context()), nil
+}
+
+type TaskStatus string
+
+const (
+	UPCOMING    TaskStatus = "UPCOMING"
+	IN_PROGRESS TaskStatus = "IN_PROGRESS"
+	DELIVERED   TaskStatus = "DELIVERED"
+)
+
+func (t Task) Status() (TaskStatus, error) {
+    // TODO: add status to task
+	return UPCOMING, nil
 }
 
 func newTask(deps *Dependencies, prototypeDeps *resolver.Dependencies, task entity.Task) Task {
