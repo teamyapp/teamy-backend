@@ -5,4 +5,3 @@
 .gitignore
 .dockerignore
 .env
-.repo.env
