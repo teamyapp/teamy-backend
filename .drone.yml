@@ -25,6 +25,12 @@ type: kubernetes
 name: testing
 
 steps:
+  - name: build app
+    image: golang:1.17-alpine
+    commands:
+      - apk add --no-cache git
+      - go build -o bin/main main.go
+      - sh ./scripts/prepare_env.sh
   - name: build & publish Docker image
     image: plugins/docker
     settings:
@@ -62,6 +68,12 @@ type: kubernetes
 name: staging
 
 steps:
+  - name: build app
+    image: golang:1.17-alpine
+    commands:
+      - apk add --no-cache git
+      - go build -o bin/main main.go
+      - sh ./scripts/prepare_env.sh
   - name: build & publish Docker image
     image: plugins/docker
     environment:
@@ -101,6 +113,12 @@ type: kubernetes
 name: production
 
 steps:
+  - name: build app
+    image: golang:1.17-alpine
+    commands:
+      - apk add --no-cache git
+      - go build -o bin/main main.go
+      - sh ./scripts/prepare_env.sh
   - name: build & publish Docker image
     image: plugins/docker
     settings:
