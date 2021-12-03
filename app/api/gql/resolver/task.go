@@ -122,6 +122,7 @@ const (
 )
 
 func (t Task) Status() (TaskStatus, error) {
+    // TODO: add status to task
 	return UPCOMING, nil
 }
 
