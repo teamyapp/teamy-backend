@@ -66,6 +66,10 @@ func (u User) Teams() ([]Team, error) {
 }
 
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
+	if args.Input == nil {
+		// todo: return all related tasks
+		return nil, nil
+	}
 	if args.Input.Status == nil {
 		return nil, nil
 	}
