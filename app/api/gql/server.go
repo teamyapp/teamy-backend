@@ -2,12 +2,12 @@ package gql
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 )
@@ -27,7 +27,7 @@ func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (htt
 		return http.Server{}, err
 	}
 
-	handler := identity.WithMiddleware(identityAPIEndpoint, &relay.Handler{Schema: schema})
+	handler := identity.WithMiddleware(identityAPIEndpoint, &Handler{Schema: schema})
 	mux := http.ServeMux{}
 	mux.HandleFunc("/graphql", enableCORS(includeGraphiQLIDE(handler.ServeHTTP)))
 	addr := fmt.Sprintf(":%d", port)
@@ -59,4 +59,32 @@ func includeGraphiQLIDE(handlerFunc http.HandlerFunc) http.HandlerFunc {
 
 		handlerFunc(writer, request)
 	}
+}
+
+type Handler struct {
+	Schema *graphql.Schema
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var params struct {
+		Query         string                 `json:"query"`
+		OperationName string                 `json:"operationName"`
+		Variables     map[string]interface{} `json:"variables"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Println("begin GraphQL")
+	response := h.Schema.Exec(r.Context(), params.Query, params.OperationName, params.Variables)
+	log.Println("end GraphQL")
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
 }

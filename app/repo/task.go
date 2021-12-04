@@ -143,6 +143,7 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 }
 
 func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
+	log.Printf("begin FindTaskByID %v", taskID)
 	ts := entity.Task{}
 	err := S.db.QueryRow(`
 	SELECT
@@ -173,6 +174,7 @@ func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
 	if err != nil {
 		log.Println(err)
 	}
+	log.Printf("end FindTaskByID %v", taskID)
 	return ts, err
 }
 

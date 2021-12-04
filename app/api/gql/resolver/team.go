@@ -39,6 +39,10 @@ func (t Team) Members() ([]User, error) {
 	return toGraphQLUsers(t.deps, t.prototypeDeps, members), nil
 }
 
+func (t Team) Tasks(args struct{ Input *TaskFilter }) []Task {
+	return nil
+}
+
 func newTeam(deps *Dependencies, prototypeDeps *resolver.Dependencies, team entity.Team) Team {
 	return Team{
 		Entity:        Entity{entity: team.Entity},
