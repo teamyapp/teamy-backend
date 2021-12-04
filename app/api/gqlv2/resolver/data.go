@@ -207,9 +207,9 @@ func (p PostgresPersister) Write(d *Data) error {
 		return nil
 	}
 	statement := `
-		update json_persister
+		UPDATE json_persister
 		SET data = $1
-		where id = 1
+		WHERE id = 1;
 	`
 	bytes, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
