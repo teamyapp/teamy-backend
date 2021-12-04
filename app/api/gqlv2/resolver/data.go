@@ -221,7 +221,7 @@ func (p PostgresPersister) Write(d *Data) error {
 
 func (p PostgresPersister) Read() *Data {
 	row := p.db.QueryRow(`
-	select data from json_persister where id = 1 
+	SELECT data FROM json_persister WHERE id = 1;
 	`)
 	var bytes []byte
 	err := row.Scan(&bytes)
