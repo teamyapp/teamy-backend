@@ -111,6 +111,13 @@ func (t Task) Mentions() ([]Mention, error) {
 	return ParseMentions(t.Context()), nil
 }
 
+func (t Task) Comments() []Comment {
+	cs := t.deps.Data.FilterComments(func(c entity.Comment) bool {
+		return c.TaskID == t.ID()
+	})
+	return Comments(t.deps, cs)
+}
+
 type TaskStatus string
 
 const (

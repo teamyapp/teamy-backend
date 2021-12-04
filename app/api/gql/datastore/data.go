@@ -7,17 +7,18 @@ import (
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
+type Data struct {
+	Tasks             map[graphql.ID]entity.Task
+	Users             map[graphql.ID]entity.User
+	Comments          []entity.Comment
+	LifetimeEvents    []LifetimeEvent
+	CreationRelations []CreationRelation
+}
+
 // Temperary SQL like struct for v2 migration purpose.
 type CreationRelation struct {
 	TaskID graphql.ID
 	UserID graphql.ID
-}
-
-type Data struct {
-	Tasks             map[graphql.ID]entity.Task
-	Users             map[graphql.ID]entity.User
-	LifetimeEvents    []LifetimeEvent
-	CreationRelations []CreationRelation
 }
 
 type LifetimeEvent struct {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -39,9 +40,21 @@ func NewDataStore(p Persister) *DataStore {
 }
 
 //
+// User
+//
+func (d DataStore) GetUser(id graphql.ID) (entity.User, error) {
+	user, ok := d.data.Users[id]
+	if !ok {
+		return entity.User{}, fmt.Errorf("user %v is not found", id)
+	}
+	return user, nil
+}
+
+//
 // Tasks
 //
 func (d DataStore) GetTask(id graphql.ID) (entity.Task, error) {
+	fmt.Printf("%+v\n", d.data.Tasks)
 	task, ok := d.data.Tasks[id]
 	if ok {
 		return task, nil
@@ -70,20 +83,46 @@ func (d DataStore) FilterTasks(filter func(t entity.Task) bool) []entity.Task {
 	return tasks
 }
 
-func (d DataStore) CreateTask(creatorID graphql.ID, task entity.Task) entity.Task {
-	id := graphql.ID(fmt.Sprintf("%v", task.ID))
-	d.data.Tasks[id] = task
+func (d DataStore) CreateTask(creatorID graphql.ID, task entity.Task) (entity.Task, error) {
+	task.CreatorID = creatorID
+	task.ID = oneEntity.ID(len(d.data.Tasks))
+	taskID := graphql.ID(fmt.Sprint(len(d.data.Tasks)))
+	d.data.Tasks[taskID] = task
 	d.data.CreationRelations = append(d.data.CreationRelations, CreationRelation{
-		TaskID: id,
+		TaskID: taskID,
 		UserID: creatorID,
 	})
-	return task
+	err := d.persister.Write(d.data)
+	if err != nil {
+		return entity.Task{}, err
+	}
+	fmt.Printf("CreateTask: %+v\n", d.data.Tasks)
+	return task, nil
 }
 
 func (d DataStore) UpdateTask(task entity.Task) (entity.Task, error) {
 	id := graphql.ID(fmt.Sprintf("%v", task.ID))
 	d.data.Tasks[id] = task
 	return task, d.persister.Write(d.data)
+}
+
+//
+// Comment
+//
+func (d DataStore) CreateComment(comment entity.Comment) (entity.Comment, error) {
+	comment.ID = graphql.ID(fmt.Sprint(len(d.data.Comments)))
+	d.data.Comments = append(d.data.Comments, comment)
+	return comment, d.persister.Write(d.data)
+}
+
+func (d DataStore) FilterComments(filter func(entity.Comment) bool) (cs []entity.Comment) {
+	fmt.Printf("%+v\n", d.data.Comments)
+	for _, c := range d.data.Comments {
+		if filter(c) {
+			cs = append(cs, c)
+		}
+	}
+	return cs
 }
 
 //
@@ -117,4 +156,12 @@ func (d *DataStore) FilterCreationRelation(f func(CreationRelation) bool) (rs []
 		}
 	}
 	return
+}
+
+func toEntityID(id graphql.ID) (int, error) {
+	i, err := strconv.ParseInt(string(id), 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int(i), nil
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
-	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -41,44 +40,29 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
 
-	taskID, err := m.deps.taskRepo.CreateTask(task)
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
+	// taskID, err := m.deps.taskRepo.CreateTask(task)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return Task{}, err
+	// }
 
-	err = m.deps.taskRepo.AssignTaskToTeam(taskID, activeTeam.ID, entity.TaskStatusUpcoming)
+	// err = m.deps.taskRepo.AssignTaskToTeam(taskID, activeTeam.ID, entity.TaskStatusUpcoming)
 
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return Task{}, err
+	// }
 
-	err = m.deps.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), datastore.LifetimeEventType{
-		Type: datastore.Creation,
-		Creation: &datastore.EventCreation{
-			TaskID: graphql.ID(fmt.Sprint(taskID)),
-		},
-	})
-	if err != nil {
-		log.Println(err)
-	}
-
-	gqlTask, err := m.query.Task(
-		struct {
-			ID graphql.ID
-		}{
-			ID: toGraphQLID(taskID),
-		})
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
+	// err = m.deps.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), datastore.LifetimeEventType{
+	// 	Type: datastore.Creation,
+	// 	Creation: &datastore.EventCreation{
+	// 		TaskID: graphql.ID(fmt.Sprint(taskID)),
+	// 	},
+	// })
 
 	// Double Commit to Datastore
-	m.deps.Data.CreateTask(toGraphQLID(userID), gqlTask.task)
-
-	return gqlTask, nil
+	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), task)
+	return newTask(m.deps, task), err
 }
 
 func (m Mutation) StartTask(ctx context.Context, args struct {
@@ -252,6 +236,13 @@ func (m Mutation) UpdateTask(
 		Task   TaskInput
 	},
 ) (Task, error) {
+	// todo: need to do authorization
+	// One can only update the task that is created by oneself.
+	_, err := identity.FromContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
 	task, err := m.deps.Data.GetTask(args.TaskID)
 	if err != nil {
 		return Task{}, err
@@ -277,6 +268,31 @@ func (m Mutation) UpdateTask(
 		return Task{}, nil
 	}
 	return newTask(m.deps, task), nil
+}
+
+func (m Mutation) Comment(
+	ctx context.Context,
+	args struct {
+		TaskID  graphql.ID
+		Content string
+	},
+) (Comment, error) {
+	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	if err != nil {
+		return Comment{}, err
+	}
+	c, err := m.deps.Data.CreateComment(entity.Comment{
+		Content:     args.Content,
+		CommenterID: toGraphQLID(userID),
+		TaskID:      args.TaskID,
+	})
+	if err != nil {
+		return Comment{}, err
+	}
+	return Comment{
+		deps:    m.deps,
+		Comment: c,
+	}, nil
 }
 
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {

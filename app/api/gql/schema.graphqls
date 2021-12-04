@@ -10,11 +10,15 @@ type Query {
 }
 
 type Mutation {
+	# Tasks
 	createTask(task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	startTask(taskId: ID!): Boolean!
 	completeTask(taskId: ID!): Boolean!
+	# Comments
+	comment(taskID: ID!, content: String!): Comment!
+	# Teams
 	updateActiveTeam(teamId: ID!): Boolean!
 }
 
@@ -63,12 +67,21 @@ type Task implements Entity {
 	creator: User!
 	owner: User
 	status: TaskStatus!
+	comments: [Comment!]!
 	# Relationships with other entities
 	mentions: [Mention!]!
 	# Time Flow
 	createdAt: Time!
 	dueAt: Time
 	lifetimeEvents: [LifetimeEvent!]!
+}
+
+type Comment {
+	id: ID!
+	content: String!
+	commenter: User!
+	task: Task!
+	# mentions: [Mention!]!
 }
 
 type User implements Entity {
