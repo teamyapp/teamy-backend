@@ -3,16 +3,13 @@ package resolver
 import (
 	"log"
 
-	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
-
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Team struct {
 	Entity
-	deps          *Dependencies
-	prototypeDeps *resolver.Dependencies
-	team          entity.Team
+	deps *Dependencies
+	team entity.Team
 }
 
 func (t Team) Name() string {
@@ -36,18 +33,17 @@ func (t Team) Members() ([]User, error) {
 		return nil, err
 	}
 
-	return toGraphQLUsers(t.deps, t.prototypeDeps, members), nil
+	return toGraphQLUsers(t.deps, members), nil
 }
 
 func (t Team) Tasks(args struct{ Input *TaskFilter }) []Task {
 	return nil
 }
 
-func newTeam(deps *Dependencies, prototypeDeps *resolver.Dependencies, team entity.Team) Team {
+func newTeam(deps *Dependencies, team entity.Team) Team {
 	return Team{
-		Entity:        Entity{entity: team.Entity},
-		deps:          deps,
-		prototypeDeps: prototypeDeps,
-		team:          team,
+		Entity: Entity{entity: team.Entity},
+		deps:   deps,
+		team:   team,
 	}
 }

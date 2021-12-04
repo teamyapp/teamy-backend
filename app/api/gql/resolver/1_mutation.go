@@ -8,14 +8,13 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
-	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Mutation struct {
-	deps          *Dependencies
-	prototypeDeps *resolver.Dependencies
-	query         *Query
+	deps  *Dependencies
+	query *Query
 }
 
 func (m Mutation) CreateTask(ctx context.Context, args struct {
@@ -55,9 +54,9 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		return Task{}, err
 	}
 
-	err = m.prototypeDeps.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), resolver.LifetimeEventType{
-		Type: resolver.Creation,
-		Creation: &resolver.EventCreation{
+	err = m.deps.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), datastore.LifetimeEventType{
+		Type: datastore.Creation,
+		Creation: &datastore.EventCreation{
 			TaskID: graphql.ID(fmt.Sprint(taskID)),
 		},
 	})
@@ -76,10 +75,8 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		return Task{}, err
 	}
 
-	m.prototypeDeps.Data.CreationRelations = append(m.prototypeDeps.Data.CreationRelations, resolver.CreationRelation{
-		TaskID: gqlTask.ID(),
-		UserID: graphql.ID(fmt.Sprint(userID)),
-	})
+	// Double Commit to Datastore
+	m.deps.Data.CreateTask(toGraphQLID(userID), gqlTask.task)
 
 	return gqlTask, nil
 }
@@ -248,11 +245,38 @@ func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 	return true, err
 }
 
-func (m Mutation) UpdateTask(ctx context.Context, args struct {
-	TaskID graphql.ID
-	Task   TaskInput
-}) bool {
-	panic("not implemented")
+func (m Mutation) UpdateTask(
+	ctx context.Context,
+	args struct {
+		TaskID graphql.ID
+		Task   TaskInput
+	},
+) (Task, error) {
+	task, err := m.deps.Data.GetTask(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+	if args.Task.Context != nil {
+		task.Context = args.Task.Context
+	}
+	if args.Task.DueAt != nil {
+		task.DueAt = &args.Task.DueAt.Time
+	}
+	if args.Task.Goal != nil {
+		task.Goal = *args.Task.Goal
+	}
+	if args.Task.OwnerUserID != nil {
+		id, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
+		if err != nil {
+			return Task{}, nil
+		}
+		task.OwnerUserId = id
+	}
+	task, err = m.deps.Data.UpdateTask(task)
+	if err != nil {
+		return Task{}, nil
+	}
+	return newTask(m.deps, task), nil
 }
 
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
@@ -264,10 +288,9 @@ func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 	return false
 }
 
-func NewMutation(deps *Dependencies, prototypeDeps *resolver.Dependencies, query *Query) Mutation {
+func NewMutation(deps *Dependencies, query *Query) Mutation {
 	return Mutation{
-		deps:          deps,
-		prototypeDeps: prototypeDeps,
-		query:         query,
+		deps:  deps,
+		query: query,
 	}
 }

@@ -6,8 +6,8 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
+	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
-	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
@@ -24,14 +24,12 @@ var repoSet = wire.NewSet(
 func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	wire.Build(
 		repoSet,
-		wire.Bind(new(resolver2.Persister), new(resolver2.PostgresPersister)),
-
+		wire.Bind(new(datastore.Persister), new(datastore.PostgresPersister)),
 		service.NewPrioritization,
 		resolver.NewResolver,
 		resolver.NewDependencies,
-		resolver2.NewPostgresPersister,
-		resolver2.NewDependencies,
-		resolver2.NewDataStore,
+		datastore.NewPostgresPersister,
+		datastore.NewDataStore,
 	)
 	return resolver.Resolver{}
 }

@@ -7,13 +7,12 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
-	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Task struct {
-	deps          *Dependencies
-	prototypeDeps *resolver.Dependencies
+	deps *Dependencies
 	Entity
 	task entity.Task
 }
@@ -51,12 +50,12 @@ func (t Task) Owner() (*User, error) {
 		return nil, err
 	}
 
-	gqlUser := newUser(t.deps, t.prototypeDeps, user)
+	gqlUser := newUser(t.deps, user)
 	return &gqlUser, nil
 }
 
 func (t Task) Creator() (User, error) {
-	rs := t.prototypeDeps.Data.FilterCreationRelation(func(cr resolver.CreationRelation) bool {
+	rs := t.deps.Data.FilterCreationRelation(func(cr datastore.CreationRelation) bool {
 		return t.ID() == cr.TaskID
 	})
 	if len(rs) == 0 {
@@ -73,7 +72,7 @@ func (t Task) Creator() (User, error) {
 		return User{}, err
 	}
 
-	gqlUser := newUser(t.deps, t.prototypeDeps, user)
+	gqlUser := newUser(t.deps, user)
 	return gqlUser, nil
 }
 
@@ -101,19 +100,15 @@ func (t Task) AvailableWorkScopes() []Option {
 	panic("not implemented")
 }
 
-func (t Task) LifetimeEvents() []resolver.LifetimeEvent {
-	events := t.prototypeDeps.Data.FilterLifetimeEvents(func(e resolver.LifetimeEvent) bool {
+func (t Task) LifetimeEvents() []LifetimeEvent {
+	events := t.deps.Data.FilterLifetimeEvents(func(e datastore.LifetimeEvent) bool {
 		return e.EventType.Creation.TaskID == t.ID()
 	})
-	for i := range events {
-		events[i].Deps = t.prototypeDeps
-		events[i].EventType.Dep(t.prototypeDeps)
-	}
-	return events
+	return LifetimeEvents(events)
 }
 
-func (t Task) Mentions() ([]resolver.Mention, error) {
-	return resolver.ParseMentions(t.Context()), nil
+func (t Task) Mentions() ([]Mention, error) {
+	return ParseMentions(t.Context()), nil
 }
 
 type TaskStatus string
@@ -129,11 +124,10 @@ func (t Task) Status() (TaskStatus, error) {
 	return UPCOMING, nil
 }
 
-func newTask(deps *Dependencies, prototypeDeps *resolver.Dependencies, task entity.Task) Task {
+func newTask(deps *Dependencies, task entity.Task) Task {
 	return Task{
-		Entity:        Entity{entity: task.Entity},
-		deps:          deps,
-		prototypeDeps: prototypeDeps,
-		task:          task,
+		Entity: Entity{entity: task.Entity},
+		deps:   deps,
+		task:   task,
 	}
 }

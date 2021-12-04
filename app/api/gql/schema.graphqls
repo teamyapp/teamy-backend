@@ -12,7 +12,7 @@ type Query {
 type Mutation {
 	createTask(task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Boolean!
-	updateTask(taskId: ID!, task: TaskInput!): Boolean!
+	updateTask(taskId: ID!, task: TaskInput!): Task!
 	startTask(taskId: ID!): Boolean!
 	completeTask(taskId: ID!): Boolean!
 	updateActiveTeam(teamId: ID!): Boolean!
@@ -23,9 +23,6 @@ input TaskInput {
 	dueAt: Time
 	context: String
 	ownerUserId: ID
-	workScopeIndex: Int
-	dependsOnTaskIds: [ID!]
-	numOfUnknowns: Int
 }
 
 interface Entity {
@@ -67,7 +64,6 @@ type Task implements Entity {
 	owner: User
 	status: TaskStatus!
 	# Relationships with other entities
-	dependsOn: [Task!]!
 	mentions: [Mention!]!
 	# Time Flow
 	createdAt: Time!
