@@ -35,7 +35,7 @@ type LifetimeEventType struct {
 }
 
 type EventAssignOwner struct {
-	ownerID graphql.ID
+	OwnerID graphql.ID
 }
 
 type EventCreation struct {
