@@ -42,28 +42,6 @@ func (m Mutation) CreateTask(
 	if activeTeam == nil {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
-
-	// taskID, err := m.deps.taskRepo.CreateTask(task)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return Task{}, err
-	// }
-
-	// err = m.deps.taskRepo.AssignTaskToTeam(taskID, activeTeam.ID, entity.TaskStatusUpcoming)
-
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return Task{}, err
-	// }
-
-	// err = m.deps.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), datastore.LifetimeEventType{
-	// 	Type: datastore.Creation,
-	// 	Creation: &datastore.EventCreation{
-	// 		TaskID: graphql.ID(fmt.Sprint(taskID)),
-	// 	},
-	// })
-
-	// Double Commit to Datastore
 	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), task)
 	return newTask(m.deps, task), err
 }
