@@ -16,9 +16,12 @@ type Mutation struct {
 	query *Query
 }
 
-func (m Mutation) CreateTask(ctx context.Context, args struct {
-	Task TaskInput
-}) (Task, error) {
+func (m Mutation) CreateTask(
+	ctx context.Context,
+	args struct {
+		Task TaskInput
+	},
+) (Task, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)

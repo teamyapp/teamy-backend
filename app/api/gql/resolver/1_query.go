@@ -6,6 +6,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Query struct {
@@ -20,6 +21,11 @@ func (q Query) Task(args struct {
 		return Task{}, err
 	}
 	return newTask(q.deps, task), nil
+}
+
+func (q Query) Tasks() ([]Task, error) {
+	tasks := q.deps.Data.FilterTasks(func(t entity.Task) bool { return true })
+	return newTasks(q.deps, tasks), nil
 }
 
 func (q Query) Me(ctx context.Context) (User, error) {

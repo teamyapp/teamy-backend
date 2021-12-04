@@ -138,3 +138,10 @@ func newTask(deps *Dependencies, task entity.Task) Task {
 		task:   task,
 	}
 }
+
+func newTasks(deps *Dependencies, tasks []entity.Task) (ts []Task) {
+	for _, t := range tasks {
+		ts = append(ts, newTask(deps, t))
+	}
+	return
+}
