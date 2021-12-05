@@ -39,7 +39,7 @@ func toGraphQLID(id oneEntity.ID) graphql.ID {
 	return graphql.ID(fmt.Sprintf("%d", int(id)))
 }
 
-func ToGraphQLIDs(ids []oneEntity.ID) []graphql.ID {
+func toGraphQLIDs(ids []oneEntity.ID) []graphql.ID {
 	graphqlIDs := make([]graphql.ID, 0)
 	for _, id := range ids {
 		graphqlIDs = append(graphqlIDs, toGraphQLID(id))
