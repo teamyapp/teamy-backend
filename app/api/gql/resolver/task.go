@@ -44,7 +44,7 @@ func (t Task) Owner() (*User, error) {
 		return nil, nil
 	}
 
-	user, err := t.deps.userRepo.FindUser(*t.task.OwnerUserId)
+	user, err := t.deps.Data.GetUser(*t.task.OwnerUserId)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -66,7 +66,7 @@ func (t Task) Creator() (User, error) {
 		return User{}, err
 	}
 
-	user, err := t.deps.userRepo.FindUser(oneEntity.ID(id))
+	user, err := t.deps.Data.GetUser(oneEntity.ID(id))
 	if err != nil {
 		log.Println(err)
 		return User{}, err

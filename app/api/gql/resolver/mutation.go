@@ -27,6 +27,12 @@ func (m Mutation) CreateTask(
 		log.Println(err)
 		return Task{}, err
 	}
+	// find user
+	user, err := m.deps.Data.GetUser(userID)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
 
 	task, err := fromGraphQLTaskInput(args.Task)
 	if err != nil {
@@ -34,20 +40,22 @@ func (m Mutation) CreateTask(
 		return Task{}, err
 	}
 
-	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+	activeTeams := m.deps.Data.FilterTeams(func(t entity.Team) bool {
+		return t.ID == user.ActiveTeamID
+	})
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
 	}
-	if activeTeam == nil {
+	if len(activeTeams) == 0 {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
-	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeam.ID, task)
+	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeams[0].ID, task)
 	if err != nil {
 		return Task{}, err
 	}
 	// add task to team
-	err = m.deps.Data.UpdateTeam(activeTeam.ID, func(t entity.Team) entity.Team {
+	err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
 		t.Tasks = append(t.Tasks, task.ID)
 		return t
 	})
@@ -194,31 +202,32 @@ func (m Mutation) CompleteTask(ctx context.Context, args struct {
 
 func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 	TeamID graphql.ID
-}) (bool, error) {
+}) (User, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)
-		return false, err
+		return User{}, err
 	}
 
-	teamID, err := fromGraphQLID(args.TeamID)
+	user, err := m.deps.Data.GetUser(userID)
 	if err != nil {
-		log.Println(err)
-		return false, err
+		log.Printf("%+v\n", err)
+		return User{}, err
 	}
-
-	teamIDs, err := m.deps.teamRepo.FindAllTeamIDs(userID)
+	id, err := fromGraphQLID(args.TeamID)
 	if err != nil {
-		log.Println(err)
-		return false, err
+		log.Printf("%+v\n", err)
+		return User{}, err
 	}
-
-	if !contains(teamIDs, teamID) {
-		return false, fmt.Errorf("activeTeamID not found in teamIDs: activeTeamId=%v teamIDs=%v", teamID, teamIDs)
+	user, err = m.deps.Data.UpdateUser((user.ID), func(u entity.User) entity.User {
+		u.ActiveTeamID = id
+		return u
+	})
+	if err != nil {
+		log.Printf("%+v\n", err)
+		return User{}, err
 	}
-
-	_, err = m.deps.userRepo.UpdateActiveTeamId(userID, &teamID)
-	return true, err
+	return newUser(m.deps, user), err
 }
 
 func (m Mutation) UpdateTask(
@@ -285,6 +294,45 @@ func (m Mutation) Comment(
 		deps:    m.deps,
 		Comment: c,
 	}, nil
+}
+
+func (m Mutation) CreateTeam(ctx context.Context,
+	args struct {
+		Input struct {
+			Name string
+		}
+	},
+) (Team, error) {
+	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	if err != nil {
+		return Team{}, err
+	}
+	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
+		Name:      args.Input.Name,
+		CreatorID: userID,
+		MemberIDs: []oneEntity.ID{
+			userID,
+		},
+	})
+	if err != nil {
+		return Team{}, err
+	}
+	return newTeam(m.deps, t), nil
+}
+
+//
+// Admin && Debug Only
+//
+func (m Mutation) CreateUser(args struct{ UserID graphql.ID }) (User, error) {
+	id, err := fromGraphQLID(args.UserID)
+	if err != nil {
+		return User{}, err
+	}
+	user, err := m.deps.Data.CreateUser(id)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser(m.deps, user), nil
 }
 
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {

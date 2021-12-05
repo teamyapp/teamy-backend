@@ -35,9 +35,9 @@ func (q Query) Me(ctx context.Context) (User, error) {
 		return User{}, err
 	}
 
-	user, err := q.deps.userRepo.FindUser(userID)
+	user, err := q.deps.Data.GetUser(userID)
 	if err != nil {
-		log.Println(err)
+		log.Printf("%+v\n", err)
 		return User{}, err
 	}
 	if err != nil {
@@ -46,6 +46,12 @@ func (q Query) Me(ctx context.Context) (User, error) {
 	}
 
 	return newUser(q.deps, user), nil
+}
+
+// debug only
+func (q Query) Teams(ctx context.Context) ([]Team, error) {
+	teams := q.deps.Data.FilterTeams(func(t entity.Team) bool { return true })
+	return newTeams(q.deps, teams), nil
 }
 
 func NewQuery(deps *Dependencies) Query {

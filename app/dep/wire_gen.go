@@ -18,13 +18,12 @@ import (
 // Injectors from wire.go:
 
 func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
-	sqlUser := repo.NewSQLUser(sqlDB)
 	sqlTask := repo.NewSQLTask(sqlDB)
 	sqlTeam := repo.NewSQLTeam(sqlDB)
 	prioritization := service.NewPrioritization()
 	postgresPersister := datastore.NewPostgresPersister(sqlDB)
 	dataStore := datastore.NewDataStore(postgresPersister)
-	dependencies := resolver.NewDependencies(sqlUser, sqlTask, sqlTeam, prioritization, dataStore)
+	dependencies := resolver.NewDependencies(sqlTask, sqlTeam, prioritization, dataStore)
 	resolverResolver := resolver.NewResolver(dependencies)
 	return resolverResolver
 }

@@ -9,6 +9,12 @@ type Query {
 	task(id: ID!): Task!
 	"return all tasks for debug purpose"
 	tasks: [Task!]!
+	# Teams
+	"""
+	get all teams
+	Admin && Debug Only resolvers
+	"""
+	teams: [Team!]!
 }
 
 type Mutation {
@@ -21,7 +27,14 @@ type Mutation {
 	# Comments
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
-	updateActiveTeam(teamId: ID!): Boolean!
+	createTeam(input: TeamInput!): Team!
+	# Users
+	updateActiveTeam(teamId: ID!): User!
+
+	# todo: implement a directive that hide this resolver from production
+	# or when the logged in user is not a system admin
+	"Admin && Debug Only resolvers"
+	createUser(userID: ID!): User!
 }
 
 input TaskInput {
@@ -31,9 +44,14 @@ input TaskInput {
 	ownerUserId: ID
 }
 
+
 interface Entity {
 	id: ID!
 	createdAt: Time!
+}
+
+input TeamInput {
+	name: String!
 }
 
 type Team implements Entity {
@@ -41,6 +59,11 @@ type Team implements Entity {
 	name: String!
 	logoUrl: String
 	createdAt: Time!
+	creator: User!
+	"creator is the owner. In the future there will be features to transfer ownership to other users, just like GitHub repo."
+	owner: User!
+	"creator is the only admin for now"
+	admins: [User!]!
 	members: [User!]!
 	tasks(input: TaskFilter): [Task!]!
 }
