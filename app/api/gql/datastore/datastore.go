@@ -121,16 +121,7 @@ func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task en
 		UserID: creatorID,
 	})
 
-	// add task to team
-	err := d.UpdateTeam(teamID, func(t entity.Team) entity.Team {
-		t.Tasks = append(t.Tasks, task.ID)
-		return t
-	})
-	if err != nil {
-		return entity.Task{}, err
-	}
-
-	err = d.persister.Write(d.data)
+	err := d.persister.Write(d.data)
 	if err != nil {
 		return entity.Task{}, err
 	}
