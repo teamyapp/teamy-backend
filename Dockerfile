@@ -4,6 +4,8 @@ WORKDIR /app
 
 RUN apk add --no-cache bash
 
+COPY app/repo/db/migration/ app/repo/db/migration/
+
 COPY bin/main bin/main
 
 COPY .repo.env .repo.env

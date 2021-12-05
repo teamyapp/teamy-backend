@@ -27,6 +27,12 @@ func main() {
 		cfg.OneConfig.GitLongCommitHash)
 
 	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
+		err = db.MigrateUp(db.DefaultMigrationRoot)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
 		gqlResolver := dep.InitGraphQLResolver(sqlDB)
 		server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.GraphQLAPIPort)
 		if err != nil {
