@@ -379,7 +379,8 @@ func (m Mutation) CreateTeam(ctx context.Context,
 		}
 	},
 ) (Team, error) {
-	userID, err := identity.FromContext(ctx) // TODO: consider do this in a middleware and init User ID in the struct or ctx
+	// TODO: consider do this in a middleware and init User ID in the struct or ctx
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return Team{}, err
 	}
