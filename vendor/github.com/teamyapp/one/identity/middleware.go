@@ -31,7 +31,7 @@ func (m Middleware) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	if len(token) > 0 {
 		userID, err := m.getUserID(token)
 		if err != nil {
-			log.Println(err)
+			log.Printf("%+v\n", err)
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}

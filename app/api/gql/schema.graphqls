@@ -9,6 +9,12 @@ type Query {
 	task(id: ID!): Task!
 	"return all tasks for debug purpose"
 	tasks: [Task!]!
+	# Teams
+	"""
+	get all teams
+	Admin && Debug Only resolvers
+	"""
+	teams: [Team!]!
 }
 
 type Mutation {
@@ -22,7 +28,13 @@ type Mutation {
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
 	createTeam(input: TeamInput!): Team!
-	updateActiveTeam(teamId: ID!): Boolean!
+	# Users
+	updateActiveTeam(teamId: ID!): User!
+
+	# todo: implement a directive that hide this resolver from production
+	# or when the logged in user is not a system admin
+	"Admin && Debug Only resolvers"
+	createUser(userID: ID!): User!
 }
 
 input TaskInput {

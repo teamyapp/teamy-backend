@@ -4,12 +4,13 @@ import (
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Data struct {
 	Tasks             map[graphql.ID]entity.Task
-	Users             map[graphql.ID]entity.User
+	Users             map[oneEntity.ID]entity.User
 	Comments          []entity.Comment
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation

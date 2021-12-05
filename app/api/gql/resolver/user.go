@@ -28,17 +28,13 @@ func (u User) ProfileURL() string {
 }
 
 func (u User) ActiveTeam() (*Team, error) {
-	team, err := u.deps.teamRepo.FindActiveTeam(u.user.ID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	if team == nil {
+	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
+		return t.ID == u.user.ActiveTeamID
+	})
+	if len(teams) == 0 {
 		return nil, nil
 	}
-
-	gqlTeam := newTeam(u.deps, *team)
+	gqlTeam := newTeam(u.deps, teams[0])
 	return &gqlTeam, nil
 }
 

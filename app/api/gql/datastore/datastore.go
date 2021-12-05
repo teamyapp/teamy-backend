@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/pkg/errors"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -34,7 +35,7 @@ func NewDataStore(p Persister) *DataStore {
 		ds.data.Tasks = make(map[graphql.ID]entity.Task)
 	}
 	if ds.data.Users == nil {
-		ds.data.Users = make(map[graphql.ID]entity.User)
+		ds.data.Users = make(map[oneEntity.ID]entity.User)
 	}
 	return &ds
 }
@@ -42,12 +43,48 @@ func NewDataStore(p Persister) *DataStore {
 //
 // User
 //
-func (d DataStore) GetUser(id graphql.ID) (entity.User, error) {
+func (d DataStore) GetUser(id oneEntity.ID) (entity.User, error) {
 	user, ok := d.data.Users[id]
 	if !ok {
 		return entity.User{}, fmt.Errorf("user %v is not found", id)
 	}
 	return user, nil
+}
+
+func (d DataStore) GetUsers(ids []oneEntity.ID) (users []entity.User, err error) {
+	for _, id := range ids {
+		user, ok := d.data.Users[id]
+		if ok {
+			if user.ID == id {
+				users = append(users, user)
+			} else {
+				err = errors.Errorf("user key %v and id %v doesn't match", id, user.ID)
+				return
+			}
+		}
+	}
+	return
+}
+
+func (d DataStore) CreateUser(id oneEntity.ID) (entity.User, error) {
+	if _, ok := d.data.Users[id]; ok {
+		return entity.User{}, errors.Errorf("user %v already exists", id)
+	}
+	d.data.Users[id] = entity.User{
+		Entity: oneEntity.Entity{
+			ID: id,
+		},
+	}
+	return d.data.Users[id], d.persister.Write(d.data)
+}
+
+func (d DataStore) UpdateUser(userID oneEntity.ID, apply func(entity.User) entity.User) (entity.User, error) {
+	_, ok := d.data.Users[userID]
+	if !ok {
+		return entity.User{}, errors.Errorf("user %v is not found", userID)
+	}
+	d.data.Users[userID] = apply(d.data.Users[userID])
+	return d.data.Users[userID], nil
 }
 
 //
@@ -205,10 +242,10 @@ func (d *DataStore) FilterCreationRelation(filter func(CreationRelation) bool) (
 	return
 }
 
-func toEntityID(id graphql.ID) (int, error) {
+func toEntityID(id graphql.ID) (oneEntity.ID, error) {
 	i, err := strconv.ParseInt(string(id), 10, 32)
 	if err != nil {
 		return 0, err
 	}
-	return int(i), nil
+	return oneEntity.ID(i), nil
 }

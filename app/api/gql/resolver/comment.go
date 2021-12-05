@@ -14,7 +14,7 @@ func (c Comment) Commenter() (User, error) {
 	if err != nil {
 		return User{}, nil
 	}
-	user, err := c.deps.userRepo.FindUser(userID)
+	user, err := c.deps.Data.GetUser(userID)
 	if err != nil {
 		return User{}, err
 	}

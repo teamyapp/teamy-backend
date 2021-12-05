@@ -28,13 +28,8 @@ func (t Team) Members() ([]User, error) {
 		return nil, err
 	}
 
-	members, err := t.deps.userRepo.FindUsers(ids)
-	if err != nil {
-		log.Printf("%+v\n", err)
-		return nil, err
-	}
-
-	return toGraphQLUsers(t.deps, members), nil
+	members, err := t.deps.Data.GetUsers(ids)
+	return toGraphQLUsers(t.deps, members), err
 }
 
 func (t Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
@@ -58,15 +53,15 @@ func (t Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 
 func (t Team) Creator() (User, error) {
 	fmt.Println(t.team.CreatorID)
-	user, err := t.deps.userRepo.FindUser(t.team.CreatorID)
+	user, err := t.deps.Data.GetUser(t.team.CreatorID)
 	return newUser(t.deps, user), err
 }
 func (t Team) Owner() (User, error) {
-	user, err := t.deps.userRepo.FindUser(t.team.CreatorID)
+	user, err := t.deps.Data.GetUser(t.team.CreatorID)
 	return newUser(t.deps, user), err
 }
 func (t Team) Admins() ([]User, error) {
-	user, err := t.deps.userRepo.FindUser(t.team.CreatorID)
+	user, err := t.deps.Data.GetUser(t.team.CreatorID)
 	return []User{newUser(t.deps, user)}, err
 }
 
