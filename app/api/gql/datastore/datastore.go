@@ -163,7 +163,7 @@ func (d *DataStore) CreateLifetimeEvent(creatorID graphql.ID, eventType Lifetime
 	return d.persister.Write(d.data)
 }
 
-func (d *DataStore) FilterCreationRelation(f func(CreationRelation) bool) (rs []CreationRelation) {
+func (d *DataStore) FilterCreationRelation(filter func(CreationRelation) bool) (rs []CreationRelation) {
 	// fmt.Printf("%+v", d.data.CreationRelations)
 	for _, r := range d.data.CreationRelations {
 		if f(r) {
