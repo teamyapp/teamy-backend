@@ -9,6 +9,10 @@ type LifetimeEvent struct {
 	datastore.LifetimeEvent
 }
 
+func (e LifetimeEvent) ID() graphql.ID {
+	return toGraphQLID(e.LifetimeEvent.ID)
+}
+
 func (e LifetimeEvent) HappensAt() graphql.Time {
 	return graphql.Time{Time: e.HappensAt_}
 }

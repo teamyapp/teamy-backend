@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -113,48 +114,53 @@ func (m Mutation) CreateTask(
 // 	return true, nil
 // }
 
-// func (m Mutation) DeleteTask(ctx context.Context, args struct {
-// 	TaskID graphql.ID
-// }) (bool, error) {
-// 	userID, err := identity.FromContext(ctx)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false, err
-// 	}
+func (m Mutation) DeleteTask(ctx context.Context, args struct {
+	TaskID graphql.ID
+}) (Task, error) {
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
 
-// 	taskID, err := fromGraphQLID(args.TaskID)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false, err
-// 	}
+	// can only delete a task if
+	// the user is the creator
+	// todo: need to design a fully featured authorization interface for all modifiable entities
+	task, err := m.deps.Data.GetTask(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+	if task.CreatorID != toGraphQLID(userID) {
+		return Task{}, errors.New("you are not the creator of this task, can not delete")
+	}
 
-// 	// Check if taskID exists - no need, we can only delete task that we can see
-// 	// UI:
-// 	//		delete task from all active team view
-// 	// Delete record from team_task table
-// 	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
-// 	// TODO: clean up the task from task dependency graph for the active team
+	deletedTask, err := m.deps.Data.DeleteTask(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
 
-// 	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false, err
-// 	}
+	// taskID, err := fromGraphQLID(args.TaskID)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return false, err
+	// }
 
-// 	err = m.deps.taskRepo.DeleteTeamTask(taskID, activeTeam.ID)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false, err
-// 	}
+	// Check if taskID exists - no need, we can only delete task that we can see
+	// UI:
+	//		delete task from all active team view
+	// Delete record from team_task table
+	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
+	// TODO: clean up the task from task dependency graph for the active team
 
-// 	err = m.deps.taskRepo.DeleteNeedAttentionTask(taskID, userID, activeTeam.ID)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false, err
-// 	}
+	// question: not sure if this is useful anymore
+	// activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return false, err
+	// }
 
-// 	return true, nil
-// }
+	return newTask(m.deps, deletedTask), nil
+}
 
 // func (m Mutation) CompleteTask(ctx context.Context, args struct {
 // 	TaskID graphql.ID

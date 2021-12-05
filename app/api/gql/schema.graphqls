@@ -20,8 +20,8 @@ type Query {
 type Mutation {
 	# Tasks
 	createTask(task: TaskInput!): Task!
-	# deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
+	deleteTask(taskId: ID!): Task!
 	# startTask(taskId: ID!): Boolean!
 	# completeTask(taskId: ID!): Boolean!
 	# Comments
