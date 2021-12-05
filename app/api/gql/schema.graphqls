@@ -28,6 +28,7 @@ type Mutation {
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
 	createTeam(input: TeamInput!): Team!
+
 	# Users
 	updateActiveTeam(teamId: ID!): User!
 

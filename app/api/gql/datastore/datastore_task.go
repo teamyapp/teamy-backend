@@ -9,6 +9,25 @@ import (
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
+func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task entity.Task) (entity.Task, error) {
+	// get next id
+	task.ID = d.newID(Task)
+	task.CreatorID = creatorID
+	taskID := graphql.ID(fmt.Sprint(task.ID))
+	d.data.Tasks[taskID] = task
+	// creator
+	d.data.CreationRelations = append(d.data.CreationRelations, CreationRelation{
+		TaskID: taskID,
+		UserID: creatorID,
+	})
+
+	err := d.persister.Write(d.data)
+	if err != nil {
+		return entity.Task{}, err
+	}
+	return task, nil
+}
+
 func (d DataStore) GetTask(id graphql.ID) (entity.Task, error) {
 	task, ok := d.data.Tasks[id]
 	if ok {
@@ -36,25 +55,6 @@ func (d DataStore) FilterTasks(filter func(t entity.Task) bool) []entity.Task {
 		}
 	}
 	return tasks
-}
-
-func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task entity.Task) (entity.Task, error) {
-	// get next id
-	task.ID = d.newID(Task)
-	task.CreatorID = creatorID
-	taskID := graphql.ID(fmt.Sprint(task.ID))
-	d.data.Tasks[taskID] = task
-	// creator
-	d.data.CreationRelations = append(d.data.CreationRelations, CreationRelation{
-		TaskID: taskID,
-		UserID: creatorID,
-	})
-
-	err := d.persister.Write(d.data)
-	if err != nil {
-		return entity.Task{}, err
-	}
-	return task, nil
 }
 
 func (d DataStore) UpdateTask(task entity.Task) (entity.Task, error) {
