@@ -3,8 +3,10 @@ package resolver
 import (
 	"context"
 	"log"
+	"strings"
 
 	"github.com/graph-gophers/graphql-go"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -23,8 +25,43 @@ func (q Query) Task(args struct {
 	return newTask(q.deps, task), nil
 }
 
-func (q Query) Tasks() ([]Task, error) {
-	tasks := q.deps.Data.FilterTasks(func(t entity.Task) bool { return true })
+func (q Query) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
+	tasks := q.deps.Data.FilterTasks(func(t entity.Task) bool {
+		if args.Input == nil {
+			return true
+		}
+		// filter by Creator
+		matchCreator := true
+		if args.Input.CreatorID != nil {
+			creatorID := *args.Input.CreatorID
+			ownerID := oneEntity.ID(-1)
+			if t.OwnerUserId != nil {
+				ownerID = *t.OwnerUserId
+			}
+			matchCreator = t.CreatorID == creatorID || toGraphQLID(ownerID) == creatorID
+			log.Println(matchCreator)
+		}
+		// filter by status
+		matchStatus := true
+		if args.Input.Status != nil {
+			status := *(args.Input.Status)
+			matchStatus = t.Status == status
+			log.Println("matchStatus", matchStatus)
+		}
+		// full text search
+		// todo: need to implement a better full text search
+		// by using the full-text search engine in postgres
+		matchText := true
+		if args.Input.Text != nil {
+			text := *(args.Input.Text)
+			matchGoal := strings.Contains(t.Goal, text)
+			matchContext := strings.Contains(t.Context, text)
+			matchText = matchGoal || matchContext
+			log.Println(matchText)
+		}
+		log.Println("=", matchCreator, matchStatus, matchText)
+		return matchCreator && matchStatus && matchText
+	})
 	return newTasks(q.deps, tasks), nil
 }
 

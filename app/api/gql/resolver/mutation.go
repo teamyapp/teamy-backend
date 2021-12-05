@@ -50,6 +50,8 @@ func (m Mutation) CreateTask(
 	if len(activeTeams) == 0 {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
+
+	task.Status = entity.UPCOMING
 	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeams[0].ID, task)
 	if err != nil {
 		return Task{}, err
@@ -65,140 +67,140 @@ func (m Mutation) CreateTask(
 	return newTask(m.deps, task), err
 }
 
-func (m Mutation) StartTask(ctx context.Context, args struct {
-	TaskID graphql.ID
-}) (bool, error) {
-	userID, err := identity.FromContext(ctx)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// func (m Mutation) StartTask(ctx context.Context, args struct {
+// 	TaskID graphql.ID
+// }) (bool, error) {
+// 	userID, err := identity.FromContext(ctx)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	taskID, err := fromGraphQLID(args.TaskID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	// TODO: a user starts others' task will assign that task to the himself
-	// TODO: show a modal to confirm task should be reassigned.
-	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	// TODO: a user starts others' task will assign that task to the himself
+// 	// TODO: show a modal to confirm task should be reassigned.
+// 	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	prevNeedAttentionTaskID, err := m.deps.taskRepo.SetNeedAttentionTask(&taskID, userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	prevNeedAttentionTaskID, err := m.deps.taskRepo.SetNeedAttentionTask(&taskID, userID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusInProgress)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusInProgress)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	if prevNeedAttentionTaskID != nil {
-		err = m.deps.taskRepo.SetTeamTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
-		if err != nil {
-			log.Println(err)
-			return false, err
-		}
-	}
+// 	if prevNeedAttentionTaskID != nil {
+// 		err = m.deps.taskRepo.SetTeamTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
+// 		if err != nil {
+// 			log.Println(err)
+// 			return false, err
+// 		}
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
-func (m Mutation) DeleteTask(ctx context.Context, args struct {
-	TaskID graphql.ID
-}) (bool, error) {
-	userID, err := identity.FromContext(ctx)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// func (m Mutation) DeleteTask(ctx context.Context, args struct {
+// 	TaskID graphql.ID
+// }) (bool, error) {
+// 	userID, err := identity.FromContext(ctx)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	taskID, err := fromGraphQLID(args.TaskID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	// Check if taskID exists - no need, we can only delete task that we can see
-	// UI:
-	//		delete task from all active team view
-	// Delete record from team_task table
-	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
-	// TODO: clean up the task from task dependency graph for the active team
+// 	// Check if taskID exists - no need, we can only delete task that we can see
+// 	// UI:
+// 	//		delete task from all active team view
+// 	// Delete record from team_task table
+// 	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
+// 	// TODO: clean up the task from task dependency graph for the active team
 
-	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	err = m.deps.taskRepo.DeleteTeamTask(taskID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	err = m.deps.taskRepo.DeleteTeamTask(taskID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	err = m.deps.taskRepo.DeleteNeedAttentionTask(taskID, userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	err = m.deps.taskRepo.DeleteNeedAttentionTask(taskID, userID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
-func (m Mutation) CompleteTask(ctx context.Context, args struct {
-	TaskID graphql.ID
-}) (bool, error) {
-	userID, err := identity.FromContext(ctx)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// func (m Mutation) CompleteTask(ctx context.Context, args struct {
+// 	TaskID graphql.ID
+// }) (bool, error) {
+// 	userID, err := identity.FromContext(ctx)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	taskID, err := fromGraphQLID(args.TaskID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	needAttentionTask, err := m.deps.taskRepo.FindTaskNeedAttentionForUser(userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	needAttentionTask, err := m.deps.taskRepo.FindTaskNeedAttentionForUser(userID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	if needAttentionTask.ID != taskID {
-		return true, err
-	}
+// 	if needAttentionTask.ID != taskID {
+// 		return true, err
+// 	}
 
-	_, err = m.deps.taskRepo.SetNeedAttentionTask(nil, userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	_, err = m.deps.taskRepo.SetNeedAttentionTask(nil, userID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusDelivered)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusDelivered)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
 func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 	TeamID graphql.ID
@@ -249,7 +251,7 @@ func (m Mutation) UpdateTask(
 		return Task{}, err
 	}
 	if args.Task.Context != nil {
-		task.Context = args.Task.Context
+		task.Context = *(args.Task.Context)
 	}
 	if args.Task.DueAt != nil {
 		task.DueAt = &args.Task.DueAt.Time

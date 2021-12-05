@@ -1,10 +1,6 @@
 package resolver
 
 import (
-	"fmt"
-	"log"
-
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -56,52 +52,12 @@ func (u User) Teams() ([]Team, error) {
 }
 
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
-	if args.Input == nil {
-		tasks := u.deps.Data.FilterTasks(func(t entity.Task) bool {
-			ownerID := oneEntity.ID(-1)
-			if t.OwnerUserId != nil {
-				ownerID = *t.OwnerUserId
-			}
-			return t.CreatorID == u.ID() || ownerID == u.user.ID
-		})
-		return newTasks(u.deps, tasks), nil
+	q := NewQuery(u.deps)
+	if args.Input != nil {
+		id := u.ID()
+		args.Input.CreatorID = &id
 	}
-	if args.Input.Status == nil {
-		return nil, nil
-	}
-	status := *(args.Input.Status)
-	activeTeam, err := u.ActiveTeam()
-	if err != nil {
-		return nil, err
-	}
-	if activeTeam == nil {
-		return nil, nil
-	}
-	switch status {
-	case UPCOMING:
-		upcomingTasks, err := u.deps.taskRepo.FindTasksForUser(u.entity.ID, activeTeam.entity.ID, entity.TaskStatusUpcoming)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		upcomingTasks = u.deps.prioritizationService.PrioritizeTasks(upcomingTasks)
-		upcomingTasks = tasksWithAvailableActions(upcomingTasks, entity.TaskStatusUpcoming)
-		return toGraphQLTasks(u.deps, upcomingTasks), nil
-	case IN_PROGRESS:
-		// not applicable to users for now
-		// todo: might implement in the future
-		return nil, nil
-	case DELIVERED:
-		deliveredTasks, err := u.deps.taskRepo.FindTasksForUser(u.entity.ID, activeTeam.entity.ID, entity.TaskStatusDelivered)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		deliveredTasks = tasksWithAvailableActions(deliveredTasks, entity.TaskStatusDelivered)
-		return toGraphQLTasks(u.deps, deliveredTasks), nil
-	default:
-		return nil, fmt.Errorf("status %v does not exist", status)
-	}
+	return q.Tasks(args)
 }
 
 func newUser(deps *Dependencies, user entity.User) User {

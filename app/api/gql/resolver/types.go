@@ -137,11 +137,14 @@ func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error) {
 		log.Error(err)
 		return entity.Task{}, err
 	}
-
+	context := ""
+	if taskInput.Context != nil {
+		context = *taskInput.Context
+	}
 	task := entity.Task{
 		Goal:        goal,
 		DueAt:       fromGraphQLTime(taskInput.DueAt),
-		Context:     taskInput.Context,
+		Context:     context,
 		OwnerUserId: ownerId,
 	}
 	return task, nil

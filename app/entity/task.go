@@ -11,7 +11,7 @@ type Task struct {
 	oneEntity.Entity
 	Goal             string
 	DueAt            *time.Time
-	Context          *string
+	Context          string
 	CreatorID        graphql.ID
 	OwnerUserId      *oneEntity.ID
 	WorkScopeIndex   *int
@@ -19,4 +19,5 @@ type Task struct {
 	DependsOnTaskIDs []oneEntity.ID
 	NumOfUnknowns    *int
 	AvailableActions []TaskAction
+	Status           TaskStatusEnum
 }

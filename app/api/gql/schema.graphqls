@@ -8,7 +8,7 @@ type Query {
 	me: User!
 	task(id: ID!): Task!
 	"return all tasks for debug purpose"
-	tasks: [Task!]!
+	tasks(input: TaskFilter): [Task!]!
 	# Teams
 	"""
 	get all teams
@@ -20,10 +20,10 @@ type Query {
 type Mutation {
 	# Tasks
 	createTask(task: TaskInput!): Task!
-	deleteTask(taskId: ID!): Boolean!
+	# deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
-	startTask(taskId: ID!): Boolean!
-	completeTask(taskId: ID!): Boolean!
+	# startTask(taskId: ID!): Boolean!
+	# completeTask(taskId: ID!): Boolean!
 	# Comments
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
@@ -118,12 +118,16 @@ type User implements Entity {
 	createdAt: Time!
 	activeTeam: Team
 	teams: [Team!]!
-	"If input is null, return all related tasks"
+	"""
+	If input is null, return all related tasks.
+	Ignore TaskFilter.creatorID
+	"""
 	tasks(input: TaskFilter): [Task!]!
 }
 
 input TaskFilter {
 	id: ID
+	creatorID: ID
 	"a string filter that searches in both goal and context. Not Implemented."
 	text: String
 	status: TaskStatus

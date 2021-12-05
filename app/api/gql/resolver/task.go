@@ -18,9 +18,10 @@ type Task struct {
 }
 
 type TaskFilter struct {
-	ID     *graphql.ID
-	Text   *string
-	Status *TaskStatus
+	ID        *graphql.ID
+	CreatorID *graphql.ID
+	Text      *string
+	Status    *entity.TaskStatusEnum
 }
 
 func (t Task) Goal() string {
@@ -32,11 +33,7 @@ func (t Task) DueAt() *graphql.Time {
 }
 
 func (t Task) Context() string {
-	c := t.task.Context
-	if c != nil {
-		return *c
-	}
-	return ""
+	return t.task.Context
 }
 
 func (t Task) Owner() (*User, error) {
@@ -118,17 +115,9 @@ func (t Task) Comments() []Comment {
 	return Comments(t.deps, cs)
 }
 
-type TaskStatus string
-
-const (
-	UPCOMING    TaskStatus = "UPCOMING"
-	IN_PROGRESS TaskStatus = "IN_PROGRESS"
-	DELIVERED   TaskStatus = "DELIVERED"
-)
-
-func (t Task) Status() (TaskStatus, error) {
+func (t Task) Status() (entity.TaskStatusEnum, error) {
 	// TODO: add status to task
-	return UPCOMING, nil
+	return t.task.Status, nil
 }
 
 func newTask(deps *Dependencies, task entity.Task) Task {
