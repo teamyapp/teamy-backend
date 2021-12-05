@@ -59,8 +59,7 @@ func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task en
 
 func (d DataStore) UpdateTask(task entity.Task) (entity.Task, error) {
 	id := graphql.ID(fmt.Sprintf("%v", task.ID))
-	task, ok := d.data.Tasks[id]
-	if !ok {
+	if _, ok := d.data.Tasks[id]; !ok {
 		return entity.Task{}, fmt.Errorf("task not found: id=%v", task.ID)
 	}
 	d.data.Tasks[id] = task

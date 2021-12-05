@@ -42,6 +42,7 @@ input TaskInput {
 	dueAt: Time
 	context: String
 	ownerUserId: ID
+	status: TaskStatus
 }
 
 

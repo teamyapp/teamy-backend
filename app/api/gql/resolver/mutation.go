@@ -272,6 +272,10 @@ func (m Mutation) UpdateTask(
 		}
 		task.OwnerUserId = id
 	}
+	if args.Task.Status != nil {
+		log.Println(*args.Task.Status)
+		task.Status = *args.Task.Status
+	}
 	task, err = m.deps.Data.UpdateTask(task)
 	if err != nil {
 		return Task{}, nil
