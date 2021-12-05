@@ -9,6 +9,12 @@ type Query {
 	task(id: ID!): Task!
 	"return all tasks for debug purpose"
 	tasks: [Task!]!
+	# Teams
+	"""
+	get all teams
+	Admin && Debug Only resolvers
+	"""
+	teams: [Team!]!
 }
 
 type Mutation {
@@ -18,14 +24,19 @@ type Mutation {
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	startTask(taskId: ID!): Boolean!
 	completeTask(taskId: ID!): Boolean!
-
 	# Comments
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
+	createTeam(input: TeamInput!): Team!
+	# Users
+	updateActiveTeam(teamId: ID!): User!
 
-	updateActiveTeam(teamId: ID!): Boolean!
+	# todo: implement a directive that hide this resolver from production
+	# or when the logged in user is not a system admin
+	"Admin && Debug Only resolvers"
+	createUser(userID: ID!): User!
+
 	addUserToTeam(userId: ID!, teamId: ID!): Boolean!
-
 	createInvitation(receiveInviteUserEmail: String!): Invitation!
 	acceptInvitation(invitationId: ID!): Boolean!
 	declineInvitation(invitationId: ID!): Boolean!
@@ -38,9 +49,14 @@ input TaskInput {
 	ownerUserId: ID
 }
 
+
 interface Entity {
 	id: ID!
 	createdAt: Time!
+}
+
+input TeamInput {
+	name: String!
 }
 
 type Team implements Entity {
@@ -48,6 +64,11 @@ type Team implements Entity {
 	name: String!
 	logoUrl: String
 	createdAt: Time!
+	creator: User!
+	"creator is the owner. In the future there will be features to transfer ownership to other users, just like GitHub repo."
+	owner: User!
+	"creator is the only admin for now"
+	admins: [User!]!
 	members: [User!]!
 	tasks(input: TaskFilter): [Task!]!
 }
@@ -82,6 +103,7 @@ type Task implements Entity {
 	# Time Flow
 	createdAt: Time!
 	dueAt: Time
+	availableActions: [TaskAction!]!
 	lifetimeEvents: [LifetimeEvent!]!
 }
 

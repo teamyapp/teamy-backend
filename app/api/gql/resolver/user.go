@@ -28,39 +28,30 @@ func (u User) ProfileURL() string {
 }
 
 func (u User) ActiveTeam() (*Team, error) {
-	team, err := u.deps.teamRepo.FindActiveTeam(u.user.ID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	if team == nil {
+	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
+		return t.ID == u.user.ActiveTeamID
+	})
+	if len(teams) == 0 {
 		return nil, nil
 	}
-
-	gqlTeam := newTeam(u.deps, *team)
+	gqlTeam := newTeam(u.deps, teams[0])
 	return &gqlTeam, nil
 }
 
 func (u User) Teams() ([]Team, error) {
-	teamIDs, err := u.deps.teamRepo.FindAllTeamIDs(u.user.ID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	teams, err := u.deps.teamRepo.FindTeams(teamIDs)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	var gqlTeams = make([]Team, 0)
-	for _, team := range teams {
-		gqlTeam := newTeam(u.deps, team)
-		gqlTeams = append(gqlTeams, gqlTeam)
-	}
-	return gqlTeams, nil
+	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
+		isCreator := t.CreatorID == u.user.ID
+		if isCreator {
+			return true
+		}
+		for _, id := range t.MemberIDs {
+			if id == u.user.ID { // is member
+				return true
+			}
+		}
+		return false
+	})
+	return newTeams(u.deps, teams), nil
 }
 
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {

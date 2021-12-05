@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/pkg/errors"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -23,6 +24,9 @@ type SQLUser struct {
 var _ User = (*SQLUser)(nil)
 
 func (S SQLUser) FindUsers(userIDs []oneEntity.ID) ([]entity.User, error) {
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
 	idsString := toIDsString(userIDs)
 
 	query := fmt.Sprintf(`
@@ -31,8 +35,7 @@ FROM "user"
 WHERE id IN (%s)`, idsString)
 	rows, err := S.db.Query(query)
 	if err != nil {
-		log.Println(err)
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	defer rows.Close()
 
@@ -56,8 +59,7 @@ func (S SQLUser) FindUser(userID oneEntity.ID) (entity.User, error) {
 	var user entity.User
 	err := S.db.QueryRow(query).Scan(&user.ID, &user.FirstName, &user.LastName, &user.ProfileURL, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
-		log.Println(user.ID, err)
-		return entity.User{}, err
+		return entity.User{}, errors.WithStack(err)
 	}
 
 	return user, nil
@@ -78,11 +80,7 @@ func (S SQLUser) UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity
 `
 	var previousActiveTeamID *int
 	err := S.db.QueryRow(statement, activeTeamID, userID).Scan(&previousActiveTeamID)
-	if err != nil {
-		log.Println(err)
-	}
-
-	return (*oneEntity.ID)(previousActiveTeamID), err
+	return (*oneEntity.ID)(previousActiveTeamID), errors.WithStack(err)
 }
 
 func NewSQLUser(db *sql.DB) SQLUser {
