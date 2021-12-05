@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,12 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
+	migrate "github.com/rubenv/sql-migrate"
 	"github.com/teamyapp/one/config"
 	"github.com/teamyapp/one/io"
 )
+
+const DefaultMigrationRoot = "app/repo/db/migration"
+const DefaultDBSeedFile = "app/repo/db/seed.sql"
 
 const lowerCaseLetters = "abcdefghijklmnopqrstuvwxyz"
 const upperCaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -80,34 +81,31 @@ func DefaultWith(action func(sqlDB *sql.DB) error) error {
 	return With(cfg, action)
 }
 
-func Migrate(migrationDir string, steps int) error {
+func MigrateUp(migrationRoot string) error {
 	return DefaultWith(func(sqlDB *sql.DB) error {
-		migrationURI := fmt.Sprintf("file://%s", migrationDir)
-
-		driver, err := postgres.WithInstance(sqlDB, &postgres.Config{})
-		if err != nil {
-			return err
-		}
-
-		m, err := migrate.NewWithDatabaseInstance(
-			migrationURI,
-			"postgres", driver)
-		if err != nil {
-			return err
-		}
-
-		err = m.Steps(steps)
-		if errors.Is(err, os.ErrNotExist) {
-			log.Println("no change in DB")
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		log.Println("finish DB migration")
-		return nil
+		return migrateDB(sqlDB, migrationRoot, migrate.Up)
 	})
+}
+
+func MigrateDown(migrationRoot string) error {
+	return DefaultWith(func(sqlDB *sql.DB) error {
+		return migrateDB(sqlDB, migrationRoot, migrate.Down)
+	})
+}
+
+func migrateDB(
+	db *sql.DB,
+	migrationRoot string,
+	migrateDirection migrate.MigrationDirection,
+) error {
+	migrations := &migrate.FileMigrationSource{
+		Dir: migrationRoot,
+	}
+	_, err := migrate.Exec(db, dbType, migrations, migrateDirection)
+	if err == nil {
+		log.Println("migration finished")
+	}
+	return err
 }
 
 func ExecSQL(sqlFileName string) error {
@@ -135,7 +133,7 @@ func ExecSQL(sqlFileName string) error {
 	})
 }
 
-func NewMigration(migrationDir string, fileName string) error {
+func NewMigration(migrationDir string, fileName string) (string, error) {
 	now := time.Now()
 	prefix := fmt.Sprintf(
 		"%04d%02d%02d%02d%02d%02d_%s",
@@ -146,25 +144,20 @@ func NewMigration(migrationDir string, fileName string) error {
 		now.Minute(),
 		now.Second(),
 		fileName)
-	fileNameFormats := []string{
-		"%s.up.sql",
-		"%s.down.sql",
-	}
 
 	err := os.MkdirAll(migrationDir, os.ModePerm)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	for _, fileNameFormat := range fileNameFormats {
-		fileName = fmt.Sprintf(fileNameFormat, prefix)
-		err = io.CreateFileWithLog(filepath.Join(migrationDir, fileName))
-		if err != nil {
-			return err
-		}
+	fileName = fmt.Sprintf("%s.sql", prefix)
+	fullFilePath := filepath.Join(migrationDir, fileName)
+	err = io.CreateFileWithLog(fullFilePath)
+	if err != nil {
+		return "", err
 	}
 
-	return nil
+	return fullFilePath, nil
 }
 
 func New(dbName string) {
