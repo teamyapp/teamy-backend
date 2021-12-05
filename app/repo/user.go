@@ -33,7 +33,6 @@ func (S SQLUser) FindUsers(userIDs []oneEntity.ID) ([]entity.User, error) {
 SELECT id, first_name, last_name, profile_url, created_at, updated_at
 FROM "user"
 WHERE id IN (%s)`, idsString)
-	fmt.Println(query)
 	rows, err := S.db.Query(query)
 	if err != nil {
 		return nil, errors.WithStack(err)

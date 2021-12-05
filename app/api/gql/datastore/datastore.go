@@ -217,13 +217,11 @@ func (d DataStore) UpdateTeam(teamID oneEntity.ID, apply func(entity.Team) entit
 
 func (d DataStore) CreateTeam(userID oneEntity.ID, t entity.Team) (entity.Team, error) {
 	t.ID = oneEntity.ID(len(d.data.Teams) + 1)
-	t.CreatorID = userID
 	d.data.Teams = append(d.data.Teams, t)
 	return t, d.persister.Write(d.data)
 }
 
 func (d DataStore) FilterTeams(filter func(entity.Team) bool) (ts []entity.Team) {
-	fmt.Printf("%+v", d.data.Teams)
 	for _, t := range d.data.Teams {
 		if filter(t) {
 			ts = append(ts, t)

@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -22,13 +21,7 @@ func (t Team) LogoURL() *string {
 }
 
 func (t Team) Members() ([]User, error) {
-	ids, err := t.deps.teamRepo.ListTeamMemberIDs(t.team.ID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	members, err := t.deps.Data.GetUsers(ids)
+	members, err := t.deps.Data.GetUsers(t.team.MemberIDs)
 	return toGraphQLUsers(t.deps, members), err
 }
 

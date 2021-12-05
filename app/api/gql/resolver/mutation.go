@@ -308,7 +308,11 @@ func (m Mutation) CreateTeam(ctx context.Context,
 		return Team{}, err
 	}
 	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
-		Name: args.Input.Name,
+		Name:      args.Input.Name,
+		CreatorID: userID,
+		MemberIDs: []oneEntity.ID{
+			userID,
+		},
 	})
 	if err != nil {
 		return Team{}, err
