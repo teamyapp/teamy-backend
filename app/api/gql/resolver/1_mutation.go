@@ -42,7 +42,7 @@ func (m Mutation) CreateTask(
 	if activeTeam == nil {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
-	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), task)
+	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeam.ID, task)
 	return newTask(m.deps, task), err
 }
 

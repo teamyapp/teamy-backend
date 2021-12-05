@@ -13,6 +13,7 @@ type Data struct {
 	Comments          []entity.Comment
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation
+	Teams             []entity.Team
 }
 
 // Temperary SQL like struct for v2 migration purpose.

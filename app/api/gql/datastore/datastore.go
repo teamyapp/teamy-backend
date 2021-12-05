@@ -36,6 +36,12 @@ func NewDataStore(p Persister) *DataStore {
 	if ds.data.Users == nil {
 		ds.data.Users = make(map[graphql.ID]entity.User)
 	}
+	// todo: implement a GraphQL to create Teams
+	ds.data.Teams = append(ds.data.Teams, entity.Team{
+		Entity: oneEntity.Entity{
+			ID: 1,
+		},
+	})
 	return &ds
 }
 
@@ -82,7 +88,7 @@ func (d DataStore) FilterTasks(filter func(t entity.Task) bool) []entity.Task {
 	return tasks
 }
 
-func (d DataStore) CreateTask(creatorID graphql.ID, task entity.Task) (entity.Task, error) {
+func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task entity.Task) (entity.Task, error) {
 	// get next id
 	// todo: consider global unique id for all resources/entities
 	task.CreatorID = creatorID
@@ -100,15 +106,26 @@ func (d DataStore) CreateTask(creatorID graphql.ID, task entity.Task) (entity.Ta
 	}
 
 	d.data.Tasks[taskID] = task
+
+	// creator
 	d.data.CreationRelations = append(d.data.CreationRelations, CreationRelation{
 		TaskID: taskID,
 		UserID: creatorID,
 	})
-	err := d.persister.Write(d.data)
+
+	// add task to team
+	err := d.UpdateTeam(teamID, func(t entity.Team) entity.Team {
+		t.Tasks = append(t.Tasks, task.ID)
+		return t
+	})
 	if err != nil {
 		return entity.Task{}, err
 	}
-	fmt.Printf("CreateTask: %+v\n", d.data.Tasks)
+
+	err = d.persister.Write(d.data)
+	if err != nil {
+		return entity.Task{}, err
+	}
 	return task, nil
 }
 
@@ -161,6 +178,34 @@ func (d *DataStore) CreateLifetimeEvent(creatorID graphql.ID, eventType Lifetime
 		EventType:  eventType,
 	})
 	return d.persister.Write(d.data)
+}
+
+//
+// Team
+//
+func (d DataStore) UpdateTeam(teamID oneEntity.ID, apply func(entity.Team) entity.Team) error {
+	for i, team := range d.data.Teams {
+		if team.ID == teamID {
+			d.data.Teams[i] = apply(team)
+			return d.persister.Write(d.data)
+		}
+	}
+	return fmt.Errorf("team %v is not found", teamID)
+}
+
+func (d DataStore) CreateTeam(t entity.Team) error {
+	t.ID = oneEntity.ID(len(d.data.Teams) + 1)
+	d.data.Teams = append(d.data.Teams, t)
+	return d.persister.Write(d.data)
+}
+
+func (d DataStore) FilterTeams(filter func(entity.Team) bool) (ts []entity.Team) {
+	for _, t := range d.data.Teams {
+		if filter(t) {
+			ts = append(ts, t)
+		}
+	}
+	return
 }
 
 func (d *DataStore) FilterCreationRelation(filter func(CreationRelation) bool) (rs []CreationRelation) {
