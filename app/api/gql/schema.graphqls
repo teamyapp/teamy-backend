@@ -75,6 +75,7 @@ type Task implements Entity {
 	# Time Flow
 	createdAt: Time!
 	dueAt: Time
+	availableActions: [TaskAction!]!
 	lifetimeEvents: [LifetimeEvent!]!
 }
 
