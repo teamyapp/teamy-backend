@@ -36,20 +36,6 @@ func NewDataStore(p Persister) *DataStore {
 	if ds.data.Users == nil {
 		ds.data.Users = make(map[graphql.ID]entity.User)
 	}
-	// todo: implement a GraphQL to create Teams
-	if len(ds.data.Teams) == 0 {
-		ds.data.Teams = append(ds.data.Teams, entity.Team{
-			Entity: oneEntity.Entity{
-				ID: 1,
-			},
-		})
-	} else if len(ds.data.Teams) > 1 {
-		ds.data.Teams = []entity.Team{
-			{Entity: oneEntity.Entity{
-				ID: 1,
-			}},
-		}
-	}
 	return &ds
 }
 
@@ -192,13 +178,15 @@ func (d DataStore) UpdateTeam(teamID oneEntity.ID, apply func(entity.Team) entit
 	return fmt.Errorf("team %v is not found", teamID)
 }
 
-func (d DataStore) CreateTeam(t entity.Team) error {
+func (d DataStore) CreateTeam(userID oneEntity.ID, t entity.Team) (entity.Team, error) {
 	t.ID = oneEntity.ID(len(d.data.Teams) + 1)
+	t.CreatorID = userID
 	d.data.Teams = append(d.data.Teams, t)
-	return d.persister.Write(d.data)
+	return t, d.persister.Write(d.data)
 }
 
 func (d DataStore) FilterTeams(filter func(entity.Team) bool) (ts []entity.Team) {
+	fmt.Printf("%+v", d.data.Teams)
 	for _, t := range d.data.Teams {
 		if filter(t) {
 			ts = append(ts, t)

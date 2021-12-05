@@ -287,6 +287,26 @@ func (m Mutation) Comment(
 	}, nil
 }
 
+func (m Mutation) CreateTeam(ctx context.Context,
+	args struct {
+		Input struct {
+			Name string
+		}
+	},
+) (Team, error) {
+	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	if err != nil {
+		return Team{}, err
+	}
+	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
+		Name: args.Input.Name,
+	})
+	if err != nil {
+		return Team{}, err
+	}
+	return newTeam(m.deps, t), nil
+}
+
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 	for _, e := range arr {
 		if e == element {

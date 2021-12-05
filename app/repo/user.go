@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/pkg/errors"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -23,16 +24,19 @@ type SQLUser struct {
 var _ User = (*SQLUser)(nil)
 
 func (S SQLUser) FindUsers(userIDs []oneEntity.ID) ([]entity.User, error) {
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
 	idsString := toIDsString(userIDs)
 
 	query := fmt.Sprintf(`
 SELECT id, first_name, last_name, profile_url, created_at, updated_at
 FROM "user"
 WHERE id IN (%s)`, idsString)
+	fmt.Println(query)
 	rows, err := S.db.Query(query)
 	if err != nil {
-		log.Println(err)
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	defer rows.Close()
 

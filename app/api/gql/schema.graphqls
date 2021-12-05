@@ -21,6 +21,7 @@ type Mutation {
 	# Comments
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
+	createTeam(input: TeamInput!): Team!
 	updateActiveTeam(teamId: ID!): Boolean!
 }
 
@@ -31,9 +32,14 @@ input TaskInput {
 	ownerUserId: ID
 }
 
+
 interface Entity {
 	id: ID!
 	createdAt: Time!
+}
+
+input TeamInput {
+	name: String!
 }
 
 type Team implements Entity {
@@ -41,6 +47,11 @@ type Team implements Entity {
 	name: String!
 	logoUrl: String
 	createdAt: Time!
+	creator: User!
+	"creator is the owner. In the future there will be features to transfer ownership to other users, just like GitHub repo."
+	owner: User!
+	"creator is the only admin for now"
+	admins: [User!]!
 	members: [User!]!
 	tasks(input: TaskFilter): [Task!]!
 }
