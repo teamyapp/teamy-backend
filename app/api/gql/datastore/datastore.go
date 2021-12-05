@@ -54,7 +54,6 @@ func (d DataStore) GetUser(id graphql.ID) (entity.User, error) {
 // Tasks
 //
 func (d DataStore) GetTask(id graphql.ID) (entity.Task, error) {
-	fmt.Printf("%+v\n", d.data.Tasks)
 	task, ok := d.data.Tasks[id]
 	if ok {
 		return task, nil
@@ -115,6 +114,10 @@ func (d DataStore) CreateTask(creatorID graphql.ID, task entity.Task) (entity.Ta
 
 func (d DataStore) UpdateTask(task entity.Task) (entity.Task, error) {
 	id := graphql.ID(fmt.Sprintf("%v", task.ID))
+	task, ok := d.data.Tasks[id]
+	if !ok {
+		return entity.Task{}, fmt.Errorf("task not found: id=%v", task.ID)
+	}
 	d.data.Tasks[id] = task
 	return task, d.persister.Write(d.data)
 }
@@ -129,7 +132,6 @@ func (d DataStore) CreateComment(comment entity.Comment) (entity.Comment, error)
 }
 
 func (d DataStore) FilterComments(filter func(entity.Comment) bool) (cs []entity.Comment) {
-	fmt.Printf("%+v\n", d.data.Comments)
 	for _, c := range d.data.Comments {
 		if filter(c) {
 			cs = append(cs, c)
