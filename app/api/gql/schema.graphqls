@@ -120,6 +120,7 @@ type User implements Entity {
 	teams: [Team!]!
 	"If input is null, return all related tasks"
 	tasks(input: TaskFilter): [Task!]!
+	needAttentionTask: Task
 }
 
 input TaskFilter {

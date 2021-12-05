@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/teamyapp/teamy-backend/app/entity"
 	"sort"
+
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Prioritization struct {

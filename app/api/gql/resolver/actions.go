@@ -30,11 +30,11 @@ var availableActions = taskActionMap{
 }
 
 func tasksWithAvailableActions(tasks []entity.Task, taskStatus entity.TaskStatus) []entity.Task {
-	newTasks := make([]entity.Task, 0)
+	updatedTasks := make([]entity.Task, 0)
 	for _, task := range tasks {
-		newTasks = append(newTasks, taskWithAvailableActions(task, taskStatus))
+		updatedTasks = append(updatedTasks, taskWithAvailableActions(task, taskStatus))
 	}
-	return newTasks
+	return updatedTasks
 }
 
 func taskWithAvailableActions(task entity.Task, taskStatus entity.TaskStatus) entity.Task {
