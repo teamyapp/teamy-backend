@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -56,8 +57,14 @@ func (u User) Teams() ([]Team, error) {
 
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	if args.Input == nil {
-		// todo: return all related tasks
-		return nil, nil
+		tasks := u.deps.Data.FilterTasks(func(t entity.Task) bool {
+			ownerID := oneEntity.ID(-1)
+			if t.OwnerUserId != nil {
+				ownerID = *t.OwnerUserId
+			}
+			return t.CreatorID == u.ID() || ownerID == u.user.ID
+		})
+		return newTasks(u.deps, tasks), nil
 	}
 	if args.Input.Status == nil {
 		return nil, nil
