@@ -5,11 +5,8 @@ import (
 )
 
 type TaskInput struct {
-	Goal             *string
-	DueAt            *graphql.Time
-	Context          *string
-	OwnerUserID      *graphql.ID
-	WorkScopeIndex   *int32
-	DependsOnTaskIds *[]graphql.ID
-	NumOfUnknowns    *int32
+	Goal        *string
+	DueAt       *graphql.Time
+	Context     *string
+	OwnerUserID *graphql.ID
 }

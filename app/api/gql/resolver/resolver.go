@@ -1,16 +1,29 @@
 package resolver
 
-import "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+import (
+	"context"
+
+	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/app/entity"
+)
 
 type Resolver struct {
 	Query
 	Mutation
 }
 
-func NewResolver(deps *Dependencies, prototypeDeps *resolver.Dependencies) Resolver {
-	query := NewQuery(deps, prototypeDeps)
+type DataStore interface {
+	taskStore
+}
+
+type taskStore interface {
+	CreateTask(c context.Context, task TaskInput, creatorID graphql.ID) (entity.Task, error)
+}
+
+func NewResolver(deps *Dependencies) Resolver {
+	query := NewQuery(deps)
 	return Resolver{
-		Query:    NewQuery(deps, prototypeDeps),
-		Mutation: NewMutation(deps, prototypeDeps, &query),
+		Query:    NewQuery(deps),
+		Mutation: NewMutation(deps, &query),
 	}
 }

@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
-
 	"github.com/graph-gophers/graphql-go"
 	"github.com/opentracing/opentracing-go/log"
 	oneEntity "github.com/teamyapp/one/entity"
@@ -21,10 +19,10 @@ var gqlTaskActionMap = map[entity.TaskAction]TaskAction{
 	entity.TaskActionMarkComplete:  TaskActionMarkComplete,
 }
 
-func toGraphQLTasks(deps *Dependencies, prototypeDeps *resolver.Dependencies, tasks []entity.Task) []Task {
+func toGraphQLTasks(deps *Dependencies, tasks []entity.Task) []Task {
 	gqlTasks := make([]Task, 0)
 	for _, task := range tasks {
-		gqlTasks = append(gqlTasks, newTask(deps, prototypeDeps, task))
+		gqlTasks = append(gqlTasks, newTask(deps, task))
 	}
 	return gqlTasks
 }
@@ -64,14 +62,14 @@ func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 	return actions
 }
 
-func toGraphQLUsers(deps *Dependencies, prototypeDeps *resolver.Dependencies, users []entity.User) []User {
+func toGraphQLUsers(deps *Dependencies, users []entity.User) []User {
 	if users == nil {
 		return nil
 	}
 
 	gqlUsers := make([]User, 0)
 	for _, user := range users {
-		gqlUsers = append(gqlUsers, newUser(deps, prototypeDeps, user))
+		gqlUsers = append(gqlUsers, newUser(deps, user))
 	}
 	return gqlUsers
 }
@@ -140,20 +138,11 @@ func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error) {
 		return entity.Task{}, err
 	}
 
-	dependentTaskIds, err := fromGraphQLIDs(taskInput.DependsOnTaskIds)
-	if err != nil {
-		log.Error(err)
-		return entity.Task{}, err
-	}
-
 	task := entity.Task{
-		Goal:             goal,
-		DueAt:            fromGraphQLTime(taskInput.DueAt),
-		Context:          taskInput.Context,
-		OwnerUserId:      ownerId,
-		WorkScopeIndex:   fromInt32(taskInput.WorkScopeIndex),
-		DependsOnTaskIDs: dependentTaskIds,
-		NumOfUnknowns:    fromInt32(taskInput.NumOfUnknowns),
+		Goal:        goal,
+		DueAt:       fromGraphQLTime(taskInput.DueAt),
+		Context:     taskInput.Context,
+		OwnerUserId: ownerId,
 	}
 	return task, nil
 }

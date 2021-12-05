@@ -8,19 +8,20 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
-	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Mutation struct {
-	deps          *Dependencies
-	prototypeDeps *resolver.Dependencies
-	query         *Query
+	deps  *Dependencies
+	query *Query
 }
 
-func (m Mutation) CreateTask(ctx context.Context, args struct {
-	Task TaskInput
-}) (Task, error) {
+func (m Mutation) CreateTask(
+	ctx context.Context,
+	args struct {
+		Task TaskInput
+	},
+) (Task, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)
@@ -41,47 +42,19 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 	if activeTeam == nil {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
-
-	taskID, err := m.deps.taskRepo.CreateTask(task)
+	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeam.ID, task)
 	if err != nil {
-		log.Println(err)
 		return Task{}, err
 	}
-
-	err = m.deps.taskRepo.AssignTaskToTeam(taskID, activeTeam.ID, entity.TaskStatusUpcoming)
-
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-
-	err = m.prototypeDeps.Data.CreateLifetimeEvent(graphql.ID(fmt.Sprint(userID)), resolver.LifetimeEventType{
-		Type: resolver.Creation,
-		Creation: &resolver.EventCreation{
-			TaskID: graphql.ID(fmt.Sprint(taskID)),
-		},
+	// add task to team
+	err = m.deps.Data.UpdateTeam(activeTeam.ID, func(t entity.Team) entity.Team {
+		t.Tasks = append(t.Tasks, task.ID)
+		return t
 	})
 	if err != nil {
-		log.Println(err)
-	}
-
-	gqlTask, err := m.query.Task(
-		struct {
-			ID graphql.ID
-		}{
-			ID: toGraphQLID(taskID),
-		})
-	if err != nil {
-		log.Println(err)
 		return Task{}, err
 	}
-
-	m.prototypeDeps.Data.CreationRelations = append(m.prototypeDeps.Data.CreationRelations, resolver.CreationRelation{
-		TaskID: gqlTask.ID(),
-		UserID: graphql.ID(fmt.Sprint(userID)),
-	})
-
-	return gqlTask, nil
+	return newTask(m.deps, task), err
 }
 
 func (m Mutation) StartTask(ctx context.Context, args struct {
@@ -248,11 +221,70 @@ func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 	return true, err
 }
 
-func (m Mutation) UpdateTask(ctx context.Context, args struct {
-	TaskID graphql.ID
-	Task   TaskInput
-}) bool {
-	panic("not implemented")
+func (m Mutation) UpdateTask(
+	ctx context.Context,
+	args struct {
+		TaskID graphql.ID
+		Task   TaskInput
+	},
+) (Task, error) {
+	// todo: need to do authorization
+	// One can only update the task that is created by oneself.
+	_, err := identity.FromContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+	task, err := m.deps.Data.GetTask(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+	if args.Task.Context != nil {
+		task.Context = args.Task.Context
+	}
+	if args.Task.DueAt != nil {
+		task.DueAt = &args.Task.DueAt.Time
+	}
+	if args.Task.Goal != nil {
+		task.Goal = *args.Task.Goal
+	}
+	if args.Task.OwnerUserID != nil {
+		id, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
+		if err != nil {
+			return Task{}, nil
+		}
+		task.OwnerUserId = id
+	}
+	task, err = m.deps.Data.UpdateTask(task)
+	if err != nil {
+		return Task{}, nil
+	}
+	return newTask(m.deps, task), nil
+}
+
+func (m Mutation) Comment(
+	ctx context.Context,
+	args struct {
+		TaskID  graphql.ID
+		Content string
+	},
+) (Comment, error) {
+	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	if err != nil {
+		return Comment{}, err
+	}
+	c, err := m.deps.Data.CreateComment(entity.Comment{
+		Content:     args.Content,
+		CommenterID: toGraphQLID(userID),
+		TaskID:      args.TaskID,
+	})
+	if err != nil {
+		return Comment{}, err
+	}
+	return Comment{
+		deps:    m.deps,
+		Comment: c,
+	}, nil
 }
 
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
@@ -264,10 +296,9 @@ func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 	return false
 }
 
-func NewMutation(deps *Dependencies, prototypeDeps *resolver.Dependencies, query *Query) Mutation {
+func NewMutation(deps *Dependencies, query *Query) Mutation {
 	return Mutation{
-		deps:          deps,
-		prototypeDeps: prototypeDeps,
-		query:         query,
+		deps:  deps,
+		query: query,
 	}
 }

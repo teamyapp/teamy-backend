@@ -7,14 +7,20 @@ type Query {
 	"the current logged in user. If not logged in, show default public viewer"
 	me: User!
 	task(id: ID!): Task!
+	"return all tasks for debug purpose"
+	tasks: [Task!]!
 }
 
 type Mutation {
+	# Tasks
 	createTask(task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Boolean!
-	updateTask(taskId: ID!, task: TaskInput!): Boolean!
+	updateTask(taskId: ID!, task: TaskInput!): Task!
 	startTask(taskId: ID!): Boolean!
 	completeTask(taskId: ID!): Boolean!
+	# Comments
+	comment(taskID: ID!, content: String!): Comment!
+	# Teams
 	updateActiveTeam(teamId: ID!): Boolean!
 }
 
@@ -23,9 +29,6 @@ input TaskInput {
 	dueAt: Time
 	context: String
 	ownerUserId: ID
-	workScopeIndex: Int
-	dependsOnTaskIds: [ID!]
-	numOfUnknowns: Int
 }
 
 interface Entity {
@@ -66,13 +69,21 @@ type Task implements Entity {
 	creator: User!
 	owner: User
 	status: TaskStatus!
+	comments: [Comment!]!
 	# Relationships with other entities
-	dependsOn: [Task!]!
 	mentions: [Mention!]!
 	# Time Flow
 	createdAt: Time!
 	dueAt: Time
 	lifetimeEvents: [LifetimeEvent!]!
+}
+
+type Comment {
+	id: ID!
+	content: String!
+	commenter: User!
+	task: Task!
+	# mentions: [Mention!]!
 }
 
 type User implements Entity {

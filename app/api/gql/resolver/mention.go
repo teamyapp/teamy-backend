@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/graph-gophers/graphql-go"
@@ -50,30 +49,20 @@ func ParseMentions(input string) (m []Mention) {
 }
 
 type Mentionable struct {
-	dep  *Dependencies
+	// dep  *Dependencies
 	Type string
 	ID   graphql.ID
 }
 
 func (m Mentionable) ToUser() (*User, bool) {
-	fmt.Println("Mentionable: m.dep", m.dep)
-	if m.Type != "User" {
-		return nil, false
-	}
-	u, err := m.dep.Data.GetUser(m.ID)
-	if err != nil {
-		return nil, false
-	}
-	return &u, true
-}
-
-func (m Mentionable) ToTask() (*Task, bool) {
-	if m.Type != "Task" {
-		return nil, false
-	}
-	tasks := m.dep.Data.GetTasks([]graphql.ID{m.ID})
-	if len(tasks) == 0 {
-		return nil, false
-	}
-	return &tasks[0], true
+	// fmt.Println("Mentionable: m.dep", m.dep)
+	// if m.Type != "User" {
+	// 	return nil, false
+	// }
+	// u, err := m.dep.Data.Get(m.ID)
+	// if err != nil {
+	// 	return nil, false
+	// }
+	// return &u, true
+	return nil, false
 }

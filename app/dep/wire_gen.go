@@ -9,8 +9,8 @@ package dep
 import (
 	"database/sql"
 	"github.com/google/wire"
+	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
-	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/repo"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
@@ -22,11 +22,10 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 	sqlTask := repo.NewSQLTask(sqlDB)
 	sqlTeam := repo.NewSQLTeam(sqlDB)
 	prioritization := service.NewPrioritization()
-	dependencies := resolver.NewDependencies(sqlUser, sqlTask, sqlTeam, prioritization)
-	postgresPersister := resolver2.NewPostgresPersister(sqlDB)
-	dataStore := resolver2.NewDataStore(postgresPersister)
-	resolverDependencies := resolver2.NewDependencies(dataStore)
-	resolverResolver := resolver.NewResolver(dependencies, resolverDependencies)
+	postgresPersister := datastore.NewPostgresPersister(sqlDB)
+	dataStore := datastore.NewDataStore(postgresPersister)
+	dependencies := resolver.NewDependencies(sqlUser, sqlTask, sqlTeam, prioritization, dataStore)
+	resolverResolver := resolver.NewResolver(dependencies)
 	return resolverResolver
 }
 

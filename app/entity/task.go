@@ -3,6 +3,7 @@ package entity
 import (
 	"time"
 
+	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
 )
 
@@ -11,6 +12,7 @@ type Task struct {
 	Goal             string
 	DueAt            *time.Time
 	Context          *string
+	CreatorID        graphql.ID
 	OwnerUserId      *oneEntity.ID
 	WorkScopeIndex   *int
 	Effort           *int

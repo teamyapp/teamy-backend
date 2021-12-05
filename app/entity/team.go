@@ -9,4 +9,5 @@ type Team struct {
 	Name      string
 	LogoURL   *string
 	MemberIDs []entity.ID
+	Tasks     []entity.ID
 }
