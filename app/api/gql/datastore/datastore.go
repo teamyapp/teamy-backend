@@ -37,11 +37,19 @@ func NewDataStore(p Persister) *DataStore {
 		ds.data.Users = make(map[graphql.ID]entity.User)
 	}
 	// todo: implement a GraphQL to create Teams
-	ds.data.Teams = append(ds.data.Teams, entity.Team{
-		Entity: oneEntity.Entity{
-			ID: 1,
-		},
-	})
+	if len(ds.data.Teams) == 0 {
+		ds.data.Teams = append(ds.data.Teams, entity.Team{
+			Entity: oneEntity.Entity{
+				ID: 1,
+			},
+		})
+	} else if len(ds.data.Teams) > 1 {
+		ds.data.Teams = []entity.Team{
+			{Entity: oneEntity.Entity{
+				ID: 1,
+			}},
+		}
+	}
 	return &ds
 }
 
