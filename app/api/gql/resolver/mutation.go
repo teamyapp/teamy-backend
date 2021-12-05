@@ -287,6 +287,56 @@ func (m Mutation) Comment(
 	}, nil
 }
 
+func (m Mutation) AddUserToTeam(ctx context.Context, args struct {
+	UserID graphql.ID
+	TeamID graphql.ID
+}) (bool, error) {
+	// TODO: check userID format
+	userID, err := fromGraphQLID(args.UserID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	// TODO: check teamID format
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	// TODO: check userID and teamID are both in DB
+	_, err = m.deps.teamRepo.AddUserToTeam(userID, teamID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (m Mutation) CreateInvitation(ctx context.Context, args struct {
+	ReceiveInviteUserEmail string
+}) Invitation {
+	panic("not implemented")
+}
+
+func (m Mutation) AcceptInvitation(ctx context.Context, args struct {
+	InvitationID graphql.ID
+}) bool {
+	// TODO: add invited user to team
+	// TODO: if invitation has accepted, show error msg
+	// TODO: if invitation has declined, show error msg
+	panic("not implemented")
+}
+
+func (m Mutation) DeclineInvitation(ctx context.Context, args struct {
+	InvitationID graphql.ID
+}) bool {
+	// TODO: set invitation as expired
+	panic("not implemented")
+}
+
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 	for _, e := range arr {
 		if e == element {

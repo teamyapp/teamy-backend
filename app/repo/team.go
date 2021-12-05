@@ -14,6 +14,7 @@ type Team interface {
 	FindAllTeamIDs(userID oneEntity.ID) ([]oneEntity.ID, error)
 	FindTeams(teamIDs []oneEntity.ID) ([]entity.Team, error)
 	ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error)
+	AddUserToTeam(userID oneEntity.ID, teamID oneEntity.ID) (bool, error)
 }
 
 type SQLTeam struct {
@@ -122,6 +123,23 @@ WHERE id IN (%s);`, idsString)
 	}
 
 	return teams, nil
+}
+
+func (S SQLTeam) AddUserToTeam(userID oneEntity.ID, teamID oneEntity.ID) (bool, error) {
+	statement := `
+	INSERT INTO team_member(
+		team_id,
+		user_id
+	)
+	VALUES ($1, $2);
+`
+	_, err := S.db.Exec(statement, teamID, userID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	return true, nil
 }
 
 func NewSQLTeam(db *sql.DB) SQLTeam {

@@ -18,10 +18,17 @@ type Mutation {
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	startTask(taskId: ID!): Boolean!
 	completeTask(taskId: ID!): Boolean!
+
 	# Comments
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
+
 	updateActiveTeam(teamId: ID!): Boolean!
+	addUserToTeam(userId: ID!, teamId: ID!): Boolean!
+
+	createInvitation(receiveInviteUserEmail: String!): Invitation!
+	acceptInvitation(invitationId: ID!): Boolean!
+	declineInvitation(invitationId: ID!): Boolean!
 }
 
 input TaskInput {
@@ -117,6 +124,25 @@ enum TaskStatus {
 	UPCOMING
 	IN_PROGRESS
 	DELIVERED
+}
+
+type Invitation implements Entity {
+	id: ID!
+	inviter: User!
+	newMember: User
+	newMemberEmail: String
+	team: Team!
+	expiration: Time!
+	createdAt: Time!
+	status: InvitationStatus!
+}
+
+enum InvitationStatus {
+	PENDING
+	ACCEPTED
+	DECLINED
+	REVOKED
+	EXPIRED
 }
 
 scalar Time

@@ -19,6 +19,14 @@ var gqlTaskActionMap = map[entity.TaskAction]TaskAction{
 	entity.TaskActionMarkComplete:  TaskActionMarkComplete,
 }
 
+var gqlInvitationStatus = map[entity.InvitationStatus]InvitationStatus{
+	entity.Pending:  Pending,
+	entity.Accepted: Accepted,
+	entity.Declined: Declined,
+	entity.Expired:  Expired,
+	entity.Revoked:  Revoked,
+}
+
 func toGraphQLTasks(deps *Dependencies, tasks []entity.Task) []Task {
 	gqlTasks := make([]Task, 0)
 	for _, task := range tasks {
@@ -62,6 +70,7 @@ func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 	return actions
 }
 
+
 func toGraphQLUsers(deps *Dependencies, users []entity.User) []User {
 	if users == nil {
 		return nil
@@ -72,6 +81,10 @@ func toGraphQLUsers(deps *Dependencies, users []entity.User) []User {
 		gqlUsers = append(gqlUsers, newUser(deps, user))
 	}
 	return gqlUsers
+}
+
+func toGraphQLInvitationStatus(invitationStatus entity.InvitationStatus) InvitationStatus {
+	return gqlInvitationStatus[invitationStatus]
 }
 
 func fromGraphQLTime(graphqlTime *graphql.Time) *time.Time {
