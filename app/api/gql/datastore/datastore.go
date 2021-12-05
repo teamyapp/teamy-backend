@@ -37,6 +37,7 @@ func NewDataStore(p Persister) *DataStore {
 	if ds.data.Users == nil {
 		ds.data.Users = make(map[oneEntity.ID]entity.User)
 	}
+
 	return &ds
 }
 

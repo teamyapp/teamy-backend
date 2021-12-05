@@ -16,7 +16,17 @@ type Query struct {
 func (q Query) Task(args struct {
 	ID graphql.ID
 }) (Task, error) {
-	task, err := q.deps.Data.GetTask(args.ID)
+	// TODO: (Begin) remove once JSON data feed is ready
+	taskID, err := fromGraphQLID(args.ID)
+	if err != nil {
+		return Task{}, err
+	}
+	task, err := q.deps.taskRepo.FindTaskByID(taskID)
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	//task, err := q.deps.Data.GetTask(args.ID)
+	// TODO: (End) enable once JSON data feed is ready
 	if err != nil {
 		return Task{}, err
 	}
@@ -35,7 +45,13 @@ func (q Query) Me(ctx context.Context) (User, error) {
 		return User{}, err
 	}
 
-	user, err := q.deps.Data.GetUser(userID)
+	// TODO: (Begin) remove once JSON data feed is ready
+	user, err := q.deps.userRepo.FindUser(userID)
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	// user, err := q.deps.Data.GetUser(userID)
+	// TODO: (End) enable once JSON data feed is ready
 	if err != nil {
 		log.Printf("%+v\n", err)
 		return User{}, err

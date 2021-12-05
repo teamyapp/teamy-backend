@@ -44,7 +44,13 @@ func (t Task) Owner() (*User, error) {
 		return nil, nil
 	}
 
-	user, err := t.deps.Data.GetUser(*t.task.OwnerUserId)
+	// TODO: (Begin) remove once JSON data feed is ready
+	user, err := t.deps.userRepo.FindUser(*t.task.OwnerUserId)
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	//user, err := t.deps.Data.GetUser(*t.task.OwnerUserId)
+	// TODO: (End) enable once JSON data feed is ready
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -121,14 +127,14 @@ func (t Task) Comments() []Comment {
 type TaskStatus string
 
 const (
-	UPCOMING    TaskStatus = "UPCOMING"
-	IN_PROGRESS TaskStatus = "IN_PROGRESS"
-	DELIVERED   TaskStatus = "DELIVERED"
+	upcoming   TaskStatus = "UPCOMING"
+	inProgress TaskStatus = "IN_PROGRESS"
+	delivered  TaskStatus = "DELIVERED"
 )
 
 func (t Task) Status() (TaskStatus, error) {
 	// TODO: add status to task
-	return UPCOMING, nil
+	return upcoming, nil
 }
 
 func newTask(deps *Dependencies, task entity.Task) Task {

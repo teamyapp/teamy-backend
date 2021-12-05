@@ -27,41 +27,84 @@ func (m Mutation) CreateTask(
 		log.Println(err)
 		return Task{}, err
 	}
-	// find user
-	user, err := m.deps.Data.GetUser(userID)
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
 
+	// TODO: (Begin) remove once JSON data feed is ready
 	task, err := fromGraphQLTaskInput(args.Task)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
 	}
 
-	activeTeams := m.deps.Data.FilterTeams(func(t entity.Team) bool {
-		return t.ID == user.ActiveTeamID
-	})
+	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
 	}
-	if len(activeTeams) == 0 {
+	if activeTeam == nil {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
-	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeams[0].ID, task)
+
+	taskID, err := m.deps.taskRepo.CreateTask(task)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
-	// add task to team
-	err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
-		t.Tasks = append(t.Tasks, task.ID)
-		return t
-	})
+
+	err = m.deps.taskRepo.AssignTaskToTeam(taskID, activeTeam.ID, entity.TaskStatusUpcoming)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
+
+	task, err = m.deps.taskRepo.FindTaskByID(taskID)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	//// find user
+	//user, err := m.deps.Data.GetUser(userID)
+	//if err != nil {
+	//	log.Println(err)
+	//	return Task{}, err
+	//}
+	//
+	//task, err := fromGraphQLTaskInput(args.Task)
+	//if err != nil {
+	//	log.Println(err)
+	//	return Task{}, err
+	//}
+	//
+	//activeTeams := m.deps.Data.FilterTeams(func(t entity.Team) bool {
+	//	return t.ID == user.ActiveTeamID
+	//})
+	//if err != nil {
+	//	log.Println(err)
+	//	return Task{}, err
+	//}
+	//if len(activeTeams) == 0 {
+	//	return Task{}, fmt.Errorf("user %v does not have an active team", userID)
+	//}
+	//task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeams[0].ID, task)
+	//if err != nil {
+	//	return Task{}, err
+	//}
+	//// add task to team
+	//err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
+	//	t.Tasks = append(t.Tasks, task.ID)
+	//	return t
+	//})
+	//if err != nil {
+	//	return Task{}, err
+	//}
+	// TODO: (End) enable once JSON data feed is ready
 	return newTask(m.deps, task), err
 }
 
@@ -209,24 +252,56 @@ func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 		return User{}, err
 	}
 
-	user, err := m.deps.Data.GetUser(userID)
+	// TODO: (Begin) remove once JSON data feed is ready
+	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		log.Printf("%+v\n", err)
 		return User{}, err
 	}
-	id, err := fromGraphQLID(args.TeamID)
+
+	_, err = m.deps.userRepo.FindUser(userID)
+	if err != nil {
+		return User{}, err
+	}
+	teamIDs, err := m.deps.teamRepo.FindAllTeamIDs(userID)
+	if err != nil {
+		return User{}, err
+	}
+
+	if !contains(teamIDs, teamID) {
+		return User{}, fmt.Errorf("team not found: teamID=%v\n", teamID)
+	}
+	_, err = m.deps.userRepo.UpdateActiveTeamId(userID, &teamID)
+	if err != nil {
+		return User{}, err
+	}
+	user, err := m.deps.userRepo.FindUser(userID)
 	if err != nil {
 		log.Printf("%+v\n", err)
 		return User{}, err
 	}
-	user, err = m.deps.Data.UpdateUser((user.ID), func(u entity.User) entity.User {
-		u.ActiveTeamID = id
-		return u
-	})
-	if err != nil {
-		log.Printf("%+v\n", err)
-		return User{}, err
-	}
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	//user, err := m.deps.Data.GetUser(userID)
+	//if err != nil {
+	//	log.Printf("%+v\n", err)
+	//	return User{}, err
+	//}
+	//id, err := fromGraphQLID(args.TeamID)
+	//if err != nil {
+	//	log.Printf("%+v\n", err)
+	//	return User{}, err
+	//}
+	//user, err = m.deps.Data.UpdateUser(user.ID, func(u entity.User) entity.User {
+	//	u.ActiveTeamID = id
+	//	return u
+	//})
+	//if err != nil {
+	//	log.Printf("%+v\n", err)
+	//	return User{}, err
+	//}
+	// TODO: (End) enable once JSON data feed is ready
 	return newUser(m.deps, user), err
 }
 
@@ -237,7 +312,7 @@ func (m Mutation) UpdateTask(
 		Task   TaskInput
 	},
 ) (Task, error) {
-	// todo: need to do authorization
+	// TODO: need to do authorization
 	// One can only update the task that is created by oneself.
 	_, err := identity.FromContext(ctx)
 	if err != nil {
@@ -278,7 +353,8 @@ func (m Mutation) Comment(
 		Content string
 	},
 ) (Comment, error) {
-	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	// TODO: consider do this in a middleware and init User ID in the struct or ctx
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return Comment{}, err
 	}
@@ -303,7 +379,7 @@ func (m Mutation) CreateTeam(ctx context.Context,
 		}
 	},
 ) (Team, error) {
-	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	userID, err := identity.FromContext(ctx) // TODO: consider do this in a middleware and init User ID in the struct or ctx
 	if err != nil {
 		return Team{}, err
 	}
