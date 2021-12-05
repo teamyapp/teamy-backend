@@ -6,8 +6,8 @@ RUN apk add --no-cache bash
 
 COPY app/repo/db/migration/ app/repo/db/migration/
 
-COPY bin/main bin/main
+COPY bin/main main
 
 COPY .repo.env .repo.env
 
-CMD ["/app/bin/main"]
+CMD ["/app/main"]
