@@ -53,6 +53,7 @@ func (m Mutation) CreateTask(
 	}
 
 	task.Status = entity.UPCOMING
+	task.OwnerUserId = &userID
 	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeams[0].ID, task)
 	if err != nil {
 		return Task{}, err

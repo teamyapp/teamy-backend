@@ -52,5 +52,5 @@ func (d DataStore) UpdateUser(userID oneEntity.ID, apply func(entity.User) entit
 		return entity.User{}, errors.Errorf("user %v is not found", userID)
 	}
 	d.data.Users[userID] = apply(d.data.Users[userID])
-	return d.data.Users[userID], nil
+	return d.data.Users[userID], d.persister.Write(d.data)
 }
