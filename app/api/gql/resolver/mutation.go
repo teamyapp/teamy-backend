@@ -425,28 +425,7 @@ func (m Mutation) AddUserToTeam(ctx context.Context, args struct {
 	UserID graphql.ID
 	TeamID graphql.ID
 }) (bool, error) {
-	// TODO: check userID format
-	userID, err := fromGraphQLID(args.UserID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
-
-	// TODO: check teamID format
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
-
-	// TODO: check userID and teamID are both in DB
-	_, err = m.deps.teamRepo.AddUserToTeam(userID, teamID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
-
-	return true, nil
+	panic("not implemented")
 }
 
 func (m Mutation) CreateInvitation(ctx context.Context, args struct {
@@ -465,6 +444,13 @@ func (m Mutation) AcceptInvitation(ctx context.Context, args struct {
 }
 
 func (m Mutation) DeclineInvitation(ctx context.Context, args struct {
+	InvitationID graphql.ID
+}) bool {
+	// TODO: set invitation as expired
+	panic("not implemented")
+}
+
+func (m Mutation) RevokeInvitation(ctx context.Context, args struct {
 	InvitationID graphql.ID
 }) bool {
 	// TODO: set invitation as expired

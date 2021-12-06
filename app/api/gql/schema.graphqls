@@ -40,6 +40,7 @@ type Mutation {
 	createInvitation(receiveInviteUserEmail: String!): Invitation!
 	acceptInvitation(invitationId: ID!): Boolean!
 	declineInvitation(invitationId: ID!): Boolean!
+	revokeInvitation(invitationId: ID!): Boolean!
 }
 
 input TaskInput {
