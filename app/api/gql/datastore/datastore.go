@@ -122,7 +122,7 @@ func (d DataStore) FilterTasks(filter func(t entity.Task) bool) []entity.Task {
 
 func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task entity.Task) (entity.Task, error) {
 	// get next id
-	// todo: consider global unique id for all resources/entities
+	// TODO: consider global unique id for all resources/entities
 	task.CreatorID = creatorID
 	idInt := len(d.data.Tasks)
 	task.ID = oneEntity.ID(idInt)

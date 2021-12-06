@@ -21,6 +21,7 @@ type Task interface {
 	FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error)
 	FindTaskByID(taskID oneEntity.ID) (entity.Task, error)
 	CreateTask(task entity.Task) (oneEntity.ID, error)
+	UpdateTask(taskID oneEntity.ID, task entity.Task) error
 	AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error
 	DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error
 	DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error
@@ -140,6 +141,32 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 	}
 
 	return oneEntity.ID(id), err
+}
+
+func (S SQLTask) UpdateTask(taskID oneEntity.ID, task entity.Task) error {
+	statement := `
+	UPDATE task
+	SET
+	    goal = $2,
+		due_at = $3,
+		context = $4,
+		owner_user_id = $5,
+		work_scope_index = $6,
+		effort = $7,
+		num_of_unknowns = $8
+	WHERE id = $1;
+`
+	_, err := S.db.Exec(
+		statement,
+		int(taskID),
+		task.Goal,
+		task.DueAt,
+		task.Context,
+		task.OwnerUserId,
+		task.WorkScopeIndex,
+		task.Effort,
+		task.NumOfUnknowns)
+	return err
 }
 
 func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {

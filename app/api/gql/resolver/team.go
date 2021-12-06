@@ -50,7 +50,7 @@ func (t Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	// TODO: (End) enable once JSON data feed is ready
 
 	if args.Input == nil {
-		// todo: return all related tasks
+		// TODO: return all related tasks
 		return nil, nil
 	}
 	if args.Input.Status == nil {

@@ -80,7 +80,7 @@ func (u User) Teams() ([]Team, error) {
 
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	if args.Input == nil {
-		// todo: return all related tasks
+		// TODO: return all related tasks
 		return nil, nil
 	}
 	if args.Input.Status == nil {
@@ -106,7 +106,7 @@ func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 		return toGraphQLTasks(u.deps, upcomingTasks), nil
 	case inProgress:
 		// not applicable to users for now
-		// todo: might implement in the future
+		// TODO: might implement in the future
 		return nil, nil
 	case delivered:
 		deliveredTasks, err := u.deps.taskRepo.FindTasksForUser(u.entity.ID, activeTeam.entity.ID, entity.TaskStatusDelivered)
