@@ -126,20 +126,7 @@ WHERE id IN (%s);`, idsString)
 }
 
 func (S SQLTeam) AddUserToTeam(userID oneEntity.ID, teamID oneEntity.ID) (bool, error) {
-	statement := `
-	INSERT INTO team_member(
-		team_id,
-		user_id
-	)
-	VALUES ($1, $2);
-`
-	_, err := S.db.Exec(statement, teamID, userID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
-
-	return true, nil
+	panic("need implementation!")
 }
 
 func NewSQLTeam(db *sql.DB) SQLTeam {
