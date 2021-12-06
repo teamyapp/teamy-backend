@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -8,6 +9,13 @@ type User struct {
 	Entity
 	deps *Dependencies
 	user entity.User
+}
+
+type UserInput struct {
+	ID *graphql.ID
+	FirstName *string
+	LastName *string
+	
 }
 
 func (u User) FirstName() string {

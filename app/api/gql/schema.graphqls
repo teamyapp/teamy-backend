@@ -35,16 +35,10 @@ type Mutation {
 	# todo: implement a directive that hide this resolver from production
 	# or when the logged in user is not a system admin
 	"Admin && Debug Only resolvers"
-	createUser(userID: ID!): User!
+	createUser(input: UserInput!): User!
+	updateUser(input: UserInput!): User!
 }
 
-input TaskInput {
-	goal: String
-	dueAt: Time
-	context: String
-	ownerUserId: ID
-	status: TaskStatus
-}
 
 
 interface Entity {
@@ -52,10 +46,11 @@ interface Entity {
 	createdAt: Time!
 }
 
-input TeamInput {
-	name: String!
-}
 
+
+########
+# Team #
+########
 type Team implements Entity {
 	id: ID!
 	name: String!
@@ -70,23 +65,49 @@ type Team implements Entity {
 	tasks(input: TaskFilter): [Task!]!
 }
 
-type PersonalStatus {
-	taskNeedAttention: Task
-	upcomingTasks: [Task!]!
-	deliveredTasks: [Task!]!
+input TeamInput {
+	name: String!
 }
 
-type TeamStatus {
-	upcomingTasks: [Task!]!
-	inProgressTasks: [Task!]!
-	deliveredTasks: [Task!]!
+
+###########
+# Comment #
+###########
+type Comment {
+	id: ID!
+	content: String!
+	commenter: User!
+	task: Task!
+	# mentions: [Mention!]!
 }
 
-type Option {
-	value: Int!
-	label: String!
+########
+# User #
+########
+type User implements Entity {
+	id: ID!
+	lastName: String!
+	firstName: String!
+	profileUrl: String!
+	createdAt: Time!
+	activeTeam: Team
+	teams: [Team!]!
+	"""
+	If input is null, return all related tasks.
+	Ignore TaskFilter.creatorID
+	"""
+	tasks(input: TaskFilter): [Task!]!
 }
 
+input UserInput {
+	id: ID
+	lastName: String
+	firstName: String
+}
+
+########
+# Task #
+########
 type Task implements Entity {
 	id: ID!
 	goal: String!
@@ -102,29 +123,6 @@ type Task implements Entity {
 	dueAt: Time
 	availableActions: [TaskAction!]!
 	lifetimeEvents: [LifetimeEvent!]!
-}
-
-type Comment {
-	id: ID!
-	content: String!
-	commenter: User!
-	task: Task!
-	# mentions: [Mention!]!
-}
-
-type User implements Entity {
-	id: ID!
-	lastName: String!
-	firstName: String!
-	profileUrl: String!
-	createdAt: Time!
-	activeTeam: Team
-	teams: [Team!]!
-	"""
-	If input is null, return all related tasks.
-	Ignore TaskFilter.creatorID
-	"""
-	tasks(input: TaskFilter): [Task!]!
 }
 
 input TaskFilter {
@@ -149,7 +147,14 @@ enum TaskStatus {
 	DELIVERED
 }
 
-scalar Time
+input TaskInput {
+	goal: String
+	dueAt: Time
+	context: String
+	ownerUserId: ID
+	status: TaskStatus
+}
+
 
 """
 LifetimeEvent
@@ -182,3 +187,4 @@ type Mention {
 
 union Mentionable = User | Task
 
+scalar Time
