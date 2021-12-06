@@ -155,8 +155,8 @@ type Invitation implements Entity {
 	inviter: User!
 	newMember: User
 	newMemberEmail: String
-	team: Team!
-	expiration: Time!
+	teamToJoin: Team!
+	expireAt: Time!
 	createdAt: Time!
 	status: InvitationStatus!
 }

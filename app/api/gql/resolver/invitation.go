@@ -6,10 +6,10 @@ import (
 )
 
 type Invitation struct {
-	deps          *Dependencies
 	Entity
-	invitation entity.Invitation
+	deps *Dependencies
 	query      Query
+	invitation entity.Invitation
 }
 
 func (i Invitation) Inviter() User {
@@ -24,11 +24,11 @@ func (i Invitation) NewMemberEmail() *string {
 	panic("need implementation")
 }
 
-func (i Invitation) Team() Team {
+func (i Invitation) TeamToJoin() Team {
 	panic("need implementation")
 }
 
-func (i Invitation) Expiration() graphql.Time {
+func (i Invitation) ExpireAt() graphql.Time {
 	expiration := toGraphQLTime(&i.invitation.Expiration)
 	return *expiration
 }
@@ -39,8 +39,8 @@ func (i Invitation) Status() InvitationStatus {
 
 func newInvitation(deps *Dependencies, invitation entity.Invitation) Invitation {
 	return Invitation{
-		Entity:        Entity{entity: invitation.Entity},
-		deps:          deps,
-		invitation:    invitation,
+		Entity:     Entity{entity: invitation.Entity},
+		deps:       deps,
+		invitation: invitation,
 	}
 }

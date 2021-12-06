@@ -70,7 +70,6 @@ func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
 	return actions
 }
 
-
 func toGraphQLUsers(deps *Dependencies, users []entity.User) []User {
 	if users == nil {
 		return nil

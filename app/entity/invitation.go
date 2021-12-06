@@ -8,10 +8,10 @@ import (
 
 type Invitation struct {
 	oneEntity.Entity
-	SendInviteUserID       oneEntity.ID
-	ReceiveInviteUserID    oneEntity.ID
-	ReceiveInviteUserEmail string
+	InviterUserID       oneEntity.ID
+	NewMemberUserID    oneEntity.ID
+	NewMemberEmail string
 	TeamID                 oneEntity.ID
-	Expiration             time.Time
+	TTL             time.Duration
 	Status                 InvitationStatus
 }

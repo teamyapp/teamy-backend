@@ -3,9 +3,9 @@ package resolver
 type InvitationStatus string
 
 const (
-	Pending  InvitationStatus = "PENDING"
-	Accepted InvitationStatus = "ACCEPTED"
-	Declined InvitationStatus = "DECLINED"
-	Revoked  InvitationStatus = "REVOKED"
-	Expired  InvitationStatus = "EXPIRED"
+	invitationStatusPending  InvitationStatus = "PENDING"
+	invitationStatusAccepted InvitationStatus = "ACCEPTED"
+	invitationStatusDeclined InvitationStatus = "DECLINED"
+	invitationStatusRevoked  InvitationStatus = "REVOKED"
+	invitationStatusExpired  InvitationStatus = "EXPIRED"
 )

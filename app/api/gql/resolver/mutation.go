@@ -374,10 +374,10 @@ func (m Mutation) Comment(
 
 func (m Mutation) CreateTeam(ctx context.Context,
 	args struct {
-	Input struct {
-		Name string
-	}
-},
+		Input struct {
+			Name string
+		}
+	},
 ) (Team, error) {
 	// TODO: consider do this in a middleware and init User ID in the struct or ctx
 	userID, err := identity.FromContext(ctx)
@@ -424,12 +424,13 @@ func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 func (m Mutation) AddUserToTeam(ctx context.Context, args struct {
 	UserID graphql.ID
 	TeamID graphql.ID
+	AcceptBeforeJoin bool
 }) (bool, error) {
 	panic("not implemented")
 }
 
 func (m Mutation) CreateInvitation(ctx context.Context, args struct {
-	ReceiveInviteUserEmail string
+	InvitedUserEmail string
 }) Invitation {
 	panic("not implemented")
 }
