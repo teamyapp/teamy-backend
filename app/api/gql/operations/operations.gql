@@ -8,17 +8,11 @@ query GetAllMyData {
       id
       name
       tasks {
-        id
-        goal
-        context
-        status
+        ...TaskDetails
       }
     }
     tasks {
-      id
-      goal
-      context
-      status
+      ...TaskDetails
     }
   }
 }
