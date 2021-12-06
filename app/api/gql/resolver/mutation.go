@@ -319,7 +319,14 @@ func (m Mutation) UpdateTask(
 		log.Println(err)
 		return Task{}, err
 	}
-	task, err := m.deps.Data.GetTask(args.TaskID)
+
+	// TODO: (Begin) remove once JSON data feed is ready
+	taskId, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskRepo.FindTaskByID(taskId)
 	if err != nil {
 		return Task{}, err
 	}
@@ -339,10 +346,39 @@ func (m Mutation) UpdateTask(
 		}
 		task.OwnerUserId = id
 	}
-	task, err = m.deps.Data.UpdateTask(task)
+
+	err = m.deps.taskRepo.UpdateTask(taskId, task)
 	if err != nil {
-		return Task{}, nil
+		return Task{}, err
 	}
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	//task, err := m.deps.Data.GetTask(args.TaskID)
+	//if err != nil {
+	//	return Task{}, err
+	//}
+	//if args.Task.Context != nil {
+	//	task.Context = args.Task.Context
+	//}
+	//if args.Task.DueAt != nil {
+	//	task.DueAt = &args.Task.DueAt.Time
+	//}
+	//if args.Task.Goal != nil {
+	//	task.Goal = *args.Task.Goal
+	//}
+	//if args.Task.OwnerUserID != nil {
+	//	id, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
+	//	if err != nil {
+	//		return Task{}, nil
+	//	}
+	//	task.OwnerUserId = id
+	//}
+	//task, err = m.deps.Data.UpdateTask(task)
+	//if err != nil {
+	//	return Task{}, nil
+	//}
+	// TODO: (End) enable once JSON data feed is ready
 	return newTask(m.deps, task), nil
 }
 

@@ -31,7 +31,7 @@ type Mutation {
 	# Users
 	updateActiveTeam(teamId: ID!): User!
 
-	# todo: implement a directive that hide this resolver from production
+	# TODO: implement a directive that hide this resolver from production
 	# or when the logged in user is not a system admin
 	"Admin && Debug Only resolvers"
 	createUser(userID: ID!): User!
@@ -151,7 +151,7 @@ LifetimeEvent
 """
 type LifetimeEvent {
     id: ID!
-	# todo: will add eventType & actor when v1 is merged with v2
+	# TODO: will add eventType & actor when v1 is merged with v2
     # eventType: LifetimeEventType!
     "who did it"
     # actor:     User!
@@ -164,7 +164,7 @@ Mention is a backend computed value according to text content of task or comment
 so that frontend doesn't need to compute is again.
 """
 type Mention {
-	# todo: will add when v2 User & Task is merged into v1
+	# TODO: will add when v2 User & Task is merged into v1
 	# mentionable: Mentionable!
 	"""
 	offset is the 0-based index of the starting of the mentioned text.
