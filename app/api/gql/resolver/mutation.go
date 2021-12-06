@@ -2,11 +2,11 @@ package resolver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/pkg/errors"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -213,20 +213,23 @@ func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 }) (User, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
-		log.Println(err)
 		return User{}, err
 	}
 
 	user, err := m.deps.Data.GetUser(userID)
 	if err != nil {
-		log.Printf("%+v\n", err)
 		return User{}, err
 	}
 	id, err := fromGraphQLID(args.TeamID)
 	if err != nil {
-		log.Printf("%+v\n", err)
 		return User{}, err
 	}
+
+	teams := m.deps.Data.FilterTeams(func(t entity.Team) bool { return t.ID == id })
+	if len(teams) == 0 {
+		return User{}, errors.Errorf("team %v does not exist", id)
+	}
+
 	user, err = m.deps.Data.UpdateUser((user.ID), func(u entity.User) entity.User {
 		u.ActiveTeamID = id
 		return u
