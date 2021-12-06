@@ -460,9 +460,29 @@ func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 func (m Mutation) AddUserToTeam(ctx context.Context, args struct {
 	UserID           graphql.ID
 	TeamID           graphql.ID
-	AcceptBeforeJoin bool
 }) (bool, error) {
-	panic("not implemented")
+	// TODO: check userID format
+	userID, err := fromGraphQLID(args.UserID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	// TODO: check teamID format
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	// TODO: check userID and teamID are both in DB
+	_, err = m.deps.teamRepo.AddUserToTeam(userID, teamID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+	// TODO: notify user
+	return true, nil
 }
 
 func (m Mutation) CreateInvitation(ctx context.Context, args struct {
