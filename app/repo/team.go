@@ -3,6 +3,9 @@ package repo
 import (
 	"database/sql"
 	"fmt"
+	"github.com/pkg/errors"
+	"strconv"
+
 	"log"
 
 	oneEntity "github.com/teamyapp/one/entity"
@@ -15,6 +18,8 @@ type Team interface {
 	FindTeams(teamIDs []oneEntity.ID) ([]entity.Team, error)
 	ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error)
 	AddUserToTeam(userID oneEntity.ID, teamID oneEntity.ID) (bool, error)
+	TeamExists(teamID oneEntity.ID) (bool, error)
+	IsUserInTeam(userID oneEntity.ID, teamID oneEntity.ID) (bool, error)
 }
 
 type SQLTeam struct {
@@ -134,9 +139,41 @@ func (S SQLTeam) AddUserToTeam(userID oneEntity.ID, teamID oneEntity.ID) (bool, 
 	VALUES ($1, $2);
 `
 	_, err := S.db.Exec(statement, teamID, userID)
+
 	if err != nil {
 		log.Println(err)
 		return false, err
+	}
+
+	return true, nil
+}
+
+func (S SQLTeam) TeamExists(teamID oneEntity.ID) (bool, error) {
+	query := fmt.Sprintf(`SELECT COUNT(1)  FROM team WHERE id = (%s)`, strconv.Itoa(int(teamID)))
+
+	var count int
+	err := S.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	if count == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (S SQLTeam) IsUserInTeam(userID oneEntity.ID, teamID oneEntity.ID) (bool, error) {
+	query := fmt.Sprintf(`SELECT COUNT(1)  FROM team_member WHERE user_id = (%s) AND team_id = (%s) `, strconv.Itoa(int(userID)), strconv.Itoa(int(teamID)))
+
+	var count int
+	err := S.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	if count == 0 { // user is not in team
+		return false, nil
 	}
 
 	return true, nil

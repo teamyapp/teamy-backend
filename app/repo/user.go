@@ -15,6 +15,7 @@ type User interface {
 	FindUsers([]oneEntity.ID) ([]entity.User, error)
 	FindUser(oneEntity.ID) (entity.User, error)
 	UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity.ID) (*oneEntity.ID, error)
+	UserExists(userID oneEntity.ID) (bool, error)
 }
 
 type SQLUser struct {
@@ -63,6 +64,21 @@ func (S SQLUser) FindUser(userID oneEntity.ID) (entity.User, error) {
 	}
 
 	return user, nil
+}
+
+func (S SQLUser) UserExists(userID oneEntity.ID) (bool, error) {
+	query := fmt.Sprintf(`SELECT COUNT(1)  FROM "user" WHERE id = (%s)`, strconv.Itoa(int(userID)))
+
+	var count int
+	err := S.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	if count == 0 {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (S SQLUser) UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity.ID) (*oneEntity.ID, error) {

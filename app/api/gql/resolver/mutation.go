@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
@@ -476,11 +477,45 @@ func (m Mutation) AddUserToTeam(ctx context.Context, args struct {
 	}
 
 	// TODO: check userID and teamID are both in DB
+	hasTeam, err := m.deps.teamRepo.TeamExists(teamID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	if hasTeam == false {
+		log.Printf("team %s does not exists!", strconv.Itoa(int(teamID)))
+		return false, nil
+	}
+
+	hasUser, err := m.deps.userRepo.UserExists(userID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	if hasUser == false {
+		log.Printf("user %s does not exists!", strconv.Itoa(int(userID)))
+		return false, nil
+	}
+
+	isUserInTeam, err := m.deps.teamRepo.IsUserInTeam(userID, teamID)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	if isUserInTeam == true {
+		log.Printf("user %s has already in team %s!", strconv.Itoa(int(userID)), strconv.Itoa(int(teamID)))
+		return false, nil
+	}
+
 	_, err = m.deps.teamRepo.AddUserToTeam(userID, teamID)
 	if err != nil {
 		log.Println(err)
 		return false, err
 	}
+
 	// TODO: notify user
 	return true, nil
 }
