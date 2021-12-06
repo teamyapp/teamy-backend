@@ -20,11 +20,11 @@ var gqlTaskActionMap = map[entity.TaskAction]TaskAction{
 }
 
 var gqlInvitationStatus = map[entity.InvitationStatus]InvitationStatus{
-	entity.Pending:  Pending,
-	entity.Accepted: Accepted,
-	entity.Declined: Declined,
-	entity.Expired:  Expired,
-	entity.Revoked:  Revoked,
+	entity.InvitationStatusPending:  invitationStatusPending,
+	entity.InvitationStatusAccepted: invitationStatusAccepted,
+	entity.InvitationStatusDeclined: invitationStatusDeclined,
+	entity.InvitationStatusExpired:  invitationStatusExpired,
+	entity.InvitationStatusRevoked:  invitationStatusRevoked,
 }
 
 func toGraphQLTasks(deps *Dependencies, tasks []entity.Task) []Task {

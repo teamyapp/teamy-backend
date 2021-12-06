@@ -29,8 +29,7 @@ func (i Invitation) TeamToJoin() Team {
 }
 
 func (i Invitation) ExpireAt() graphql.Time {
-	expiration := toGraphQLTime(&i.invitation.Expiration)
-	return *expiration
+	panic("need implementation")
 }
 
 func (i Invitation) Status() InvitationStatus {

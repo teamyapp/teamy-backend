@@ -37,7 +37,7 @@ type Mutation {
 	createUser(userID: ID!): User!
 
 	addUserToTeam(userId: ID!, teamId: ID!): Boolean!
-	createInvitation(receiveInviteUserEmail: String!): Invitation!
+	createInvitation(invitedUserEmail: String!): Invitation!
 	acceptInvitation(invitationId: ID!): Boolean!
 	declineInvitation(invitationId: ID!): Boolean!
 	revokeInvitation(invitationId: ID!): Boolean!
