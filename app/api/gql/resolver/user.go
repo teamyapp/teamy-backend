@@ -14,12 +14,10 @@ type User struct {
 }
 
 func (u User) FirstName() string {
-	// TODO: replace with real first name
 	return u.user.FirstName
 }
 
 func (u User) LastName() string {
-	// TODO: replace with real last name
 	return u.user.LastName
 }
 
@@ -28,29 +26,55 @@ func (u User) ProfileURL() string {
 }
 
 func (u User) ActiveTeam() (*Team, error) {
-	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
-		return t.ID == u.user.ActiveTeamID
-	})
-	if len(teams) == 0 {
+	// TODO: (Begin) remove once JSON data feed is ready
+	team, err := u.deps.teamRepo.FindActiveTeam(u.entity.ID)
+	if err != nil {
+		return nil, err
+	}
+	if team == nil {
 		return nil, nil
 	}
+
+	teams := []entity.Team{
+		*team,
+	}
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	//teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
+	//	return t.ID == u.user.ActiveTeamID
+	//})
+	//if len(teams) == 0 {
+	//	return nil, nil
+	//}
+	// TODO: (End) enable once JSON data feed is ready
 	gqlTeam := newTeam(u.deps, teams[0])
 	return &gqlTeam, nil
 }
 
 func (u User) Teams() ([]Team, error) {
-	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
-		isCreator := t.CreatorID == u.user.ID
-		if isCreator {
-			return true
-		}
-		for _, id := range t.MemberIDs {
-			if id == u.user.ID { // is member
-				return true
-			}
-		}
-		return false
-	})
+	// TODO: (Begin) remove once JSON data feed is ready
+	teamIDs, err := u.deps.teamRepo.FindAllTeamIDs(u.entity.ID)
+	if err != nil {
+		return nil, err
+	}
+	teams, err := u.deps.teamRepo.FindTeams(teamIDs)
+	// TODO: (End) remove once JSON data feed is ready
+
+	// TODO: (Begin) enable once JSON data feed is ready
+	//teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
+	//	isCreator := t.CreatorID == u.user.ID
+	//	if isCreator {
+	//		return true
+	//	}
+	//	for _, id := range t.MemberIDs {
+	//		if id == u.user.ID { // is member
+	//			return true
+	//		}
+	//	}
+	//	return false
+	//})
+	// TODO: (End) enable once JSON data feed is ready
 	return newTeams(u.deps, teams), nil
 }
 
@@ -71,7 +95,7 @@ func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 		return nil, nil
 	}
 	switch status {
-	case UPCOMING:
+	case upcoming:
 		upcomingTasks, err := u.deps.taskRepo.FindTasksForUser(u.entity.ID, activeTeam.entity.ID, entity.TaskStatusUpcoming)
 		if err != nil {
 			log.Println(err)
@@ -80,11 +104,11 @@ func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 		upcomingTasks = u.deps.prioritizationService.PrioritizeTasks(upcomingTasks)
 		upcomingTasks = tasksWithAvailableActions(upcomingTasks, entity.TaskStatusUpcoming)
 		return toGraphQLTasks(u.deps, upcomingTasks), nil
-	case IN_PROGRESS:
+	case inProgress:
 		// not applicable to users for now
 		// todo: might implement in the future
 		return nil, nil
-	case DELIVERED:
+	case delivered:
 		deliveredTasks, err := u.deps.taskRepo.FindTasksForUser(u.entity.ID, activeTeam.entity.ID, entity.TaskStatusDelivered)
 		if err != nil {
 			log.Println(err)
@@ -95,6 +119,27 @@ func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	default:
 		return nil, fmt.Errorf("status %v does not exist", status)
 	}
+}
+
+func (u User) NeedAttentionTask() (*Task, error) {
+	activeTeam, err := u.ActiveTeam()
+	if err != nil {
+		return nil, err
+	}
+	if activeTeam == nil {
+		return nil, nil
+	}
+	taskPtr, err := u.deps.taskRepo.FindTaskNeedAttentionForUser(u.entity.ID, activeTeam.entity.ID)
+	if err != nil {
+		return nil, err
+	}
+	if taskPtr == nil {
+		return nil, nil
+	}
+
+	task := taskWithAvailableActions(*taskPtr, entity.TaskStatusNeedAttention)
+	gqlTask := newTask(u.deps, task)
+	return &gqlTask, nil
 }
 
 func newUser(deps *Dependencies, user entity.User) User {
