@@ -422,8 +422,8 @@ func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 }
 
 func (m Mutation) AddUserToTeam(ctx context.Context, args struct {
-	UserID graphql.ID
-	TeamID graphql.ID
+	UserID           graphql.ID
+	TeamID           graphql.ID
 	AcceptBeforeJoin bool
 }) (bool, error) {
 	panic("not implemented")

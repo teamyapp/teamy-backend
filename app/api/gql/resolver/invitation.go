@@ -7,7 +7,7 @@ import (
 
 type Invitation struct {
 	Entity
-	deps *Dependencies
+	deps       *Dependencies
 	query      Query
 	invitation entity.Invitation
 }
