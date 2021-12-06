@@ -35,6 +35,12 @@ type Mutation {
 	# or when the logged in user is not a system admin
 	"Admin && Debug Only resolvers"
 	createUser(userID: ID!): User!
+
+	addUserToTeam(userId: ID!, teamId: ID!): Boolean!
+	createInvitation(invitedUserEmail: String!): Invitation!
+	acceptInvitation(invitationId: ID!): Boolean!
+	declineInvitation(invitationId: ID!): Boolean!
+	revokeInvitation(invitationId: ID!): Boolean!
 }
 
 input TaskInput {
@@ -142,6 +148,25 @@ enum TaskStatus {
 	UPCOMING
 	IN_PROGRESS
 	DELIVERED
+}
+
+type Invitation implements Entity {
+	id: ID!
+	inviter: User!
+	newMember: User
+	newMemberEmail: String
+	teamToJoin: Team!
+	expireAt: Time!
+	createdAt: Time!
+	status: InvitationStatus!
+}
+
+enum InvitationStatus {
+	PENDING
+	ACCEPTED
+	DECLINED
+	REVOKED
+	EXPIRED
 }
 
 scalar Time

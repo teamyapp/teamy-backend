@@ -457,6 +457,43 @@ func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
 	return false
 }
 
+func (m Mutation) AddUserToTeam(ctx context.Context, args struct {
+	UserID           graphql.ID
+	TeamID           graphql.ID
+	AcceptBeforeJoin bool
+}) (bool, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) CreateInvitation(ctx context.Context, args struct {
+	InvitedUserEmail string
+}) Invitation {
+	panic("not implemented")
+}
+
+func (m Mutation) AcceptInvitation(ctx context.Context, args struct {
+	InvitationID graphql.ID
+}) bool {
+	// TODO: add invited user to team
+	// TODO: if invitation has accepted, show error msg
+	// TODO: if invitation has declined, show error msg
+	panic("not implemented")
+}
+
+func (m Mutation) DeclineInvitation(ctx context.Context, args struct {
+	InvitationID graphql.ID
+}) bool {
+	// TODO: set invitation as expired
+	panic("not implemented")
+}
+
+func (m Mutation) RevokeInvitation(ctx context.Context, args struct {
+	InvitationID graphql.ID
+}) bool {
+	// TODO: set invitation as expired
+	panic("not implemented")
+}
+
 func NewMutation(deps *Dependencies, query *Query) Mutation {
 	return Mutation{
 		deps:  deps,
