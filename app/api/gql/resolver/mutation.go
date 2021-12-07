@@ -294,6 +294,7 @@ func (m Mutation) Comment(
 		Content string
 	},
 ) (Comment, error) {
+	// partial working
 	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
 	if err != nil {
 		return Comment{}, err
@@ -319,6 +320,8 @@ func (m Mutation) CreateTeam(ctx context.Context,
 		}
 	},
 ) (Team, error) {
+	// Partial working
+	// TODO: add iconURL(previously logoURL)
 	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
 	if err != nil {
 		return Team{}, err
@@ -338,8 +341,8 @@ func (m Mutation) CreateTeam(ctx context.Context,
 
 //
 // Admin && Debug Only
-//
 func (m Mutation) CreateUser(args struct{ Input UserInput }) (User, error) {
+	// Fully working
 	if args.Input.ID == nil {
 		return User{}, errors.New("must provide an ID")
 	}
@@ -347,6 +350,8 @@ func (m Mutation) CreateUser(args struct{ Input UserInput }) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
+
+	// TODO(albert): add firstName, lastName & profileUrl
 	user, err := m.deps.Data.CreateUser(id)
 	if err != nil {
 		return User{}, err
