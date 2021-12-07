@@ -58,7 +58,7 @@ FROM user_state
 INNER JOIN team ON user_state.active_team_id = team.id
 WHERE user_id = $1`,
 			int(userID)).
-		Scan(&team.ID, &team.Name, &team.LogoURL, &team.CreatedAt, &team.UpdatedAt)
+		Scan(&team.ID, &team.Name, &team.IconURL, &team.CreatedAt, &team.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -113,7 +113,7 @@ WHERE id IN (%s);`, idsString)
 	var teams []entity.Team
 	for rows.Next() {
 		var team entity.Team
-		err = rows.Scan(&team.ID, &team.Name, &team.LogoURL, &team.CreatedAt, &team.UpdatedAt)
+		err = rows.Scan(&team.ID, &team.Name, &team.IconURL, &team.CreatedAt, &team.UpdatedAt)
 		if err != nil {
 			log.Println(team.ID, err)
 			continue

@@ -34,16 +34,12 @@ func (d DataStore) GetUsers(ids []oneEntity.ID) (users []entity.User, err error)
 	return
 }
 
-func (d DataStore) CreateUser(id oneEntity.ID) (entity.User, error) {
-	if _, ok := d.data.Users[id]; ok {
-		return entity.User{}, errors.Errorf("user %v already exists", id)
+func (d DataStore) CreateUser(user entity.User) (entity.User, error) {
+	if _, ok := d.data.Users[user.ID]; ok {
+		return entity.User{}, errors.Errorf("user %v already exists", user.ID)
 	}
-	d.data.Users[id] = entity.User{
-		Entity: oneEntity.Entity{
-			ID: id,
-		},
-	}
-	return d.data.Users[id], d.persister.Write(d.data)
+	d.data.Users[user.ID] = user
+	return user, d.persister.Write(d.data)
 }
 
 func (d DataStore) UpdateUser(userID oneEntity.ID, apply func(entity.User) entity.User) (entity.User, error) {

@@ -16,8 +16,8 @@ func (t Team) Name() string {
 	return t.team.Name
 }
 
-func (t Team) LogoURL() *string {
-	return t.team.LogoURL
+func (t Team) IconURL() *string {
+	return t.team.IconURL
 }
 
 func (t Team) Members() ([]User, error) {

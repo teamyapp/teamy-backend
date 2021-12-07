@@ -249,9 +249,7 @@ func (m Mutation) UpdateTask(
 		Task   TaskInput
 	},
 ) (Task, error) {
-	// todo: need to do authorization
-	// One can only update the task that is created by oneself.
-	_, err := identity.FromContext(ctx)
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
@@ -260,6 +258,10 @@ func (m Mutation) UpdateTask(
 	if err != nil {
 		return Task{}, err
 	}
+	if task.CreatorID != toGraphQLID(userID) {
+		return Task{}, errors.New("you are not the creator of this task")
+	}
+
 	if args.Task.Context != nil {
 		task.Context = *(args.Task.Context)
 	}
@@ -295,7 +297,7 @@ func (m Mutation) Comment(
 	},
 ) (Comment, error) {
 	// partial working
-	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return Comment{}, err
 	}
@@ -316,18 +318,18 @@ func (m Mutation) Comment(
 func (m Mutation) CreateTeam(ctx context.Context,
 	args struct {
 		Input struct {
-			Name string
+			Name    string
+			IconURL *string
 		}
 	},
 ) (Team, error) {
-	// Partial working
-	// TODO: add iconURL(previously logoURL)
 	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
 	if err != nil {
 		return Team{}, err
 	}
 	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
 		Name:      args.Input.Name,
+		IconURL:   args.Input.IconURL,
 		CreatorID: userID,
 		MemberIDs: []oneEntity.ID{
 			userID,
@@ -337,49 +339,6 @@ func (m Mutation) CreateTeam(ctx context.Context,
 		return Team{}, err
 	}
 	return newTeam(m.deps, t), nil
-}
-
-//
-// Admin && Debug Only
-func (m Mutation) CreateUser(args struct{ Input UserInput }) (User, error) {
-	// Fully working
-	if args.Input.ID == nil {
-		return User{}, errors.New("must provide an ID")
-	}
-	id, err := fromGraphQLID(*args.Input.ID)
-	if err != nil {
-		return User{}, err
-	}
-
-	// TODO(albert): add firstName, lastName & profileUrl
-	user, err := m.deps.Data.CreateUser(id)
-	if err != nil {
-		return User{}, err
-	}
-	return newUser(m.deps, user), nil
-}
-
-func (m Mutation) UpdateUser(args struct{ Input UserInput }) (User, error) {
-	if args.Input.ID == nil {
-		return User{}, errors.New("must provide an ID")
-	}
-	id, err := fromGraphQLID(*args.Input.ID)
-	if err != nil {
-		return User{}, err
-	}
-	user, err := m.deps.Data.UpdateUser(id, func(u entity.User) entity.User {
-		if args.Input.LastName != nil {
-			u.LastName = *args.Input.LastName
-		}
-		if args.Input.FirstName != nil {
-			u.FirstName = *args.Input.FirstName
-		}
-		return u
-	})
-	if err != nil {
-		return User{}, err
-	}
-	return newUser(m.deps, user), nil
 }
 
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {

@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"github.com/graph-gophers/graphql-go"
+	"github.com/pkg/errors"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -12,10 +13,57 @@ type User struct {
 }
 
 type UserInput struct {
-	ID *graphql.ID
-	FirstName *string
-	LastName *string
-	
+	ID         *graphql.ID
+	FirstName  *string
+	LastName   *string
+	ProfileUrl *string
+}
+
+// Admin && Debug Only
+func (m Mutation) CreateUser(
+	args struct {
+		Input struct {
+			ID         graphql.ID
+			FirstName  *string
+			LastName   *string
+			ProfileUrl *string
+		}
+	},
+) (User, error) {
+	id, err := fromGraphQLID(args.Input.ID)
+	if err != nil {
+		return User{}, err
+	}
+
+	// TODO(albert): add firstName, lastName & profileUrl
+	user, err := m.deps.Data.CreateUser(id)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser(m.deps, user), nil
+}
+
+func (m Mutation) UpdateUser(args struct{ Input UserInput }) (User, error) {
+	if args.Input.ID == nil {
+		return User{}, errors.New("must provide an ID")
+	}
+	id, err := fromGraphQLID(*args.Input.ID)
+	if err != nil {
+		return User{}, err
+	}
+	user, err := m.deps.Data.UpdateUser(id, func(u entity.User) entity.User {
+		if args.Input.LastName != nil {
+			u.LastName = *args.Input.LastName
+		}
+		if args.Input.FirstName != nil {
+			u.FirstName = *args.Input.FirstName
+		}
+		return u
+	})
+	if err != nil {
+		return User{}, err
+	}
+	return newUser(m.deps, user), nil
 }
 
 func (u User) FirstName() string {

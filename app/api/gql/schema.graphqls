@@ -54,7 +54,7 @@ interface Entity {
 type Team implements Entity {
 	id: ID!
 	name: String!
-	logoUrl: String
+	iconURL: String
 	createdAt: Time!
 	creator: User!
 	"creator is the owner. In the future there will be features to transfer ownership to other users, just like GitHub repo."
@@ -100,9 +100,10 @@ type User implements Entity {
 }
 
 input UserInput {
-	id: ID
+	id: ID!
 	lastName: String
 	firstName: String
+	profileUrl: String
 }
 
 ########
