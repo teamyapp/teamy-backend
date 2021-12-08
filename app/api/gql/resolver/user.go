@@ -44,8 +44,8 @@ func (m Mutation) CreateUser(
 		lastName = *args.Input.LastName
 	}
 	profileURL := ""
-	if args.Input.ProfileUrl != nil {
-		profileURL = *args.Input.ProfileUrl
+	if args.Input.ProfileURL != nil {
+		profileURL = *args.Input.ProfileURL
 	}
 	user, err := m.deps.Data.CreateUser(entity.User{
 		Entity: oneEntity.Entity{

@@ -3,7 +3,7 @@ package datastore
 import (
 	"time"
 
-	"github.com/graph-gophers/graphql-go"
+	oneEntity "github.com/teamyapp/one/entity"
 )
 
 func (d *DataStore) CreateLifetimeEvent(creatorID oneEntity.ID, eventType LifetimeEventType) error {
