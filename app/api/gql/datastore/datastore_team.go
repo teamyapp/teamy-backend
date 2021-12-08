@@ -22,12 +22,13 @@ func (d DataStore) FilterTeams(filter func(entity.Team) bool) (ts []entity.Team)
 	return
 }
 
-func (d DataStore) UpdateTeam(teamID oneEntity.ID, apply func(entity.Team) entity.Team) error {
+func (d DataStore) UpdateTeam(teamID oneEntity.ID, apply func(entity.Team) entity.Team) (entity.Team, error) {
 	for i, team := range d.data.Teams {
 		if team.ID == teamID {
-			d.data.Teams[i] = apply(team)
-			return d.persister.Write(d.data)
+			newTeam := apply(team)
+			d.data.Teams[i] = newTeam
+			return newTeam, d.persister.Write(d.data)
 		}
 	}
-	return fmt.Errorf("team %v is not found", teamID)
+	return entity.Team{}, fmt.Errorf("team %v is not found", teamID)
 }

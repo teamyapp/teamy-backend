@@ -59,7 +59,7 @@ func (m Mutation) CreateTask(
 		return Task{}, err
 	}
 	// add task to team
-	err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
+	_, err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
 		t.Tasks = append(t.Tasks, task.ID)
 		return t
 	})
@@ -313,32 +313,6 @@ func (m Mutation) Comment(
 		deps:    m.deps,
 		Comment: c,
 	}, nil
-}
-
-func (m Mutation) CreateTeam(ctx context.Context,
-	args struct {
-		Input struct {
-			Name    string
-			IconURL *string
-		}
-	},
-) (Team, error) {
-	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
-	if err != nil {
-		return Team{}, err
-	}
-	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
-		Name:      args.Input.Name,
-		IconURL:   args.Input.IconURL,
-		CreatorID: userID,
-		MemberIDs: []oneEntity.ID{
-			userID,
-		},
-	})
-	if err != nil {
-		return Team{}, err
-	}
-	return newTeam(m.deps, t), nil
 }
 
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {

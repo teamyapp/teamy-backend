@@ -11,10 +11,6 @@ type Team struct {
 	CreatorID          entity.ID
 	MemberIDs          []entity.ID
 	Tasks              []entity.ID
+	// user id -> task id
 	NeedAttentionTasks map[entity.ID]entity.ID
-}
-
-type TeamUserTaskNeedAttention struct {
-	UserID entity.ID
-	TaskID entity.ID
 }

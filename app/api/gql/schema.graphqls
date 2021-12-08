@@ -27,7 +27,8 @@ type Mutation {
 	# Comments
 	comment(taskID: ID!, content: String!): Comment!
 	# Teams
-	createTeam(input: TeamInput!): Team!
+	createTeam(input: CreateTeamInput!): Team!
+	promoteTaskToNeedAttention(taskID: ID!): Team!
 
 	# Users
 	updateActiveTeam(teamId: ID!): User!
@@ -51,7 +52,7 @@ interface Entity {
 ########
 # Team #
 ########
-type Team implements Entity {
+type Team {
 	id: ID!
 	name: String!
 	iconURL: String
@@ -63,10 +64,15 @@ type Team implements Entity {
 	admins: [User!]!
 	members: [User!]!
 	tasks(input: TaskFilter): [Task!]!
+	tasksNeedAttention: [Task!]!
 }
 
-input TeamInput {
+input CreateTeamInput {
 	name: String!
+}
+
+input UpdateTeamInput {
+	id: ID!
 }
 
 
@@ -109,7 +115,7 @@ input UserInput {
 ########
 # Task #
 ########
-type Task implements Entity {
+type Task {
 	id: ID!
 	goal: String!
 	context: String!
