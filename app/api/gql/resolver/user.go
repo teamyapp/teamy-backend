@@ -129,7 +129,7 @@ func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	q := NewQuery(u.deps)
 	if args.Input != nil {
 		userID := u.ID()
-		args.Input.CreatorID = &id
+		args.Input.CreatorID = &userID
 	}
 	return q.Tasks(args)
 }
