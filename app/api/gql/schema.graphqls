@@ -25,10 +25,10 @@ type Mutation {
 	# startTask(taskId: ID!): Boolean!
 	# completeTask(taskId: ID!): Boolean!
 	# Comments
-	comment(taskID: ID!, content: String!): Comment!
+	comment(taskId: ID!, content: String!): Comment!
 	# Teams
 	createTeam(input: CreateTeamInput!): Team!
-	promoteTaskToNeedAttention(taskID: ID!): Team!
+	promoteTaskToNeedAttention(taskId: ID!): Team!
 
 	# Users
 	updateActiveTeam(teamId: ID!): User!
