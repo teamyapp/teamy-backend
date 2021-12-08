@@ -13,6 +13,10 @@ func (e LifetimeEvent) ID() graphql.ID {
 	return toGraphQLID(e.LifetimeEvent.ID)
 }
 
+func (e LifetimeEvent) ActorID() graphql.ID {
+	return toGraphQLID(e.LifetimeEvent.ActorID)
+}
+
 func (e LifetimeEvent) HappensAt() graphql.Time {
 	return graphql.Time{Time: e.HappensAt_}
 }
