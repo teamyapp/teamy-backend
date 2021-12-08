@@ -28,6 +28,9 @@ func (d DataStore) FilterTeams(filter func(entity.Team) bool) (ts []entity.Team)
 func (d DataStore) UpdateTeam(teamID oneEntity.ID, apply func(entity.Team) entity.Team) (entity.Team, error) {
 	for i, team := range d.data.Teams {
 		if team.ID == teamID {
+			if team.NeedAttentionTasks == nil {
+				team.NeedAttentionTasks = make(map[oneEntity.ID]oneEntity.ID)
+			}
 			newTeam := apply(team)
 			d.data.Teams[i] = newTeam
 			return newTeam, d.persister.Write(d.data)
