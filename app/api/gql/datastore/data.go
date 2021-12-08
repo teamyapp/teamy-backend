@@ -35,7 +35,7 @@ type CreationRelation struct {
 
 type LifetimeEvent struct {
 	ID         oneEntity.ID
-	ActorID    graphql.ID
+	ActorID    oneEntity.ID
 	HappensAt_ time.Time
 	EventType  LifetimeEventType
 }
