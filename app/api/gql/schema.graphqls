@@ -55,7 +55,7 @@ interface Entity {
 type Team {
 	id: ID!
 	name: String!
-	iconURL: String
+	iconUrl: String
 	createdAt: Time!
 	creator: User!
 	"creator is the owner. In the future there will be features to transfer ownership to other users, just like GitHub repo."
