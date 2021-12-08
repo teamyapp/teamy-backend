@@ -84,7 +84,7 @@ func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }
 		}
 		return false
 	})
-	return newTasks(t.deps, tasks)
+	return newTasks(t.deps, tasks), nil
 }
 
 //////////////
