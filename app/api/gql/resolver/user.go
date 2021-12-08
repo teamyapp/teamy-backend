@@ -128,7 +128,7 @@ func (u User) Teams() ([]Team, error) {
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	q := NewQuery(u.deps)
 	if args.Input != nil {
-		id := u.ID()
+		userID := u.ID()
 		args.Input.CreatorID = &id
 	}
 	return q.Tasks(args)
