@@ -3,6 +3,7 @@ package resolver
 import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -34,9 +35,26 @@ func (m Mutation) CreateUser(
 	if err != nil {
 		return User{}, err
 	}
-
-	// TODO(albert): add firstName, lastName & profileUrl
-	user, err := m.deps.Data.CreateUser(id)
+	firstName := ""
+	if args.Input.FirstName != nil {
+		firstName = *args.Input.FirstName
+	}
+	lastName := ""
+	if args.Input.LastName != nil {
+		lastName = *args.Input.LastName
+	}
+	profileURL := ""
+	if args.Input.ProfileUrl != nil {
+		profileURL = *args.Input.ProfileUrl
+	}
+	user, err := m.deps.Data.CreateUser(entity.User{
+		Entity: oneEntity.Entity{
+			ID: id,
+		},
+		FirstName:  firstName,
+		LastName:   lastName,
+		ProfileURL: profileURL,
+	})
 	if err != nil {
 		return User{}, err
 	}
