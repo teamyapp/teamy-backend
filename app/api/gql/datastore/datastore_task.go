@@ -10,7 +10,6 @@ import (
 )
 
 func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task entity.Task) (entity.Task, error) {
-	// get next id
 	task.ID = d.newID(Task)
 	task.CreatorID = creatorID
 	taskID := graphql.ID(fmt.Sprint(task.ID))
