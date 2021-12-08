@@ -6,7 +6,7 @@ import (
 	"github.com/graph-gophers/graphql-go"
 )
 
-func (d *DataStore) CreateLifetimeEvent(creatorID graphql.ID, eventType LifetimeEventType) error {
+func (d *DataStore) CreateLifetimeEvent(creatorID oneEntity.ID, eventType LifetimeEventType) error {
 	d.data.LifetimeEvents = append(d.data.LifetimeEvents, LifetimeEvent{
 		ID:         d.newID(Event),
 		ActorID:    creatorID,
