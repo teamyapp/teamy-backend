@@ -21,6 +21,7 @@ type Task struct {
 type TaskFilter struct {
 	ID        *graphql.ID
 	CreatorID *graphql.ID
+	OwnerID   *graphql.ID
 	Text      *string
 	Status    *entity.TaskStatusEnum
 }
@@ -151,6 +152,16 @@ func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
 		matchCreator = t.CreatorID == creatorID || toGraphQLID(ownerID) == creatorID
 		log.Println(matchCreator)
 	}
+	// filter by Owner
+	matchOwner := true
+	if input.OwnerID != nil && t.OwnerUserId != nil {
+		ownerID := *input.OwnerID
+		id, err := fromGraphQLID(ownerID)
+		if err != nil {
+			return false
+		}
+		matchOwner = (*t.OwnerUserId) == id
+	}
 	// filter by status
 	matchStatus := true
 	if input.Status != nil {
@@ -170,5 +181,5 @@ func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
 		log.Println(matchText)
 	}
 	log.Println("=", matchCreator, matchStatus, matchText)
-	return matchCreator && matchStatus && matchText
+	return matchCreator && matchStatus && matchText && matchOwner
 }

@@ -134,7 +134,8 @@ type Task {
 
 input TaskFilter {
 	id: ID
-	creatorID: ID
+	creatorId: ID
+	ownerId: ID
 	"a string filter that searches in both goal and context. Not Implemented."
 	text: String
 	status: TaskStatus
