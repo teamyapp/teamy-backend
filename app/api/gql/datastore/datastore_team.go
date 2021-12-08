@@ -16,6 +16,9 @@ func (d DataStore) CreateTeam(userID oneEntity.ID, t entity.Team) (entity.Team, 
 func (d DataStore) FilterTeams(filter func(entity.Team) bool) (ts []entity.Team) {
 	for _, t := range d.data.Teams {
 		if filter(t) {
+			if t.NeedAttentionTasks == nil {
+				t.NeedAttentionTasks = make(map[oneEntity.ID]oneEntity.ID)
+			}
 			ts = append(ts, t)
 		}
 	}
