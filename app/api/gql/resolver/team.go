@@ -63,11 +63,23 @@ func (t Team) Admins() ([]User, error) {
 	return []User{newUser(t.deps, user)}, err
 }
 
-func (t Team) TasksNeedAttention() []Task {
+func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }) ([]Task, error) {
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	tasks := t.deps.Data.FilterTasks(func(task entity.Task) bool {
 		for _, taskID := range t.NeedAttentionTasks {
 			if taskID == task.ID && task.Status == entity.IN_PROGRESS {
-				return true
+				if args.IsMine {
+					if task.OwnerUserId != nil {
+						return false
+					} else {
+						return userID == *task.OwnerUserId
+					}
+				} else {
+					return true
+				}
 			}
 		}
 		return false
@@ -86,7 +98,7 @@ func (m Mutation) CreateTeam(ctx context.Context,
 		}
 	},
 ) (Team, error) {
-	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return Team{}, err
 	}

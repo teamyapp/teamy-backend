@@ -64,7 +64,7 @@ type Team {
 	admins: [User!]!
 	members: [User!]!
 	tasks(input: TaskFilter): [Task!]!
-	tasksNeedAttention: [Task!]!
+	tasksNeedAttention(isMine: Boolean): [Task!]!
 }
 
 input CreateTeamInput {
