@@ -72,7 +72,7 @@ func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }
 		for _, taskID := range t.NeedAttentionTasks {
 			if taskID == task.ID && task.Status == entity.IN_PROGRESS {
 				if args.IsMine {
-					if task.OwnerUserId != nil {
+					if task.OwnerUserId == nil {
 						return false
 					} else {
 						return userID == *task.OwnerUserId
