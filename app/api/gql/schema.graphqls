@@ -8,7 +8,7 @@ type Query {
 	me: User!
 	task(id: ID!): Task!
 	"return all tasks for debug purpose"
-	tasks: [Task!]!
+	tasks(input: TaskFilter): [Task!]!
 	# Teams
 	"""
 	get all teams
@@ -20,29 +20,26 @@ type Query {
 type Mutation {
 	# Tasks
 	createTask(task: TaskInput!): Task!
-	deleteTask(taskId: ID!): Boolean!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
-	startTask(taskId: ID!): Boolean!
-	completeTask(taskId: ID!): Boolean!
+	deleteTask(taskId: ID!): Task!
+	# startTask(taskId: ID!): Boolean!
+	# completeTask(taskId: ID!): Boolean!
 	# Comments
-	comment(taskID: ID!, content: String!): Comment!
+	comment(taskId: ID!, content: String!): Comment!
 	# Teams
-	createTeam(input: TeamInput!): Team!
+	createTeam(input: CreateTeamInput!): Team!
+	promoteTaskToNeedAttention(taskId: ID!): Team!
+
 	# Users
 	updateActiveTeam(teamId: ID!): User!
 
 	# todo: implement a directive that hide this resolver from production
 	# or when the logged in user is not a system admin
 	"Admin && Debug Only resolvers"
-	createUser(userID: ID!): User!
+	createUser(input: UserInput!): User!
+	updateUser(input: UserInput!): User!
 }
 
-input TaskInput {
-	goal: String
-	dueAt: Time
-	context: String
-	ownerUserId: ID
-}
 
 
 interface Entity {
@@ -50,14 +47,15 @@ interface Entity {
 	createdAt: Time!
 }
 
-input TeamInput {
-	name: String!
-}
 
-type Team implements Entity {
+
+########
+# Team #
+########
+type Team {
 	id: ID!
 	name: String!
-	logoUrl: String
+	iconUrl: String
 	createdAt: Time!
 	creator: User!
 	"creator is the owner. In the future there will be features to transfer ownership to other users, just like GitHub repo."
@@ -66,26 +64,58 @@ type Team implements Entity {
 	admins: [User!]!
 	members: [User!]!
 	tasks(input: TaskFilter): [Task!]!
+	tasksNeedAttention(isMine: Boolean = false): [Task!]!
 }
 
-type PersonalStatus {
-	taskNeedAttention: Task
-	upcomingTasks: [Task!]!
-	deliveredTasks: [Task!]!
+input CreateTeamInput {
+	name: String!
 }
 
-type TeamStatus {
-	upcomingTasks: [Task!]!
-	inProgressTasks: [Task!]!
-	deliveredTasks: [Task!]!
+input UpdateTeamInput {
+	id: ID!
 }
 
-type Option {
-	value: Int!
-	label: String!
+
+###########
+# Comment #
+###########
+type Comment {
+	id: ID!
+	content: String!
+	commenter: User!
+	task: Task!
+	# mentions: [Mention!]!
 }
 
-type Task implements Entity {
+########
+# User #
+########
+type User implements Entity {
+	id: ID!
+	lastName: String!
+	firstName: String!
+	profileUrl: String!
+	createdAt: Time!
+	activeTeam: Team
+	teams: [Team!]!
+	"""
+	If input is null, return all related tasks.
+	Ignore TaskFilter.creatorID
+	"""
+	tasks(input: TaskFilter): [Task!]!
+}
+
+input UserInput {
+	id: ID!
+	lastName: String
+	firstName: String
+	profileUrl: String
+}
+
+########
+# Task #
+########
+type Task {
 	id: ID!
 	goal: String!
 	context: String!
@@ -102,28 +132,10 @@ type Task implements Entity {
 	lifetimeEvents: [LifetimeEvent!]!
 }
 
-type Comment {
-	id: ID!
-	content: String!
-	commenter: User!
-	task: Task!
-	# mentions: [Mention!]!
-}
-
-type User implements Entity {
-	id: ID!
-	lastName: String!
-	firstName: String!
-	profileUrl: String!
-	createdAt: Time!
-	activeTeam: Team
-	teams: [Team!]!
-	"If input is null, return all related tasks"
-	tasks(input: TaskFilter): [Task!]!
-}
-
 input TaskFilter {
 	id: ID
+	creatorId: ID
+	ownerId: ID
 	"a string filter that searches in both goal and context. Not Implemented."
 	text: String
 	status: TaskStatus
@@ -143,7 +155,14 @@ enum TaskStatus {
 	DELIVERED
 }
 
-scalar Time
+input TaskInput {
+	goal: String
+	dueAt: Time
+	context: String
+	ownerUserId: ID
+	status: TaskStatus
+}
+
 
 """
 LifetimeEvent
@@ -176,3 +195,4 @@ type Mention {
 
 union Mentionable = User | Task
 
+scalar Time

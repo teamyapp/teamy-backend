@@ -1,12 +1,17 @@
 package resolver
 
 import (
+	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Comment struct {
 	deps *Dependencies
 	entity.Comment
+}
+
+func (c Comment) ID() graphql.ID {
+	return toGraphQLID(c.Comment.ID)
 }
 
 func (c Comment) Commenter() (User, error) {

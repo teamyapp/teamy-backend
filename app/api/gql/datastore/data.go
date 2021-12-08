@@ -15,7 +15,17 @@ type Data struct {
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation
 	Teams             []entity.Team
+	IDs               map[oneEntity.ID]Type
 }
+
+type Type string
+
+const (
+	Task    Type = "Task"
+	Comment Type = "Comment"
+	Team    Type = "Team"
+	Event   Type = "LifetimeEvent"
+)
 
 // Temperary SQL like struct for v2 migration purpose.
 type CreationRelation struct {
@@ -24,8 +34,8 @@ type CreationRelation struct {
 }
 
 type LifetimeEvent struct {
-	ID         graphql.ID
-	ActorID    graphql.ID
+	ID         oneEntity.ID
+	ActorID    oneEntity.ID
 	HappensAt_ time.Time
 	EventType  LifetimeEventType
 }

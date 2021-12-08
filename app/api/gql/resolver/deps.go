@@ -7,20 +7,20 @@ import (
 )
 
 type Dependencies struct {
-	taskRepo              repo.Task
+	// taskRepo              repo.Task
 	teamRepo              repo.Team
 	prioritizationService service.Prioritization
 	Data                  *datastore.DataStore
 }
 
 func NewDependencies(
-	taskRepo repo.Task,
+	// taskRepo repo.Task,
 	teamRepo repo.Team,
 	prioritizationService service.Prioritization,
 	data *datastore.DataStore,
 ) *Dependencies {
 	return &Dependencies{
-		taskRepo:              taskRepo,
+		// taskRepo:              taskRepo,
 		teamRepo:              teamRepo,
 		prioritizationService: prioritizationService,
 		Data:                  data,

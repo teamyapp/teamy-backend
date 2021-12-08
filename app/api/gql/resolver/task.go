@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
@@ -18,9 +19,11 @@ type Task struct {
 }
 
 type TaskFilter struct {
-	ID     *graphql.ID
-	Text   *string
-	Status *TaskStatus
+	ID        *graphql.ID
+	CreatorID *graphql.ID
+	OwnerID   *graphql.ID
+	Text      *string
+	Status    *entity.TaskStatusEnum
 }
 
 func (t Task) Goal() string {
@@ -32,11 +35,7 @@ func (t Task) DueAt() *graphql.Time {
 }
 
 func (t Task) Context() string {
-	c := t.task.Context
-	if c != nil {
-		return *c
-	}
-	return ""
+	return t.task.Context
 }
 
 func (t Task) Owner() (*User, error) {
@@ -92,8 +91,8 @@ func (t Task) NumOfUnknowns() *int32 {
 	return toGraphQLInt(t.task.NumOfUnknowns)
 }
 
-func (t Task) AvailableActions() []TaskAction {
-	return toGraphQLTaskActions(t.task.AvailableActions)
+func (t Task) AvailableActions() []entity.TaskAction {
+	return availableActions[t.task.Status]
 }
 
 func (t Task) AvailableWorkScopes() []Option {
@@ -118,17 +117,9 @@ func (t Task) Comments() []Comment {
 	return Comments(t.deps, cs)
 }
 
-type TaskStatus string
-
-const (
-	UPCOMING    TaskStatus = "UPCOMING"
-	IN_PROGRESS TaskStatus = "IN_PROGRESS"
-	DELIVERED   TaskStatus = "DELIVERED"
-)
-
-func (t Task) Status() (TaskStatus, error) {
+func (t Task) Status() (entity.TaskStatusEnum, error) {
 	// TODO: add status to task
-	return UPCOMING, nil
+	return t.task.Status, nil
 }
 
 func newTask(deps *Dependencies, task entity.Task) Task {
@@ -144,4 +135,51 @@ func newTasks(deps *Dependencies, tasks []entity.Task) (ts []Task) {
 		ts = append(ts, newTask(deps, t))
 	}
 	return
+}
+
+func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
+	if input == nil {
+		return true
+	}
+	// filter by Creator
+	matchCreator := true
+	if input.CreatorID != nil {
+		creatorID := *input.CreatorID
+		ownerID := oneEntity.ID(-1)
+		if t.OwnerUserId != nil {
+			ownerID = *t.OwnerUserId
+		}
+		matchCreator = t.CreatorID == creatorID || toGraphQLID(ownerID) == creatorID
+		log.Println(matchCreator)
+	}
+	// filter by Owner
+	matchOwner := true
+	if input.OwnerID != nil && t.OwnerUserId != nil {
+		ownerID := *input.OwnerID
+		id, err := fromGraphQLID(ownerID)
+		if err != nil {
+			return false
+		}
+		matchOwner = (*t.OwnerUserId) == id
+	}
+	// filter by status
+	matchStatus := true
+	if input.Status != nil {
+		status := *(input.Status)
+		matchStatus = t.Status == status
+		log.Println("matchStatus", matchStatus)
+	}
+	// full text search
+	// todo: need to implement a better full text search
+	// by using the full-text search engine in postgres
+	matchText := true
+	if input.Text != nil {
+		text := *(input.Text)
+		matchGoal := strings.Contains(t.Goal, text)
+		matchContext := strings.Contains(t.Context, text)
+		matchText = matchGoal || matchContext
+		log.Println(matchText)
+	}
+	log.Println("=", matchCreator, matchStatus, matchText)
+	return matchCreator && matchStatus && matchText && matchOwner
 }

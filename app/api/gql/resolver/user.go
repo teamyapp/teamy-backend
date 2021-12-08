@@ -1,9 +1,9 @@
 package resolver
 
 import (
-	"fmt"
-	"log"
-
+	"github.com/graph-gophers/graphql-go"
+	"github.com/pkg/errors"
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -11,6 +11,77 @@ type User struct {
 	Entity
 	deps *Dependencies
 	user entity.User
+}
+
+type UserInput struct {
+	ID         *graphql.ID
+	FirstName  *string
+	LastName   *string
+	ProfileUrl *string
+}
+
+// Admin && Debug Only
+func (m Mutation) CreateUser(
+	args struct {
+		Input struct {
+			ID         graphql.ID
+			FirstName  *string
+			LastName   *string
+			ProfileURL *string
+		}
+	},
+) (User, error) {
+	id, err := fromGraphQLID(args.Input.ID)
+	if err != nil {
+		return User{}, err
+	}
+	firstName := ""
+	if args.Input.FirstName != nil {
+		firstName = *args.Input.FirstName
+	}
+	lastName := ""
+	if args.Input.LastName != nil {
+		lastName = *args.Input.LastName
+	}
+	profileURL := ""
+	if args.Input.ProfileURL != nil {
+		profileURL = *args.Input.ProfileURL
+	}
+	user, err := m.deps.Data.CreateUser(entity.User{
+		Entity: oneEntity.Entity{
+			ID: id,
+		},
+		FirstName:  firstName,
+		LastName:   lastName,
+		ProfileURL: profileURL,
+	})
+	if err != nil {
+		return User{}, err
+	}
+	return newUser(m.deps, user), nil
+}
+
+func (m Mutation) UpdateUser(args struct{ Input UserInput }) (User, error) {
+	if args.Input.ID == nil {
+		return User{}, errors.New("must provide an ID")
+	}
+	id, err := fromGraphQLID(*args.Input.ID)
+	if err != nil {
+		return User{}, err
+	}
+	user, err := m.deps.Data.UpdateUser(id, func(u entity.User) entity.User {
+		if args.Input.LastName != nil {
+			u.LastName = *args.Input.LastName
+		}
+		if args.Input.FirstName != nil {
+			u.FirstName = *args.Input.FirstName
+		}
+		return u
+	})
+	if err != nil {
+		return User{}, err
+	}
+	return newUser(m.deps, user), nil
 }
 
 func (u User) FirstName() string {
@@ -55,46 +126,12 @@ func (u User) Teams() ([]Team, error) {
 }
 
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
-	if args.Input == nil {
-		// todo: return all related tasks
-		return nil, nil
+	q := NewQuery(u.deps)
+	if args.Input != nil {
+		userID := u.ID()
+		args.Input.CreatorID = &userID
 	}
-	if args.Input.Status == nil {
-		return nil, nil
-	}
-	status := *(args.Input.Status)
-	activeTeam, err := u.ActiveTeam()
-	if err != nil {
-		return nil, err
-	}
-	if activeTeam == nil {
-		return nil, nil
-	}
-	switch status {
-	case UPCOMING:
-		upcomingTasks, err := u.deps.taskRepo.FindTasksForUser(u.entity.ID, activeTeam.entity.ID, entity.TaskStatusUpcoming)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		upcomingTasks = u.deps.prioritizationService.PrioritizeTasks(upcomingTasks)
-		upcomingTasks = tasksWithAvailableActions(upcomingTasks, entity.TaskStatusUpcoming)
-		return toGraphQLTasks(u.deps, upcomingTasks), nil
-	case IN_PROGRESS:
-		// not applicable to users for now
-		// todo: might implement in the future
-		return nil, nil
-	case DELIVERED:
-		deliveredTasks, err := u.deps.taskRepo.FindTasksForUser(u.entity.ID, activeTeam.entity.ID, entity.TaskStatusDelivered)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		deliveredTasks = tasksWithAvailableActions(deliveredTasks, entity.TaskStatusDelivered)
-		return toGraphQLTasks(u.deps, deliveredTasks), nil
-	default:
-		return nil, fmt.Errorf("status %v does not exist", status)
-	}
+	return q.Tasks(args)
 }
 
 func newUser(deps *Dependencies, user entity.User) User {

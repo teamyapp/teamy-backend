@@ -23,8 +23,10 @@ func (q Query) Task(args struct {
 	return newTask(q.deps, task), nil
 }
 
-func (q Query) Tasks() ([]Task, error) {
-	tasks := q.deps.Data.FilterTasks(func(t entity.Task) bool { return true })
+func (q Query) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
+	tasks := q.deps.Data.FilterTasks(func(t entity.Task) bool {
+		return taskFilterFunc(t, args.Input)
+	})
 	return newTasks(q.deps, tasks), nil
 }
 

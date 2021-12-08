@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/pkg/errors"
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -50,12 +51,15 @@ func (m Mutation) CreateTask(
 	if len(activeTeams) == 0 {
 		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
 	}
+
+	task.Status = entity.UPCOMING
+	task.OwnerUserId = &userID
 	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeams[0].ID, task)
 	if err != nil {
 		return Task{}, err
 	}
 	// add task to team
-	err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
+	_, err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
 		t.Tasks = append(t.Tasks, task.ID)
 		return t
 	})
@@ -65,66 +69,82 @@ func (m Mutation) CreateTask(
 	return newTask(m.deps, task), err
 }
 
-func (m Mutation) StartTask(ctx context.Context, args struct {
-	TaskID graphql.ID
-}) (bool, error) {
-	userID, err := identity.FromContext(ctx)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// func (m Mutation) StartTask(ctx context.Context, args struct {
+// 	TaskID graphql.ID
+// }) (bool, error) {
+// 	userID, err := identity.FromContext(ctx)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	taskID, err := fromGraphQLID(args.TaskID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	// TODO: a user starts others' task will assign that task to the himself
-	// TODO: show a modal to confirm task should be reassigned.
-	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	// TODO: a user starts others' task will assign that task to the himself
+// 	// TODO: show a modal to confirm task should be reassigned.
+// 	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	prevNeedAttentionTaskID, err := m.deps.taskRepo.SetNeedAttentionTask(&taskID, userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	prevNeedAttentionTaskID, err := m.deps.taskRepo.SetNeedAttentionTask(&taskID, userID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusInProgress)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusInProgress)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	if prevNeedAttentionTaskID != nil {
-		err = m.deps.taskRepo.SetTeamTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
-		if err != nil {
-			log.Println(err)
-			return false, err
-		}
-	}
+// 	if prevNeedAttentionTaskID != nil {
+// 		err = m.deps.taskRepo.SetTeamTaskStatus(*prevNeedAttentionTaskID, activeTeam.ID, entity.TaskStatusUpcoming)
+// 		if err != nil {
+// 			log.Println(err)
+// 			return false, err
+// 		}
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
 func (m Mutation) DeleteTask(ctx context.Context, args struct {
 	TaskID graphql.ID
-}) (bool, error) {
+}) (Task, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)
-		return false, err
+		return Task{}, err
 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
+	// can only delete a task if
+	// the user is the creator
+	// todo: need to design a fully featured authorization interface for all modifiable entities
+	task, err := m.deps.Data.GetTask(args.TaskID)
 	if err != nil {
-		log.Println(err)
-		return false, err
+		return Task{}, err
 	}
+	if task.CreatorID != toGraphQLID(userID) {
+		return Task{}, errors.New("you are not the creator of this task, can not delete")
+	}
+
+	deletedTask, err := m.deps.Data.DeleteTask(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	// taskID, err := fromGraphQLID(args.TaskID)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return false, err
+	// }
 
 	// Check if taskID exists - no need, we can only delete task that we can see
 	// UI:
@@ -133,92 +153,84 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 	// TODO: move task to trash instead of completely deleting it. delete task after 7 days if in action
 	// TODO: clean up the task from task dependency graph for the active team
 
-	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+	// question: not sure if this is useful anymore
+	// activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return false, err
+	// }
 
-	err = m.deps.taskRepo.DeleteTeamTask(taskID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
-
-	err = m.deps.taskRepo.DeleteNeedAttentionTask(taskID, userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
-
-	return true, nil
+	return newTask(m.deps, deletedTask), nil
 }
 
-func (m Mutation) CompleteTask(ctx context.Context, args struct {
-	TaskID graphql.ID
-}) (bool, error) {
-	userID, err := identity.FromContext(ctx)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// func (m Mutation) CompleteTask(ctx context.Context, args struct {
+// 	TaskID graphql.ID
+// }) (bool, error) {
+// 	userID, err := identity.FromContext(ctx)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	taskID, err := fromGraphQLID(args.TaskID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	activeTeam, err := m.deps.teamRepo.FindActiveTeam(userID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	needAttentionTask, err := m.deps.taskRepo.FindTaskNeedAttentionForUser(userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	needAttentionTask, err := m.deps.taskRepo.FindTaskNeedAttentionForUser(userID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	if needAttentionTask.ID != taskID {
-		return true, err
-	}
+// 	if needAttentionTask.ID != taskID {
+// 		return true, err
+// 	}
 
-	_, err = m.deps.taskRepo.SetNeedAttentionTask(nil, userID, activeTeam.ID)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	_, err = m.deps.taskRepo.SetNeedAttentionTask(nil, userID, activeTeam.ID)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusDelivered)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
+// 	err = m.deps.taskRepo.SetTeamTaskStatus(taskID, activeTeam.ID, entity.TaskStatusDelivered)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return false, err
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
 func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 	TeamID graphql.ID
 }) (User, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
-		log.Println(err)
 		return User{}, err
 	}
 
 	user, err := m.deps.Data.GetUser(userID)
 	if err != nil {
-		log.Printf("%+v\n", err)
 		return User{}, err
 	}
 	id, err := fromGraphQLID(args.TeamID)
 	if err != nil {
-		log.Printf("%+v\n", err)
 		return User{}, err
 	}
+
+	teams := m.deps.Data.FilterTeams(func(t entity.Team) bool { return t.ID == id })
+	if len(teams) == 0 {
+		return User{}, errors.Errorf("team %v does not exist", id)
+	}
+
 	user, err = m.deps.Data.UpdateUser((user.ID), func(u entity.User) entity.User {
 		u.ActiveTeamID = id
 		return u
@@ -237,9 +249,7 @@ func (m Mutation) UpdateTask(
 		Task   TaskInput
 	},
 ) (Task, error) {
-	// todo: need to do authorization
-	// One can only update the task that is created by oneself.
-	_, err := identity.FromContext(ctx)
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
@@ -248,8 +258,12 @@ func (m Mutation) UpdateTask(
 	if err != nil {
 		return Task{}, err
 	}
+	if task.CreatorID != toGraphQLID(userID) {
+		return Task{}, errors.New("you are not the creator of this task")
+	}
+
 	if args.Task.Context != nil {
-		task.Context = args.Task.Context
+		task.Context = *(args.Task.Context)
 	}
 	if args.Task.DueAt != nil {
 		task.DueAt = &args.Task.DueAt.Time
@@ -263,6 +277,10 @@ func (m Mutation) UpdateTask(
 			return Task{}, nil
 		}
 		task.OwnerUserId = id
+	}
+	if args.Task.Status != nil {
+		log.Println(*args.Task.Status)
+		task.Status = *args.Task.Status
 	}
 	task, err = m.deps.Data.UpdateTask(task)
 	if err != nil {
@@ -278,7 +296,8 @@ func (m Mutation) Comment(
 		Content string
 	},
 ) (Comment, error) {
-	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
+	// partial working
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return Comment{}, err
 	}
@@ -294,45 +313,6 @@ func (m Mutation) Comment(
 		deps:    m.deps,
 		Comment: c,
 	}, nil
-}
-
-func (m Mutation) CreateTeam(ctx context.Context,
-	args struct {
-		Input struct {
-			Name string
-		}
-	},
-) (Team, error) {
-	userID, err := identity.FromContext(ctx) // todo: consider do this in a middleware and init User ID in the struct or ctx
-	if err != nil {
-		return Team{}, err
-	}
-	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
-		Name:      args.Input.Name,
-		CreatorID: userID,
-		MemberIDs: []oneEntity.ID{
-			userID,
-		},
-	})
-	if err != nil {
-		return Team{}, err
-	}
-	return newTeam(m.deps, t), nil
-}
-
-//
-// Admin && Debug Only
-//
-func (m Mutation) CreateUser(args struct{ UserID graphql.ID }) (User, error) {
-	id, err := fromGraphQLID(args.UserID)
-	if err != nil {
-		return User{}, err
-	}
-	user, err := m.deps.Data.CreateUser(id)
-	if err != nil {
-		return User{}, err
-	}
-	return newUser(m.deps, user), nil
 }
 
 func contains(arr []oneEntity.ID, element oneEntity.ID) bool {

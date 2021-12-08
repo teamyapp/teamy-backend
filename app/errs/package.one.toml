@@ -1,8 +1,0 @@
-[[target]]
-name = "app"
-type = "goLibrary"
-src = "*.go"
-dep = [
-	"(@):module",
-    "(teamyapp/tool/oneFramework)/entity"
-]

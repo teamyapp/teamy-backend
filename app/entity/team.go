@@ -6,9 +6,11 @@ import (
 
 type Team struct {
 	entity.Entity
-	Name      string
-	LogoURL   *string
-	CreatorID entity.ID
-	MemberIDs []entity.ID
-	Tasks     []entity.ID
+	Name               string
+	IconURL            *string
+	CreatorID          entity.ID
+	MemberIDs          []entity.ID
+	Tasks              []entity.ID
+	// user id -> task id
+	NeedAttentionTasks map[entity.ID]entity.ID
 }
