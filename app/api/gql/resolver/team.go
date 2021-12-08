@@ -66,7 +66,7 @@ func (t Team) Admins() ([]User, error) {
 func (t Team) TasksNeedAttention() []Task {
 	tasks := t.deps.Data.FilterTasks(func(task entity.Task) bool {
 		for _, taskID := range t.NeedAttentionTasks {
-			if taskID == task.ID {
+			if taskID == task.ID && task.Status == entity.IN_PROGRESS {
 				return true
 			}
 		}
