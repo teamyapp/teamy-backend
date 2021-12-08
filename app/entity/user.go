@@ -11,3 +11,13 @@ type User struct {
 	ProfileURL   string
 	ActiveTeamID oneEntity.ID
 }
+
+func GhostUser() User {
+	return User{
+		Entity: oneEntity.Entity{
+			ID: -1,
+		},
+		FirstName: "ghost",
+		LastName: "this user has either been removed from the system or never existed",
+	}
+}

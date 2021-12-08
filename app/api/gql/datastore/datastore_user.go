@@ -29,6 +29,8 @@ func (d DataStore) GetUsers(ids []oneEntity.ID) (users []entity.User, err error)
 				err = errors.Errorf("user key %v and id %v doesn't match", id, user.ID)
 				return
 			}
+		} else {
+			users = append(users, entity.GhostUser())
 		}
 	}
 	return
