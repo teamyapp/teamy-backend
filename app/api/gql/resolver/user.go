@@ -27,7 +27,7 @@ func (m Mutation) CreateUser(
 			ID         graphql.ID
 			FirstName  *string
 			LastName   *string
-			ProfileUrl *string
+			ProfileURL *string
 		}
 	},
 ) (User, error) {
