@@ -17,7 +17,7 @@ func GhostUser() User {
 		Entity: oneEntity.Entity{
 			ID: -1,
 		},
-		FirstName: "ghost",
+		FirstName: "Ghost",
 		LastName: "this user has either been removed from the system or never existed",
 	}
 }
