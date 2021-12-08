@@ -1,11 +1,11 @@
 package entity
 
-type TaskAction int
+type TaskAction string
 
 const (
-	TaskActionStart TaskAction = iota
-	TaskActionDelete
-	TaskActionAssignOwner
-	TaskActionReportBlocked
-	TaskActionMarkComplete
+	TaskActionStart         TaskAction = "START"
+	TaskActionDelete        TaskAction = "DELETE"
+	TaskActionAssignOwner   TaskAction = "ASSIGN_OWNER"
+	TaskActionReportBlocked TaskAction = "REPORT_BLOCKED"
+	TaskActionMarkComplete  TaskAction = "MARK_COMPLETE"
 )

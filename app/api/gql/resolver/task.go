@@ -90,8 +90,8 @@ func (t Task) NumOfUnknowns() *int32 {
 	return toGraphQLInt(t.task.NumOfUnknowns)
 }
 
-func (t Task) AvailableActions() []TaskAction {
-	return toGraphQLTaskActions(t.task.AvailableActions)
+func (t Task) AvailableActions() []entity.TaskAction {
+	return availableActions[t.task.Status]
 }
 
 func (t Task) AvailableWorkScopes() []Option {

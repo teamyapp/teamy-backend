@@ -11,13 +11,13 @@ import (
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
-var gqlTaskActionMap = map[entity.TaskAction]TaskAction{
-	entity.TaskActionStart:         TaskActionStart,
-	entity.TaskActionDelete:        TaskActionDelete,
-	entity.TaskActionAssignOwner:   TaskActionAssignOwner,
-	entity.TaskActionReportBlocked: TaskActionReportBlocked,
-	entity.TaskActionMarkComplete:  TaskActionMarkComplete,
-}
+// var gqlTaskActionMap = map[entity.TaskAction]TaskAction{
+// 	entity.TaskActionStart:         TaskActionStart,
+// 	entity.TaskActionDelete:        TaskActionDelete,
+// 	entity.TaskActionAssignOwner:   TaskActionAssignOwner,
+// 	entity.TaskActionReportBlocked: TaskActionReportBlocked,
+// 	entity.TaskActionMarkComplete:  TaskActionMarkComplete,
+// }
 
 func toGraphQLTasks(deps *Dependencies, tasks []entity.Task) []Task {
 	gqlTasks := make([]Task, 0)
@@ -54,13 +54,13 @@ func toGraphQLTime(time *time.Time) *graphql.Time {
 	return &graphql.Time{Time: *time}
 }
 
-func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
-	actions := make([]TaskAction, 0)
-	for _, action := range taskActions {
-		actions = append(actions, gqlTaskActionMap[action])
-	}
-	return actions
-}
+// func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
+// 	actions := make([]TaskAction, 0)
+// 	for _, action := range taskActions {
+// 		actions = append(actions, gqlTaskActionMap[action])
+// 	}
+// 	return actions
+// }
 
 func toGraphQLUsers(deps *Dependencies, users []entity.User) []User {
 	if users == nil {
