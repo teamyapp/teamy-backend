@@ -9,6 +9,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/teamy-backend/app/api/gql/operations"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 )
 
@@ -74,6 +75,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// handle server stored queries
+    // Execute custom queries if specified
+	if params.Query == "" {
+		params.Query = operations.Operations()
 	}
 
 	log.Println("begin GraphQL")
