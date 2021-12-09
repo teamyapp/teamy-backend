@@ -78,6 +78,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// handle server stored queries
+    // Execute custom queries if specified
 	if params.Query == "" {
 		params.Query = operations.Operations()
 	}
