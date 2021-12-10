@@ -13,6 +13,8 @@ steps:
       webhook:
         from_secret: SLACK_WEBHOOK
       channel: code
+    when:
+      status: [ success, failure ]
 trigger:
   branch:
     - master
@@ -57,6 +59,8 @@ steps:
       webhook:
         from_secret: SLACK_WEBHOOK
       channel: code
+    when:
+      status: [ success, failure ]
 trigger:
   branch:
     - testing
@@ -101,6 +105,8 @@ steps:
       webhook:
         from_secret: SLACK_WEBHOOK
       channel: code
+    when:
+      status: [ success, failure ]
 trigger:
   branch:
     - master
@@ -145,6 +151,8 @@ steps:
       webhook:
         from_secret: SLACK_WEBHOOK
       channel: code
+    when:
+      status: [ success, failure ]
 trigger:
   branch:
     - production
