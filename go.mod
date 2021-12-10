@@ -7,7 +7,7 @@ require (
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/teamyapp/one v0.0.0-20211205061627-34af73204501
+	github.com/teamyapp/one v0.0.0-20211210090909-75d5a83f5504
 )
 
 //replace github.com/teamyapp/one => ../../infra/oneFramework
