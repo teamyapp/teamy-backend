@@ -43,7 +43,7 @@ github.com/rubenv/sql-migrate
 github.com/rubenv/sql-migrate/sqlparse
 # github.com/stretchr/testify v1.7.0
 ## explicit; go 1.13
-# github.com/teamyapp/one v0.0.0-20211205061627-34af73204501
+# github.com/teamyapp/one v0.0.0-20211210090909-75d5a83f5504
 ## explicit; go 1.17
 github.com/teamyapp/one/config
 github.com/teamyapp/one/db

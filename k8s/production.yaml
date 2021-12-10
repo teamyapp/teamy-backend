@@ -67,7 +67,7 @@ spec:
                   name: teamy
                   key: db-name
             - name: IDENTITY_API_ENDPOINT
-              value: http://identity.production.svc.cluster.local
+              value: http://cloud.production.svc.cluster.local/identity
 ---
 apiVersion: v1
 kind: Service

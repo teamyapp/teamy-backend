@@ -31,7 +31,7 @@ func (m Middleware) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	if len(token) > 0 {
 		userID, err := m.getUserID(token)
 		if err != nil {
-			log.Printf("%+v\n", err)
+			log.Println(err)
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -84,7 +84,7 @@ func getBearerToken(request *http.Request) (string, error) {
 }
 
 func WithMiddleware(identityAPIEndpoint string, handler http.Handler) Middleware {
-	verifyTokenURL := fmt.Sprintf("%s/identity/verify-token", identityAPIEndpoint)
+	verifyTokenURL := fmt.Sprintf("%s/verify-token", identityAPIEndpoint)
 	return Middleware{
 		verifyTokenURL: verifyTokenURL,
 		handler:        handler,
