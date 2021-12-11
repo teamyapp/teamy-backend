@@ -205,7 +205,7 @@ type TeamUpdate {
 	"Given the user id, add the user to the team."
 	addMember(id: ID!): TeamUpdate!
 	"Given the task id, promote an In Progress task to Need Attention."
-	promoteTaskToNeedAttention(Id: ID!): Team!
+	promoteTaskToNeedAttention(Id: ID!): TeamUpdate!
 	"get the value of this team"
 	team: Team!
 }
