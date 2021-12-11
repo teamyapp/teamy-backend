@@ -14,7 +14,7 @@ type Team struct {
 	// user id -> task id
 	NeedAttentionTasks map[entity.ID]entity.ID
 }
-
+// The follow line doesn't follow Go's naming convention and will be refactored once Go 1.18 is released with Generics support.
 type OrderedSet_ID []entity.ID
 
 func (set OrderedSet_ID) Add(newID entity.ID) OrderedSet_ID {
