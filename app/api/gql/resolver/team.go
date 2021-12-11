@@ -196,34 +196,34 @@ func (m TeamUpdate) PromoteTaskToNeedAttention(
 	args struct {
 		ID graphql.ID
 	},
-) (Team, error) {
+) (TeamUpdate, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
-		return Team{}, err
+		return TeamUpdate{}, err
 	}
 	user, err := m.deps.Data.GetUser(userID)
 	if err != nil {
-		return Team{}, err
+		return TeamUpdate{}, err
 	}
 	taskID, err := fromGraphQLID(args.ID)
 	if err != nil {
-		return Team{}, err
+		return TeamUpdate{}, err
 	}
 	task, err := m.deps.Data.GetTask(args.ID)
 	if err != nil {
-		return Team{}, err
+		return TeamUpdate{}, err
 	}
 	if task.Status != entity.IN_PROGRESS {
-		return Team{}, errors.Errorf("task %v is not in progress, can not promote to Need Attention", taskID)
+		return TeamUpdate{}, errors.Errorf("task %v is not in progress, can not promote to Need Attention", taskID)
 	}
 	team, err := m.deps.Data.UpdateTeam(user.ActiveTeamID, func(t entity.Team) entity.Team {
 		t.NeedAttentionTasks[userID] = taskID
 		return t
 	})
 	if err != nil {
-		return Team{}, err
+		return TeamUpdate{}, err
 	}
-	return newTeam(m.deps, team), nil
+	return TeamUpdate{deps: m.deps, team: team}, nil
 }
 
 func (tu TeamUpdate) Team() Team {
