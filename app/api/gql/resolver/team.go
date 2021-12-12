@@ -97,10 +97,10 @@ func (m Mutation) CreateTeam(ctx context.Context,
 			IconURL *string
 		}
 	},
-) (Team, error) {
+) (TeamUpdate, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
-		return Team{}, err
+		return TeamUpdate{}, err
 	}
 	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
 		Name:      args.Input.Name,
@@ -111,9 +111,9 @@ func (m Mutation) CreateTeam(ctx context.Context,
 		},
 	})
 	if err != nil {
-		return Team{}, err
+		return TeamUpdate{}, err
 	}
-	return newTeam(m.deps, t), nil
+	return TeamUpdate{deps: m.deps, team: t}, nil
 }
 
 func (m Mutation) PromoteTaskToNeedAttention(

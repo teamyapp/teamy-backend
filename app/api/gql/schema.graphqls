@@ -189,7 +189,7 @@ type Mutation {
 	
 	#########
 	# Teams #
-	createTeam(input: CreateTeamInput!): Team!			@deprecated(reason: "use TeamUpdate")
+	createTeam(input: CreateTeamInput!): TeamUpdate!
 	promoteTaskToNeedAttention(taskId: ID!): Team!		@deprecated(reason: "use TeamUpdate")
 	"give a team id, get the update type of it."
 	team(id: ID!): TeamUpdate!
