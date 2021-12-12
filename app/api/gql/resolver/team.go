@@ -158,6 +158,78 @@ func newTeam(deps *Dependencies, team entity.Team) Team {
 	}
 }
 
+func (m Mutation) Team(ctx context.Context,
+	args struct{ ID graphql.ID },
+) (TeamUpdate, error) {
+	ts := m.deps.Data.FilterTeams(func(t entity.Team) bool {
+		return toGraphQLID(t.ID) == args.ID
+	})
+	if len(ts) == 0 {
+		return TeamUpdate{}, errors.Errorf("team %v is not found", args.ID)
+	}
+	return TeamUpdate{team: ts[0], deps: m.deps}, nil
+}
+
+type TeamUpdate struct {
+	team entity.Team
+	deps *Dependencies
+}
+
+func (tu TeamUpdate) AddMember(args struct{ ID graphql.ID }) (TeamUpdate, error) {
+	userID, err := fromGraphQLID(args.ID)
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	newTeam, err := tu.deps.Data.UpdateTeam(tu.team.ID, func(t entity.Team) entity.Team {
+		t.MemberIDs = t.MemberIDs.Add(userID)
+		return t
+	})
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	tu.team = newTeam
+	return tu, nil
+}
+
+func (m TeamUpdate) PromoteTaskToNeedAttention(
+	ctx context.Context,
+	args struct {
+		ID graphql.ID
+	},
+) (TeamUpdate, error) {
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	user, err := m.deps.Data.GetUser(userID)
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	taskID, err := fromGraphQLID(args.ID)
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	task, err := m.deps.Data.GetTask(args.ID)
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	if task.Status != entity.IN_PROGRESS {
+		return TeamUpdate{}, errors.Errorf("task %v is not in progress, can not promote to Need Attention", taskID)
+	}
+	team, err := m.deps.Data.UpdateTeam(user.ActiveTeamID, func(t entity.Team) entity.Team {
+		t.NeedAttentionTasks[userID] = taskID
+		return t
+	})
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	return TeamUpdate{deps: m.deps, team: team}, nil
+}
+
+func (tu TeamUpdate) Team() Team {
+	return newTeam(tu.deps, tu.team)
+}
+
 func newTeams(deps *Dependencies, teams []entity.Team) (ts []Team) {
 	for _, t := range teams {
 		ts = append(ts, newTeam(deps, t))

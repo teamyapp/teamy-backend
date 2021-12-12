@@ -17,30 +17,6 @@ type Query {
 	teams: [Team!]!
 }
 
-type Mutation {
-	# Tasks
-	createTask(task: TaskInput!): Task!
-	updateTask(taskId: ID!, task: TaskInput!): Task!
-	deleteTask(taskId: ID!): Task!
-	# startTask(taskId: ID!): Boolean!
-	# completeTask(taskId: ID!): Boolean!
-	# Comments
-	comment(taskId: ID!, content: String!): Comment!
-	# Teams
-	createTeam(input: CreateTeamInput!): Team!
-	promoteTaskToNeedAttention(taskId: ID!): Team!
-
-	# Users
-	updateActiveTeam(teamId: ID!): User!
-
-	# todo: implement a directive that hide this resolver from production
-	# or when the logged in user is not a system admin
-	"Admin && Debug Only resolvers"
-	createUser(input: UserInput!): User!
-	updateUser(input: UserInput!): User!
-}
-
-
 
 interface Entity {
 	id: ID!
@@ -196,3 +172,40 @@ type Mention {
 union Mentionable = User | Task
 
 scalar Time
+
+"""
+Mutation
+"""
+type Mutation {
+	# Tasks
+	createTask(task: TaskInput!): Task!
+	updateTask(taskId: ID!, task: TaskInput!): Task!
+	deleteTask(taskId: ID!): Task!
+	# startTask(taskId: ID!): Boolean!
+	# completeTask(taskId: ID!): Boolean!
+	# Comments
+	comment(taskId: ID!, content: String!): Comment!
+	# Teams
+	createTeam(input: CreateTeamInput!): Team!			@deprecated(reason: "use TeamUpdate")
+	promoteTaskToNeedAttention(taskId: ID!): Team!		@deprecated(reason: "use TeamUpdate")
+	"give a team id, get the update type of it."
+	team(id: ID!): TeamUpdate!
+
+	# Users
+	updateActiveTeam(teamId: ID!): User!
+
+	# todo: implement a directive that hide this resolver from production
+	# or when the logged in user is not a system admin
+	"Admin && Debug Only resolvers"
+	createUser(input: UserInput!): User!
+	updateUser(input: UserInput!): User!
+}
+
+type TeamUpdate {
+	"Given the user id, add the user to the team."
+	addMember(id: ID!): TeamUpdate!
+	"Given the task id, promote an In Progress task to Need Attention."
+	promoteTaskToNeedAttention(Id: ID!): TeamUpdate!
+	"get the value of this team"
+	team: Team!
+}

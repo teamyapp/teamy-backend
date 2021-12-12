@@ -37,6 +37,19 @@ func NewDataStore(p Persister) *DataStore {
 	if ds.data.IDs == nil {
 		ds.data.IDs = make(map[oneEntity.ID]Type)
 	}
+	for i, team := range ds.data.Teams {
+		// maintain the set
+		var members entity.OrderedSet_ID
+		for _, member := range team.MemberIDs {
+			members = members.Add(member)
+		}
+		ds.data.Teams[i].MemberIDs = members
+		var tasks entity.OrderedSet_ID
+		for _, taskID := range team.Tasks {
+			tasks = tasks.Add(taskID)
+		}
+		ds.data.Teams[i].Tasks = tasks
+	}
 	return &ds
 }
 
