@@ -196,13 +196,26 @@ type Mutation {
 
 	#########
 	# Users #
-	updateActiveTeam(teamId: ID!): User!
+	user(id: ID!): UserUpdate!
+	updateActiveTeam(teamId: ID!): User!	@deprecated(reason: "use UserUpdate")
+	updateUser(input: UserInput!): User!	@deprecated(reason: "use UserUpdate")
 
 	# todo: implement a directive that hide this resolver from production
 	# or when the logged in user is not a system admin
 	"Admin && Debug Only resolvers"
-	createUser(input: UserInput!): User!
-	updateUser(input: UserInput!): User!
+	createUser(input: UserInput!): UserUpdate!
+}
+
+input UserUpdateInput {
+	lastName: String
+	firstName: String
+	profileUrl: String
+}
+
+type UserUpdate {
+	updateActiveTeam(teamId: ID!): UserUpdate!
+	updateUser(input: UserUpdateInput!): UserUpdate!
+	user: User!
 }
 
 type TeamUpdate {
