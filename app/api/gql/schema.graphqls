@@ -177,21 +177,25 @@ scalar Time
 Mutation
 """
 type Mutation {
-	# Tasks
+	#########
+	# Tasks #
 	createTask(task: TaskInput!): Task!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
-	# startTask(taskId: ID!): Boolean!
-	# completeTask(taskId: ID!): Boolean!
-	# Comments
+	
+	############
+	# Comments #
 	comment(taskId: ID!, content: String!): Comment!
-	# Teams
+	
+	#########
+	# Teams #
 	createTeam(input: CreateTeamInput!): Team!			@deprecated(reason: "use TeamUpdate")
 	promoteTaskToNeedAttention(taskId: ID!): Team!		@deprecated(reason: "use TeamUpdate")
 	"give a team id, get the update type of it."
 	team(id: ID!): TeamUpdate!
 
-	# Users
+	#########
+	# Users #
 	updateActiveTeam(teamId: ID!): User!
 
 	# todo: implement a directive that hide this resolver from production
