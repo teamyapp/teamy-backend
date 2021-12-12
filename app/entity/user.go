@@ -18,6 +18,6 @@ func GhostUser() User {
 			ID: -1,
 		},
 		FirstName: "Ghost",
-		LastName: "this user has either been removed from the system or never existed",
+		LastName:  "this user has either been removed from the system or never existed",
 	}
 }

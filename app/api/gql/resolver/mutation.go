@@ -209,8 +209,6 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 // 	return true, nil
 // }
 
-
-
 func (m Mutation) UpdateTask(
 	ctx context.Context,
 	args struct {
