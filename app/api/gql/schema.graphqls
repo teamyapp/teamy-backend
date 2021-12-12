@@ -189,21 +189,22 @@ type Mutation {
 	
 	#########
 	# Teams #
-	createTeam(input: CreateTeamInput!): TeamUpdate!
-	promoteTaskToNeedAttention(taskId: ID!): Team!		@deprecated(reason: "use TeamUpdate")
-	"give a team id, get the update type of it."
 	team(id: ID!): TeamUpdate!
+	createTeam(input: CreateTeamInput!): TeamUpdate!
 
 	#########
 	# Users #
 	user(id: ID!): UserUpdate!
-	updateActiveTeam(teamId: ID!): User!	@deprecated(reason: "use UserUpdate")
-	updateUser(input: UserInput!): User!	@deprecated(reason: "use UserUpdate")
-
-	# todo: implement a directive that hide this resolver from production
-	# or when the logged in user is not a system admin
-	"Admin && Debug Only resolvers"
+	"""
+	todo: implement a directive that hide this resolver from production
+		  or when the logged in user is not a system admin
+	Admin && Debug Only resolvers
+	"""
 	createUser(input: UserInput!): UserUpdate!
+	
+	promoteTaskToNeedAttention(taskId: ID!): Team!	@deprecated(reason: "use TeamUpdate")
+	updateActiveTeam(teamId: ID!): User!			@deprecated(reason: "use UserUpdate")
+	updateUser(input: UserInput!): User!			@deprecated(reason: "use UserUpdate")
 }
 
 input UserUpdateInput {
