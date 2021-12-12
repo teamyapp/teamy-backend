@@ -3,6 +3,7 @@ module github.com/teamyapp/teamy-backend
 go 1.17
 
 require (
+	github.com/google/uuid v1.1.2
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0

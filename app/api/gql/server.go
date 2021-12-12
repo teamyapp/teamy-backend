@@ -1,16 +1,18 @@
 package gql
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/api/gql/operations"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
+	"github.com/teamyapp/teamy-backend/app/log"
 )
 
 //go:embed schema.graphqls
@@ -24,7 +26,6 @@ func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (htt
 		graphql.UseFieldResolvers(),
 		graphql.UseStringDescriptions())
 	if err != nil {
-		log.Println(err)
 		return http.Server{}, err
 	}
 
@@ -78,14 +79,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// handle server stored queries
-    // Execute custom queries if specified
+	// Execute custom queries if specified
 	if params.Query == "" {
 		params.Query = operations.Operations()
 	}
-
-	log.Println("begin GraphQL")
-	response := h.Schema.Exec(r.Context(), params.Query, params.OperationName, params.Variables)
-	log.Println("end GraphQL")
+	ctx := r.Context()
+	// generate request id
+	reqID, err := uuid.NewRandom()
+	if err != nil {
+		log.Info(err)
+	} else {
+		ctx = context.WithValue(ctx, "request-id", reqID.String())
+	}
+	log.Info(ctx, "begin GraphQL")
+	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
+	log.Info(ctx, "end GraphQL")
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
