@@ -31,7 +31,7 @@ func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (htt
 
 	handler := identity.WithMiddleware(identityAPIEndpoint, &Handler{Schema: schema})
 	mux := http.ServeMux{}
-	mux.HandleFunc("/graphql", enableCORS(includeGraphiQLIDE(handler.ServeHTTP)))
+	mux.HandleFunc("/graphql", requestID(enableCORS(includeGraphiQLIDE(handler.ServeHTTP))))
 	addr := fmt.Sprintf(":%d", port)
 	return http.Server{Addr: addr, Handler: &mux}, nil
 }
@@ -48,6 +48,26 @@ func enableCORS(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		}
 
 		handlerFunc(writer, request)
+	}
+}
+
+const requestIDKey = "request-id"
+
+func requestID(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	// TODO: move into [One] to encourage reuse
+	return func(writer http.ResponseWriter, request *http.Request) {
+		reqID, err := uuid.NewRandom()
+		if err != nil {
+			log.Info(err)
+			handlerFunc(writer, request)
+		} else {
+			reqIDStr := reqID.String()
+			ctx := request.Context()
+			ctx = context.WithValue(ctx, requestIDKey, reqIDStr)
+			log.Info(ctx, "new request")
+			newRequest := request.WithContext(ctx)
+			handlerFunc(writer, newRequest)
+		}
 	}
 }
 
@@ -85,14 +105,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	// generate request id
-	reqID, err := uuid.NewRandom()
-	if err != nil {
-		log.Info(err)
-	} else {
-		ctx = context.WithValue(ctx, "request-id", reqID.String())
-	}
+
 	log.Info(ctx, "begin GraphQL")
 	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
+	if response.Extensions == nil {
+		response.Extensions = make(map[string]interface{})
+	}
+	response.Extensions["request-id"] = ctx.Value(requestIDKey)
 	log.Info(ctx, "end GraphQL")
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
