@@ -27,3 +27,12 @@ func (set OrderedSet_ID) Add(newID entity.ID) OrderedSet_ID {
 	set = append(set, newID)
 	return set
 }
+
+func (set OrderedSet_ID) Has(id entity.ID) bool {
+	for _, ID := range set {
+		if ID == id {
+			return true
+		}
+	}
+	return false
+}

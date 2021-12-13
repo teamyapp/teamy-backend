@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
@@ -169,18 +168,22 @@ func (up UserUpdate) UpdateActiveTeam(ctx context.Context, args struct {
 	if err != nil {
 		return UserUpdate{}, err
 	}
-	id, err := fromGraphQLID(args.TeamID)
+	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		return UserUpdate{}, err
 	}
 
-	teams := up.deps.Data.FilterTeams(func(t entity.Team) bool { return t.ID == id })
+	teams := up.deps.Data.FilterTeams(func(t entity.Team) bool { return t.ID == teamID })
 	if len(teams) == 0 {
-		return UserUpdate{}, errors.Errorf("team %v does not exist", id)
+		return UserUpdate{}, errors.Errorf("team %v does not exist", teamID)
+	}
+
+	if !teams[0].MemberIDs.Has(up.user.ID) { // if not a team member
+		return UserUpdate{}, errors.Errorf("user %v is not a member of team %v", up.user.ID, teamID)
 	}
 
 	user, err = up.deps.Data.UpdateUser((user.ID), func(u entity.User) entity.User {
-		u.ActiveTeamID = id
+		u.ActiveTeamID = teamID
 		return u
 	})
 	if err != nil {
@@ -255,27 +258,11 @@ func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 		return User{}, err
 	}
 
-	user, err := m.deps.Data.GetUser(userID)
-	if err != nil {
-		return User{}, err
-	}
-	id, err := fromGraphQLID(args.TeamID)
+	userUpdate, err := m.User(ctx, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
 	if err != nil {
 		return User{}, err
 	}
 
-	teams := m.deps.Data.FilterTeams(func(t entity.Team) bool { return t.ID == id })
-	if len(teams) == 0 {
-		return User{}, errors.Errorf("team %v does not exist", id)
-	}
-
-	user, err = m.deps.Data.UpdateUser((user.ID), func(u entity.User) entity.User {
-		u.ActiveTeamID = id
-		return u
-	})
-	if err != nil {
-		log.Printf("%+v\n", err)
-		return User{}, err
-	}
-	return newUser(m.deps, user), err
+	up, err := userUpdate.UpdateActiveTeam(ctx, args)
+	return newUser(m.deps, up.user), err
 }
