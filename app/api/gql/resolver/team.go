@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
@@ -45,6 +46,9 @@ func (team Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 			}
 		}
 		return false
+	})
+	sort.Slice(tasks, func(i, j int) bool {
+		return tasks[i].ID < tasks[j].ID
 	})
 	return newTasks(team.deps, tasks), nil
 }
