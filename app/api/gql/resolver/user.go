@@ -29,7 +29,6 @@ func (u User) FirstName() string {
 }
 
 func (u User) LastName() string {
-	// TODO: replace with real last name
 	return u.user.LastName
 }
 
