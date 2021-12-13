@@ -24,12 +24,10 @@ type UserInput struct {
 }
 
 func (u User) FirstName() string {
-	// TODO: replace with real first name
 	return u.user.FirstName
 }
 
 func (u User) LastName() string {
-	// TODO: replace with real last name
 	return u.user.LastName
 }
 
