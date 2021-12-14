@@ -43,6 +43,11 @@ func (t Task) Owner() (*User, error) {
 		return nil, nil
 	}
 
+	if *t.task.OwnerUserId == -1 {
+		u := newUser(t.deps, entity.GhostUser())
+		return &u, nil
+	}
+
 	user, err := t.deps.Data.GetUser(*t.task.OwnerUserId)
 	if err != nil {
 		log.Println(err)
@@ -145,11 +150,7 @@ func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
 	matchCreator := true
 	if input.CreatorID != nil {
 		creatorID := *input.CreatorID
-		ownerID := oneEntity.ID(-1)
-		if t.OwnerUserId != nil {
-			ownerID = *t.OwnerUserId
-		}
-		matchCreator = t.CreatorID == creatorID || toGraphQLID(ownerID) == creatorID
+		matchCreator = t.CreatorID == creatorID
 	}
 	// filter by Owner
 	matchOwner := true
