@@ -150,7 +150,6 @@ func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
 			ownerID = *t.OwnerUserId
 		}
 		matchCreator = t.CreatorID == creatorID || toGraphQLID(ownerID) == creatorID
-		log.Println(matchCreator)
 	}
 	// filter by Owner
 	matchOwner := true
@@ -167,7 +166,6 @@ func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
 	if input.Status != nil {
 		status := *(input.Status)
 		matchStatus = t.Status == status
-		log.Println("matchStatus", matchStatus)
 	}
 	// full text search
 	// todo: need to implement a better full text search
@@ -178,8 +176,6 @@ func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
 		matchGoal := strings.Contains(t.Goal, text)
 		matchContext := strings.Contains(t.Context, text)
 		matchText = matchGoal || matchContext
-		log.Println(matchText)
 	}
-	log.Println("=", matchCreator, matchStatus, matchText)
 	return matchCreator && matchStatus && matchText && matchOwner
 }

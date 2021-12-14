@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"log"
+	"sort"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
@@ -26,6 +27,9 @@ func (q Query) Task(args struct {
 func (q Query) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	tasks := q.deps.Data.FilterTasks(func(t entity.Task) bool {
 		return taskFilterFunc(t, args.Input)
+	})
+	sort.Slice(tasks, func(i, j int) bool {
+		return tasks[i].ID < tasks[j].ID
 	})
 	return newTasks(q.deps, tasks), nil
 }
