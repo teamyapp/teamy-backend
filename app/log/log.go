@@ -3,6 +3,9 @@ package log
 import (
 	"context"
 	"log"
+	"strings"
+
+	"github.com/teamyapp/one/identity"
 )
 
 func Info(args ...interface{}) {
@@ -11,12 +14,19 @@ func Info(args ...interface{}) {
 	}
 	first := args[0]
 	if ctx, ok := first.(context.Context); ok {
+		logs := args[1:]
 		reqID, ok := ctx.Value("request-id").(string)
 		if ok {
-			log.Println(append([]interface{}{reqID}, args[1:]...)...)
-		} else {
-			log.Println(args[1:]...)
+			logs = append([]interface{}{reqID}, logs...)
 		}
+		userID, err := identity.FromContext(ctx)
+		if err != nil && !strings.Contains(err.Error(), "userID not found") {
+			log.Println(reqID, err)
+		}
+		if err == nil {
+			logs = append(logs, "user", userID)
+		}
+		log.Println(logs...)
 	} else {
 		log.Println(args...)
 	}
