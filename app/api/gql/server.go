@@ -31,7 +31,7 @@ func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (htt
 
 	handler := identity.WithMiddleware(identityAPIEndpoint, &Handler{Schema: schema})
 	mux := http.ServeMux{}
-	mux.HandleFunc("/graphql", requestID(enableCORS(includeGraphiQLIDE(handler.ServeHTTP))))
+	mux.HandleFunc("/graphql", requestID(enableCORS(handler.ServeHTTP)))
 	addr := fmt.Sprintf(":%d", port)
 	return http.Server{Addr: addr, Handler: &mux}, nil
 }
@@ -71,23 +71,16 @@ func requestID(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func includeGraphiQLIDE(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method == http.MethodGet {
-			writer.WriteHeader(http.StatusOK)
-			_, _ = writer.Write(graphIDEHTML)
-			return
-		}
-
-		handlerFunc(writer, request)
-	}
-}
-
 type Handler struct {
 	Schema *graphql.Schema
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(graphIDEHTML)
+		return
+	}
 	var params struct {
 		Query         string                 `json:"query"`
 		OperationName string                 `json:"operationName"`
@@ -103,9 +96,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if params.Query == "" {
 		params.Query = operations.Operations()
 	}
-	ctx := r.Context()
-	// generate request id
 
+	ctx := r.Context()
 	log.Info(ctx, "begin GraphQL")
 	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
 	if response.Extensions == nil {
