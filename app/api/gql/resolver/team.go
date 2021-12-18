@@ -92,6 +92,21 @@ func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }
 }
 
 //////////////
+// Query //
+//////////////
+func (q Query) Team(ctx context.Context, args struct {
+	ID graphql.ID
+}) (Team, error) {
+	ts := q.deps.Data.FilterTeams(func(t entity.Team) bool {
+		return toGraphQLID(t.ID) == args.ID
+	})
+	if len(ts) == 0 {
+		return Team{}, errors.Errorf("team %v is not found", args.ID)
+	}
+	return Team{Team: ts[0], deps: q.deps}, nil
+}
+
+//////////////
 // Mutation //
 //////////////
 func (m Mutation) CreateTeam(ctx context.Context,
@@ -162,7 +177,7 @@ func newTeam(deps *Dependencies, team entity.Team) Team {
 	}
 }
 
-func (m Mutation) Team(ctx context.Context,
+func (m Mutation) TeamUpdate(ctx context.Context,
 	args struct{ ID graphql.ID },
 ) (TeamUpdate, error) {
 	ts := m.deps.Data.FilterTeams(func(t entity.Team) bool {

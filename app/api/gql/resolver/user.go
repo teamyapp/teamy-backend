@@ -123,7 +123,7 @@ func (m Mutation) CreateUser(
 	return UserUpdate{deps: m.deps, user: user}, nil
 }
 
-func (m Mutation) User(ctx context.Context, args struct{ ID graphql.ID }) (UserUpdate, error) {
+func (m Mutation) UserUpdate(ctx context.Context, args struct{ ID graphql.ID }) (UserUpdate, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return UserUpdate{}, err
@@ -256,7 +256,7 @@ func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 		return User{}, err
 	}
 
-	userUpdate, err := m.User(ctx, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
+	userUpdate, err := m.UserUpdate(ctx, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
 	if err != nil {
 		return User{}, err
 	}

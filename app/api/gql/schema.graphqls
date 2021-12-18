@@ -9,7 +9,10 @@ type Query {
 	task(id: ID!): Task!
 	"return all tasks for debug purpose"
 	tasks(input: TaskFilter): [Task!]!
-	# Teams
+
+#	# Teams
+	team(id: ID!): Team!
+
 	"""
 	get all teams
 	Admin && Debug Only resolvers
@@ -22,8 +25,6 @@ interface Entity {
 	id: ID!
 	createdAt: Time!
 }
-
-
 
 ########
 # Team #
@@ -182,26 +183,26 @@ type Mutation {
 	createTask(task: TaskInput!): Task!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
-	
+
 	############
 	# Comments #
 	comment(taskId: ID!, content: String!): Comment!
-	
+
 	#########
 	# Teams #
-	team(id: ID!): TeamUpdate!
+	teamUpdate(id: ID!): TeamUpdate!
 	createTeam(input: CreateTeamInput!): TeamUpdate!
 
 	#########
 	# Users #
-	user(id: ID!): UserUpdate!
+	userUpdate(id: ID!): UserUpdate!
 	"""
 	todo: implement a directive that hide this resolver from production
 		  or when the logged in user is not a system admin
 	Admin && Debug Only resolvers
 	"""
 	createUser(input: UserInput!): UserUpdate!
-	
+
 	promoteTaskToNeedAttention(taskId: ID!): Team!	@deprecated(reason: "use TeamUpdate")
 	updateActiveTeam(teamId: ID!): User!			@deprecated(reason: "use UserUpdate")
 	updateUser(input: UserInput!): User!			@deprecated(reason: "use UserUpdate")
