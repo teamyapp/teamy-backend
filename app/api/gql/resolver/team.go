@@ -38,11 +38,11 @@ func (t Team) Members() ([]User, error) {
 	return toGraphQLUsers(t.deps, members), err
 }
 
-func (team Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
-	tasks := team.deps.Data.FilterTasks(func(t entity.Task) bool {
-		for _, taskID := range team.Team.Tasks {
-			if t.ID == taskID {
-				return taskFilterFunc(t, args.Input)
+func (t Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
+	tasks := t.deps.Data.FilterTasks(func(task entity.Task) bool {
+		for _, taskID := range t.Team.Tasks {
+			if task.ID == taskID {
+				return taskFilterFunc(task, args.Input)
 			}
 		}
 		return false
@@ -50,7 +50,7 @@ func (team Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	sort.Slice(tasks, func(i, j int) bool {
 		return tasks[i].ID < tasks[j].ID
 	})
-	return newTasks(team.deps, tasks), nil
+	return newTasks(t.deps, tasks), nil
 }
 
 func (t Team) Creator() (User, error) {
@@ -162,8 +162,7 @@ func newTeam(deps *Dependencies, team entity.Team) Team {
 	}
 }
 
-func (m Mutation) Team(ctx context.Context,
-	args struct{ ID graphql.ID },
+func (m Mutation) Team(ctx context.Context, args struct{ ID graphql.ID },
 ) (TeamUpdate, error) {
 	ts := m.deps.Data.FilterTeams(func(t entity.Team) bool {
 		return toGraphQLID(t.ID) == args.ID
@@ -195,7 +194,7 @@ func (tu TeamUpdate) AddMember(args struct{ ID graphql.ID }) (TeamUpdate, error)
 	return tu, nil
 }
 
-func (m TeamUpdate) PromoteTaskToNeedAttention(
+func (tu TeamUpdate) PromoteTaskToNeedAttention(
 	ctx context.Context,
 	args struct {
 		ID graphql.ID
@@ -205,7 +204,7 @@ func (m TeamUpdate) PromoteTaskToNeedAttention(
 	if err != nil {
 		return TeamUpdate{}, err
 	}
-	user, err := m.deps.Data.GetUser(userID)
+	user, err := tu.deps.Data.GetUser(userID)
 	if err != nil {
 		return TeamUpdate{}, err
 	}
@@ -213,21 +212,21 @@ func (m TeamUpdate) PromoteTaskToNeedAttention(
 	if err != nil {
 		return TeamUpdate{}, err
 	}
-	task, err := m.deps.Data.GetTask(args.ID)
+	task, err := tu.deps.Data.GetTask(args.ID)
 	if err != nil {
 		return TeamUpdate{}, err
 	}
 	if task.Status != entity.IN_PROGRESS {
 		return TeamUpdate{}, errors.Errorf("task %v is not in progress, can not promote to Need Attention", taskID)
 	}
-	team, err := m.deps.Data.UpdateTeam(user.ActiveTeamID, func(t entity.Team) entity.Team {
+	team, err := tu.deps.Data.UpdateTeam(user.ActiveTeamID, func(t entity.Team) entity.Team {
 		t.NeedAttentionTasks[userID] = taskID
 		return t
 	})
 	if err != nil {
 		return TeamUpdate{}, err
 	}
-	return TeamUpdate{deps: m.deps, team: team}, nil
+	return TeamUpdate{deps: tu.deps, team: team}, nil
 }
 
 func (tu TeamUpdate) Team() Team {

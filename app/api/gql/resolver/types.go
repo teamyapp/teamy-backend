@@ -101,13 +101,16 @@ func fromGraphQLID(graphqlID graphql.ID) (oneEntity.ID, error) {
 	return (oneEntity.ID)(id), err
 }
 
-func fromGraphQLIDs(graphqlIDs *[]graphql.ID) ([]oneEntity.ID, error) {
+func fromGraphQLIDsPtr(graphqlIDs *[]graphql.ID) ([]oneEntity.ID, error) {
 	if graphqlIDs == nil || len(*graphqlIDs) == 0 {
 		return nil, nil
 	}
+	return fromGraphQLIDs(*graphqlIDs)
+}
 
+func fromGraphQLIDs(graphqlIDs []graphql.ID) ([]oneEntity.ID, error) {
 	ids := make([]oneEntity.ID, 0)
-	for _, graphqlID := range *graphqlIDs {
+	for _, graphqlID := range graphqlIDs {
 		id, err := fromGraphQLID(graphqlID)
 		if err != nil {
 			return ids, err
@@ -148,4 +151,16 @@ func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error) {
 		OwnerUserId: ownerId,
 	}
 	return task, nil
+}
+
+func toIDsMap(gqlIDs []graphql.ID) (map[oneEntity.ID]bool, error) {
+	ids, err := fromGraphQLIDs(gqlIDs)
+	if err != nil {
+		return nil, err
+	}
+	idsMap := make(map[oneEntity.ID]bool)
+	for _, id := range ids {
+		idsMap[id] = true
+	}
+	return idsMap, nil
 }

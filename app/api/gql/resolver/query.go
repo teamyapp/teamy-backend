@@ -55,8 +55,25 @@ func (q Query) Me(ctx context.Context) (User, error) {
 }
 
 // debug only
-func (q Query) Teams(ctx context.Context) ([]Team, error) {
-	teams := q.deps.Data.FilterTeams(func(t entity.Team) bool { return true })
+func (q Query) Teams(ctx context.Context, args struct {
+	IDs *[]graphql.ID
+}) ([]Team, error) {
+	var teams []entity.Team
+
+	if args.IDs == nil {
+		teams = q.deps.Data.FilterTeams(func(team entity.Team) bool { return true })
+	} else {
+		idsMap, err := toIDsMap(*args.IDs)
+		if err != nil {
+			return nil, err
+		}
+
+		teams = q.deps.Data.FilterTeams(func(team entity.Team) bool {
+			_, ok := idsMap[team.ID]
+			return ok
+		})
+	}
+
 	return newTeams(q.deps, teams), nil
 }
 
