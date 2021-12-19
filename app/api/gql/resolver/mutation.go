@@ -7,7 +7,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -280,15 +279,6 @@ func (m Mutation) Comment(
 		deps:    m.deps,
 		Comment: c,
 	}, nil
-}
-
-func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
-	for _, e := range arr {
-		if e == element {
-			return true
-		}
-	}
-	return false
 }
 
 func NewMutation(deps *Dependencies, query *Query) Mutation {

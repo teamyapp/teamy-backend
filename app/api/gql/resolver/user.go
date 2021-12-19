@@ -46,18 +46,33 @@ func (u User) ActiveTeam() (*Team, error) {
 	return &gqlTeam, nil
 }
 
-func (u User) Teams() ([]Team, error) {
+func (u User) Teams(ctx context.Context, args struct {
+	IDs *[]graphql.ID
+}) ([]Team, error) {
+	var idsMap map[oneEntity.ID]bool
+	var err error
+
+	if args.IDs != nil {
+		idsMap, err = toIDsMap(*args.IDs)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		idsMap = make(map[oneEntity.ID]bool)
+	}
+
 	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
-		isCreator := t.CreatorID == u.user.ID
-		if isCreator {
+		if t.CreatorID != u.user.ID &&
+			!contains(t.MemberIDs, u.user.ID) {
+			return false
+		}
+
+		if args.IDs == nil {
 			return true
 		}
-		for _, id := range t.MemberIDs {
-			if id == u.user.ID { // is member
-				return true
-			}
-		}
-		return false
+
+		_, ok := idsMap[t.ID]
+		return ok
 	})
 	return newTeams(u.deps, teams), nil
 }
@@ -123,7 +138,7 @@ func (m Mutation) CreateUser(
 	return UserUpdate{deps: m.deps, user: user}, nil
 }
 
-func (m Mutation) UserUpdate(ctx context.Context, args struct{ ID graphql.ID }) (UserUpdate, error) {
+func (m Mutation) User(ctx context.Context, args struct{ ID graphql.ID }) (UserUpdate, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return UserUpdate{}, err
@@ -256,7 +271,7 @@ func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 		return User{}, err
 	}
 
-	userUpdate, err := m.UserUpdate(ctx, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
+	userUpdate, err := m.User(ctx, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
 	if err != nil {
 		return User{}, err
 	}

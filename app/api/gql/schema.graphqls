@@ -9,15 +9,7 @@ type Query {
 	task(id: ID!): Task!
 	"return all tasks for debug purpose"
 	tasks(input: TaskFilter): [Task!]!
-
-#	# Teams
-	team(id: ID!): Team!
-
-	"""
-	get all teams
-	Admin && Debug Only resolvers
-	"""
-	teams: [Team!]!
+	teams(ids: [ID!]): [Team!]!
 }
 
 
@@ -74,7 +66,7 @@ type User implements Entity {
 	profileUrl: String!
 	createdAt: Time!
 	activeTeam: Team
-	teams: [Team!]!
+	teams(ids: [ID!]): [Team!]!
 	"""
 	If input is null, return all related tasks.
 	Ignore TaskFilter.creatorID
@@ -190,12 +182,12 @@ type Mutation {
 
 	#########
 	# Teams #
-	teamUpdate(id: ID!): TeamUpdate!
+	team(id: ID!): TeamUpdate!
 	createTeam(input: CreateTeamInput!): TeamUpdate!
 
 	#########
 	# Users #
-	userUpdate(id: ID!): UserUpdate!
+	user(id: ID!): UserUpdate!
 	"""
 	todo: implement a directive that hide this resolver from production
 		  or when the logged in user is not a system admin
