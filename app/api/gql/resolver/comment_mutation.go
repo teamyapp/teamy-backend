@@ -16,7 +16,6 @@ func (m Mutation) CreateComment(
 		Content string
 	},
 ) (Comment, error) {
-	// partial working
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return Comment{}, err
