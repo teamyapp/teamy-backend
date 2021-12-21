@@ -107,7 +107,7 @@ func (m Mutation) UpdateTask(
 	if err != nil {
 		return Task{}, err
 	}
-	{	// access control
+	{ // access control
 		user, err := m.deps.Data.GetUser(userID)
 		if err != nil {
 			return Task{}, err
@@ -146,7 +146,7 @@ func (m Mutation) UpdateTask(
 			}
 		}
 		if !allowWrite {
-			return Task{}, errors.Errorf("user %v can not modify task %v")
+			return Task{}, errors.Errorf("user %v can not modify task %v", userID, task.ID)
 		}
 	}
 	if args.Task.Context != nil {
