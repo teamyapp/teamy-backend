@@ -107,46 +107,47 @@ func (m Mutation) UpdateTask(
 	if err != nil {
 		return Task{}, err
 	}
-
-	user, err := m.deps.Data.GetUser(userID)
-	if err != nil {
-		return Task{}, err
-	}
-	userResolver := User{
-		deps: m.deps,
-		user: user,
-	}
-	tasks, err := userResolver.Tasks(struct{ Input *TaskFilter }{})
-	if err != nil {
-		return Task{}, err
-	}
-
-	userCanReachTask := false
-	for _, t := range tasks {
-		if t.task.ID == task.ID {
-			userCanReachTask = true
-			break
+	{	// access control
+		user, err := m.deps.Data.GetUser(userID)
+		if err != nil {
+			return Task{}, err
 		}
-	}
-	allowWrite := false
-	{ // the user must be in a team that owns this task
-		if userCanReachTask {
-			teams, err := userResolver.Teams(ctx, struct{ IDs *[]graphql.ID }{})
-			if err != nil {
-				return Task{}, err
+		userResolver := User{
+			deps: m.deps,
+			user: user,
+		}
+		tasks, err := userResolver.Tasks(struct{ Input *TaskFilter }{})
+		if err != nil {
+			return Task{}, err
+		}
+
+		userCanReachTask := false
+		for _, t := range tasks {
+			if t.task.ID == task.ID {
+				userCanReachTask = true
+				break
 			}
-			for _, team := range teams {
-				if task.OwnedByTeam == team.Team.ID {
-					allowWrite = true
-					break
+		}
+		allowWrite := false
+		{ // the user must be in a team that owns this task
+			if userCanReachTask {
+				teams, err := userResolver.Teams(ctx, struct{ IDs *[]graphql.ID }{})
+				if err != nil {
+					return Task{}, err
 				}
+				for _, team := range teams {
+					if task.OwnedByTeam == team.Team.ID {
+						allowWrite = true
+						break
+					}
+				}
+			} else if task.CreatorID == toGraphQLID(userID) {
+				allowWrite = true
 			}
-		} else if task.CreatorID == toGraphQLID(userID) {
-			allowWrite = true
 		}
-	}
-	if !allowWrite {
-		return Task{}, errors.Errorf("user %v can not modify task %v")
+		if !allowWrite {
+			return Task{}, errors.Errorf("user %v can not modify task %v")
+		}
 	}
 	if args.Task.Context != nil {
 		task.Context = *(args.Task.Context)
