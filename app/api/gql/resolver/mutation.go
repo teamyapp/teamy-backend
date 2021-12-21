@@ -255,32 +255,6 @@ func (m Mutation) UpdateTask(
 	return newTask(m.deps, task), nil
 }
 
-func (m Mutation) Comment(
-	ctx context.Context,
-	args struct {
-		TaskID  graphql.ID
-		Content string
-	},
-) (Comment, error) {
-	// partial working
-	userID, err := identity.FromContext(ctx)
-	if err != nil {
-		return Comment{}, err
-	}
-	c, err := m.deps.Data.CreateComment(entity.Comment{
-		Content:     args.Content,
-		CommenterID: toGraphQLID(userID),
-		TaskID:      args.TaskID,
-	})
-	if err != nil {
-		return Comment{}, err
-	}
-	return Comment{
-		deps:    m.deps,
-		Comment: c,
-	}, nil
-}
-
 func NewMutation(deps *Dependencies, query *Query) Mutation {
 	return Mutation{
 		deps:  deps,
