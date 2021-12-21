@@ -1,6 +1,9 @@
 package datastore
 
 import (
+	"fmt"
+
+	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -17,4 +20,15 @@ func (d DataStore) FilterComments(filter func(entity.Comment) bool) (cs []entity
 		}
 	}
 	return cs
+}
+
+func (d DataStore) UpdateComment(id oneEntity.ID, apply func(entity.Comment) entity.Comment) (entity.Comment, error) {
+	for i, comment := range d.data.Comments {
+		if comment.ID == id {
+			newC := apply(comment)
+			d.data.Comments[i] = newC
+			return newC, d.persister.Write(d.data)
+		}
+	}
+	return entity.Comment{}, fmt.Errorf("comment %v is not found", id)
 }

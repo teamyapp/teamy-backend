@@ -178,7 +178,8 @@ type Mutation {
 
 	############
 	# Comments #
-	comment(taskId: ID!, content: String!): Comment!
+	comment(id: ID!): 						      CommentUpdate!
+	createComment(taskId: ID!, content: String!): Comment!
 
 	#########
 	# Teams #
@@ -219,4 +220,9 @@ type TeamUpdate {
 	promoteTaskToNeedAttention(Id: ID!): TeamUpdate!
 	"get the value of this team"
 	team: Team!
+}
+
+type CommentUpdate {
+	updateContent(content: String!): CommentUpdate!
+	comment: Comment!
 }
