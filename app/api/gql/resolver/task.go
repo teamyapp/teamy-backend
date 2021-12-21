@@ -84,17 +84,17 @@ func (t Task) WorkScope() Option {
 	panic("not implemented")
 }
 
-func (t Task) Effort() *int32 {
-	return toGraphQLInt(t.task.Effort)
-}
+// func (t Task) Effort() *int32 {
+// 	return toGraphQLInt(t.task.Effort)
+// }
 
 func (t Task) DependsOn() []Task {
 	panic("not implemented")
 }
 
-func (t Task) NumOfUnknowns() *int32 {
-	return toGraphQLInt(t.task.NumOfUnknowns)
-}
+// func (t Task) NumOfUnknowns() *int32 {
+// 	return toGraphQLInt(t.task.NumOfUnknowns)
+// }
 
 func (t Task) AvailableActions() []entity.TaskAction {
 	return availableActions[t.task.Status]

@@ -131,9 +131,10 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 		task.DueAt,
 		task.Context,
 		task.OwnerUserId,
-		task.WorkScopeIndex,
-		task.Effort,
-		task.NumOfUnknowns).Scan(&id)
+	// task.WorkScopeIndex,
+	// task.Effort,
+	// task.NumOfUnknowns
+	).Scan(&id)
 	if err != nil {
 		log.Println(err)
 		return 0, err
@@ -166,9 +167,9 @@ func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
 			&ts.DueAt,
 			&ts.Context,
 			&ts.OwnerUserId,
-			&ts.WorkScopeIndex,
-			&ts.Effort,
-			&ts.NumOfUnknowns,
+			// &ts.WorkScopeIndex,
+			// &ts.Effort,
+			// &ts.NumOfUnknowns,
 			&ts.CreatedAt,
 			&ts.UpdatedAt)
 	if err != nil {
@@ -211,9 +212,9 @@ WHERE team_id = $1
 			&ts.DueAt,
 			&ts.Context,
 			&ts.OwnerUserId,
-			&ts.WorkScopeIndex,
-			&ts.Effort,
-			&ts.NumOfUnknowns,
+			// &ts.WorkScopeIndex,
+			// &ts.Effort,
+			// &ts.NumOfUnknowns,
 			&ts.CreatedAt,
 			&ts.UpdatedAt)
 		if err != nil {
@@ -266,9 +267,9 @@ WHERE team_task.team_id = $1
 			&ts.DueAt,
 			&ts.Context,
 			&ts.OwnerUserId,
-			&ts.WorkScopeIndex,
-			&ts.Effort,
-			&ts.NumOfUnknowns,
+			// &ts.WorkScopeIndex,
+			// &ts.Effort,
+			// &ts.NumOfUnknowns,
 			&ts.CreatedAt,
 			&ts.UpdatedAt)
 		if err != nil {
@@ -312,9 +313,9 @@ WHERE team_member.user_id = $1
 		&task.DueAt,
 		&task.Context,
 		&task.OwnerUserId,
-		&task.WorkScopeIndex,
-		&task.Effort,
-		&task.NumOfUnknowns,
+		// &task.WorkScopeIndex,
+		// &task.Effort,
+		// &task.NumOfUnknowns,
 		&task.CreatedAt,
 		&task.UpdatedAt)
 	if err == nil {

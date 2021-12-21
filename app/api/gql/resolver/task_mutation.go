@@ -136,7 +136,7 @@ func (m Mutation) UpdateTask(
 				return Task{}, err
 			}
 			for _, team := range teams {
-				if task.OwnedByTeamOrUser == team.Team.ID {
+				if task.OwnedByTeam == team.Team.ID {
 					allowWrite = true
 					break
 				}

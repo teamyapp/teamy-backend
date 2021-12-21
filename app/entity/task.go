@@ -9,12 +9,12 @@ import (
 
 type Task struct {
 	oneEntity.Entity
-	Goal              string
-	DueAt             *time.Time
-	Context           string
-	CreatorID         graphql.ID
-	OwnerUserId       *oneEntity.ID
-	OwnedByTeamOrUser oneEntity.ID
+	Goal        string
+	DueAt       *time.Time
+	Context     string
+	CreatorID   graphql.ID
+	OwnerUserId *oneEntity.ID
+	OwnedByTeam oneEntity.ID
 	// WorkScopeIndex   *int
 	// Effort           *int
 	// DependsOnTaskIDs []oneEntity.ID
