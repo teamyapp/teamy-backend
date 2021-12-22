@@ -90,6 +90,7 @@ type Task {
 	context: String!
 	creator: User!
 	owner: User
+	ownedByTeam: Team
 	status: TaskStatus!
 	comments: [Comment!]!
 	# Relationships with other entities
