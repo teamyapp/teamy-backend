@@ -48,7 +48,8 @@ func (m Mutation) CreateTask(
 
 	task.Status = entity.UPCOMING
 	task.OwnerUserId = &userID
-	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), activeTeams[0].ID, task)
+	task.OwnedByTeam = activeTeams[0].ID
+	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), task)
 	if err != nil {
 		return Task{}, err
 	}
@@ -117,7 +118,7 @@ func (m Mutation) UpdateTask(
 			user: user,
 		}
 		allowWrite := false
-		{	// the user must be in a team that owns this task
+		{ // the user must be in a team that owns this task
 			teams, err := userResolver.Teams(ctx, struct{ IDs *[]graphql.ID }{})
 			if err != nil {
 				return Task{}, err

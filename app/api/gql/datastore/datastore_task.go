@@ -5,11 +5,10 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/errors"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
-func (d DataStore) CreateTask(creatorID graphql.ID, teamID oneEntity.ID, task entity.Task) (entity.Task, error) {
+func (d DataStore) CreateTask(creatorID graphql.ID, task entity.Task) (entity.Task, error) {
 	task.ID = d.newID(Task)
 	task.CreatorID = creatorID
 	taskID := graphql.ID(fmt.Sprint(task.ID))
