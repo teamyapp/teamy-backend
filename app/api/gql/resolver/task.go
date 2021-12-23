@@ -57,7 +57,16 @@ func (t Task) Owner() (*User, error) {
 	gqlUser := newUser(t.deps, user)
 	return &gqlUser, nil
 }
-
+func (t Task) OwnedByTeam() (*Team, error) {
+	teams := t.deps.Data.FilterTeams(func(team entity.Team) bool {
+		return t.task.OwnedByTeam == team.ID
+	})
+	if len(teams) == 0 {
+		return nil, nil
+	}
+	team := newTeam(t.deps, teams[0])
+	return &team, nil
+}
 func (t Task) Creator() (User, error) {
 	rs := t.deps.Data.FilterCreationRelation(func(cr datastore.CreationRelation) bool {
 		return t.ID() == cr.TaskID
@@ -84,17 +93,17 @@ func (t Task) WorkScope() Option {
 	panic("not implemented")
 }
 
-func (t Task) Effort() *int32 {
-	return toGraphQLInt(t.task.Effort)
-}
+// func (t Task) Effort() *int32 {
+// 	return toGraphQLInt(t.task.Effort)
+// }
 
 func (t Task) DependsOn() []Task {
 	panic("not implemented")
 }
 
-func (t Task) NumOfUnknowns() *int32 {
-	return toGraphQLInt(t.task.NumOfUnknowns)
-}
+// func (t Task) NumOfUnknowns() *int32 {
+// 	return toGraphQLInt(t.task.NumOfUnknowns)
+// }
 
 func (t Task) AvailableActions() []entity.TaskAction {
 	return availableActions[t.task.Status]
