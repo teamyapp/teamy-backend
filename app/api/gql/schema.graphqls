@@ -231,5 +231,6 @@ type TeamUpdate {
 
 type CommentUpdate {
 	updateContent(content: String!): CommentUpdate!
+	delete: Comment!
 	comment: Comment!
 }
