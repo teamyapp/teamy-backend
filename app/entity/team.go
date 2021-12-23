@@ -7,7 +7,7 @@ import (
 type Team struct {
 	entity.Entity
 	Name      string
-	IconURL   *string
+	IconURL   string
 	CreatorID entity.ID
 	MemberIDs OrderedSet_ID
 	Tasks     OrderedSet_ID
