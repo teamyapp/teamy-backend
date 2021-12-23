@@ -11,7 +11,7 @@ import (
 type Data struct {
 	Tasks             map[graphql.ID]entity.Task
 	Users             map[oneEntity.ID]entity.User
-	Comments          []entity.Comment
+	Comments          map[oneEntity.ID]entity.Comment
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation
 	Teams             []entity.Team

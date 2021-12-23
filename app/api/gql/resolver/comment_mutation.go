@@ -81,6 +81,17 @@ func (cu CommentUpdate) UpdateContent(
 	return cu, nil
 }
 
+func (cu CommentUpdate) Delete() (Comment, error) {
+	comment, err := cu.deps.Data.DeleteComment(cu.comment.ID)
+	if err != nil {
+		return Comment{}, err
+	}
+	return Comment{
+		deps:    cu.deps,
+		Comment: comment,
+	}, nil
+}
+
 func (cu CommentUpdate) Comment() Comment {
 	return Comment{
 		deps:    cu.deps,
