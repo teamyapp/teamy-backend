@@ -24,7 +24,7 @@ interface Entity {
 type Team {
 	id: ID!
 	name: String!
-	iconUrl: String
+	iconUrl: String!
 	createdAt: Time!
 	creator: User!
 	"creator is the owner. In the future there will be features to transfer ownership to other users, just like GitHub repo."
@@ -214,9 +214,15 @@ type UserUpdate {
 	user: User!
 }
 
+input TeamUpdateInput {
+	name:       String
+	iconUrl: String
+}
+
 type TeamUpdate {
 	"Given the user id, add the user to the team."
 	addMember(id: ID!): TeamUpdate!
+	update(input: TeamUpdateInput!): TeamUpdate!
 	"Given the task id, promote an In Progress task to Need Attention."
 	promoteTaskToNeedAttention(Id: ID!): TeamUpdate!
 	"get the value of this team"
