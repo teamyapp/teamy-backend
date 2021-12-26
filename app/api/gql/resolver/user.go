@@ -239,30 +239,6 @@ func (up UserUpdate) UpdateUser(
 //
 // Deprecated
 //
-
-func (m Mutation) UpdateUser(args struct{ Input UserInput }) (User, error) {
-	if args.Input.ID == nil {
-		return User{}, errors.New("must provide an ID")
-	}
-	id, err := fromGraphQLID(*args.Input.ID)
-	if err != nil {
-		return User{}, err
-	}
-	user, err := m.deps.Data.UpdateUser(id, func(u entity.User) entity.User {
-		if args.Input.LastName != nil {
-			u.LastName = *args.Input.LastName
-		}
-		if args.Input.FirstName != nil {
-			u.FirstName = *args.Input.FirstName
-		}
-		return u
-	})
-	if err != nil {
-		return User{}, err
-	}
-	return newUser(m.deps, user), nil
-}
-
 func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
 	TeamID graphql.ID
 }) (User, error) {
