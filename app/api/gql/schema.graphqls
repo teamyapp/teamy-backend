@@ -221,6 +221,7 @@ input TeamUpdateInput {
 type TeamUpdate {
 	"Given the user id, add the user to the team."
 	addMember(id: ID!): TeamUpdate!
+	removeMember(id: ID!): TeamUpdate!
 	update(input: TeamUpdateInput!): TeamUpdate!
 	"Given the task id, promote an In Progress task to Need Attention."
 	promoteTaskToNeedAttention(Id: ID!): TeamUpdate!

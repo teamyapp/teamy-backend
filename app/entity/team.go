@@ -36,3 +36,12 @@ func (set OrderedSet_ID) Has(id entity.ID) bool {
 	}
 	return false
 }
+
+func (set OrderedSet_ID) Remove(id entity.ID) OrderedSet_ID {
+	for i, ID := range set {
+		if ID == id {
+			return append(set[:i], set[i+1:]...)
+		}
+	}
+	return set
+}
