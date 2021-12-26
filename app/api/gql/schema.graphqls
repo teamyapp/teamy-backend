@@ -199,7 +199,6 @@ type Mutation {
 
 	promoteTaskToNeedAttention(taskId: ID!): Team!	@deprecated(reason: "use TeamUpdate")
 	updateActiveTeam(teamId: ID!): User!			@deprecated(reason: "use UserUpdate")
-	updateUser(input: UserInput!): User!			@deprecated(reason: "use UserUpdate")
 }
 
 input UserUpdateInput {
