@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
@@ -13,55 +12,48 @@ import (
 
 func (m Mutation) CreateTask(
 	ctx context.Context,
-	args struct {
-		Task TaskInput
-	},
-) (Task, error) {
+	args struct{ Task TaskInput },
+) (TaskUpdate, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-	// find user
-	user, err := m.deps.Data.GetUser(userID)
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
+		return TaskUpdate{}, err
 	}
 
 	task, err := fromGraphQLTaskInput(args.Task)
 	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-
-	activeTeams := m.deps.Data.FilterTeams(func(t entity.Team) bool {
-		return t.ID == user.ActiveTeamID
-	})
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-	if len(activeTeams) == 0 {
-		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
+		return TaskUpdate{}, err
 	}
 
 	task.Status = entity.UPCOMING
 	task.OwnerUserId = &userID
-	task.OwnedByTeam = activeTeams[0].ID
 	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), task)
 	if err != nil {
-		return Task{}, err
+		return TaskUpdate{}, err
 	}
-	// add task to team
-	_, err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
-		t.Tasks = append(t.Tasks, task.ID)
-		return t
-	})
+	return TaskUpdate{m.deps, task}, err
+}
+
+type TaskUpdate struct {
+	deps *Dependencies
+	task entity.Task
+}
+
+func (tu TaskUpdate) OwnedByTeam(args struct{ ID graphql.ID }) (TaskUpdate, error) {
+	id, err := fromGraphQLID(args.ID)
 	if err != nil {
-		return Task{}, err
+		return tu, err
 	}
-	return newTask(m.deps, task), err
+	tu.task.OwnedByTeam = id
+	newTask, err := tu.deps.Data.UpdateTask(tu.task)
+	if err != nil {
+		return tu, err
+	}
+	tu.task = newTask
+	return tu, nil
+}
+
+func (tu TaskUpdate) Task() Task {
+	return newTask(tu.deps, tu.task)
 }
 
 func (m Mutation) DeleteTask(ctx context.Context, args struct {
