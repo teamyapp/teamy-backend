@@ -1,6 +1,8 @@
 package entity
 
 import (
+	"time"
+
 	"github.com/graph-gophers/graphql-go"
 	oneEntity "github.com/teamyapp/one/entity"
 )
@@ -10,4 +12,5 @@ type Comment struct {
 	Content     string
 	CommenterID graphql.ID
 	TaskID      graphql.ID
+	CreatedAt   time.Time
 }

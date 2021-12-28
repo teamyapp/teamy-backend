@@ -34,6 +34,10 @@ func (c Comment) Task() (Task, error) {
 	return newTask(c.deps, task), nil
 }
 
+func (c Comment) CreatedAt() (graphql.Time, error) {
+	return graphql.Time{Time: c.Comment.CreatedAt}, nil
+}
+
 func Comments(deps *Dependencies, cs []entity.Comment) (comments []Comment) {
 	for _, c := range cs {
 		comments = append(comments, Comment{

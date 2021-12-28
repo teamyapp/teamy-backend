@@ -53,6 +53,7 @@ type Comment {
 	content: String!
 	commenter: User!
 	task: Task!
+	createdAt: Time!
 	# mentions: [Mention!]!
 }
 
