@@ -38,12 +38,37 @@ type TaskUpdate struct {
 	task entity.Task
 }
 
-func (tu TaskUpdate) OwnedByTeam(args struct{ ID graphql.ID }) (TaskUpdate, error) {
-	id, err := fromGraphQLID(args.ID)
+func (tu TaskUpdate) OwnedByTeam(ctx context.Context, args struct{ ID graphql.ID }) (TaskUpdate, error) {
+	teamID, err := fromGraphQLID(args.ID)
 	if err != nil {
 		return tu, err
 	}
-	tu.task.OwnedByTeam = id
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		return TaskUpdate{}, err
+	}
+	// check if the user is a member of the team
+	teams := tu.deps.Data.FilterTeams(func(t entity.Team) bool {
+		return t.ID == teamID
+	})
+	if len(teams) == 0 {
+		return tu, errors.Errorf("team %v does not exist", teamID)
+	}
+	if !teams[0].MemberIDs.Has(userID) {
+		return tu, errors.Errorf("user %v is not a member of team %v", userID, teamID)
+	}
+
+	// add the task to the team's task list if not there yet
+	_, err = tu.deps.Data.UpdateTeam(teamID, func(t entity.Team) entity.Team {
+		t.Tasks = t.Tasks.Add(tu.task.ID)
+		return t
+	})
+	if err != nil {
+		return tu, err
+	}
+
+	// make this team own this task (all team members has UPDATE privilige to the task)
+	tu.task.OwnedByTeam = teamID
 	newTask, err := tu.deps.Data.UpdateTask(tu.task)
 	if err != nil {
 		return tu, err
