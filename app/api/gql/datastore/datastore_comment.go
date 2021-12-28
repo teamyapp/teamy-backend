@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"fmt"
+	"time"
 
 	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -9,6 +10,7 @@ import (
 
 func (d DataStore) CreateComment(comment entity.Comment) (entity.Comment, error) {
 	comment.ID = d.newID(Comment)
+	comment.CreatedAt = time.Now()
 	d.data.Comments[comment.ID] = comment
 	return comment, d.persister.Write(d.data)
 }
