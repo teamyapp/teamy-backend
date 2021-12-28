@@ -12,11 +12,3 @@ type TaskInput struct {
 	OwnerUserID *graphql.ID
 	Status      *entity.TaskStatusEnum
 }
-
-type TaskCreationInput struct {
-	Goal        *string
-	DueAt       *graphql.Time
-	Context     *string
-	OwnerUserID *graphql.ID
-	Status      *entity.TaskStatusEnum
-}
