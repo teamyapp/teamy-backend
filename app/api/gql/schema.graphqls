@@ -212,6 +212,7 @@ input TaskCreationInput {
 }
 
 type TaskUpdate {
+	"change ownedByTeam of task field to id"
 	ownedByTeam(id: ID!): TaskUpdate!
 	task: Task!
 }
