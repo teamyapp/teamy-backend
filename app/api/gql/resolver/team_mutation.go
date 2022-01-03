@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
@@ -63,20 +62,6 @@ func (m Mutation) PromoteTaskToNeedAttention(
 		return Team{}, errors.Errorf("task %v is not in progress, can not promote to Need Attention", taskID)
 	}
 	team, err := m.deps.Data.UpdateTeam(user.ActiveTeamID, func(t entity.Team) entity.Team {
-		// TODO: redesign GraphQL API to trigger this in at client side
-		prevTaskId, ok := t.NeedAttentionTasks[userID]
-		if ok {
-			status := entity.UPCOMING
-			_, err := m.UpdateTask(ctx, struct {
-				TaskID graphql.ID
-				Task   TaskInput
-			}{TaskID: toGraphQLID(prevTaskId), Task: TaskInput{
-				Status: &status,
-			}})
-			if err != nil {
-				log.Println(err)
-			}
-		}
 		t.NeedAttentionTasks[userID] = taskID
 		return t
 	})
