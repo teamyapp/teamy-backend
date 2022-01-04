@@ -52,6 +52,7 @@ func (u User) Teams(ctx context.Context, args struct {
 	var idsMap map[oneEntity.ID]bool
 	var err error
 
+	// todo: use OrderredSet instead of toIDsMap
 	if args.IDs != nil {
 		idsMap, err = toIDsMap(*args.IDs)
 		if err != nil {

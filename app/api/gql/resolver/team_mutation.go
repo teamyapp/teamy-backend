@@ -138,6 +138,22 @@ func (tu TeamUpdate) RemoveMember(args struct{ ID graphql.ID }) (TeamUpdate, err
 	return tu, nil
 }
 
+func (tu TeamUpdate) RemoveTask(args struct{ ID graphql.ID }) (TeamUpdate, error) {
+	taskID, err := fromGraphQLID(args.ID)
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	newTeam, err := tu.deps.Data.UpdateTeam(tu.team.ID, func(t entity.Team) entity.Team {
+		t.Tasks = t.Tasks.Remove(taskID)
+		return t
+	})
+	if err != nil {
+		return TeamUpdate{}, err
+	}
+	tu.team = newTeam
+	return tu, nil
+}
+
 func (tu TeamUpdate) PromoteTaskToNeedAttention(
 	ctx context.Context,
 	args struct {
