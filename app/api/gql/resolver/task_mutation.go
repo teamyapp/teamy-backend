@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
@@ -13,55 +12,73 @@ import (
 
 func (m Mutation) CreateTask(
 	ctx context.Context,
-	args struct {
-		Task TaskInput
-	},
-) (Task, error) {
+	args struct{ Task TaskInput },
+) (TaskUpdate, error) {
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-	// find user
-	user, err := m.deps.Data.GetUser(userID)
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
+		return TaskUpdate{}, err
 	}
 
 	task, err := fromGraphQLTaskInput(args.Task)
 	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-
-	activeTeams := m.deps.Data.FilterTeams(func(t entity.Team) bool {
-		return t.ID == user.ActiveTeamID
-	})
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-	if len(activeTeams) == 0 {
-		return Task{}, fmt.Errorf("user %v does not have an active team", userID)
+		return TaskUpdate{}, err
 	}
 
 	task.Status = entity.UPCOMING
 	task.OwnerUserId = &userID
-	task.OwnedByTeam = activeTeams[0].ID
 	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), task)
 	if err != nil {
-		return Task{}, err
+		return TaskUpdate{}, err
 	}
-	// add task to team
-	_, err = m.deps.Data.UpdateTeam(activeTeams[0].ID, func(t entity.Team) entity.Team {
-		t.Tasks = append(t.Tasks, task.ID)
+	return TaskUpdate{m.deps, task}, err
+}
+
+type TaskUpdate struct {
+	deps *Dependencies
+	task entity.Task
+}
+
+func (tu TaskUpdate) OwnedByTeam(ctx context.Context, args struct{ ID graphql.ID }) (TaskUpdate, error) {
+	teamID, err := fromGraphQLID(args.ID)
+	if err != nil {
+		return tu, err
+	}
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		return TaskUpdate{}, err
+	}
+	// check if the user is a member of the team
+	teams := tu.deps.Data.FilterTeams(func(t entity.Team) bool {
+		return t.ID == teamID
+	})
+	if len(teams) == 0 {
+		return tu, errors.Errorf("team %v does not exist", teamID)
+	}
+	if !teams[0].MemberIDs.Has(userID) {
+		return tu, errors.Errorf("user %v is not a member of team %v", userID, teamID)
+	}
+
+	// add the task to the team's task list if not there yet
+	_, err = tu.deps.Data.UpdateTeam(teamID, func(t entity.Team) entity.Team {
+		t.Tasks = t.Tasks.Add(tu.task.ID)
 		return t
 	})
 	if err != nil {
-		return Task{}, err
+		return tu, err
 	}
-	return newTask(m.deps, task), err
+
+	// make this team own this task (all team members has UPDATE privilige to the task)
+	tu.task.OwnedByTeam = teamID
+	newTask, err := tu.deps.Data.UpdateTask(tu.task)
+	if err != nil {
+		return tu, err
+	}
+	tu.task = newTask
+	return tu, nil
+}
+
+func (tu TaskUpdate) Task() Task {
+	return newTask(tu.deps, tu.task)
 }
 
 func (m Mutation) DeleteTask(ctx context.Context, args struct {

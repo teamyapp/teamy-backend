@@ -98,7 +98,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	log.Info(ctx, "begin GraphQL")
+	log.Info(ctx, "begin GraphQL", params.Query)
 	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
 	if response.Extensions == nil {
 		response.Extensions = make(map[string]interface{})

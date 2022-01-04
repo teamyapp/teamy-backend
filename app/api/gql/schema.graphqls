@@ -174,7 +174,8 @@ Mutation
 type Mutation {
 	#########
 	# Tasks #
-	createTask(task: TaskInput!): Task!
+	"A task can exist independently from a team"
+	createTask(task: TaskCreationInput!): TaskUpdate!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
 
@@ -200,6 +201,20 @@ type Mutation {
 
 	promoteTaskToNeedAttention(taskId: ID!): Team!	@deprecated(reason: "use TeamUpdate")
 	updateActiveTeam(teamId: ID!): User!			@deprecated(reason: "use UserUpdate")
+}
+
+input TaskCreationInput {
+	goal: String
+	context: String
+	dueAt: Time
+	ownerUserId: ID
+	status: TaskStatus
+}
+
+type TaskUpdate {
+	"change ownedByTeam of task field to id"
+	ownedByTeam(id: ID!): TaskUpdate!
+	task: Task!
 }
 
 input UserUpdateInput {
