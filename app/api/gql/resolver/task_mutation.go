@@ -97,8 +97,18 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 	if err != nil {
 		return Task{}, err
 	}
-	if task.CreatorID != toGraphQLID(userID) {
-		return Task{}, errors.New("you are not the creator of this task, can not delete")
+	{ // access control
+		user, err := m.deps.Data.GetUser(userID)
+		if err != nil {
+			return Task{}, err
+		}
+		err = allowWrite(ctx, task, User{
+			deps: m.deps,
+			user: user,
+		})
+		if err != nil {
+			return Task{}, err
+		}
 	}
 
 	deletedTask, err := m.deps.Data.DeleteTask(args.TaskID)
@@ -134,24 +144,9 @@ func (m Mutation) UpdateTask(
 			deps: m.deps,
 			user: user,
 		}
-		allowWrite := false
-		{ // the user must be in a team that owns this task
-			teams, err := userResolver.Teams(ctx, struct{ IDs *[]graphql.ID }{})
-			if err != nil {
-				return Task{}, err
-			}
-			for _, team := range teams {
-				if task.OwnedByTeam == team.Team.ID {
-					allowWrite = true
-					break
-				}
-			}
-			if task.CreatorID == toGraphQLID(userID) {
-				allowWrite = true
-			}
-		}
-		if !allowWrite {
-			return Task{}, errors.Errorf("user %v can not modify task %v", userID, task.ID)
+		err = allowWrite(ctx, task, userResolver)
+		if err != nil {
+			return Task{}, err
 		}
 	}
 	if args.Task.Context != nil {
@@ -179,4 +174,27 @@ func (m Mutation) UpdateTask(
 		return Task{}, nil
 	}
 	return newTask(m.deps, task), nil
+}
+
+func allowWrite(ctx context.Context, task entity.Task, userResolver User) error {
+	allowWrite := false
+	// the user must be in a team that owns this task
+	teams, err := userResolver.Teams(ctx, struct{ IDs *[]graphql.ID }{})
+	if err != nil {
+		return err
+	}
+	for _, team := range teams {
+		if task.OwnedByTeam == team.Team.ID {
+			allowWrite = true
+			break
+		}
+	}
+	if task.CreatorID == toGraphQLID(userResolver.entity.ID) {
+		allowWrite = true
+	}
+
+	if !allowWrite {
+		return errors.Errorf("user %v can not modify task %v", userResolver.entity.ID, task.ID)
+	}
+	return nil
 }
