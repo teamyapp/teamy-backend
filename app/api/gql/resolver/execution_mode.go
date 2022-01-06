@@ -26,6 +26,7 @@ var availableActions = taskActionMap{
 	},
 	entity.DELIVERED: {
 		entity.TaskActionDelete,
+		entity.TaskActionAssignOwner,
 	},
 }
 
