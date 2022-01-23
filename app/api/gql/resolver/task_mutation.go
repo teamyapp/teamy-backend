@@ -10,6 +10,28 @@ import (
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
+func (m Mutation) TaskUpdate(
+	ctx context.Context,
+	args struct{ TaskID graphql.ID },
+) (TaskUpdate, error) {
+	id, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return TaskUpdate{}, err
+	}
+
+	tasks := m.deps.Data.FilterTasks(func(t entity.Task) bool {
+		return t.ID == id
+	})
+	if len(tasks) < 1 {
+		return TaskUpdate{}, errors.Errorf("task not found: id=%s", args.TaskID)
+	}
+
+	return TaskUpdate{
+		deps: m.deps,
+		task: tasks[0],
+	}, nil
+}
+
 func (m Mutation) CreateTask(
 	ctx context.Context,
 	args struct{ Task TaskInput },
@@ -81,6 +103,34 @@ func (tu TaskUpdate) OwnedByTeam(ctx context.Context, args struct{ ID graphql.ID
 		return tu, err
 	}
 	tu.task = newTask
+	return tu, nil
+}
+
+func (tu TaskUpdate) RemoveOwner(ctx context.Context) (TaskUpdate, error) {
+	userID, err := identity.FromContext(ctx)
+	if err != nil {
+		return TaskUpdate{}, err
+	}
+
+	{ // access control
+		user, err := tu.deps.Data.GetUser(userID)
+		if err != nil {
+			return TaskUpdate{}, err
+		}
+		err = allowWrite(ctx, tu.task, User{
+			deps: tu.deps,
+			user: user,
+		})
+		if err != nil {
+			return TaskUpdate{}, err
+		}
+	}
+
+	tu.task.OwnerUserId = nil
+	_, err = tu.deps.Data.UpdateTask(tu.task)
+	if err != nil {
+		return TaskUpdate{}, err
+	}
 	return tu, nil
 }
 

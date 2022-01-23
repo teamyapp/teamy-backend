@@ -178,6 +178,7 @@ type Mutation {
 	createTask(task: TaskCreationInput!): TaskUpdate!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
+	taskUpdate(taskId: ID!): TaskUpdate!
 
 	############
 	# Comments #
@@ -214,6 +215,7 @@ input TaskCreationInput {
 type TaskUpdate {
 	"change ownedByTeam of task field to id"
 	ownedByTeam(id: ID!): TaskUpdate!
+	removeOwner: TaskUpdate!
 	task: Task!
 }
 
