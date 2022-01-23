@@ -25,7 +25,14 @@ func (m Mutation) CreateTask(
 	}
 
 	task.Status = entity.UPCOMING
-	task.OwnerUserId = &userID
+	if args.Task.OwnerUserID != nil {
+		id, err := fromGraphQLID(*args.Task.OwnerUserID)
+		if err != nil {
+			return TaskUpdate{}, err
+		}
+		task.OwnerUserId = &id
+	}
+
 	task, err = m.deps.Data.CreateTask(toGraphQLID(userID), task)
 	if err != nil {
 		return TaskUpdate{}, err
