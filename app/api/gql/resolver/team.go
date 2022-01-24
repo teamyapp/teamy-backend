@@ -71,6 +71,7 @@ func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }
 		return nil, err
 	}
 
+	// ideally prefer not to have data corruption
 	tasks := t.deps.Data.FilterTasks(func(task entity.Task) bool {
 		for ownerID, taskID := range t.NeedAttentionTasks {
 			if taskID == task.ID && task.Status == entity.IN_PROGRESS {
