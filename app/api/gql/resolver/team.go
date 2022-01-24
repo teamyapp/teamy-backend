@@ -70,14 +70,15 @@ func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }
 	if err != nil {
 		return nil, err
 	}
+
 	tasks := t.deps.Data.FilterTasks(func(task entity.Task) bool {
-		for _, taskID := range t.NeedAttentionTasks {
+		for ownerID, taskID := range t.NeedAttentionTasks {
 			if taskID == task.ID && task.Status == entity.IN_PROGRESS {
 				if args.IsMine {
 					if task.OwnerUserId == nil {
 						return false
 					} else {
-						return userID == *task.OwnerUserId
+						return ownerID == userID && userID == *task.OwnerUserId
 					}
 				} else {
 					return true
