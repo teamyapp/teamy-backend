@@ -175,7 +175,7 @@ type Mutation {
 	#########
 	# Tasks #
 	"A task can exist independently from a team"
-	createTask(task: TaskCreationInput!): TaskUpdate!
+	createTask(task: CreateTaskInput!): TaskUpdate!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
 	taskUpdate(taskId: ID!): TaskUpdate!
@@ -204,7 +204,7 @@ type Mutation {
 	updateActiveTeam(teamId: ID!): User!			@deprecated(reason: "use UserUpdate")
 }
 
-input TaskCreationInput {
+input CreateTaskInput {
 	goal: String
 	context: String
 	dueAt: Time
