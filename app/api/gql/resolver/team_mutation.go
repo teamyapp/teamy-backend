@@ -14,7 +14,6 @@ func (m Mutation) CreateTeam(ctx context.Context,
 	args struct {
 		Input struct {
 			Name    string
-			IconURL string
 		}
 	},
 ) (TeamUpdate, error) {
@@ -24,7 +23,6 @@ func (m Mutation) CreateTeam(ctx context.Context,
 	}
 	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
 		Name:      args.Input.Name,
-		IconURL:   args.Input.IconURL,
 		CreatorID: userID,
 		MemberIDs: []oneEntity.ID{
 			userID,
