@@ -15,16 +15,18 @@ type Data struct {
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation
 	Teams             []entity.Team
+	Invitations       map[oneEntity.ID]entity.Invitation
 	IDs               map[oneEntity.ID]Type
 }
 
 type Type string
 
 const (
-	Task    Type = "Task"
-	Comment Type = "Comment"
-	Team    Type = "Team"
-	Event   Type = "LifetimeEvent"
+	Task       Type = "Task"
+	Invitation Type = "Invitation"
+	Comment    Type = "Comment"
+	Team       Type = "Team"
+	Event      Type = "LifetimeEvent"
 )
 
 // Temperary SQL like struct for v2 migration purpose.

@@ -246,12 +246,12 @@ func allowWrite(ctx context.Context, task entity.Task, userResolver User) error 
 			break
 		}
 	}
-	if task.CreatorID == toGraphQLID(userResolver.entity.ID) {
+	if task.CreatorID == toGraphQLID(userResolver.user.ID) {
 		allowWrite = true
 	}
 
 	if !allowWrite {
-		return errors.Errorf("user %v can not modify task %v", userResolver.entity.ID, task.ID)
+		return errors.Errorf("user %v can not modify task %v", userResolver.user.ID, task.ID)
 	}
 	return nil
 }

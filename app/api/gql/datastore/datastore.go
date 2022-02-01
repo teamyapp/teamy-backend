@@ -42,12 +42,12 @@ func NewDataStore(p Persister) *DataStore {
 	}
 	for i, team := range ds.data.Teams {
 		// maintain the set
-		var members entity.OrderedSet_ID
+		var members entity.OrderedSetID
 		for _, member := range team.MemberIDs {
 			members = members.Add(member)
 		}
 		ds.data.Teams[i].MemberIDs = members
-		var tasks entity.OrderedSet_ID
+		var tasks entity.OrderedSetID
 		for _, taskID := range team.Tasks {
 			tasks = tasks.Add(taskID)
 		}

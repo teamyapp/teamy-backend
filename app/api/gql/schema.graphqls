@@ -3,24 +3,9 @@ schema {
 	mutation: Mutation
 }
 
-type Query {
-	"the current logged in user. If not logged in, show default public viewer"
-	me: User!
-	task(id: ID!): Task!
-	"return all tasks for debug purpose"
-	tasks(input: TaskFilter): [Task!]!
-	teams(ids: [ID!]): [Team!]!
-}
-
-
-interface Entity {
-	id: ID!
-	createdAt: Time!
-}
-
-########
-# Team #
-########
+"""
+Team
+"""
 type Team {
 	id: ID!
 	name: String!
@@ -34,6 +19,7 @@ type Team {
 	members: [User!]!
 	tasks(input: TaskFilter): [Task!]!
 	tasksNeedAttention(isMine: Boolean = false): [Task!]!
+	invitations: [Invitation!]!
 }
 
 input CreateTeamInput {
@@ -44,10 +30,9 @@ input UpdateTeamInput {
 	id: ID!
 }
 
-
-###########
-# Comment #
-###########
+"""
+Comment
+"""
 type Comment {
 	id: ID!
 	content: String!
@@ -57,10 +42,10 @@ type Comment {
 	# mentions: [Mention!]!
 }
 
-########
-# User #
-########
-type User implements Entity {
+"""
+User
+"""
+type User {
 	id: ID!
 	lastName: String!
 	firstName: String!
@@ -82,9 +67,9 @@ input UserInput {
 	profileUrl: String
 }
 
-########
-# Task #
-########
+"""
+Task
+"""
 type Task {
 	id: ID!
 	goal: String!
@@ -134,21 +119,68 @@ input TaskInput {
 	status: TaskStatus
 }
 
+"""
+Invitation
+"""
+type Invitation {
+	id: ID!
+	sender: User!
+	receiver: User
+	receiverEmail: String
+	team: Team!
+	expireAt: Time!
+	createdAt: Time!
+	status: InvitationStatus!
+	code: String!
+}
+
+enum InvitationStatus {
+	PENDING
+	ACCEPTED
+	REVOKED
+	DECLINED
+	EXPIRED
+}
+
+input SendEmailInvitationInput {
+	senderUserId: ID!
+	teamId: ID!
+	receiverEmail: String!
+}
+
+input InvitationInput {
+	senderUserId: ID
+	receiverUserId: ID
+	receiverEmail: String
+	teamId: ID
+	expireAt: Time
+	status: InvitationStatus
+}
+
+type InvitationUpdate {
+	invitation: Invitation!
+	accept: InvitationUpdate!
+	decline: InvitationUpdate!
+	update(input: InvitationInput!): InvitationUpdate!
+	delete: Invitation!
+}
 
 """
 LifetimeEvent
 """
 type LifetimeEvent {
-    id: ID!
+	id: ID!
 	# todo: will add eventType & actor when v1 is merged with v2
-    # eventType: LifetimeEventType!
-    "who did it"
-    # actor:     User!
+	# eventType: LifetimeEventType!
+	"who did it"
+	# actor:     User!
 	actorID:   ID!
-    happensAt: Time!
+	happensAt: Time!
 }
 
 """
+Mention
+
 Mention is a backend computed value according to text content of task or comments
 so that frontend doesn't need to compute is again.
 """
@@ -168,40 +200,60 @@ union Mentionable = User | Task
 
 scalar Time
 
+type Query {
+	"the current logged in user. If not logged in, show default public viewer"
+	me: User!
+	task(id: ID!): Task!
+	"return all tasks for debug purpose"
+	tasks(input: TaskFilter): [Task!]!
+	teams(ids: [ID!]): [Team!]!
+}
+
 """
 Mutation
 """
 type Mutation {
-	#########
-	# Tasks #
-	"A task can exist independently from a team"
+	"""
+	Task
+	A task can exist independently from a team
+	"""
 	createTask(task: CreateTaskInput!): TaskUpdate!
 	updateTask(taskId: ID!, task: TaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
 	taskUpdate(taskId: ID!): TaskUpdate!
 
-	############
-	# Comments #
-	comment(id: ID!): 						      CommentUpdate!
+	"""
+	Comment
+	"""
+	comment(id: ID!): CommentUpdate!
 	createComment(taskId: ID!, content: String!): Comment!
 
-	#########
-	# Teams #
+	"""
+	Team
+	"""
 	team(id: ID!): TeamUpdate!
 	createTeam(input: CreateTeamInput!): TeamUpdate!
 
-	#########
-	# Users #
+	"""
+	User
+	"""
 	user(id: ID!): UserUpdate!
+
+	"""
+	Invitation
+	"""
+	sendEmailInvitation(input: SendEmailInvitationInput!): InvitationUpdate!
+	invitationUpdate(id: ID!): InvitationUpdate!
+	invitationUpdateWithCode(code: String!): InvitationUpdate!
+
 	"""
 	todo: implement a directive that hide this resolver from production
-		  or when the logged in user is not a system admin
+	or when the logged in user is not a system admin
 	Admin && Debug Only resolvers
 	"""
 	createUser(input: UserInput!): UserUpdate!
-
-	promoteTaskToNeedAttention(taskId: ID!): Team!	@deprecated(reason: "use TeamUpdate")
-	updateActiveTeam(teamId: ID!): User!			@deprecated(reason: "use UserUpdate")
+	promoteTaskToNeedAttention(taskId: ID!): Team!    @deprecated(reason: "use TeamUpdate")
+	updateActiveTeam(teamId: ID!): User!            @deprecated(reason: "use UserUpdate")
 }
 
 input CreateTaskInput {

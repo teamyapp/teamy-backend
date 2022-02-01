@@ -14,7 +14,6 @@ import (
 
 type Task struct {
 	deps *Dependencies
-	Entity
 	task entity.Task
 }
 
@@ -24,6 +23,10 @@ type TaskFilter struct {
 	OwnerID   *graphql.ID
 	Text      *string
 	Status    *entity.TaskStatusEnum
+}
+
+func (t Task) ID() graphql.ID {
+	return toGraphQLID(t.task.ID)
 }
 
 func (t Task) Goal() string {
@@ -69,10 +72,10 @@ func (t Task) OwnedByTeam() (*Team, error) {
 }
 func (t Task) Creator() (User, error) {
 	rs := t.deps.Data.FilterCreationRelation(func(cr datastore.CreationRelation) bool {
-		return t.ID() == cr.TaskID
+		return toGraphQLID(t.task.ID) == cr.TaskID
 	})
 	if len(rs) == 0 {
-		return User{}, fmt.Errorf("this task %v has no creator recorded", t.ID())
+		return User{}, fmt.Errorf("this task %v has no creator recorded", t.task.ID)
 	}
 	id, err := strconv.Atoi(string(rs[0].UserID))
 	if err != nil {
@@ -115,7 +118,7 @@ func (t Task) AvailableWorkScopes() []Option {
 
 func (t Task) LifetimeEvents() []LifetimeEvent {
 	events := t.deps.Data.FilterLifetimeEvents(func(e datastore.LifetimeEvent) bool {
-		return e.EventType.Creation.TaskID == t.ID()
+		return e.EventType.Creation.TaskID == toGraphQLID(t.task.ID)
 	})
 	return LifetimeEvents(events)
 }
@@ -126,7 +129,7 @@ func (t Task) Mentions() ([]Mention, error) {
 
 func (t Task) Comments() []Comment {
 	cs := t.deps.Data.FilterComments(func(c entity.Comment) bool {
-		return c.TaskID == t.ID()
+		return c.TaskID == toGraphQLID(t.task.ID)
 	})
 	return Comments(t.deps, cs)
 }
@@ -136,11 +139,14 @@ func (t Task) Status() (entity.TaskStatusEnum, error) {
 	return t.task.Status, nil
 }
 
+func (t Task) CreatedAt() graphql.Time {
+	return graphql.Time{Time: t.task.CreatedAt}
+}
+
 func newTask(deps *Dependencies, task entity.Task) Task {
 	return Task{
-		Entity: Entity{entity: task.Entity},
-		deps:   deps,
-		task:   task,
+		deps: deps,
+		task: task,
 	}
 }
 

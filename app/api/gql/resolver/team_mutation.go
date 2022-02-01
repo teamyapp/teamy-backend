@@ -13,7 +13,7 @@ import (
 func (m Mutation) CreateTeam(ctx context.Context,
 	args struct {
 		Input struct {
-			Name    string
+			Name string
 		}
 	},
 ) (TeamUpdate, error) {
