@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/one/identity"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -18,10 +19,10 @@ type InvitationUpdate struct {
 type InvitationInput struct {
 	SenderUserID   *graphql.ID
 	ReceiverUserID *graphql.ID
-	ReceiverEmail  *string
 	TeamID         *graphql.ID
 	ExpireAt       *graphql.Time
 	Status         *entity.InvitationStatus
+	Code           *string
 }
 
 func (i InvitationUpdate) Invitation(ctx context.Context) Invitation {
@@ -124,26 +125,31 @@ func (i InvitationUpdate) Update(ctx context.Context, args struct {
 				return invitation
 			}
 		}
+
 		if args.Input.ReceiverUserID != nil {
 			invitation.ReceiverUserID, err = fromGraphQLIDPtr(args.Input.ReceiverUserID)
 			if err != nil {
 				return invitation
 			}
 		}
-		if args.Input.ReceiverEmail != nil {
-			invitation.ReceiverEmail = args.Input.ReceiverEmail
-		}
+
 		if args.Input.TeamID != nil {
 			invitation.TeamID, err = fromGraphQLID(*args.Input.TeamID)
 			if err != nil {
 				return invitation
 			}
 		}
+
 		if args.Input.ExpireAt != nil {
 			invitation.ExpireAt = (*args.Input.ExpireAt).Time
 		}
+
 		if args.Input.Status != nil {
 			invitation.Status = *args.Input.Status
+		}
+
+		if args.Input.Code != nil {
+			invitation.Code = *args.Input.Code
 		}
 		return invitation
 	})
@@ -170,11 +176,11 @@ func (i InvitationUpdate) Delete(ctx context.Context) (Invitation, error) {
 	return Invitation{deps: i.deps, Invitation: deleted}, err
 }
 
-func (m Mutation) SendEmailInvitation(ctx context.Context, args struct {
+func (m Mutation) CreateInvitation(ctx context.Context, args struct {
 	Input struct {
-		SenderUserID  graphql.ID
-		TeamID        graphql.ID
-		ReceiverEmail string
+		SenderUserID graphql.ID
+		TeamID       graphql.ID
+		ExpireAt     graphql.Time
 	}
 }) (InvitationUpdate, error) {
 	userID, err := identity.FromContext(ctx)
@@ -199,19 +205,21 @@ func (m Mutation) SendEmailInvitation(ctx context.Context, args struct {
 		return InvitationUpdate{}, err
 	}
 
-	// TODO: send email
 	invitation := entity.Invitation{
-		SenderUserID:  senderUserID,
-		ReceiverEmail: &args.Input.ReceiverEmail,
-		TeamID:        teamID,
-		Status:        entity.InvitationStatusPending,
+		SenderUserID: senderUserID,
+		TeamID:       teamID,
+		Status:       entity.InvitationStatusPending,
+		Code:         uuid.New().String(),
+		ExpireAt:     args.Input.ExpireAt.Time,
 	}
+
 	created, err := m.deps.Data.CreateInvitation(invitation)
 	if err != nil {
 		return InvitationUpdate{}, err
 	}
+
 	_, err = m.deps.Data.UpdateTeam(teamID, func(team entity.Team) entity.Team {
-		team.InvitationIDs = team.InvitationIDs.Add(invitation.ID)
+		team.InvitationIDs = team.InvitationIDs.Add(created.ID)
 		return team
 	})
 	if err != nil {

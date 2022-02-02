@@ -10,7 +10,6 @@ type Invitation struct {
 	ID             oneEntity.ID
 	SenderUserID   oneEntity.ID
 	ReceiverUserID *oneEntity.ID
-	ReceiverEmail  *string
 	TeamID         oneEntity.ID
 	ExpireAt       time.Time
 	Status         InvitationStatus

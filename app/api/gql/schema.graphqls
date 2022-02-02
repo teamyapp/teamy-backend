@@ -126,7 +126,6 @@ type Invitation {
 	id: ID!
 	sender: User!
 	receiver: User
-	receiverEmail: String
 	team: Team!
 	expireAt: Time!
 	createdAt: Time!
@@ -142,16 +141,15 @@ enum InvitationStatus {
 	EXPIRED
 }
 
-input SendEmailInvitationInput {
+input CreateInvitationInput {
 	senderUserId: ID!
 	teamId: ID!
-	receiverEmail: String!
+	expireAt: Time!
 }
 
-input InvitationInput {
+input UpdateInvitationInput {
 	senderUserId: ID
 	receiverUserId: ID
-	receiverEmail: String
 	teamId: ID
 	expireAt: Time
 	status: InvitationStatus
@@ -161,7 +159,7 @@ type InvitationUpdate {
 	invitation: Invitation!
 	accept: InvitationUpdate!
 	decline: InvitationUpdate!
-	update(input: InvitationInput!): InvitationUpdate!
+	update(input: UpdateInvitationInput!): InvitationUpdate!
 	delete: Invitation!
 }
 
@@ -242,7 +240,7 @@ type Mutation {
 	"""
 	Invitation
 	"""
-	sendEmailInvitation(input: SendEmailInvitationInput!): InvitationUpdate!
+	createInvitation(input: CreateInvitationInput!): InvitationUpdate!
 	invitationUpdate(id: ID!): InvitationUpdate!
 	invitationUpdateWithCode(code: String!): InvitationUpdate!
 
