@@ -23,14 +23,6 @@ func (t Team) ID() graphql.ID {
 	return toGraphQLID(t.Team.ID)
 }
 
-func (t Team) Name() string {
-	return t.Team.Name
-}
-
-func (t Team) IconURL() string {
-	return t.Team.IconURL
-}
-
 func (t Team) Members() ([]User, error) {
 	members, err := t.deps.Data.GetUsers(t.Team.MemberIDs)
 	return toGraphQLUsers(t.deps, members), err
@@ -89,6 +81,21 @@ func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }
 		return false
 	})
 	return newTasks(t.deps, tasks), nil
+}
+
+func (t Team) Invitations() []Invitation {
+	invitations := t.deps.Data.FilterInvitations(func(invitation entity.Invitation) bool {
+		return t.InvitationIDs.Has(invitation.ID)
+	})
+
+	gqlInvitations := make([]Invitation, 0)
+	for _, invitation := range invitations {
+		gqlInvitations = append(gqlInvitations, Invitation{
+			deps:       t.deps,
+			Invitation: invitation,
+		})
+	}
+	return gqlInvitations
 }
 
 func newTeam(deps *Dependencies, team entity.Team) Team {

@@ -11,7 +11,6 @@ import (
 )
 
 type User struct {
-	Entity
 	deps *Dependencies
 	user entity.User
 }
@@ -21,6 +20,10 @@ type UserInput struct {
 	FirstName  *string
 	LastName   *string
 	ProfileUrl *string
+}
+
+func (u User) ID() graphql.ID {
+	return toGraphQLID(u.user.ID)
 }
 
 func (u User) FirstName() string {
@@ -81,24 +84,27 @@ func (u User) Teams(ctx context.Context, args struct {
 func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	q := NewQuery(u.deps)
 	if args.Input != nil {
-		userID := u.ID()
+		userID := toGraphQLID(u.user.ID)
 		args.Input.CreatorID = &userID
 	}
 	return q.Tasks(args)
 }
 
+func (u User) CreatedAt() graphql.Time {
+	return graphql.Time{Time: u.user.CreatedAt}
+}
+
 func newUser(deps *Dependencies, user entity.User) User {
 	return User{
-		Entity: Entity{entity: user.Entity},
-		deps:   deps,
-		user:   user,
+		deps: deps,
+		user: user,
 	}
 }
 
-//////////////
-// Mutation //
-//////////////
-// Admin && Debug Only
+/*
+	Mutation
+*/
+
 func (m Mutation) CreateUser(
 	args struct {
 		Input struct {
