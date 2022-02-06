@@ -7,12 +7,14 @@ import (
 )
 
 type Invitation struct {
-	ID             oneEntity.ID
-	SenderUserID   oneEntity.ID
-	ReceiverUserID *oneEntity.ID
-	TeamID         oneEntity.ID
-	ExpireAt       time.Time
-	Status         InvitationStatus
-	Code           string
-	CreatedAt      time.Time
+	ID                oneEntity.ID
+	SenderUserID      oneEntity.ID
+	ReceiverFirstName string
+	ReceiverLastName  string
+	ReceiverUserID    *oneEntity.ID
+	TeamID            oneEntity.ID
+	ExpireAt          time.Time
+	Status            InvitationStatus
+	Code              string
+	CreatedAt         time.Time
 }

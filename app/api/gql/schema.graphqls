@@ -125,6 +125,8 @@ Invitation
 type Invitation {
 	id: ID!
 	sender: User!
+	receiverFirstName: String!
+	receiverLastName: String!
 	receiver: User
 	team: Team!
 	expireAt: Time!
@@ -142,8 +144,9 @@ enum InvitationStatus {
 }
 
 input CreateInvitationInput {
-	senderUserId: ID!
 	teamId: ID!
+	receiverFirstName: String!
+	receiverLastName: String!
 	expireAt: Time!
 }
 
@@ -161,6 +164,11 @@ type InvitationUpdate {
 	decline: InvitationUpdate!
 	update(input: UpdateInvitationInput!): InvitationUpdate!
 	delete: Invitation!
+}
+
+input InvitationFilter {
+	id: ID
+	code: String
 }
 
 """
@@ -205,6 +213,7 @@ type Query {
 	"return all tasks for debug purpose"
 	tasks(input: TaskFilter): [Task!]!
 	teams(ids: [ID!]): [Team!]!
+	invitations(input: InvitationFilter!): [Invitation!]!
 }
 
 """

@@ -16,7 +16,7 @@ func (d DataStore) CreateInvitation(invitation entity.Invitation) (entity.Invita
 	if err != nil {
 		return entity.Invitation{}, err
 	}
-	return invitation, nil
+	return invitation, d.persister.Write(d.data)
 }
 
 func (d DataStore) FilterInvitations(filter func(invitation entity.Invitation) bool) []entity.Invitation {

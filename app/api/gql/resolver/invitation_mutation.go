@@ -36,7 +36,9 @@ func (i InvitationUpdate) Accept(ctx context.Context) (InvitationUpdate, error) 
 	case entity.InvitationStatusExpired:
 		return InvitationUpdate{}, fmt.Errorf("invitation is expired: %v", i.invitation.ID)
 	case entity.InvitationStatusAccepted:
-		return i, nil
+		return InvitationUpdate{}, fmt.Errorf("invitation has been accepted already: %v", i.invitation.ID)
+	case entity.InvitationStatusDeclined:
+		return InvitationUpdate{}, fmt.Errorf("invitation has been declined already: %v", i.invitation.ID)
 	}
 
 	if time.Now().After(i.invitation.ExpireAt) {
@@ -178,9 +180,10 @@ func (i InvitationUpdate) Delete(ctx context.Context) (Invitation, error) {
 
 func (m Mutation) CreateInvitation(ctx context.Context, args struct {
 	Input struct {
-		SenderUserID graphql.ID
-		TeamID       graphql.ID
-		ExpireAt     graphql.Time
+		ReceiverFirstName string
+		ReceiverLastName  string
+		TeamID            graphql.ID
+		ExpireAt          graphql.Time
 	}
 }) (InvitationUpdate, error) {
 	userID, err := identity.FromContext(ctx)
@@ -200,17 +203,18 @@ func (m Mutation) CreateInvitation(ctx context.Context, args struct {
 		return InvitationUpdate{}, fmt.Errorf("should find only 1 team: %v", teamID)
 	}
 
-	senderUserID, err := fromGraphQLID(args.Input.SenderUserID)
 	if err != nil {
 		return InvitationUpdate{}, err
 	}
 
 	invitation := entity.Invitation{
-		SenderUserID: senderUserID,
-		TeamID:       teamID,
-		Status:       entity.InvitationStatusPending,
-		Code:         uuid.New().String(),
-		ExpireAt:     args.Input.ExpireAt.Time,
+		SenderUserID:      userID,
+		ReceiverFirstName: args.Input.ReceiverFirstName,
+		ReceiverLastName:  args.Input.ReceiverLastName,
+		TeamID:            teamID,
+		Status:            entity.InvitationStatusPending,
+		Code:              uuid.New().String(),
+		ExpireAt:          args.Input.ExpireAt.Time,
 	}
 
 	created, err := m.deps.Data.CreateInvitation(invitation)
