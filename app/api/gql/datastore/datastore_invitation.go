@@ -12,10 +12,6 @@ func (d DataStore) CreateInvitation(invitation entity.Invitation) (entity.Invita
 	invitation.ID = d.newID(Invitation)
 	invitation.CreatedAt = time.Now()
 	d.data.Invitations[invitation.ID] = invitation
-	err := d.persister.Write(d.data)
-	if err != nil {
-		return entity.Invitation{}, err
-	}
 	return invitation, d.persister.Write(d.data)
 }
 

@@ -87,6 +87,17 @@ func (i InvitationUpdate) Accept(ctx context.Context) (InvitationUpdate, error) 
 }
 
 func (i InvitationUpdate) Decline(ctx context.Context) (InvitationUpdate, error) {
+	switch i.invitation.Status {
+	case entity.InvitationStatusInvoked:
+		return InvitationUpdate{}, fmt.Errorf("invitation is revoked: %v", i.invitation.ID)
+	case entity.InvitationStatusExpired:
+		return InvitationUpdate{}, fmt.Errorf("invitation is expired: %v", i.invitation.ID)
+	case entity.InvitationStatusAccepted:
+		return InvitationUpdate{}, fmt.Errorf("invitation has been accepted already: %v", i.invitation.ID)
+	case entity.InvitationStatusDeclined:
+		return InvitationUpdate{}, fmt.Errorf("invitation has been declined already: %v", i.invitation.ID)
+	}
+
 	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return InvitationUpdate{}, err
