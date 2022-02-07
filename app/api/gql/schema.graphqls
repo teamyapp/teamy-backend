@@ -60,10 +60,9 @@ type User {
 	tasks(input: TaskFilter): [Task!]!
 }
 
-input UserInput {
-	id: ID!
-	lastName: String
-	firstName: String
+input CreateUserInput {
+	lastName: String!
+	firstName: String!
 	profileUrl: String
 }
 
@@ -258,7 +257,7 @@ type Mutation {
 	or when the logged in user is not a system admin
 	Admin && Debug Only resolvers
 	"""
-	createUser(input: UserInput!): UserUpdate!
+	createUser(input: CreateUserInput!): UserUpdate!
 	promoteTaskToNeedAttention(taskId: ID!): Team!    @deprecated(reason: "use TeamUpdate")
 	updateActiveTeam(teamId: ID!): User!            @deprecated(reason: "use UserUpdate")
 }
@@ -278,7 +277,7 @@ type TaskUpdate {
 	task: Task!
 }
 
-input UserUpdateInput {
+input UpdateUserInput {
 	lastName: String
 	firstName: String
 	profileUrl: String
@@ -286,7 +285,7 @@ input UserUpdateInput {
 
 type UserUpdate {
 	updateActiveTeam(teamId: ID!): UserUpdate!
-	updateUser(input: UserUpdateInput!): UserUpdate!
+	updateUser(input: UpdateUserInput!): UserUpdate!
 	user: User!
 }
 
