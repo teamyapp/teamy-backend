@@ -106,37 +106,28 @@ func newUser(deps *Dependencies, user entity.User) User {
 */
 
 func (m Mutation) CreateUser(
+	ctx context.Context,
 	args struct {
 		Input struct {
-			ID         graphql.ID
-			FirstName  *string
-			LastName   *string
+			FirstName  string
+			LastName   string
 			ProfileURL *string
 		}
 	},
 ) (UserUpdate, error) {
-	id, err := fromGraphQLID(args.Input.ID)
+	userID, err := identity.FromContext(ctx)
 	if err != nil {
 		return UserUpdate{}, err
 	}
-	firstName := ""
-	if args.Input.FirstName != nil {
-		firstName = *args.Input.FirstName
-	}
-	lastName := ""
-	if args.Input.LastName != nil {
-		lastName = *args.Input.LastName
-	}
+
 	profileURL := ""
 	if args.Input.ProfileURL != nil {
 		profileURL = *args.Input.ProfileURL
 	}
 	user, err := m.deps.Data.CreateUser(entity.User{
-		Entity: oneEntity.Entity{
-			ID: id,
-		},
-		FirstName:  firstName,
-		LastName:   lastName,
+		ID:         userID,
+		FirstName:  args.Input.FirstName,
+		LastName:   args.Input.LastName,
 		ProfileURL: profileURL,
 	})
 	if err != nil {
