@@ -157,14 +157,6 @@ input UpdateInvitationInput {
 	status: InvitationStatus
 }
 
-type InvitationUpdate {
-	invitation: Invitation!
-	accept: InvitationUpdate!
-	decline: InvitationUpdate!
-	update(input: UpdateInvitationInput!): InvitationUpdate!
-	delete: Invitation!
-}
-
 input InvitationFilter {
 	id: ID
 	code: String
@@ -215,6 +207,65 @@ type Query {
 	invitations(input: InvitationFilter!): [Invitation!]!
 }
 
+type TaskMutation {
+	createTask(task: CreateTaskInput!): TaskMutation!
+	updateTask(taskId: ID!, task: TaskInput!): TaskMutation!
+	deleteTask(taskId: ID!): TaskMutation!
+	"change ownedByTeam of task field to id"
+	updateOwningTeam(id: ID!): TaskMutation!
+	"TODO: replace with unset API"
+	removeOwner: TaskMutation!
+
+	task: Task!
+	mutation: Mutation!
+}
+
+type CommentMutation {
+	createComment(taskId: ID!, content: String!): CommentMutation!
+	updateContent(content: String!): CommentMutation!
+	deleteComment: CommentMutation!
+
+	comment: Comment!
+	mutation: Mutation!
+}
+
+type TeamMutation {
+	createTeam(input: CreateTeamInput!): TeamMutation!
+	updateTeam(teamId: ID!, input: UpdateTeamInput!): TeamMutation!
+
+	"Given the user id, add the user to the team."
+	addMember(memberId: ID!): TeamMutation!
+	removeMember(memberId: ID!): TeamMutation!
+
+	"Remove the task from the team"
+	removeTask(taskId: ID!): TeamMutation!
+	"Given the task id, promote an In Progress task to Need Attention."
+	promoteTaskToNeedAttention(taskId: ID!): TeamMutation!
+
+	team: Team!
+	mutation: Mutation!
+}
+
+type UserMutation {
+	createUser(input: CreateUserInput!): UserMutation!
+	updateActiveTeam(userId: ID!, teamId: ID!): UserMutation!
+	updateUser(userId: ID!, input: UpdateUserInput!): UserMutation!
+
+	user: User!
+	mutation: Mutation!
+}
+
+type InvitationMutation {
+	createInvitation(input: CreateInvitationInput!): InvitationMutation!
+	acceptInvitation(code: String): InvitationMutation!
+	acceptInvitation(code: String): InvitationMutation!
+	updateInvitation(invitationId: ID!, input: UpdateInvitationInput!): InvitationMutation!
+	deleteInvitation(invitationId: ID!): InvitationMutation!
+
+	invitation: Invitation!
+	mutation: Mutation!
+}
+
 """
 Mutation
 """
@@ -223,43 +274,11 @@ type Mutation {
 	Task
 	A task can exist independently from a team
 	"""
-	createTask(task: CreateTaskInput!): TaskUpdate!
-	updateTask(taskId: ID!, task: TaskInput!): Task!
-	deleteTask(taskId: ID!): Task!
-	taskUpdate(taskId: ID!): TaskUpdate!
-
-	"""
-	Comment
-	"""
-	comment(id: ID!): CommentUpdate!
-	createComment(taskId: ID!, content: String!): Comment!
-
-	"""
-	Team
-	"""
-	team(id: ID!): TeamUpdate!
-	createTeam(input: CreateTeamInput!): TeamUpdate!
-
-	"""
-	User
-	"""
-	user(id: ID!): UserUpdate!
-
-	"""
-	Invitation
-	"""
-	createInvitation(input: CreateInvitationInput!): InvitationUpdate!
-	invitationUpdate(id: ID!): InvitationUpdate!
-	invitationUpdateWithCode(code: String!): InvitationUpdate!
-
-	"""
-	todo: implement a directive that hide this resolver from production
-	or when the logged in user is not a system admin
-	Admin && Debug Only resolvers
-	"""
-	createUser(input: CreateUserInput!): UserUpdate!
-	promoteTaskToNeedAttention(taskId: ID!): Team!    @deprecated(reason: "use TeamUpdate")
-	updateActiveTeam(teamId: ID!): User!            @deprecated(reason: "use UserUpdate")
+	taskMutation: TaskMutation!
+	commentMutation: CommentMutation!
+	teamMutation: TeamMutation!
+	userMutation: UserMutation!
+	invitationMutation: InvitationMutation!
 }
 
 input CreateTaskInput {
@@ -270,23 +289,10 @@ input CreateTaskInput {
 	status: TaskStatus
 }
 
-type TaskUpdate {
-	"change ownedByTeam of task field to id"
-	ownedByTeam(id: ID!): TaskUpdate!
-	removeOwner: TaskUpdate!
-	task: Task!
-}
-
 input UpdateUserInput {
 	lastName: String
 	firstName: String
 	profileUrl: String
-}
-
-type UserUpdate {
-	updateActiveTeam(teamId: ID!): UserUpdate!
-	updateUser(input: UpdateUserInput!): UserUpdate!
-	user: User!
 }
 
 input TeamUpdateInput {
@@ -294,21 +300,3 @@ input TeamUpdateInput {
 	iconUrl: String
 }
 
-type TeamUpdate {
-	"Given the user id, add the user to the team."
-	addMember(id: ID!): TeamUpdate!
-	removeMember(id: ID!): TeamUpdate!
-	"Remove the task from the team"
-	removeTask(id: ID!): TeamUpdate!
-	update(input: TeamUpdateInput!): TeamUpdate!
-	"Given the task id, promote an In Progress task to Need Attention."
-	promoteTaskToNeedAttention(Id: ID!): TeamUpdate!
-	"get the value of this team"
-	team: Team!
-}
-
-type CommentUpdate {
-	updateContent(content: String!): CommentUpdate!
-	delete: Comment!
-	comment: Comment!
-}
