@@ -22,6 +22,7 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 		DueAt       *graphql.Time
 	}
 }) (Task, error) {
+	panic("implement me")
 }
 
 func (m Mutation) UpdateTask(ctx context.Context, args struct {
@@ -34,11 +35,13 @@ func (m Mutation) UpdateTask(ctx context.Context, args struct {
 		DueAt       *graphql.Time
 	}
 }) (Task, error) {
+	panic("implement me")
 }
 
 func (m Mutation) DeleteTask(ctx context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
+	panic("implement me")
 }
 
 /* Message */
@@ -49,6 +52,7 @@ func (m Mutation) CreateMessage(ctx context.Context, args struct {
 		Body string
 	}
 }) (Message, error) {
+	panic("implement me")
 }
 
 func (m Mutation) UpdateMessage(ctx context.Context, args struct {
@@ -57,11 +61,13 @@ func (m Mutation) UpdateMessage(ctx context.Context, args struct {
 		body *string
 	}
 }) (Message, error) {
+	panic("implement me")
 }
 
 func (m Mutation) DeleteMessage(ctx context.Context, args struct {
 	MessageID graphql.ID
 }) (Message, error) {
+	panic("implement me")
 }
 
 /* Team */
@@ -71,6 +77,7 @@ func (m Mutation) CreateTeam(ctx context.Context, args struct {
 		Name string
 	}
 }) (Team, error) {
+	panic("implement me")
 }
 
 func (m Mutation) UpdateTeam(ctx context.Context, args struct {
@@ -80,30 +87,35 @@ func (m Mutation) UpdateTeam(ctx context.Context, args struct {
 		IconURL *string
 	}
 }) (Team, error) {
+	panic("implement me")
 }
 
 func (m Mutation) AddMemberToTeam(ctx context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
+	panic("implement me")
 }
 
 func (m Mutation) RemoveMemberFromTeam(ctx context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
+	panic("implement me")
 }
 
 func (m Mutation) RemoveTaskFromTeam(ctx context.Context, args struct {
 	TeamID graphql.ID
 	TaskID graphql.ID
 }) (Team, error) {
+	panic("implement me")
 }
 
 func (m Mutation) PromoteTeamTaskToNeedAttention(ctx context.Context, args struct {
 	TeamID graphql.ID
 	TaskID graphql.ID
 }) (Team, error) {
+	panic("implement me")
 }
 
 /* User */
@@ -115,6 +127,7 @@ func (m Mutation) CreateUser(ctx context.Context, args struct {
 		ProfileURL *string
 	}
 }) (User, error) {
+	panic("implement me")
 }
 
 func (m Mutation) UpdateUser(ctx context.Context, args struct {
@@ -125,6 +138,7 @@ func (m Mutation) UpdateUser(ctx context.Context, args struct {
 		ProfileURL *string
 	}
 }) (User, error) {
+	panic("implement me")
 }
 
 /* Invitation */
@@ -137,6 +151,7 @@ func (m Mutation) CreateInvitation(ctx context.Context, args struct {
 		ExpireAT          *graphql.Time
 	}
 }) (Invitation, error) {
+	panic("implement me")
 }
 
 func (m Mutation) UpdateInvitation(ctx context.Context, args struct {
@@ -148,19 +163,23 @@ func (m Mutation) UpdateInvitation(ctx context.Context, args struct {
 		Status         *entity.InvitationStatus
 	}
 }) (Invitation, error) {
+	panic("implement me")
 }
 
 func (m Mutation) DeleteInvitation(ctx context.Context, args struct {
 	InvitationID graphql.ID
 }) (Invitation, error) {
+	panic("implement me")
 }
 
 func (m Mutation) AcceptInvitation(ctx context.Context, args struct {
 	InvitationCode string
 }) (Invitation, error) {
+	panic("implement me")
 }
 
 func (m Mutation) DeclineInvitation(ctx context.Context, args struct {
 	InvitationCode string
 }) (Invitation, error) {
+	panic("implement me")
 }
