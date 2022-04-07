@@ -22,7 +22,7 @@ type TaskFilter struct {
 	CreatorID *graphql.ID
 	OwnerID   *graphql.ID
 	Text      *string
-	Status    *entity.TaskStatusEnum
+	Status    *entity.TaskStatus
 }
 
 func (t Task) ID() graphql.ID {
@@ -134,7 +134,7 @@ func (t Task) Comments() []Comment {
 	return Comments(t.deps, cs)
 }
 
-func (t Task) Status() (entity.TaskStatusEnum, error) {
+func (t Task) Status() (entity.TaskStatus, error) {
 	// TODO: add status to task
 	return t.task.Status, nil
 }

@@ -56,7 +56,7 @@ func (m Mutation) PromoteTaskToNeedAttention(
 	if err != nil {
 		return Team{}, err
 	}
-	if task.Status != entity.IN_PROGRESS {
+	if task.Status != entity.TaskStatusInProgress {
 		return Team{}, errors.Errorf("task %v is not in progress, can not promote to Need Attention", taskID)
 	}
 	team, err := m.deps.Data.UpdateTeam(user.ActiveTeamID, func(t entity.Team) entity.Team {
@@ -174,7 +174,7 @@ func (tu TeamUpdate) PromoteTaskToNeedAttention(
 	if err != nil {
 		return TeamUpdate{}, err
 	}
-	if task.Status != entity.IN_PROGRESS {
+	if task.Status != entity.TaskStatusInProgress {
 		return TeamUpdate{}, errors.Errorf("task %v is not in progress, can not promote to Need Attention", taskID)
 	}
 	team, err := tu.deps.Data.UpdateTeam(user.ActiveTeamID, func(t entity.Team) entity.Team {
