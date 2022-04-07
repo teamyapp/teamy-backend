@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/teamyapp/one/entity"
 )
@@ -14,7 +15,9 @@ const userIDKey key = 0
 func FromContext(ctx context.Context) (entity.ID, error) {
 	userID, ok := ctx.Value(userIDKey).(entity.ID)
 	if !ok {
-		return 0, fmt.Errorf("userID not found")
+		err := fmt.Errorf("userID not found")
+		log.Println(err)
+		return 0, err
 	}
 
 	return userID, nil

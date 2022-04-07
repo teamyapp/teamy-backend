@@ -10,5 +10,5 @@ type TaskInput struct {
 	DueAt       *graphql.Time
 	Context     *string
 	OwnerUserID *graphql.ID
-	Status      *entity.TaskStatusEnum
+	Status      *entity.TaskStatus
 }

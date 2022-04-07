@@ -20,5 +20,5 @@ type Task struct {
 	// DependsOnTaskIDs []oneEntity.ID
 	// NumOfUnknowns    *int
 	AvailableActions []TaskAction
-	Status           TaskStatusEnum
+	Status           TaskStatus
 }

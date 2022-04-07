@@ -1,19 +1,10 @@
 package entity
 
-type TaskStatus int
+type TaskStatus string
 
 const (
-	TaskStatusNeedAttention TaskStatus = iota
-	TaskStatusUpcoming
-	TaskStatusInProgress
-	TaskStatusDelivered
-)
-
-type TaskStatusEnum string
-
-const (
-	NeedAttention TaskStatusEnum = "NeedAttention"
-	UPCOMING      TaskStatusEnum = "UPCOMING"
-	IN_PROGRESS   TaskStatusEnum = "IN_PROGRESS"
-	DELIVERED     TaskStatusEnum = "DELIVERED"
+	TaskStatusNeedAttention TaskStatus = "NEED_ATTENTION"
+	TaskStatusUpcoming      TaskStatus = "UPCOMING"
+	TaskStatusInProgress    TaskStatus = "IN_PROGRESS"
+	TaskStatusDelivered     TaskStatus = "DELIVERED"
 )
