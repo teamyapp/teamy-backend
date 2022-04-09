@@ -91,7 +91,7 @@ type Invitation {
 	expireAt: Time!
 	createdAt: Time!
 	status: InvitationStatus!
-	code: String
+	code: String!
 }
 
 enum InvitationStatus {
