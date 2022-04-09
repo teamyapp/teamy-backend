@@ -10,11 +10,11 @@ import (
 
 type Invitation struct {
 	invitation entityv2.Invitation
-	deps       *Dependencies
+	deps       Dependencies
 }
 
-func (i Invitation) ID(ctx context.Context) (graphql.ID, error) {
-	return toGraphQLID(i.invitation.ID), nil
+func (i Invitation) ID(ctx context.Context) graphql.ID {
+	return toGraphQLID(i.invitation.ID)
 }
 
 func (i Invitation) Sender(ctx context.Context) (User, error) {
@@ -24,8 +24,8 @@ func (i Invitation) Sender(ctx context.Context) (User, error) {
 	}
 
 	return User{
-		sender,
-		i.deps,
+		user: sender,
+		deps: i.deps,
 	}, nil
 }
 
@@ -52,8 +52,8 @@ func (i Invitation) Receiver(ctx context.Context) (*User, error) {
 	}
 
 	return &User{
-		receiver,
-		i.deps,
+		user: receiver,
+		deps: i.deps,
 	}, nil
 }
 
@@ -64,8 +64,8 @@ func (i Invitation) JoiningTeam(ctx context.Context) (Team, error) {
 	}
 
 	return Team{
-		team,
-		i.deps,
+		team: team,
+		deps: i.deps,
 	}, nil
 }
 

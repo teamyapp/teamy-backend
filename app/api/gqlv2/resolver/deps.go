@@ -12,8 +12,8 @@ type Dependencies struct {
 func NewDependencies(
 	userDao dao.User,
 	teamDao dao.Team,
-) *Dependencies {
-	return &Dependencies{
+) Dependencies {
+	return Dependencies{
 		userDao: userDao,
 		teamDao: teamDao,
 	}

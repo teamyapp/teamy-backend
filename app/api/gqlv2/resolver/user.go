@@ -10,7 +10,7 @@ import (
 
 type User struct {
 	user dao.User
-	deps *Dependencies
+	deps Dependencies
 }
 
 func (User) ID(ctx context.Context) (graphql.ID, error) {

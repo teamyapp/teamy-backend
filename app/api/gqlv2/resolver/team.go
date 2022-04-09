@@ -10,7 +10,7 @@ import (
 
 type Team struct {
 	team dao.Team
-	deps *Dependencies
+	deps Dependencies
 }
 
 func (Team) ID(ctx context.Context) (graphql.ID, error) {
