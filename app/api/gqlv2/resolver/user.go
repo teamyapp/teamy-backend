@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+
 	"github.com/teamyapp/teamy-backend/app/dao"
 
 	"github.com/graph-gophers/graphql-go"

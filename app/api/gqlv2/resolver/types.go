@@ -1,9 +1,10 @@
 package resolver
 
 import (
-	"github.com/graph-gophers/graphql-go"
 	"strconv"
 	"time"
+
+	"github.com/graph-gophers/graphql-go"
 )
 
 func toGraphQLID(id uint64) graphql.ID {
