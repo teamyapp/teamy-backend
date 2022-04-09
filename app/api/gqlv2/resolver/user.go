@@ -3,10 +3,14 @@ package resolver
 import (
 	"context"
 
+	"github.com/teamyapp/teamy-backend/app/dao"
+
 	"github.com/graph-gophers/graphql-go"
 )
 
 type User struct {
+	user dao.User
+	deps Dependencies
 }
 
 func (User) ID(ctx context.Context) (graphql.ID, error) {

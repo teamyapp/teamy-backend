@@ -3,53 +3,84 @@ package resolver
 import (
 	"context"
 
+	"github.com/teamyapp/teamy-backend/app/entityv2"
+
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Invitation struct {
+	invitation entityv2.Invitation
+	deps       Dependencies
 }
 
-func (Invitation) ID(ctx context.Context) (graphql.ID, error) {
-	panic("implement me")
+func (i Invitation) ID(ctx context.Context) graphql.ID {
+	return toGraphQLID(i.invitation.ID)
 }
 
-func (Invitation) Sender(ctx context.Context) (User, error) {
-	panic("implement me")
+func (i Invitation) Sender(ctx context.Context) (User, error) {
+	sender, err := i.deps.userDao.FindUser(i.invitation.SenderUserID)
+	if err != nil {
+		return User{}, err
+	}
+
+	return User{
+		user: sender,
+		deps: i.deps,
+	}, nil
 }
 
-func (Invitation) ReceiverFirstName(ctx context.Context) (string, error) {
-	panic("implement me")
+func (i Invitation) ReceiverFirstName(ctx context.Context) string {
+	return i.invitation.ReceiverFirstName
 }
 
-func (Invitation) ReceiverLastName(ctx context.Context) (*string, error) {
-	panic("implement me")
+func (i Invitation) ReceiverLastName(ctx context.Context) *string {
+	return i.invitation.ReceiverLastName
 }
 
-func (Invitation) ReceiverEmail(ctx context.Context) (*string, error) {
-	panic("implement me")
+func (i Invitation) ReceiverEmail(ctx context.Context) *string {
+	return i.invitation.ReceiverEmail
 }
 
-func (Invitation) Receiver(ctx context.Context) (*User, error) {
-	panic("implement me")
+func (i Invitation) Receiver(ctx context.Context) (*User, error) {
+	if i.invitation.ReceiverUserID == nil {
+		return nil, nil
+	}
+
+	receiver, err := i.deps.userDao.FindUser(*i.invitation.ReceiverUserID)
+	if err != nil {
+		return &User{}, err
+	}
+
+	return &User{
+		user: receiver,
+		deps: i.deps,
+	}, nil
 }
 
-func (Invitation) JoiningTeam(ctx context.Context) (Team, error) {
-	panic("implement me")
+func (i Invitation) JoiningTeam(ctx context.Context) (Team, error) {
+	team, err := i.deps.teamDao.FindTeam(i.invitation.TeamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return Team{
+		team: team,
+		deps: i.deps,
+	}, nil
 }
 
-func (Invitation) ExpireAt(ctx context.Context) (graphql.Time, error) {
-	panic("implement me")
+func (i Invitation) ExpireAt(ctx context.Context) graphql.Time {
+	return toGraphQLTime(i.invitation.ExpireAt)
 }
 
-func (Invitation) CreateAt(ctx context.Context) (graphql.Time, error) {
-	panic("implement me")
+func (i Invitation) CreateAt(ctx context.Context) graphql.Time {
+	return toGraphQLTime(i.invitation.CreatedAt)
 }
 
-func (Invitation) Status(ctx context.Context) (entity.InvitationStatus, error) {
-	panic("implement me")
+func (i Invitation) Status(ctx context.Context) entityv2.InvitationStatus {
+	return i.invitation.Status
 }
 
-func (Invitation) Code(ctx context.Context) (*string, error) {
-	panic("implement me")
+func (i Invitation) Code(ctx context.Context) string {
+	return i.invitation.Code
 }
