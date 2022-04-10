@@ -40,6 +40,10 @@ func (u User) Teams(ctx context.Context) ([]Team, error) {
 	}
 
 	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+
 	teams := make([]Team, 0, 0)
 	for _, teamEntity := range teamEntities {
 		teams = append(teams, Team{
