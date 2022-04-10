@@ -9,8 +9,8 @@ import (
 )
 
 type Invitation struct {
-	invitation entityv2.Invitation
 	deps       Dependencies
+	invitation entityv2.Invitation
 }
 
 func (i Invitation) ID(ctx context.Context) graphql.ID {
