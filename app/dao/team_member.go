@@ -1,5 +1,5 @@
 package dao
 
 type TeamMember interface {
-	FindTeamIDsForUser(userId uint64) ([]uint64, error)
+	FindTeamIDsByUserID(userID uint64) ([]uint64, error)
 }

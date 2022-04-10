@@ -34,19 +34,16 @@ func (u User) CreatedAt(ctx context.Context) graphql.Time {
 }
 
 func (u User) Teams(ctx context.Context) ([]Team, error) {
-	ids, err := u.deps.teamMemberDao.FindTeamIDsForUser(u.user.ID)
+	ids, err := u.deps.teamMemberDao.FindTeamIDsByUserID(u.user.ID)
 	if err != nil {
 		return nil, err
 	}
 
+	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ids)
 	teams := make([]Team, 0, 0)
-	for _, id := range ids {
-		team, err := u.deps.teamDao.FindTeam(id)
-		if err != nil {
-			return nil, err
-		}
+	for _, teamEntity := range teamEntities {
 		teams = append(teams, Team{
-			team: team,
+			team: teamEntity,
 			deps: u.deps,
 		})
 	}

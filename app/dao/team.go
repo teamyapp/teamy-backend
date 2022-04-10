@@ -3,5 +3,6 @@ package dao
 import "github.com/teamyapp/teamy-backend/app/entityv2"
 
 type Team interface {
-	FindTeam(id uint64) (entityv2.Team, error)
+	FindTeamByID(id uint64) (entityv2.Team, error)
+	FindTeamsByIDs(ids []uint64) ([]entityv2.Team, error)
 }

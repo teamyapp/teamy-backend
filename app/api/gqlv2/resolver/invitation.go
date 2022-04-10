@@ -18,7 +18,7 @@ func (i Invitation) ID(ctx context.Context) graphql.ID {
 }
 
 func (i Invitation) Sender(ctx context.Context) (User, error) {
-	sender, err := i.deps.userDao.FindUser(i.invitation.SenderUserID)
+	sender, err := i.deps.userDao.FindUserByID(i.invitation.SenderUserID)
 	if err != nil {
 		return User{}, err
 	}
@@ -46,7 +46,7 @@ func (i Invitation) Receiver(ctx context.Context) (*User, error) {
 		return nil, nil
 	}
 
-	receiver, err := i.deps.userDao.FindUser(*i.invitation.ReceiverUserID)
+	receiver, err := i.deps.userDao.FindUserByID(*i.invitation.ReceiverUserID)
 	if err != nil {
 		return &User{}, err
 	}
@@ -58,7 +58,7 @@ func (i Invitation) Receiver(ctx context.Context) (*User, error) {
 }
 
 func (i Invitation) JoiningTeam(ctx context.Context) (Team, error) {
-	team, err := i.deps.teamDao.FindTeam(i.invitation.TeamID)
+	team, err := i.deps.teamDao.FindTeamByID(i.invitation.TeamID)
 	if err != nil {
 		return Team{}, err
 	}
