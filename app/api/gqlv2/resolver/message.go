@@ -4,23 +4,26 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type Message struct {
+	deps    Dependencies
+	message entityv2.Message
 }
 
-func (Message) ID(ctx context.Context) (graphql.ID, error) {
-	panic("implement me")
+func (m Message) ID(ctx context.Context) graphql.ID {
+	return toGraphQLID(m.message.ID)
 }
 
-func (Message) Body(ctx context.Context) (string, error) {
-	panic("implement me")
+func (m Message) Body(ctx context.Context) string {
+	return m.message.Body
 }
 
-func (Message) CreatedAt(ctx context.Context) (graphql.Time, error) {
-	panic("implement me")
+func (m Message) CreatedAt(ctx context.Context) graphql.Time {
+	return toGraphQLTime(m.message.CreatedAt)
 }
 
-func (Message) UpdatedAt(ctx context.Context) (*graphql.Time, error) {
-	panic("implement me")
+func (m Message) UpdatedAt(ctx context.Context) *graphql.Time {
+	return toGraphQLTimePtr(m.message.UpdatedAt)
 }
