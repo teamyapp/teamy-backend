@@ -12,8 +12,8 @@ type Task struct {
 	DueAt            *time.Time
 	Context          string
 	CreatorID        uint64
-	OwnerUserId      *uint64
-	OwningTeamId     uint64
+	OwnerUserID      *uint64
+	OwningTeamID     uint64
 	Status           TaskStatus
 	CommentsThreadID *uint64
 }

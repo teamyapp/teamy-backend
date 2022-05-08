@@ -4,11 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/teamyapp/teamy-backend/app/collect"
-
-	"github.com/teamyapp/teamy-backend/app/entityv2"
-
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/app/collect"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type Team struct {

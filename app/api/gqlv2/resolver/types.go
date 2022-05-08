@@ -24,6 +24,7 @@ func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &id, err
 }
 
