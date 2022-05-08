@@ -67,7 +67,7 @@ func (t Team) Members(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 
-	return collect.Map(userEntities, func(userEntity entityv2.User, index int) User {
+	return collect.Map(userEntities, func(userEntity entityv2.User, _ int) User {
 		return User{
 			user: userEntity,
 			deps: t.deps,
@@ -87,7 +87,7 @@ func (t Team) Tasks(ctx context.Context, args struct {
 		return matchTask(args.Filter, task)
 	})
 
-	return collect.Map(filteredTasks, func(filteredTask entityv2.Task, index int) Task {
+	return collect.Map(filteredTasks, func(filteredTask entityv2.Task, _ int) Task {
 		return Task{
 			task: filteredTask,
 			deps: t.deps,
@@ -101,7 +101,7 @@ func (t Team) Invitations(ctx context.Context) ([]Invitation, error) {
 		return nil, err
 	}
 
-	return collect.Map(invitationEntities, func(invitationEntity entityv2.Invitation, index int) Invitation {
+	return collect.Map(invitationEntities, func(invitationEntity entityv2.Invitation, _ int) Invitation {
 		return Invitation{
 			invitation: invitationEntity,
 			deps:       t.deps,
