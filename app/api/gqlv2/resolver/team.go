@@ -113,7 +113,7 @@ func matchTask(filter TaskFilter, task entityv2.Task) bool {
 		return false
 	}
 
-	if filter.OwnerID != nil && ownerID != task.OwnerUserId {
+	if filter.OwnerID != nil && ownerID != task.OwnerUserID {
 		return false
 	}
 
