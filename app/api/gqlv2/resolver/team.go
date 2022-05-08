@@ -2,8 +2,9 @@ package resolver
 
 import (
 	"context"
-	"github.com/teamyapp/teamy-backend/app/collect"
 	"strings"
+
+	"github.com/teamyapp/teamy-backend/app/collect"
 
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 
