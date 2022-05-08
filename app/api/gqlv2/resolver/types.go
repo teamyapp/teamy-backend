@@ -15,6 +15,10 @@ func toGraphQLTime(time time.Time) graphql.Time {
 	return graphql.Time{Time: time}
 }
 
+func toGraphQLTimePtr(time *time.Time) *graphql.Time {
+	return &graphql.Time{Time: *time}
+}
+
 func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	if graphqlID == nil {
 		return nil, nil
