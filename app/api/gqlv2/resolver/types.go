@@ -28,6 +28,5 @@ func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 }
 
 func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
-	id, err := strconv.Atoi(string(graphqlID))
-	return uint64(id), err
+	return strconv.ParseUint(string(graphqlID), 10, 64)
 }
