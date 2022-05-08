@@ -2,14 +2,13 @@ package resolver
 
 import (
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entity"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type TaskFilter struct {
-	ID      *graphql.ID
 	OwnerID *graphql.ID
 	Goal    *string
-	Status  *entity.TaskStatus
+	Status  *entityv2.TaskStatus
 }
 
 type TeamFilter struct {

@@ -7,8 +7,9 @@ import (
 type Team struct {
 	ID        uint64
 	Name      string
-	IconURL   string
+	IconURL   *string
 	CreatorID uint64
+	OwnerID   uint64
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 }

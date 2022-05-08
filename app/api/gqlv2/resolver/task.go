@@ -2,12 +2,15 @@ package resolver
 
 import (
 	"context"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Task struct {
+	deps Dependencies
+	task entityv2.Task
 }
 
 func (t Task) ID(ctx context.Context) (graphql.ID, error) {

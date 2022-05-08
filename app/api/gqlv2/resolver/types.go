@@ -14,3 +14,20 @@ func toGraphQLID(id uint64) graphql.ID {
 func toGraphQLTime(time time.Time) graphql.Time {
 	return graphql.Time{Time: time}
 }
+
+func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
+	if graphqlID == nil {
+		return nil, nil
+	}
+
+	id, err := fromGraphQLID(*graphqlID)
+	if err != nil {
+		return nil, err
+	}
+	return &id, err
+}
+
+func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
+	id, err := strconv.Atoi(string(graphqlID))
+	return uint64(id), err
+}
