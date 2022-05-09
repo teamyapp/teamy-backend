@@ -15,5 +15,5 @@ type Task struct {
 	OwnerUserID      *uint64
 	OwningTeamID     uint64
 	Status           TaskStatus
-	CommentsThreadID *uint64
+	CommentsThreadID uint64
 }
