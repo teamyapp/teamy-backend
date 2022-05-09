@@ -11,7 +11,6 @@ type Dependencies struct {
 	invitationDao dao.Invitation
 	taskDao       dao.Task
 	messageDao    dao.Message
-	threadDao     dao.Thread
 }
 
 func NewDependencies(
@@ -21,7 +20,6 @@ func NewDependencies(
 	invitationDao dao.Invitation,
 	taskDao dao.Task,
 	messageDao dao.Message,
-	threadDao dao.Thread,
 ) Dependencies {
 	return Dependencies{
 		userDao:       userDao,
@@ -30,6 +28,5 @@ func NewDependencies(
 		invitationDao: invitationDao,
 		taskDao:       taskDao,
 		messageDao:    messageDao,
-		threadDao:     threadDao,
 	}
 }

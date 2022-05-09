@@ -3,6 +3,8 @@ package resolver
 import (
 	"context"
 
+	"github.com/teamyapp/teamy-backend/app/collect"
+
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
@@ -91,20 +93,18 @@ func (t Task) Status(ctx context.Context) entityv2.TaskStatus {
 	return t.task.Status
 }
 
-func (t Task) Comments(ctx context.Context) (*Thread, error) {
-	if t.task.CommentsThreadID == nil {
-		return nil, nil
-	}
-
-	thread, err := t.deps.threadDao.FindThreadByID(*t.task.CommentsThreadID)
+func (t Task) Comments(ctx context.Context) ([]Message, error) {
+	messages, err := t.deps.messageDao.FindMessagesByThreadID(t.task.CommentsThreadID)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Thread{
-		deps:   t.deps,
-		thread: thread,
-	}, nil
+	return collect.Map(messages, func(message entityv2.Message, _ int) Message {
+		return Message{
+			message: message,
+			deps:    t.deps,
+		}
+	}), nil
 }
 
 func (t Task) CreatedAt(ctx context.Context) graphql.Time {

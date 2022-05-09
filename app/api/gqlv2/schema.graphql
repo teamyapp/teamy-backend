@@ -49,16 +49,11 @@ type Task {
 	owner: User
 	owningTeam: Team!
 	status: TaskStatus!
-	comments: Thread!
+	comments: [Message]!
 	createdAt: Time!
 	updatedAt: Time
 	dueAt: Time
 	availableActions: [TaskAction!]!
-}
-
-type Thread {
-	id: ID!
-	messages: [Message!]!
 }
 
 type Message {
