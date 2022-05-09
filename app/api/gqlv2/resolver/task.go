@@ -3,9 +3,8 @@ package resolver
 import (
 	"context"
 
-	"github.com/teamyapp/teamy-backend/app/collect"
-
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/app/collect"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
@@ -66,6 +65,7 @@ func (t Task) Owner(ctx context.Context) (*User, error) {
 	if t.task.OwnerUserID == nil {
 		return nil, nil
 	}
+
 	owner, err := t.deps.userDao.FindUserByID(*t.task.OwnerUserID)
 	if err != nil {
 		return nil, err
