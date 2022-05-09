@@ -44,10 +44,10 @@ type Mutation {
 type Task {
 	id: ID!
 	goal: String!
-	context: String
+	context: String!
 	creator: User!
 	owner: User
-	owningTeam: Team
+	owningTeam: Team!
 	status: TaskStatus!
 	comments: Thread!
 	createdAt: Time!
@@ -99,6 +99,21 @@ enum InvitationStatus {
 	ACCEPTED
 	DECLINED
 	EXPIRED
+}
+
+enum TaskAction {
+	START
+	DELETE
+	ASSIGN_OWNER
+	REPORT_BLOCKED
+	MARK_COMPLETE
+}
+
+enum TaskStatus {
+	NEED_ATTENTION
+	UPCOMING
+	IN_PROGRESS
+	DELIVERED
 }
 
 type User {
