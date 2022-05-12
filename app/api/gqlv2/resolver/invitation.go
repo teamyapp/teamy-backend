@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/teamyapp/teamy-backend/app/entityv2"
-
 	"github.com/graph-gophers/graphql-go"
 )
 
@@ -29,7 +28,7 @@ func (i Invitation) Sender(ct context.Context) (User, error) {
 	}, nil
 }
 
-func (i Invitation) ReceiverFirstName(ct context.Context) string {
+func (i Invitation) ReceiverFirstName(ct context.Context) *string {
 	return i.invitation.ReceiverFirstName
 }
 

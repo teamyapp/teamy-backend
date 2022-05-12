@@ -7,7 +7,7 @@ import (
 type Invitation struct {
 	ID                uint64
 	SenderUserID      uint64
-	ReceiverFirstName string
+	ReceiverFirstName *string
 	ReceiverLastName  *string
 	ReceiverUserID    *uint64
 	ReceiverEmail     *string

@@ -10,10 +10,11 @@ type Task struct {
 	UpdatedAt        *time.Time
 	Goal             string
 	DueAt            *time.Time
-	Context          string
+	Context          *string
 	CreatorID        uint64
 	OwnerUserID      *uint64
 	OwningTeamID     uint64
 	Status           TaskStatus
+	Effort           *uint
 	CommentsThreadID uint64
 }

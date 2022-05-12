@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/teamyapp/teamy-backend/app/entityv2"
-
 	"github.com/graph-gophers/graphql-go"
 )
 
@@ -26,7 +25,7 @@ func (u User) LastName(ct context.Context) string {
 }
 
 func (u User) ProfileURL(ct context.Context) *string {
-	return &u.user.ProfileURL
+	return u.user.ProfileURL
 }
 
 func (u User) CreatedAt(ct context.Context) graphql.Time {

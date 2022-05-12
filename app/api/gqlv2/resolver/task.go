@@ -45,7 +45,7 @@ func (t Task) Goal(ct context.Context) string {
 	return t.task.Goal
 }
 
-func (t Task) Context(ct context.Context) string {
+func (t Task) Context(ct context.Context) *string {
 	return t.task.Context
 }
 
