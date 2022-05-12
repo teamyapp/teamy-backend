@@ -26,7 +26,7 @@ func (u User) LastName(ctx context.Context) string {
 }
 
 func (u User) ProfileURL(ctx context.Context) *string {
-	return &u.user.ProfileURL
+	return u.user.ProfileURL
 }
 
 func (u User) CreatedAt(ctx context.Context) graphql.Time {

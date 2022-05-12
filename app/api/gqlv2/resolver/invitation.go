@@ -29,7 +29,7 @@ func (i Invitation) Sender(ctx context.Context) (User, error) {
 	}, nil
 }
 
-func (i Invitation) ReceiverFirstName(ctx context.Context) string {
+func (i Invitation) ReceiverFirstName(ctx context.Context) *string {
 	return i.invitation.ReceiverFirstName
 }
 

@@ -72,6 +72,7 @@ type Team {
 	owner: User!
 	members: [User!]!
 	tasks(filter: TaskFilter): [Task!]!
+
 	invitations: [Invitation!]!
 }
 
