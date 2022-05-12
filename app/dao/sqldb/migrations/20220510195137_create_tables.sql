@@ -85,8 +85,3 @@ DROP TABLE thread;
 DROP TABLE team;
 DROP TABLE "user";
 
-
-
-
-
-
