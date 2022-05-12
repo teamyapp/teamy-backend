@@ -8,18 +8,15 @@ require (
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/teamyapp/one v0.0.0-20211210090909-75d5a83f5504
+	github.com/teamyapp/cloud v0.0.0-20220512061748-cba9459a3918
 )
 
-//replace github.com/teamyapp/one => ../../infra/oneFramework
+//replace github.com/teamyapp/cloud => /Users/harryliu/Documents/projects/teamyapp/apps/cloud
 
 require (
+	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/lib/pq v1.10.3 // indirect
-	github.com/rubenv/sql-migrate v0.0.0-20211023115951-9f02b1e13857 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
-	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
-	gopkg.in/gorp.v1 v1.7.2 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	github.com/lib/pq v1.10.5 // indirect
+	github.com/rubenv/sql-migrate v1.1.1 // indirect
 )

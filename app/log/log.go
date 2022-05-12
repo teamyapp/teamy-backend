@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 )
 
 func Info(args ...interface{}) {
@@ -13,13 +13,13 @@ func Info(args ...interface{}) {
 		return
 	}
 	first := args[0]
-	if ctx, ok := first.(context.Context); ok {
+	if ct, ok := first.(context.Context); ok {
 		logs := args[1:]
-		reqID, ok := ctx.Value("request-id").(string)
+		reqID, ok := ct.Value("request-id").(string)
 		if ok {
 			logs = append([]interface{}{reqID}, logs...)
 		}
-		userID, err := identity.FromContext(ctx)
+		userID, err := ctx.UserIDFromContext(ct)
 		if err != nil && !strings.Contains(err.Error(), "userID not found") {
 			log.Println(reqID, err)
 		}

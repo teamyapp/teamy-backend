@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/teamyapp/teamy-backend/app/entityv2"
-
 	"github.com/graph-gophers/graphql-go"
 )
 
@@ -13,27 +12,27 @@ type User struct {
 	user entityv2.User
 }
 
-func (u User) ID(ctx context.Context) graphql.ID {
+func (u User) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(u.user.ID)
 }
 
-func (u User) FirstName(ctx context.Context) string {
+func (u User) FirstName(ct context.Context) string {
 	return u.user.FirstName
 }
 
-func (u User) LastName(ctx context.Context) string {
+func (u User) LastName(ct context.Context) string {
 	return u.user.LastName
 }
 
-func (u User) ProfileURL(ctx context.Context) *string {
+func (u User) ProfileURL(ct context.Context) *string {
 	return u.user.ProfileURL
 }
 
-func (u User) CreatedAt(ctx context.Context) graphql.Time {
+func (u User) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(u.user.CreatedAt)
 }
 
-func (u User) Teams(ctx context.Context) ([]Team, error) {
+func (u User) Teams(ct context.Context) ([]Team, error) {
 	ids, err := u.deps.teamMemberDao.FindTeamIDsByUserID(u.user.ID)
 	if err != nil {
 		return nil, err

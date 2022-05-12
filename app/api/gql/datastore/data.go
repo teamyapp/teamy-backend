@@ -4,19 +4,18 @@ import (
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Data struct {
 	Tasks             map[graphql.ID]entity.Task
-	Users             map[oneEntity.ID]entity.User
-	Comments          map[oneEntity.ID]entity.Comment
+	Users             map[uint64]entity.User
+	Comments          map[uint64]entity.Comment
 	LifetimeEvents    []LifetimeEvent
 	CreationRelations []CreationRelation
 	Teams             []entity.Team
-	Invitations       map[oneEntity.ID]entity.Invitation
-	IDs               map[oneEntity.ID]Type
+	Invitations       map[uint64]entity.Invitation
+	IDs               map[uint64]Type
 }
 
 type Type string
@@ -36,8 +35,8 @@ type CreationRelation struct {
 }
 
 type LifetimeEvent struct {
-	ID         oneEntity.ID
-	ActorID    oneEntity.ID
+	ID         uint64
+	ActorID    uint64
 	HappensAt_ time.Time
 	EventType  LifetimeEventType
 }

@@ -2,17 +2,15 @@ package entity
 
 import (
 	"time"
-
-	oneEntity "github.com/teamyapp/one/entity"
 )
 
 type Invitation struct {
-	ID                oneEntity.ID
-	SenderUserID      oneEntity.ID
+	ID                uint64
+	SenderUserID      uint64
 	ReceiverFirstName string
 	ReceiverLastName  string
-	ReceiverUserID    *oneEntity.ID
-	TeamID            oneEntity.ID
+	ReceiverUserID    *uint64
+	TeamID            uint64
 	ExpireAt          time.Time
 	Status            InvitationStatus
 	Code              string

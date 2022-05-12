@@ -3,11 +3,9 @@ package repo
 import (
 	"strconv"
 	"strings"
-
-	"github.com/teamyapp/one/entity"
 )
 
-func toIDsString(ids []entity.ID) string {
+func toIDsString(ids []uint64) string {
 	idStrings := make([]string, 0)
 	for _, singleID := range ids {
 		idStrings = append(idStrings, strconv.Itoa(int(singleID)))

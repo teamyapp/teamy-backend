@@ -37,19 +37,19 @@ type Task struct {
 	task entityv2.Task
 }
 
-func (t Task) ID(ctx context.Context) graphql.ID {
+func (t Task) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(t.task.ID)
 }
 
-func (t Task) Goal(ctx context.Context) string {
+func (t Task) Goal(ct context.Context) string {
 	return t.task.Goal
 }
 
-func (t Task) Context(ctx context.Context) *string {
+func (t Task) Context(ct context.Context) *string {
 	return t.task.Context
 }
 
-func (t Task) Creator(ctx context.Context) (User, error) {
+func (t Task) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userDao.FindUserByID(t.task.CreatorID)
 	if err != nil {
 		return User{}, err
@@ -61,7 +61,7 @@ func (t Task) Creator(ctx context.Context) (User, error) {
 	}, nil
 }
 
-func (t Task) Owner(ctx context.Context) (*User, error) {
+func (t Task) Owner(ct context.Context) (*User, error) {
 	if t.task.OwnerUserID == nil {
 		return nil, nil
 	}
@@ -77,7 +77,7 @@ func (t Task) Owner(ctx context.Context) (*User, error) {
 	}, nil
 }
 
-func (t Task) OwningTeam(ctx context.Context) (*Team, error) {
+func (t Task) OwningTeam(ct context.Context) (*Team, error) {
 	team, err := t.deps.teamDao.FindTeamByID(t.task.OwningTeamID)
 	if err != nil {
 		return nil, err
@@ -89,11 +89,11 @@ func (t Task) OwningTeam(ctx context.Context) (*Team, error) {
 	}, nil
 }
 
-func (t Task) Status(ctx context.Context) entityv2.TaskStatus {
+func (t Task) Status(ct context.Context) entityv2.TaskStatus {
 	return t.task.Status
 }
 
-func (t Task) Comments(ctx context.Context) ([]Message, error) {
+func (t Task) Comments(ct context.Context) ([]Message, error) {
 	messages, err := t.deps.messageDao.FindMessagesByThreadID(t.task.CommentsThreadID)
 	if err != nil {
 		return nil, err
@@ -107,18 +107,18 @@ func (t Task) Comments(ctx context.Context) ([]Message, error) {
 	}), nil
 }
 
-func (t Task) CreatedAt(ctx context.Context) graphql.Time {
+func (t Task) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(t.task.CreatedAt)
 }
 
-func (t Task) UpdatedAt(ctx context.Context) *graphql.Time {
+func (t Task) UpdatedAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.UpdatedAt)
 }
 
-func (t Task) DueAt(ctx context.Context) *graphql.Time {
+func (t Task) DueAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.DueAt)
 }
 
-func (t Task) AvailableActions(ctx context.Context) []entityv2.TaskAction {
+func (t Task) AvailableActions(ct context.Context) []entityv2.TaskAction {
 	return availableActions[t.task.Status]
 }

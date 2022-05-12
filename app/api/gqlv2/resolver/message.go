@@ -12,18 +12,18 @@ type Message struct {
 	message entityv2.Message
 }
 
-func (m Message) ID(ctx context.Context) graphql.ID {
+func (m Message) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(m.message.ID)
 }
 
-func (m Message) Body(ctx context.Context) string {
+func (m Message) Body(ct context.Context) string {
 	return m.message.Body
 }
 
-func (m Message) CreatedAt(ctx context.Context) graphql.Time {
+func (m Message) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(m.message.CreatedAt)
 }
 
-func (m Message) UpdatedAt(ctx context.Context) *graphql.Time {
+func (m Message) UpdatedAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(m.message.UpdatedAt)
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -26,7 +25,7 @@ func (d DataStore) FilterInvitations(filter func(invitation entity.Invitation) b
 }
 
 func (d DataStore) UpdateInvitation(
-	invitationID oneEntity.ID,
+	invitationID uint64,
 	apply func(invitation entity.Invitation) entity.Invitation,
 ) (entity.Invitation, error) {
 	val, ok := d.data.Invitations[invitationID]
@@ -39,7 +38,7 @@ func (d DataStore) UpdateInvitation(
 	return invitation, d.persister.Write(d.data)
 }
 
-func (d DataStore) DeleteInvitation(id oneEntity.ID) (entity.Invitation, error) {
+func (d DataStore) DeleteInvitation(id uint64) (entity.Invitation, error) {
 	val, ok := d.data.Invitations[id]
 	if !ok {
 		return entity.Invitation{}, fmt.Errorf("invitation not found: %v", id)

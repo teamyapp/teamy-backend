@@ -2,11 +2,9 @@ package datastore
 
 import (
 	"time"
-
-	oneEntity "github.com/teamyapp/one/entity"
 )
 
-func (d *DataStore) CreateLifetimeEvent(creatorID oneEntity.ID, eventType LifetimeEventType) error {
+func (d *DataStore) CreateLifetimeEvent(creatorID uint64, eventType LifetimeEventType) error {
 	d.data.LifetimeEvents = append(d.data.LifetimeEvents, LifetimeEvent{
 		ID:         d.newID(Event),
 		ActorID:    creatorID,

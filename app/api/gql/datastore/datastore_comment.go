@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -24,7 +23,7 @@ func (d DataStore) FilterComments(filter func(entity.Comment) bool) (cs []entity
 	return cs
 }
 
-func (d DataStore) UpdateComment(id oneEntity.ID, apply func(entity.Comment) entity.Comment) (entity.Comment, error) {
+func (d DataStore) UpdateComment(id uint64, apply func(entity.Comment) entity.Comment) (entity.Comment, error) {
 	comment, ok := d.data.Comments[id]
 	if ok {
 		d.data.Comments[id] = apply(comment)
@@ -33,7 +32,7 @@ func (d DataStore) UpdateComment(id oneEntity.ID, apply func(entity.Comment) ent
 	return entity.Comment{}, fmt.Errorf("comment %v is not found", id)
 }
 
-func (d DataStore) DeleteComment(id oneEntity.ID) (entity.Comment, error) {
+func (d DataStore) DeleteComment(id uint64) (entity.Comment, error) {
 	comment, ok := d.data.Comments[id]
 	if ok {
 		delete(d.data.Comments, id)

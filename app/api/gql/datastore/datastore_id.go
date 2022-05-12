@@ -1,9 +1,7 @@
 package datastore
 
-import oneEntity "github.com/teamyapp/one/entity"
-
-func (d *DataStore) newID(entityType Type) oneEntity.ID {
-	newID := oneEntity.ID(len(d.data.IDs) + 1)
+func (d *DataStore) newID(entityType Type) uint64 {
+	newID := uint64(len(d.data.IDs) + 1)
 	for {
 		if _, ok := d.data.IDs[newID]; ok {
 			newID += 1

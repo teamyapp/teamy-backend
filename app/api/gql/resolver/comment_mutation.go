@@ -5,18 +5,18 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 func (m Mutation) CreateComment(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		TaskID  graphql.ID
 		Content string
 	},
 ) (Comment, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return Comment{}, err
 	}
@@ -35,12 +35,12 @@ func (m Mutation) CreateComment(
 }
 
 func (m Mutation) Comment(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		ID graphql.ID
 	},
 ) (CommentUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return CommentUpdate{}, err
 	}
@@ -65,7 +65,7 @@ type CommentUpdate struct {
 }
 
 func (cu CommentUpdate) UpdateContent(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		Content string
 	},
