@@ -1,11 +1,9 @@
 package datastore
 
 import (
-	"strconv"
 	"sync"
 
 	"github.com/graph-gophers/graphql-go"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -32,16 +30,16 @@ func NewDataStore(p Persister) *DataStore {
 		ds.data.Tasks = make(map[graphql.ID]entity.Task)
 	}
 	if ds.data.Users == nil {
-		ds.data.Users = make(map[oneEntity.ID]entity.User)
+		ds.data.Users = make(map[uint64]entity.User)
 	}
 	if ds.data.IDs == nil {
-		ds.data.IDs = make(map[oneEntity.ID]Type)
+		ds.data.IDs = make(map[uint64]Type)
 	}
 	if ds.data.Comments == nil {
-		ds.data.Comments = make(map[oneEntity.ID]entity.Comment)
+		ds.data.Comments = make(map[uint64]entity.Comment)
 	}
 	if ds.data.Invitations == nil {
-		ds.data.Invitations = make(map[oneEntity.ID]entity.Invitation)
+		ds.data.Invitations = make(map[uint64]entity.Invitation)
 	}
 	for i, team := range ds.data.Teams {
 		// maintain the set
@@ -67,12 +65,4 @@ func (d *DataStore) FilterCreationRelation(filter func(CreationRelation) bool) (
 		}
 	}
 	return
-}
-
-func toEntityID(id graphql.ID) (oneEntity.ID, error) {
-	i, err := strconv.ParseInt(string(id), 10, 32)
-	if err != nil {
-		return 0, err
-	}
-	return oneEntity.ID(i), nil
 }

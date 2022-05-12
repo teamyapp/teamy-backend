@@ -1,9 +1,0 @@
-[[target]]
-name = "config"
-type = "goLibrary"
-src = "*.go"
-dep = [
-	"(@):module",
-	"(github.com/joho/godotenv)",
-	"(github.com/kelseyhightower/envconfig)"
-]

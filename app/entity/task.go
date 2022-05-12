@@ -4,20 +4,21 @@ import (
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	oneEntity "github.com/teamyapp/one/entity"
 )
 
 type Task struct {
-	oneEntity.Entity
+	ID          uint64
+	CreatedAt   time.Time
+	UpdatedAt   *time.Time
 	Goal        string
 	DueAt       *time.Time
 	Context     string
 	CreatorID   graphql.ID
-	OwnerUserId *oneEntity.ID
-	OwnedByTeam oneEntity.ID
+	OwnerUserId *uint64
+	OwnedByTeam uint64
 	// WorkScopeIndex   *int
 	// Effort           *int
-	// DependsOnTaskIDs []oneEntity.ID
+	// DependsOnTaskIDs []uint64
 	// NumOfUnknowns    *int
 	AvailableActions []TaskAction
 	Status           TaskStatus

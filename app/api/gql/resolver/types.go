@@ -7,7 +7,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/opentracing/opentracing-go/log"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -35,11 +34,11 @@ func toGraphQLInt(num *int) *int32 {
 	return &gqlInt
 }
 
-func toGraphQLID(id oneEntity.ID) graphql.ID {
-	return graphql.ID(fmt.Sprintf("%d", int(id)))
+func toGraphQLID(id uint64) graphql.ID {
+	return graphql.ID(fmt.Sprintf("%d", id))
 }
 
-func toGraphQLIDs(ids []oneEntity.ID) []graphql.ID {
+func toGraphQLIDs(ids []uint64) []graphql.ID {
 	graphqlIDs := make([]graphql.ID, 0)
 	for _, id := range ids {
 		graphqlIDs = append(graphqlIDs, toGraphQLID(id))
@@ -81,7 +80,7 @@ func fromGraphQLTime(graphqlTime *graphql.Time) *time.Time {
 	return &graphqlTime.Time
 }
 
-func fromGraphQLIDPtr(graphqlID *graphql.ID) (*oneEntity.ID, error) {
+func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	if graphqlID == nil {
 		return nil, nil
 	}
@@ -93,23 +92,23 @@ func fromGraphQLIDPtr(graphqlID *graphql.ID) (*oneEntity.ID, error) {
 	return &id, err
 }
 
-func fromGraphQLID(graphqlID graphql.ID) (oneEntity.ID, error) {
+func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
 	id, err := strconv.Atoi(string(graphqlID))
 	if err != nil {
 		log.Error(err)
 	}
-	return (oneEntity.ID)(id), err
+	return (uint64)(id), err
 }
 
-func fromGraphQLIDsPtr(graphqlIDs *[]graphql.ID) ([]oneEntity.ID, error) {
+func fromGraphQLIDsPtr(graphqlIDs *[]graphql.ID) ([]uint64, error) {
 	if graphqlIDs == nil || len(*graphqlIDs) == 0 {
 		return nil, nil
 	}
 	return fromGraphQLIDs(*graphqlIDs)
 }
 
-func fromGraphQLIDs(graphqlIDs []graphql.ID) ([]oneEntity.ID, error) {
-	ids := make([]oneEntity.ID, 0)
+func fromGraphQLIDs(graphqlIDs []graphql.ID) ([]uint64, error) {
+	ids := make([]uint64, 0)
 	for _, graphqlID := range graphqlIDs {
 		id, err := fromGraphQLID(graphqlID)
 		if err != nil {
@@ -153,12 +152,12 @@ func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error) {
 	return task, nil
 }
 
-func toIDsMap(gqlIDs []graphql.ID) (map[oneEntity.ID]bool, error) {
+func toIDsMap(gqlIDs []graphql.ID) (map[uint64]bool, error) {
 	ids, err := fromGraphQLIDs(gqlIDs)
 	if err != nil {
 		return nil, err
 	}
-	idsMap := make(map[oneEntity.ID]bool)
+	idsMap := make(map[uint64]bool)
 	for _, id := range ids {
 		idsMap[id] = true
 	}

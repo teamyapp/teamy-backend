@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/graph-gophers/graphql-go"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
@@ -46,7 +45,7 @@ func (t Task) Owner() (*User, error) {
 		return nil, nil
 	}
 
-	if *t.task.OwnerUserId == -1 {
+	if *t.task.OwnerUserId == 0 {
 		u := newUser(t.deps, entity.GhostUser())
 		return &u, nil
 	}
@@ -82,7 +81,7 @@ func (t Task) Creator() (User, error) {
 		return User{}, err
 	}
 
-	user, err := t.deps.Data.GetUser(oneEntity.ID(id))
+	user, err := t.deps.Data.GetUser(uint64(id))
 	if err != nil {
 		log.Println(err)
 		return User{}, err

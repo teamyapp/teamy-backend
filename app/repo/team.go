@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"log"
 
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Team interface {
-	FindActiveTeam(userID oneEntity.ID) (*entity.Team, error)
-	FindAllTeamIDs(userID oneEntity.ID) ([]oneEntity.ID, error)
-	FindTeams(teamIDs []oneEntity.ID) ([]entity.Team, error)
-	ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error)
+	FindActiveTeam(userID uint64) (*entity.Team, error)
+	FindAllTeamIDs(userID uint64) ([]uint64, error)
+	FindTeams(teamIDs []uint64) ([]entity.Team, error)
+	ListTeamMemberIDs(teamID uint64) ([]uint64, error)
 }
 
 type SQLTeam struct {
@@ -22,7 +21,7 @@ type SQLTeam struct {
 
 var _ Team = (*SQLTeam)(nil)
 
-func (S SQLTeam) ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error) {
+func (S SQLTeam) ListTeamMemberIDs(teamID uint64) ([]uint64, error) {
 	rows, err := S.db.Query(`
 	SELECT user_id
 	FROM team_member
@@ -35,8 +34,8 @@ func (S SQLTeam) ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error) 
 
 	defer rows.Close()
 
-	var ids []oneEntity.ID
-	var id oneEntity.ID
+	var ids []uint64
+	var id uint64
 	for rows.Next() {
 		err = rows.Scan(&id)
 		if err != nil {
@@ -49,7 +48,7 @@ func (S SQLTeam) ListTeamMemberIDs(teamID oneEntity.ID) ([]oneEntity.ID, error) 
 	return ids, nil
 }
 
-func (S SQLTeam) FindActiveTeam(userID oneEntity.ID) (*entity.Team, error) {
+func (S SQLTeam) FindActiveTeam(userID uint64) (*entity.Team, error) {
 	team := entity.Team{}
 	err := S.db.
 		QueryRow(`
@@ -70,7 +69,7 @@ WHERE user_id = $1`,
 	return &team, err
 }
 
-func (S SQLTeam) FindAllTeamIDs(userID oneEntity.ID) ([]oneEntity.ID, error) {
+func (S SQLTeam) FindAllTeamIDs(userID uint64) ([]uint64, error) {
 	rows, err := S.db.Query(`
 	SELECT team_id
 	FROM team_member
@@ -83,8 +82,8 @@ func (S SQLTeam) FindAllTeamIDs(userID oneEntity.ID) ([]oneEntity.ID, error) {
 
 	defer rows.Close()
 
-	var ids []oneEntity.ID
-	var id oneEntity.ID
+	var ids []uint64
+	var id uint64
 	for rows.Next() {
 		err = rows.Scan(&id)
 		if err != nil {
@@ -97,7 +96,7 @@ func (S SQLTeam) FindAllTeamIDs(userID oneEntity.ID) ([]oneEntity.ID, error) {
 	return ids, nil
 }
 
-func (S SQLTeam) FindTeams(teamIDs []oneEntity.ID) ([]entity.Team, error) {
+func (S SQLTeam) FindTeams(teamIDs []uint64) ([]entity.Team, error) {
 	idsString := toIDsString(teamIDs)
 	query := fmt.Sprintf(`
 SELECT id, name, logo_url, created_at, updated_at

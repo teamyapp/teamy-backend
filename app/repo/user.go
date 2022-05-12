@@ -7,14 +7,13 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type User interface {
-	FindUsers([]oneEntity.ID) ([]entity.User, error)
-	FindUser(oneEntity.ID) (entity.User, error)
-	UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity.ID) (*oneEntity.ID, error)
+	FindUsers([]uint64) ([]entity.User, error)
+	FindUser(uint64) (entity.User, error)
+	UpdateActiveTeamId(userID uint64, activeTeamID *uint64) (*uint64, error)
 }
 
 type SQLUser struct {
@@ -23,7 +22,7 @@ type SQLUser struct {
 
 var _ User = (*SQLUser)(nil)
 
-func (S SQLUser) FindUsers(userIDs []oneEntity.ID) ([]entity.User, error) {
+func (S SQLUser) FindUsers(userIDs []uint64) ([]entity.User, error) {
 	if len(userIDs) == 0 {
 		return nil, nil
 	}
@@ -53,7 +52,7 @@ WHERE id IN (%s)`, idsString)
 	return users, nil
 }
 
-func (S SQLUser) FindUser(userID oneEntity.ID) (entity.User, error) {
+func (S SQLUser) FindUser(userID uint64) (entity.User, error) {
 	query := fmt.Sprintf(`SELECT id, first_name, last_name, profile_url, created_at, updated_at FROM "user" WHERE id = (%s)`, strconv.Itoa(int(userID)))
 
 	var user entity.User
@@ -65,7 +64,7 @@ func (S SQLUser) FindUser(userID oneEntity.ID) (entity.User, error) {
 	return user, nil
 }
 
-func (S SQLUser) UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity.ID) (*oneEntity.ID, error) {
+func (S SQLUser) UpdateActiveTeamId(userID uint64, activeTeamID *uint64) (*uint64, error) {
 	statement := `
 	UPDATE user_state AS updated
 	SET active_team_id = $1
@@ -78,9 +77,9 @@ func (S SQLUser) UpdateActiveTeamId(userID oneEntity.ID, activeTeamID *oneEntity
 	WHERE updated.user_id = previous.user_id
 	RETURNING previous.active_team_id;
 `
-	var previousActiveTeamID *int
+	var previousActiveTeamID *uint64
 	err := S.db.QueryRow(statement, activeTeamID, userID).Scan(&previousActiveTeamID)
-	return (*oneEntity.ID)(previousActiveTeamID), errors.WithStack(err)
+	return previousActiveTeamID, errors.WithStack(err)
 }
 
 func NewSQLUser(db *sql.DB) SQLUser {

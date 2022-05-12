@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -35,8 +35,8 @@ func (q Query) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
 	return newTasks(q.deps, tasks), nil
 }
 
-func (q Query) Me(ctx context.Context) (User, error) {
-	userID, err := identity.FromContext(ctx)
+func (q Query) Me(ct context.Context) (User, error) {
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println(err)
 		return User{}, err
@@ -56,7 +56,7 @@ func (q Query) Me(ctx context.Context) (User, error) {
 }
 
 // debug only
-func (q Query) Teams(ctx context.Context, args struct {
+func (q Query) Teams(ct context.Context, args struct {
 	IDs *[]graphql.ID
 }) ([]Team, error) {
 	var teams []entity.Team
@@ -78,7 +78,7 @@ func (q Query) Teams(ctx context.Context, args struct {
 	return newTeams(q.deps, teams), nil
 }
 
-func (q Query) Invitations(ctx context.Context, args struct {
+func (q Query) Invitations(ct context.Context, args struct {
 	Input struct {
 		ID   *graphql.ID
 		Code *string
@@ -97,7 +97,7 @@ func (q Query) Invitations(ctx context.Context, args struct {
 		}
 		invitation := invitations[0]
 
-		userID, err := identity.FromContext(ctx)
+		userID, err := ctx.UserIDFromContext(ct)
 		if err != nil {
 			return nil, err
 		}

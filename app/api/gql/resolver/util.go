@@ -1,10 +1,6 @@
 package resolver
 
-import (
-	oneEntity "github.com/teamyapp/one/entity"
-)
-
-func contains(arr []oneEntity.ID, element oneEntity.ID) bool {
+func contains(arr []uint64, element uint64) bool {
 	for _, e := range arr {
 		if e == element {
 			return true

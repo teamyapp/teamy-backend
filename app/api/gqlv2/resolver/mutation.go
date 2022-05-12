@@ -12,7 +12,7 @@ type Mutation struct {
 
 /* Task */
 
-func (m Mutation) CreateTask(ctx context.Context, args struct {
+func (m Mutation) CreateTask(ct context.Context, args struct {
 	TeamID graphql.ID
 	Task   struct {
 		Goal        string
@@ -25,7 +25,7 @@ func (m Mutation) CreateTask(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) UpdateTask(ctx context.Context, args struct {
+func (m Mutation) UpdateTask(ct context.Context, args struct {
 	TaskID graphql.ID
 	Input  struct {
 		Goal        *string
@@ -38,7 +38,7 @@ func (m Mutation) UpdateTask(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) DeleteTask(ctx context.Context, args struct {
+func (m Mutation) DeleteTask(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
 	panic("implement me")
@@ -46,7 +46,7 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 
 /* Message */
 
-func (m Mutation) CreateMessage(ctx context.Context, args struct {
+func (m Mutation) CreateMessage(ct context.Context, args struct {
 	ThreadID graphql.ID
 	Message  struct {
 		Body string
@@ -55,7 +55,7 @@ func (m Mutation) CreateMessage(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) UpdateMessage(ctx context.Context, args struct {
+func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	MessageID graphql.ID
 	Message   struct {
 		body *string
@@ -64,7 +64,7 @@ func (m Mutation) UpdateMessage(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) DeleteMessage(ctx context.Context, args struct {
+func (m Mutation) DeleteMessage(ct context.Context, args struct {
 	MessageID graphql.ID
 }) (Message, error) {
 	panic("implement me")
@@ -72,7 +72,7 @@ func (m Mutation) DeleteMessage(ctx context.Context, args struct {
 
 /* Team */
 
-func (m Mutation) CreateTeam(ctx context.Context, args struct {
+func (m Mutation) CreateTeam(ct context.Context, args struct {
 	Team struct {
 		Name string
 	}
@@ -80,7 +80,7 @@ func (m Mutation) CreateTeam(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) UpdateTeam(ctx context.Context, args struct {
+func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 	Input  struct {
 		Name    *string
@@ -90,28 +90,28 @@ func (m Mutation) UpdateTeam(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) AddMemberToTeam(ctx context.Context, args struct {
+func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
 	panic("implement me")
 }
 
-func (m Mutation) RemoveMemberFromTeam(ctx context.Context, args struct {
+func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
 	panic("implement me")
 }
 
-func (m Mutation) RemoveTaskFromTeam(ctx context.Context, args struct {
+func (m Mutation) RemoveTaskFromTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 	TaskID graphql.ID
 }) (Team, error) {
 	panic("implement me")
 }
 
-func (m Mutation) PromoteTeamTaskToNeedAttention(ctx context.Context, args struct {
+func (m Mutation) PromoteTeamTaskToNeedAttention(ct context.Context, args struct {
 	TeamID graphql.ID
 	TaskID graphql.ID
 }) (Team, error) {
@@ -120,7 +120,7 @@ func (m Mutation) PromoteTeamTaskToNeedAttention(ctx context.Context, args struc
 
 /* User */
 
-func (m Mutation) CreateUser(ctx context.Context, args struct {
+func (m Mutation) CreateUser(ct context.Context, args struct {
 	User struct {
 		LastName   string
 		FirstName  *string
@@ -130,7 +130,7 @@ func (m Mutation) CreateUser(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) UpdateUser(ctx context.Context, args struct {
+func (m Mutation) UpdateUser(ct context.Context, args struct {
 	UserID graphql.ID
 	Input  struct {
 		LastName   *string
@@ -143,7 +143,7 @@ func (m Mutation) UpdateUser(ctx context.Context, args struct {
 
 /* Invitation */
 
-func (m Mutation) CreateInvitation(ctx context.Context, args struct {
+func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	TeamID     graphql.ID
 	Invitation struct {
 		ReceiverFirstName *string
@@ -154,7 +154,7 @@ func (m Mutation) CreateInvitation(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) UpdateInvitation(ctx context.Context, args struct {
+func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 	InvitationID graphql.ID
 	Input        struct {
 		SenderUserID   *graphql.ID
@@ -166,19 +166,19 @@ func (m Mutation) UpdateInvitation(ctx context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) DeleteInvitation(ctx context.Context, args struct {
+func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 	InvitationID graphql.ID
 }) (Invitation, error) {
 	panic("implement me")
 }
 
-func (m Mutation) AcceptInvitation(ctx context.Context, args struct {
+func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	InvitationCode string
 }) (Invitation, error) {
 	panic("implement me")
 }
 
-func (m Mutation) DeclineInvitation(ctx context.Context, args struct {
+func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	InvitationCode string
 }) (Invitation, error) {
 	panic("implement me")
