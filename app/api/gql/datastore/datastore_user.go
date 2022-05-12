@@ -4,14 +4,13 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 //
 // User
 //
-func (d DataStore) GetUser(id oneEntity.ID) (entity.User, error) {
+func (d DataStore) GetUser(id uint64) (entity.User, error) {
 	user, ok := d.data.Users[id]
 	if !ok {
 		return entity.User{}, fmt.Errorf("user %v is not found", id)
@@ -19,7 +18,7 @@ func (d DataStore) GetUser(id oneEntity.ID) (entity.User, error) {
 	return user, nil
 }
 
-func (d DataStore) GetUsers(ids []oneEntity.ID) (users []entity.User, err error) {
+func (d DataStore) GetUsers(ids []uint64) (users []entity.User, err error) {
 	for _, id := range ids {
 		user, ok := d.data.Users[id]
 		if ok {
@@ -44,7 +43,7 @@ func (d DataStore) CreateUser(user entity.User) (entity.User, error) {
 	return user, d.persister.Write(d.data)
 }
 
-func (d DataStore) UpdateUser(userID oneEntity.ID, apply func(entity.User) entity.User) (entity.User, error) {
+func (d DataStore) UpdateUser(userID uint64, apply func(entity.User) entity.User) (entity.User, error) {
 	_, ok := d.data.Users[userID]
 	if !ok {
 		return entity.User{}, errors.Errorf("user %v is not found", userID)

@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -57,8 +57,8 @@ func (t Team) Admins() ([]User, error) {
 	return []User{newUser(t.deps, user)}, err
 }
 
-func (t Team) TasksNeedAttention(ctx context.Context, args struct{ IsMine bool }) ([]Task, error) {
-	userID, err := identity.FromContext(ctx)
+func (t Team) TasksNeedAttention(ct context.Context, args struct{ IsMine bool }) ([]Task, error) {
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return nil, err
 	}

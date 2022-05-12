@@ -2,28 +2,26 @@ package entity
 
 import (
 	"time"
-
-	"github.com/teamyapp/one/entity"
 )
 
 type Team struct {
-	ID        entity.ID
+	ID        uint64
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 	Name      string
 	IconURL   string
-	CreatorID entity.ID
+	CreatorID uint64
 	MemberIDs OrderedSetID
 	Tasks     OrderedSetID
 	// user id -> task id
-	NeedAttentionTasks map[entity.ID]entity.ID
+	NeedAttentionTasks map[uint64]uint64
 	InvitationIDs      OrderedSetID
 }
 
 // OrderedSetID will be refactored once Go 1.18 is released with Generics support.
-type OrderedSetID []entity.ID
+type OrderedSetID []uint64
 
-func (set OrderedSetID) Add(newID entity.ID) OrderedSetID {
+func (set OrderedSetID) Add(newID uint64) OrderedSetID {
 	for _, id := range set {
 		if id == newID {
 			return set
@@ -33,7 +31,7 @@ func (set OrderedSetID) Add(newID entity.ID) OrderedSetID {
 	return set
 }
 
-func (set OrderedSetID) Has(id entity.ID) bool {
+func (set OrderedSetID) Has(id uint64) bool {
 	for _, ID := range set {
 		if ID == id {
 			return true
@@ -42,7 +40,7 @@ func (set OrderedSetID) Has(id entity.ID) bool {
 	return false
 }
 
-func (set OrderedSetID) Remove(id entity.ID) OrderedSetID {
+func (set OrderedSetID) Remove(id uint64) OrderedSetID {
 	for i, ID := range set {
 		if ID == id {
 			return append(set[:i], set[i+1:]...)

@@ -4,14 +4,14 @@ import (
 	"database/sql"
 	"log"
 
-	"github.com/teamyapp/one/db"
+	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/app/api/gql"
 	"github.com/teamyapp/teamy-backend/app/config"
 	"github.com/teamyapp/teamy-backend/app/dep"
 )
 
 func init() {
-	log.SetFlags(log.LstdFlags | log.Llongfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
 func main() {
@@ -22,12 +22,12 @@ func main() {
 	}
 	log.Printf(
 		"Git Commit: https://github.com/%s/%s/commit/%s\n",
-		cfg.OneConfig.RepoOwner,
-		cfg.OneConfig.RepoName,
-		cfg.OneConfig.GitLongCommitHash)
+		cfg.GitRepoOwner,
+		cfg.GitRepoName,
+		cfg.GitLongCommitHash)
 
-	panic(db.With(cfg.OneConfig, func(sqlDB *sql.DB) error {
-		err = db.MigrateUp(db.DefaultMigrationRoot)
+	panic(sqldb.Use(cfg.Config, func(sqlDB *sql.DB) error {
+		err = sqldb.MigrateUp(sqlDB, sqldb.DefaultMigrationRoot)
 		if err != nil {
 			log.Println(err)
 			return err

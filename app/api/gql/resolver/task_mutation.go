@@ -6,12 +6,12 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 func (m Mutation) TaskUpdate(
-	ctx context.Context,
+	ct context.Context,
 	args struct{ TaskID graphql.ID },
 ) (TaskUpdate, error) {
 	id, err := fromGraphQLID(args.TaskID)
@@ -33,10 +33,10 @@ func (m Mutation) TaskUpdate(
 }
 
 func (m Mutation) CreateTask(
-	ctx context.Context,
+	ct context.Context,
 	args struct{ Task TaskInput },
 ) (TaskUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return TaskUpdate{}, err
 	}
@@ -67,12 +67,12 @@ type TaskUpdate struct {
 	task entity.Task
 }
 
-func (tu TaskUpdate) OwnedByTeam(ctx context.Context, args struct{ ID graphql.ID }) (TaskUpdate, error) {
+func (tu TaskUpdate) OwnedByTeam(ct context.Context, args struct{ ID graphql.ID }) (TaskUpdate, error) {
 	teamID, err := fromGraphQLID(args.ID)
 	if err != nil {
 		return tu, err
 	}
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return TaskUpdate{}, err
 	}
@@ -106,8 +106,8 @@ func (tu TaskUpdate) OwnedByTeam(ctx context.Context, args struct{ ID graphql.ID
 	return tu, nil
 }
 
-func (tu TaskUpdate) RemoveOwner(ctx context.Context) (TaskUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+func (tu TaskUpdate) RemoveOwner(ct context.Context) (TaskUpdate, error) {
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return TaskUpdate{}, err
 	}
@@ -117,7 +117,7 @@ func (tu TaskUpdate) RemoveOwner(ctx context.Context) (TaskUpdate, error) {
 		if err != nil {
 			return TaskUpdate{}, err
 		}
-		err = allowWrite(ctx, tu.task, User{
+		err = allowWrite(ct, tu.task, User{
 			deps: tu.deps,
 			user: user,
 		})
@@ -138,10 +138,10 @@ func (tu TaskUpdate) Task() Task {
 	return newTask(tu.deps, tu.task)
 }
 
-func (m Mutation) DeleteTask(ctx context.Context, args struct {
+func (m Mutation) DeleteTask(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
@@ -159,7 +159,7 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 		if err != nil {
 			return Task{}, err
 		}
-		err = allowWrite(ctx, task, User{
+		err = allowWrite(ct, task, User{
 			deps: m.deps,
 			user: user,
 		})
@@ -177,13 +177,13 @@ func (m Mutation) DeleteTask(ctx context.Context, args struct {
 }
 
 func (m Mutation) UpdateTask(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		TaskID graphql.ID
 		Task   TaskInput
 	},
 ) (Task, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err
@@ -201,7 +201,7 @@ func (m Mutation) UpdateTask(
 			deps: m.deps,
 			user: user,
 		}
-		err = allowWrite(ctx, task, userResolver)
+		err = allowWrite(ct, task, userResolver)
 		if err != nil {
 			return Task{}, err
 		}
@@ -233,10 +233,10 @@ func (m Mutation) UpdateTask(
 	return newTask(m.deps, task), nil
 }
 
-func allowWrite(ctx context.Context, task entity.Task, userResolver User) error {
+func allowWrite(ct context.Context, task entity.Task, userResolver User) error {
 	allowWrite := false
 	// the user must be in a team that owns this task
-	teams, err := userResolver.Teams(ctx, struct{ IDs *[]graphql.ID }{})
+	teams, err := userResolver.Teams(ct, struct{ IDs *[]graphql.ID }{})
 	if err != nil {
 		return err
 	}

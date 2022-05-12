@@ -5,26 +5,25 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
-	oneEntity "github.com/teamyapp/one/entity"
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
-func (m Mutation) CreateTeam(ctx context.Context,
+func (m Mutation) CreateTeam(ct context.Context,
 	args struct {
 		Input struct {
 			Name string
 		}
 	},
 ) (TeamUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return TeamUpdate{}, err
 	}
 	t, err := m.deps.Data.CreateTeam(userID, entity.Team{
 		Name:      args.Input.Name,
 		CreatorID: userID,
-		MemberIDs: []oneEntity.ID{
+		MemberIDs: []uint64{
 			userID,
 		},
 	})
@@ -35,12 +34,12 @@ func (m Mutation) CreateTeam(ctx context.Context,
 }
 
 func (m Mutation) PromoteTaskToNeedAttention(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		TaskID graphql.ID
 	},
 ) (Team, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return Team{}, err
 	}
@@ -69,7 +68,7 @@ func (m Mutation) PromoteTaskToNeedAttention(
 	return newTeam(m.deps, team), nil
 }
 
-func (m Mutation) Team(ctx context.Context, args struct{ ID graphql.ID },
+func (m Mutation) Team(ct context.Context, args struct{ ID graphql.ID },
 ) (TeamUpdate, error) {
 	ts := m.deps.Data.FilterTeams(func(t entity.Team) bool {
 		return toGraphQLID(t.ID) == args.ID
@@ -153,12 +152,12 @@ func (tu TeamUpdate) RemoveTask(args struct{ ID graphql.ID }) (TeamUpdate, error
 }
 
 func (tu TeamUpdate) PromoteTaskToNeedAttention(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		ID graphql.ID
 	},
 ) (TeamUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return TeamUpdate{}, err
 	}

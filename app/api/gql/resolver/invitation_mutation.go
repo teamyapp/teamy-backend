@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -25,11 +25,11 @@ type InvitationInput struct {
 	Code           *string
 }
 
-func (i InvitationUpdate) Invitation(ctx context.Context) Invitation {
+func (i InvitationUpdate) Invitation(ct context.Context) Invitation {
 	return Invitation{deps: i.deps, Invitation: i.invitation}
 }
 
-func (i InvitationUpdate) Accept(ctx context.Context) (InvitationUpdate, error) {
+func (i InvitationUpdate) Accept(ct context.Context) (InvitationUpdate, error) {
 	switch i.invitation.Status {
 	case entity.InvitationStatusInvoked:
 		return InvitationUpdate{}, fmt.Errorf("invitation is revoked: %v", i.invitation.ID)
@@ -52,7 +52,7 @@ func (i InvitationUpdate) Accept(ctx context.Context) (InvitationUpdate, error) 
 		return InvitationUpdate{}, fmt.Errorf("invitation expired: %v", updated.ID)
 	}
 
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return InvitationUpdate{}, err
 	}
@@ -86,7 +86,7 @@ func (i InvitationUpdate) Accept(ctx context.Context) (InvitationUpdate, error) 
 	return i, nil
 }
 
-func (i InvitationUpdate) Decline(ctx context.Context) (InvitationUpdate, error) {
+func (i InvitationUpdate) Decline(ct context.Context) (InvitationUpdate, error) {
 	switch i.invitation.Status {
 	case entity.InvitationStatusInvoked:
 		return InvitationUpdate{}, fmt.Errorf("invitation is revoked: %v", i.invitation.ID)
@@ -98,7 +98,7 @@ func (i InvitationUpdate) Decline(ctx context.Context) (InvitationUpdate, error)
 		return InvitationUpdate{}, fmt.Errorf("invitation has been declined already: %v", i.invitation.ID)
 	}
 
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return InvitationUpdate{}, err
 	}
@@ -117,10 +117,10 @@ func (i InvitationUpdate) Decline(ctx context.Context) (InvitationUpdate, error)
 	return i, nil
 }
 
-func (i InvitationUpdate) Update(ctx context.Context, args struct {
+func (i InvitationUpdate) Update(ct context.Context, args struct {
 	Input InvitationInput
 }) (InvitationUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return InvitationUpdate{}, err
 	}
@@ -173,8 +173,8 @@ func (i InvitationUpdate) Update(ctx context.Context, args struct {
 	return i, nil
 }
 
-func (i InvitationUpdate) Delete(ctx context.Context) (Invitation, error) {
-	userID, err := identity.FromContext(ctx)
+func (i InvitationUpdate) Delete(ct context.Context) (Invitation, error) {
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return Invitation{}, err
 	}
@@ -189,7 +189,7 @@ func (i InvitationUpdate) Delete(ctx context.Context) (Invitation, error) {
 	return Invitation{deps: i.deps, Invitation: deleted}, err
 }
 
-func (m Mutation) CreateInvitation(ctx context.Context, args struct {
+func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	Input struct {
 		ReceiverFirstName string
 		ReceiverLastName  string
@@ -197,7 +197,7 @@ func (m Mutation) CreateInvitation(ctx context.Context, args struct {
 		ExpireAt          graphql.Time
 	}
 }) (InvitationUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return InvitationUpdate{}, err
 	}
@@ -247,7 +247,7 @@ func (m Mutation) CreateInvitation(ctx context.Context, args struct {
 	}, nil
 }
 
-func (m Mutation) InvitationUpdate(ctx context.Context, args struct {
+func (m Mutation) InvitationUpdate(ct context.Context, args struct {
 	ID graphql.ID
 }) (InvitationUpdate, error) {
 	id, err := fromGraphQLID(args.ID)
@@ -264,7 +264,7 @@ func (m Mutation) InvitationUpdate(ctx context.Context, args struct {
 	return InvitationUpdate{deps: m.deps, invitation: invitations[0]}, nil
 }
 
-func (m Mutation) InvitationUpdateWithCode(ctx context.Context, args struct {
+func (m Mutation) InvitationUpdateWithCode(ct context.Context, args struct {
 	Code string
 }) (InvitationUpdate, error) {
 	invitations := m.deps.Data.FilterInvitations(func(invitation entity.Invitation) bool {

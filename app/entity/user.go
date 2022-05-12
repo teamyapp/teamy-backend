@@ -2,23 +2,21 @@ package entity
 
 import (
 	"time"
-
-	oneEntity "github.com/teamyapp/one/entity"
 )
 
 type User struct {
-	ID           oneEntity.ID
+	ID           uint64
 	CreatedAt    time.Time
 	UpdatedAt    *time.Time
 	FirstName    string
 	LastName     string
 	ProfileURL   string
-	ActiveTeamID oneEntity.ID
+	ActiveTeamID uint64
 }
 
 func GhostUser() User {
 	return User{
-		ID:        -1,
+		ID:        0,
 		FirstName: "Ghost",
 		LastName:  "this user has either been removed from the system or never existed",
 	}

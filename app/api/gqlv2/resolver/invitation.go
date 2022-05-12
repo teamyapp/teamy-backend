@@ -13,11 +13,11 @@ type Invitation struct {
 	invitation entityv2.Invitation
 }
 
-func (i Invitation) ID(ctx context.Context) graphql.ID {
+func (i Invitation) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(i.invitation.ID)
 }
 
-func (i Invitation) Sender(ctx context.Context) (User, error) {
+func (i Invitation) Sender(ct context.Context) (User, error) {
 	sender, err := i.deps.userDao.FindUserByID(i.invitation.SenderUserID)
 	if err != nil {
 		return User{}, err
@@ -29,19 +29,19 @@ func (i Invitation) Sender(ctx context.Context) (User, error) {
 	}, nil
 }
 
-func (i Invitation) ReceiverFirstName(ctx context.Context) string {
+func (i Invitation) ReceiverFirstName(ct context.Context) string {
 	return i.invitation.ReceiverFirstName
 }
 
-func (i Invitation) ReceiverLastName(ctx context.Context) *string {
+func (i Invitation) ReceiverLastName(ct context.Context) *string {
 	return i.invitation.ReceiverLastName
 }
 
-func (i Invitation) ReceiverEmail(ctx context.Context) *string {
+func (i Invitation) ReceiverEmail(ct context.Context) *string {
 	return i.invitation.ReceiverEmail
 }
 
-func (i Invitation) Receiver(ctx context.Context) (*User, error) {
+func (i Invitation) Receiver(ct context.Context) (*User, error) {
 	if i.invitation.ReceiverUserID == nil {
 		return nil, nil
 	}
@@ -57,7 +57,7 @@ func (i Invitation) Receiver(ctx context.Context) (*User, error) {
 	}, nil
 }
 
-func (i Invitation) JoiningTeam(ctx context.Context) (Team, error) {
+func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
 	team, err := i.deps.teamDao.FindTeamByID(i.invitation.TeamID)
 	if err != nil {
 		return Team{}, err
@@ -69,18 +69,18 @@ func (i Invitation) JoiningTeam(ctx context.Context) (Team, error) {
 	}, nil
 }
 
-func (i Invitation) ExpireAt(ctx context.Context) graphql.Time {
+func (i Invitation) ExpireAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(i.invitation.ExpireAt)
 }
 
-func (i Invitation) CreateAt(ctx context.Context) graphql.Time {
+func (i Invitation) CreateAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(i.invitation.CreatedAt)
 }
 
-func (i Invitation) Status(ctx context.Context) entityv2.InvitationStatus {
+func (i Invitation) Status(ct context.Context) entityv2.InvitationStatus {
 	return i.invitation.Status
 }
 
-func (i Invitation) Code(ctx context.Context) string {
+func (i Invitation) Code(ct context.Context) string {
 	return i.invitation.Code
 }

@@ -5,8 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/pkg/errors"
-	oneEntity "github.com/teamyapp/one/entity"
-	"github.com/teamyapp/one/identity"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -49,10 +48,10 @@ func (u User) ActiveTeam() (*Team, error) {
 	return &gqlTeam, nil
 }
 
-func (u User) Teams(ctx context.Context, args struct {
+func (u User) Teams(ct context.Context, args struct {
 	IDs *[]graphql.ID
 }) ([]Team, error) {
-	var idsMap map[oneEntity.ID]bool
+	var idsMap map[uint64]bool
 	var err error
 
 	// todo: use OrderredSet instead of toIDsMap
@@ -62,7 +61,7 @@ func (u User) Teams(ctx context.Context, args struct {
 			return nil, err
 		}
 	} else {
-		idsMap = make(map[oneEntity.ID]bool)
+		idsMap = make(map[uint64]bool)
 	}
 
 	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
@@ -106,7 +105,7 @@ func newUser(deps *Dependencies, user entity.User) User {
 */
 
 func (m Mutation) CreateUser(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		Input struct {
 			FirstName  string
@@ -115,7 +114,7 @@ func (m Mutation) CreateUser(
 		}
 	},
 ) (UserUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return UserUpdate{}, err
 	}
@@ -136,8 +135,8 @@ func (m Mutation) CreateUser(
 	return UserUpdate{deps: m.deps, user: user}, nil
 }
 
-func (m Mutation) User(ctx context.Context, args struct{ ID graphql.ID }) (UserUpdate, error) {
-	userID, err := identity.FromContext(ctx)
+func (m Mutation) User(ct context.Context, args struct{ ID graphql.ID }) (UserUpdate, error) {
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return UserUpdate{}, err
 	}
@@ -172,7 +171,7 @@ func (up UserUpdate) User() User {
 	return newUser(up.deps, up.user)
 }
 
-func (up UserUpdate) UpdateActiveTeam(ctx context.Context, args struct {
+func (up UserUpdate) UpdateActiveTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 }) (UserUpdate, error) {
 	user, err := up.deps.Data.GetUser(up.user.ID)
@@ -206,7 +205,7 @@ func (up UserUpdate) UpdateActiveTeam(ctx context.Context, args struct {
 }
 
 func (up UserUpdate) UpdateUser(
-	ctx context.Context,
+	ct context.Context,
 	args struct {
 		Input struct {
 			FirstName  *string
@@ -237,19 +236,19 @@ func (up UserUpdate) UpdateUser(
 //
 // Deprecated
 //
-func (m Mutation) UpdateActiveTeam(ctx context.Context, args struct {
+func (m Mutation) UpdateActiveTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 }) (User, error) {
-	userID, err := identity.FromContext(ctx)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		return User{}, err
 	}
 
-	userUpdate, err := m.User(ctx, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
+	userUpdate, err := m.User(ct, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
 	if err != nil {
 		return User{}, err
 	}
 
-	up, err := userUpdate.UpdateActiveTeam(ctx, args)
+	up, err := userUpdate.UpdateActiveTeam(ct, args)
 	return newUser(m.deps, up.user), err
 }

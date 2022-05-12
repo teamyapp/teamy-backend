@@ -14,23 +14,23 @@ type Team struct {
 	team entityv2.Team
 }
 
-func (t Team) ID(ctx context.Context) graphql.ID {
+func (t Team) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(t.team.ID)
 }
 
-func (t Team) Name(ctx context.Context) string {
+func (t Team) Name(ct context.Context) string {
 	return t.team.Name
 }
 
-func (t Team) IconURL(ctx context.Context) *string {
+func (t Team) IconURL(ct context.Context) *string {
 	return t.team.IconURL
 }
 
-func (t Team) CreatedAt(ctx context.Context) graphql.Time {
+func (t Team) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(t.team.CreatedAt)
 }
 
-func (t Team) Creator(ctx context.Context) (User, error) {
+func (t Team) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userDao.FindUserByID(t.team.CreatorID)
 	if err != nil {
 		return User{}, nil
@@ -42,7 +42,7 @@ func (t Team) Creator(ctx context.Context) (User, error) {
 	}, nil
 }
 
-func (t Team) Owner(ctx context.Context) (User, error) {
+func (t Team) Owner(ct context.Context) (User, error) {
 	user, err := t.deps.userDao.FindUserByID(t.team.OwnerID)
 	if err != nil {
 		return User{}, nil
@@ -54,7 +54,7 @@ func (t Team) Owner(ctx context.Context) (User, error) {
 	}, nil
 }
 
-func (t Team) Members(ctx context.Context) ([]User, error) {
+func (t Team) Members(ct context.Context) ([]User, error) {
 	teamMemberIDs, err := t.deps.teamMemberDao.FindTeamMemberIDsByTeamID(t.team.ID)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (t Team) Members(ctx context.Context) ([]User, error) {
 	}), nil
 }
 
-func (t Team) Tasks(ctx context.Context, args struct {
+func (t Team) Tasks(ct context.Context, args struct {
 	Filter TaskFilter
 }) ([]Task, error) {
 	tasks, err := t.deps.taskDao.FindTasksByTeamID(t.team.ID)
@@ -93,7 +93,7 @@ func (t Team) Tasks(ctx context.Context, args struct {
 	}), nil
 }
 
-func (t Team) Invitations(ctx context.Context) ([]Invitation, error) {
+func (t Team) Invitations(ct context.Context) ([]Invitation, error) {
 	invitationEntities, err := t.deps.invitationDao.FindInvitationsByTeamID(t.team.ID)
 	if err != nil {
 		return nil, err

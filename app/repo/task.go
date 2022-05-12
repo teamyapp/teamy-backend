@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 
-	oneEntity "github.com/teamyapp/one/entity"
 	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
@@ -16,16 +15,16 @@ var sqlTaskStatues = map[entity.TaskStatus]int{
 }
 
 type Task interface {
-	FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
-	FindTasksForUser(userID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error)
-	FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error)
-	FindTaskByID(taskID oneEntity.ID) (entity.Task, error)
-	CreateTask(task entity.Task) (oneEntity.ID, error)
-	AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error
-	DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error
-	DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error
-	SetNeedAttentionTask(taskID *oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) (*oneEntity.ID, error)
-	SetTeamTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error
+	FindTasksForTeam(teamID uint64, taskStatus entity.TaskStatus) ([]entity.Task, error)
+	FindTasksForUser(userID uint64, teamID uint64, taskStatus entity.TaskStatus) ([]entity.Task, error)
+	FindTaskNeedAttentionForUser(userID uint64, teamID uint64) (*entity.Task, error)
+	FindTaskByID(taskID uint64) (entity.Task, error)
+	CreateTask(task entity.Task) (uint64, error)
+	AssignTaskToTeam(taskID uint64, teamID uint64, taskStatus entity.TaskStatus) error
+	DeleteTeamTask(taskID uint64, teamID uint64) error
+	DeleteNeedAttentionTask(taskID uint64, userID uint64, teamID uint64) error
+	SetNeedAttentionTask(taskID *uint64, userID uint64, teamID uint64) (*uint64, error)
+	SetTeamTaskStatus(taskID uint64, teamID uint64, teamStatus entity.TaskStatus) error
 }
 
 type SQLTask struct {
@@ -34,7 +33,7 @@ type SQLTask struct {
 
 var _ Task = (*SQLTask)(nil)
 
-func (S SQLTask) SetTeamTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, teamStatus entity.TaskStatus) error {
+func (S SQLTask) SetTeamTaskStatus(taskID uint64, teamID uint64, teamStatus entity.TaskStatus) error {
 	statement := `
 	UPDATE team_task
 	SET task_status = $1
@@ -47,7 +46,7 @@ func (S SQLTask) SetTeamTaskStatus(taskID oneEntity.ID, teamID oneEntity.ID, tea
 	return err
 }
 
-func (S SQLTask) SetNeedAttentionTask(taskID *oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) (*oneEntity.ID, error) {
+func (S SQLTask) SetNeedAttentionTask(taskID *uint64, userID uint64, teamID uint64) (*uint64, error) {
 	statement := `
 	UPDATE team_member AS updated
 	SET need_attention_task_id = $1
@@ -60,16 +59,16 @@ func (S SQLTask) SetNeedAttentionTask(taskID *oneEntity.ID, userID oneEntity.ID,
 	WHERE updated.user_id = previous.user_id AND updated.team_id = previous.team_id
 	RETURNING previous.need_attention_task_id;
 `
-	var needAttentionTaskID *int
+	var needAttentionTaskID *uint64
 	err := S.db.QueryRow(statement, taskID, userID, teamID).Scan(&needAttentionTaskID)
 	if err != nil {
 		log.Println(err)
 	}
 
-	return (*oneEntity.ID)(needAttentionTaskID), err
+	return needAttentionTaskID, err
 }
 
-func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.ID, teamID oneEntity.ID) error {
+func (S SQLTask) DeleteNeedAttentionTask(taskID uint64, userID uint64, teamID uint64) error {
 	statement := `
 	UPDATE team_member
 	SET need_attention_task_id = NULL
@@ -82,7 +81,7 @@ func (S SQLTask) DeleteNeedAttentionTask(taskID oneEntity.ID, userID oneEntity.I
 	return err
 }
 
-func (S SQLTask) DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error {
+func (S SQLTask) DeleteTeamTask(taskID uint64, teamID uint64) error {
 	statement := `
 	DELETE FROM team_task
 	WHERE task_id = $1 AND team_id = $2;
@@ -94,7 +93,7 @@ func (S SQLTask) DeleteTeamTask(taskID oneEntity.ID, teamID oneEntity.ID) error 
 	return err
 }
 
-func (S SQLTask) AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) error {
+func (S SQLTask) AssignTaskToTeam(taskID uint64, teamID uint64, taskStatus entity.TaskStatus) error {
 	statement := `
 	INSERT INTO team_task(
 	    task_id,
@@ -110,7 +109,7 @@ func (S SQLTask) AssignTaskToTeam(taskID oneEntity.ID, teamID oneEntity.ID, task
 	return err
 }
 
-func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
+func (S SQLTask) CreateTask(task entity.Task) (uint64, error) {
 	statement := `
 	INSERT INTO task(
 		 goal,
@@ -131,19 +130,19 @@ func (S SQLTask) CreateTask(task entity.Task) (oneEntity.ID, error) {
 		task.DueAt,
 		task.Context,
 		task.OwnerUserId,
-	// task.WorkScopeIndex,
-	// task.Effort,
-	// task.NumOfUnknowns
+		// task.WorkScopeIndex,
+		// task.Effort,
+		// task.NumOfUnknowns
 	).Scan(&id)
 	if err != nil {
 		log.Println(err)
 		return 0, err
 	}
 
-	return oneEntity.ID(id), err
+	return uint64(id), err
 }
 
-func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
+func (S SQLTask) FindTaskByID(taskID uint64) (entity.Task, error) {
 	log.Printf("begin FindTaskByID %v", taskID)
 	ts := entity.Task{}
 	err := S.db.QueryRow(`
@@ -179,7 +178,7 @@ func (S SQLTask) FindTaskByID(taskID oneEntity.ID) (entity.Task, error) {
 	return ts, err
 }
 
-func (S SQLTask) FindTasksForTeam(teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
+func (S SQLTask) FindTasksForTeam(teamID uint64, taskStatus entity.TaskStatus) ([]entity.Task, error) {
 	rows, err := S.db.Query(`
 SELECT
        task.id,
@@ -233,7 +232,7 @@ WHERE team_id = $1
 	return tasks, nil
 }
 
-func (S SQLTask) FindTasksForUser(userID oneEntity.ID, teamID oneEntity.ID, taskStatus entity.TaskStatus) ([]entity.Task, error) {
+func (S SQLTask) FindTasksForUser(userID uint64, teamID uint64, taskStatus entity.TaskStatus) ([]entity.Task, error) {
 	rows, err := S.db.Query(`
 SELECT
        task.id,
@@ -288,7 +287,7 @@ WHERE team_task.team_id = $1
 	return tasks, nil
 }
 
-func (S SQLTask) FindTaskNeedAttentionForUser(userID oneEntity.ID, teamID oneEntity.ID) (*entity.Task, error) {
+func (S SQLTask) FindTaskNeedAttentionForUser(userID uint64, teamID uint64) (*entity.Task, error) {
 	row := S.db.QueryRow(`
 SELECT
        task.id,
