@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"sync"
 
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/app/api/gql"
@@ -26,21 +27,36 @@ func main() {
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
 
-	panic(sqldb.Use(cfg.Config, func(sqlDB *sql.DB) error {
+	err = sqldb.Use(cfg.Config, func(sqlDB *sql.DB) error {
 		err = sqldb.MigrateUp(sqlDB, sqldb.DefaultMigrationRoot)
 		if err != nil {
 			log.Println(err)
 			return err
 		}
 
-		gqlResolver := dep.InitGraphQLResolver(sqlDB)
-		server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.GraphQLAPIPort)
-		if err != nil {
-			panic(err)
-		}
-
-		log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIPort)
-		panic(server.ListenAndServe())
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			StartGraphQLServer(cfg, sqlDB)
+		}()
+		wg.Wait()
 		return nil
-	}))
+	})
+
+	if err != nil {
+		log.Println(err)
+		panic(err)
+	}
+}
+
+func StartGraphQLServer(cfg config.Config, sqlDB *sql.DB) {
+	gqlResolver := dep.InitGraphQLResolver(sqlDB)
+	server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.GraphQLAPIPort)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIPort)
+	panic(server.ListenAndServe())
 }
