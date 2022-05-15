@@ -79,9 +79,9 @@ spec:
   selector:
     app: teamy-backend
   ports:
-    - name: http
+    - name: gql
       port: 9000
-    - name: http
+    - name: gqlv2
       port: 9001
 ---
 apiVersion: traefik.containo.us/v1alpha1
