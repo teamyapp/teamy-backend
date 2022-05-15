@@ -102,7 +102,7 @@ spec:
           port: 9000
           passHostHeader: true
     - kind: Rule
-      match: Host(`backend-v2.staging.teamyapp.com`)
+      match: Host(`backend-v2.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend
