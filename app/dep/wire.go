@@ -8,6 +8,9 @@ import (
 	"github.com/google/wire"
 	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
+	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
+	"github.com/teamyapp/teamy-backend/app/dao"
+	"github.com/teamyapp/teamy-backend/app/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/app/repo"
 	"github.com/teamyapp/teamy-backend/app/service"
 )
@@ -32,4 +35,28 @@ func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
 		datastore.NewDataStore,
 	)
 	return resolver.Resolver{}
+}
+
+var daoSet = wire.NewSet(
+	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
+	wire.Bind(new(dao.Message), new(sqldb.Message)),
+	wire.Bind(new(dao.Task), new(sqldb.Task)),
+	wire.Bind(new(dao.Team), new(sqldb.Team)),
+	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
+	wire.Bind(new(dao.User), new(sqldb.User)),
+	sqldb.NewInvitation,
+	sqldb.NewMessage,
+	sqldb.NewTask,
+	sqldb.NewTeam,
+	sqldb.NewTeamMember,
+	sqldb.NewUser,
+)
+
+func InitGraphQLV2Resolver(sqlDB *sql.DB) resolver2.Resolver {
+	wire.Build(
+		daoSet,
+		resolver2.NewDependencies,
+		resolver2.NewResolver,
+	)
+	return resolver2.Resolver{}
 }

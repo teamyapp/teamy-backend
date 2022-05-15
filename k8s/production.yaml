@@ -48,6 +48,7 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 9000
+            - containerPort: 9001
           env:
             - name: DB_HOST
               value: postgres.db.svc.cluster.local
@@ -79,8 +80,9 @@ spec:
     app: teamy-backend
   ports:
     - name: http
-      port: 80
-      targetPort: 9000
+      port: 9000
+    - name: http
+      port: 9001
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
@@ -97,7 +99,15 @@ spec:
         - kind: Service
           name: teamy-backend
           namespace: production
-          port: 80
+          port: 9000
+          passHostHeader: true
+    - kind: Rule
+      match: Host(`backend-v2.teamyapp.com`)
+      services:
+        - kind: Service
+          name: teamy-backend
+          namespace: staging
+          port: 9001
           passHostHeader: true
   tls:
     secretName: teamy-cert

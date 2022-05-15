@@ -6,16 +6,17 @@ import (
 )
 
 type TaskFilter struct {
+	TaskID  *graphql.ID
 	OwnerID *graphql.ID
 	Goal    *string
 	Status  *entityv2.TaskStatus
 }
 
 type TeamFilter struct {
-	ID *graphql.ID
+	TeamID *graphql.ID
 }
 
 type InvitationFilter struct {
-	ID   *graphql.ID
-	Code *string
+	InvitationID *graphql.ID
+	Code         *string
 }

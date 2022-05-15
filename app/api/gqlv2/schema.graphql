@@ -12,30 +12,30 @@ type Query {
 
 type Mutation {
 	# Task
-	createTask(teamId: ID!, task: CreateTaskInput): Task!
-	updateTask(taskId: ID!, input: UpdateTaskInput): Task!
+	createTask(teamId: ID!, task: CreateTaskInput!): Task!
+	updateTask(taskId: ID!, input: UpdateTaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
-	updateMessage(messageId: ID!, input: UpdateMessageInput): Message!
+	updateMessage(messageId: ID!, input: UpdateMessageInput!): Message!
 	deleteMessage(messageId: ID!): Message!
 
 	# Team
-	createTeam(team: CreateTeamInput): Team!
+	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	addMemberToTeam(teamId: ID!, memberId: ID!): Team!
-	removeMemberFromTeam(teamId: ID!, memberId: ID): Team!
+	removeMemberFromTeam(teamId: ID!, memberId: ID!): Team!
 	removeTaskFromTeam(teamId: ID!, taskID: ID!): Team!
 	promoteTeamTaskToNeedAttention(teamId: ID!, taskId: ID!): Team!
 
 	# User
 	createUser(user: CreateUserInput!): User!
-	updateUser(userId: ID!, input: UpdateUserInput): User!
+	updateUser(userId: ID!, input: UpdateUserInput!): User!
 
 	# Invitation
-	createInvitation(teamId: ID!, invitation: CreateInvitationInput): Invitation!
-	updateInvitation(invitationId: ID!, input: UpdateInvitationInput): Invitation!
+	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!
+	updateInvitation(invitationId: ID!, input: UpdateInvitationInput!): Invitation!
 	acceptInvitation(invitationCode: String!): Invitation!
 	declineInvitation(invitationCode: String!): Invitation!
 	deleteInvitation(invitationId: ID!): Invitation!
@@ -44,12 +44,12 @@ type Mutation {
 type Task {
 	id: ID!
 	goal: String!
-	context: String!
+	context: String
 	creator: User!
 	owner: User
 	owningTeam: Team!
 	status: TaskStatus!
-	comments: [Message]!
+	comments: [Message!]!
 	createdAt: Time!
 	updatedAt: Time
 	dueAt: Time
@@ -71,14 +71,14 @@ type Team {
 	creator: User!
 	owner: User!
 	members: [User!]!
-	tasks(filter: TaskFilter): [Task!]!
+	tasks(filter: TaskFilter!): [Task!]!
 	invitations: [Invitation!]!
 }
 
 type Invitation {
 	id: ID!
 	sender: User!
-	receiverFirstName: String!
+	receiverFirstName: String
 	receiverLastName: String
 	receiverEmail: String
 	receiver: User
@@ -122,18 +122,18 @@ type User {
 
 # Input
 input TaskFilter {
-	id: ID
+	taskId: ID
 	ownerId: ID
 	goal: String
 	status: TaskStatus
 }
 
 input TeamFilter {
-	id: ID
+	teamId: ID
 }
 
 input InvitationFilter {
-	id: ID
+	invitationId: ID
 	code: String
 }
 
@@ -194,3 +194,5 @@ input UpdateInvitationInput {
 	expireAt: Time
 	status: InvitationStatus
 }
+
+scalar Time
