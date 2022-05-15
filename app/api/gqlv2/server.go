@@ -10,7 +10,7 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/teamyapp/cloud/app/middleware"
-	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
+	"github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/log"
 )
 

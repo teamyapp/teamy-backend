@@ -12,6 +12,7 @@ type Config struct {
 	config.RepoConfig
 	IdentityAPIEndpoint string `envconfig:"IDENTITY_API_ENDPOINT" default:"http://localhost:9500/identity"`
 	GraphQLAPIPort      int    `envconfig:"GRAPH_QL_API_PORT" default:"9000"`
+	GraphQLAPIV2Port    int    `envconfig:"GRAPH_QL_API_V2_PORT" default:"9001"`
 }
 
 func FromEnv() (Config, error) {

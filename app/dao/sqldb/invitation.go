@@ -107,3 +107,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entityv2.Invitatio
 
 	return invitations, err
 }
+
+func NewInvitation(sqlDB *sql.DB) Invitation {
+	return Invitation{db: sqlDB}
+}

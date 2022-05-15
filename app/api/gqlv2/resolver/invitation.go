@@ -72,7 +72,7 @@ func (i Invitation) ExpireAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(i.invitation.ExpireAt)
 }
 
-func (i Invitation) CreateAt(ct context.Context) graphql.Time {
+func (i Invitation) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(i.invitation.CreatedAt)
 }
 

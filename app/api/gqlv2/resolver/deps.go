@@ -20,8 +20,8 @@ func NewDependencies(
 	invitationDao dao.Invitation,
 	taskDao dao.Task,
 	messageDao dao.Message,
-) Dependencies {
-	return Dependencies{
+) *Dependencies {
+	return &Dependencies{
 		userDao:       userDao,
 		teamDao:       teamDao,
 		teamMemberDao: teamMemberDao,
