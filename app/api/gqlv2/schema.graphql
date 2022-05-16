@@ -4,10 +4,10 @@ schema {
 }
 
 type Query {
-	me: User!
-	tasks(filter: TaskFilter!): [Task!]!
-	teams(filter: TeamFilter!): [Team!]!
-	invitations(filter: InvitationFilter!): [Invitation!]!
+	me(filter: TeamFilter!): User!
+	tasks(filter: TaskFilter): [Task!]!
+	teams(filter: TeamFilter): [Team!]!
+	invitations(filter: InvitationFilter): [Invitation!]!
 }
 
 type Mutation {
@@ -71,8 +71,8 @@ type Team {
 	creator: User!
 	owner: User!
 	members: [User!]!
-	tasks(filter: TaskFilter!): [Task!]!
-	invitations: [Invitation!]!
+	tasks(filter: TaskFilter): [Task!]!
+	invitations(filter: InvitationFilter): [Invitation!]!
 }
 
 type Invitation {
@@ -117,7 +117,7 @@ type User {
 	lastName: String!
 	profileUrl: String
 	createdAt: Time!
-	teams: [Team!]!
+	teams(filter: TeamFilter!): [Team!]!
 }
 
 # Input

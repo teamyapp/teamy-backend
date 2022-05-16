@@ -8,7 +8,7 @@ import (
 )
 
 type Invitation struct {
-	deps       Dependencies
+	deps       *Dependencies
 	invitation entityv2.Invitation
 }
 
@@ -22,10 +22,7 @@ func (i Invitation) Sender(ct context.Context) (User, error) {
 		return User{}, err
 	}
 
-	return User{
-		user: sender,
-		deps: i.deps,
-	}, nil
+	return newUser(i.deps, sender), nil
 }
 
 func (i Invitation) ReceiverFirstName(ct context.Context) *string {
@@ -50,10 +47,8 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 		return &User{}, err
 	}
 
-	return &User{
-		user: receiver,
-		deps: i.deps,
-	}, nil
+	gqlUser := newUser(i.deps, receiver)
+	return &gqlUser, nil
 }
 
 func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
@@ -62,10 +57,7 @@ func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
 		return Team{}, err
 	}
 
-	return Team{
-		team: team,
-		deps: i.deps,
-	}, nil
+	return newTeam(i.deps, team), nil
 }
 
 func (i Invitation) ExpireAt(ct context.Context) graphql.Time {
@@ -82,4 +74,11 @@ func (i Invitation) Status(ct context.Context) entityv2.InvitationStatus {
 
 func (i Invitation) Code(ct context.Context) string {
 	return i.invitation.Code
+}
+
+func newInvitation(deps *Dependencies, invitation entityv2.Invitation) Invitation {
+	return Invitation{
+		deps:       deps,
+		invitation: invitation,
+	}
 }

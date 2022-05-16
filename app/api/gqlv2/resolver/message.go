@@ -8,7 +8,7 @@ import (
 )
 
 type Message struct {
-	deps    Dependencies
+	deps    *Dependencies
 	message entityv2.Message
 }
 
@@ -26,4 +26,11 @@ func (m Message) CreatedAt(ct context.Context) graphql.Time {
 
 func (m Message) UpdatedAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(m.message.UpdatedAt)
+}
+
+func newMessage(deps *Dependencies, message entityv2.Message) Message {
+	return Message{
+		deps:    deps,
+		message: message,
+	}
 }

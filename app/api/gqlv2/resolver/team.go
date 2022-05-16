@@ -10,7 +10,7 @@ import (
 )
 
 type Team struct {
-	deps Dependencies
+	deps *Dependencies
 	team entityv2.Team
 }
 
@@ -36,10 +36,7 @@ func (t Team) Creator(ct context.Context) (User, error) {
 		return User{}, nil
 	}
 
-	return User{
-		user: user,
-		deps: t.deps,
-	}, nil
+	return newUser(t.deps, user), nil
 }
 
 func (t Team) Owner(ct context.Context) (User, error) {
@@ -48,10 +45,7 @@ func (t Team) Owner(ct context.Context) (User, error) {
 		return User{}, nil
 	}
 
-	return User{
-		user: user,
-		deps: t.deps,
-	}, nil
+	return newUser(t.deps, user), nil
 }
 
 func (t Team) Members(ct context.Context) ([]User, error) {
@@ -66,44 +60,45 @@ func (t Team) Members(ct context.Context) ([]User, error) {
 	}
 
 	return collect.Map(userEntities, func(userEntity entityv2.User, _ int) User {
-		return User{
-			user: userEntity,
-			deps: t.deps,
-		}
+		return newUser(t.deps, userEntity)
 	}), nil
 }
 
 func (t Team) Tasks(ct context.Context, args struct {
-	Filter TaskFilter
+	Filter *TaskFilter
 }) ([]Task, error) {
 	tasks, err := t.deps.taskDao.FindTasksByTeamID(t.team.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	filteredTasks := collect.Filter(tasks, func(task entityv2.Task) bool {
-		return matchTask(args.Filter, task)
-	})
+	if args.Filter != nil {
+		tasks = collect.Filter(tasks, func(task entityv2.Task) bool {
+			return matchTask(*args.Filter, task)
+		})
+	}
 
-	return collect.Map(filteredTasks, func(filteredTask entityv2.Task, _ int) Task {
-		return Task{
-			task: filteredTask,
-			deps: t.deps,
-		}
+	return collect.Map(tasks, func(task entityv2.Task, _ int) Task {
+		return newTask(t.deps, task)
 	}), nil
 }
 
-func (t Team) Invitations(ct context.Context) ([]Invitation, error) {
+func (t Team) Invitations(ct context.Context, args struct {
+	Filter *InvitationFilter
+}) ([]Invitation, error) {
 	invitationEntities, err := t.deps.invitationDao.FindInvitationsByTeamID(t.team.ID)
 	if err != nil {
 		return nil, err
 	}
 
+	if args.Filter != nil {
+		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entityv2.Invitation) bool {
+			return matchInvitation(*args.Filter, invitationEntity)
+		})
+	}
+
 	return collect.Map(invitationEntities, func(invitationEntity entityv2.Invitation, _ int) Invitation {
-		return Invitation{
-			invitation: invitationEntity,
-			deps:       t.deps,
-		}
+		return newInvitation(t.deps, invitationEntity)
 	}), nil
 }
 
@@ -126,4 +121,28 @@ func matchTask(filter TaskFilter, task entityv2.Task) bool {
 	}
 
 	return true
+}
+
+func matchInvitation(filter InvitationFilter, invitation entityv2.Invitation) bool {
+	invitationID, err := fromGraphQLIDPtr(filter.InvitationID)
+	if err != nil {
+		return false
+	}
+
+	if filter.InvitationID != nil && *invitationID != invitation.ID {
+		return false
+	}
+
+	if filter.Code != nil && *filter.Code != invitation.Code {
+		return false
+	}
+
+	return true
+}
+
+func newTeam(deps *Dependencies, team entityv2.Team) Team {
+	return Team{
+		deps: deps,
+		team: team,
+	}
 }
