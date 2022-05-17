@@ -4,7 +4,7 @@ schema {
 }
 
 type Query {
-	me(filter: TeamFilter!): User!
+	me: User!
 	tasks(filter: TaskFilter): [Task!]!
 	teams(filter: TeamFilter): [Team!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
@@ -117,7 +117,7 @@ type User {
 	lastName: String!
 	profileUrl: String
 	createdAt: Time!
-	teams(filter: TeamFilter!): [Team!]!
+	teams(filter: TeamFilter): [Team!]!
 }
 
 # Input

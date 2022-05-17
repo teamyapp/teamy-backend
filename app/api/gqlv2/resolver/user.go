@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
@@ -32,7 +33,7 @@ func (u User) CreatedAt(ct context.Context) graphql.Time {
 }
 
 func (u User) Teams(ct context.Context, args struct {
-	Filter TeamFilter
+	Filter *TeamFilter
 }) ([]Team, error) {
 	ids, err := u.deps.teamMemberDao.FindTeamIDsByUserID(u.user.ID)
 	if err != nil {
@@ -44,6 +45,7 @@ func (u User) Teams(ct context.Context, args struct {
 		if err != nil {
 			return nil, err
 		}
+
 		teamEntity, err := u.deps.teamDao.FindTeamByID(*teamID)
 		return []Team{newTeam(u.deps, teamEntity)}, nil
 	}

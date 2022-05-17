@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+
 	"github.com/teamyapp/teamy-backend/app/collect"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
@@ -10,9 +11,7 @@ type Query struct {
 	deps *Dependencies
 }
 
-func (q Query) Me(ct context.Context, args struct {
-	Filter TeamFilter
-}) (User, error) {
+func (q Query) Me(ct context.Context) (User, error) {
 	panic("implement me")
 }
 

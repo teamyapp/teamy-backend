@@ -2,8 +2,8 @@ package sqldb
 
 import (
 	"database/sql"
-	"github.com/teamyapp/teamy-backend/app/dao"
 
+	"github.com/teamyapp/teamy-backend/app/dao"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 

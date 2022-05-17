@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"strings"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/collect"
@@ -100,44 +99,6 @@ func (t Team) Invitations(ct context.Context, args struct {
 	return collect.Map(invitationEntities, func(invitationEntity entityv2.Invitation, _ int) Invitation {
 		return newInvitation(t.deps, invitationEntity)
 	}), nil
-}
-
-func matchTask(filter TaskFilter, task entityv2.Task) bool {
-	ownerID, err := fromGraphQLIDPtr(filter.OwnerID)
-	if err != nil {
-		return false
-	}
-
-	if filter.OwnerID != nil && ownerID != task.OwnerUserID {
-		return false
-	}
-
-	if filter.Status != nil && *filter.Status != task.Status {
-		return false
-	}
-
-	if filter.Goal != nil && strings.Contains(task.Goal, *filter.Goal) {
-		return false
-	}
-
-	return true
-}
-
-func matchInvitation(filter InvitationFilter, invitation entityv2.Invitation) bool {
-	invitationID, err := fromGraphQLIDPtr(filter.InvitationID)
-	if err != nil {
-		return false
-	}
-
-	if filter.InvitationID != nil && *invitationID != invitation.ID {
-		return false
-	}
-
-	if filter.Code != nil && *filter.Code != invitation.Code {
-		return false
-	}
-
-	return true
 }
 
 func newTeam(deps *Dependencies, team entityv2.Team) Team {
