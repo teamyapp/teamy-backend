@@ -28,8 +28,7 @@ func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (htt
 		return http.Server{}, err
 	}
 
-	relayHandler := relay.Handler{Schema: schema}
-	handler := middleware.WithIdentity(identityAPIEndpoint, logRequest(relayHandler.ServeHTTP))
+	handler := middleware.WithIdentity(identityAPIEndpoint, &relay.Handler{Schema: schema})
 	mux := http.ServeMux{}
 	mux.HandleFunc("/graphql", requestID(enableCORS(handler.ServeHTTP)))
 	addr := fmt.Sprintf(":%d", port)
@@ -64,16 +63,9 @@ func requestID(handlerFunc http.HandlerFunc) http.HandlerFunc {
 			reqIDStr := reqID.String()
 			ctx := request.Context()
 			ctx = context.WithValue(ctx, requestIDKey, reqIDStr)
+			log.Info(ctx, "new request")
 			newRequest := request.WithContext(ctx)
 			handlerFunc(writer, newRequest)
 		}
-	}
-}
-
-func logRequest(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		ctx := request.Context()
-		log.Info(ctx, "new request")
-		handlerFunc(writer, request)
 	}
 }
