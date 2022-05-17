@@ -157,6 +157,49 @@ func (i Invitation) FindAllInvitations() ([]entityv2.Invitation, error) {
 	return invitations, err
 }
 
+func (i Invitation) CreateInvitation(invitation entityv2.Invitation) error {
+	statement := `
+	INSERT INTO invitation(
+	    id,
+		sender_user_id,
+		receiver_first_name,
+		receiver_email,
+	    team_id,
+		expire_at,
+		status,
+		code,
+		create_at
+	)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+`
+	_, err := i.db.Exec(statement,
+		int64(invitation.ID),
+		invitation.SenderUserID,
+		invitation.ReceiverFirstName,
+		invitation.ReceiverEmail,
+		invitation.TeamID,
+		invitation.ExpireAt,
+		invitation.Status,
+		invitation.Code,
+		invitation.CreatedAt,
+	)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return err
+}
+
+func (i Invitation) UpdateInvitation(invitation entityv2.Invitation) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (i Invitation) DeleteInvitation(id uint64) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewInvitation(sqlDB *sql.DB) Invitation {
 	return Invitation{db: sqlDB}
 }

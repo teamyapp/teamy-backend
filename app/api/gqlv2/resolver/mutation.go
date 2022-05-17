@@ -2,6 +2,10 @@ package resolver
 
 import (
 	"context"
+	"github.com/teamyapp/cloud/app/ctx"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"math/rand"
+	"time"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -149,10 +153,37 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	Invitation struct {
 		ReceiverFirstName *string
 		ReceiverEmail     *string
-		ExpireAT          *graphql.Time
+		ExpireAt          graphql.Time
 	}
 }) (Invitation, error) {
-	panic("implement me")
+	senderID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation := entityv2.Invitation{
+		ID:                rand.Uint64(),
+		SenderUserID:      senderID,
+		ReceiverFirstName: args.Invitation.ReceiverFirstName,
+		ReceiverEmail:     args.Invitation.ReceiverEmail,
+		TeamID:            teamID,
+		ExpireAt:          args.Invitation.ExpireAt.Time,
+		Status:            entityv2.InvitationStatusPending,
+		Code:              randSeq(10),
+		CreatedAt:         time.Now(),
+	}
+
+	err = m.deps.invitationDao.CreateInvitation(invitation)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	return newInvitation(m.deps, invitation), err
 }
 
 func (m Mutation) UpdateInvitation(ct context.Context, args struct {
