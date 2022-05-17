@@ -183,9 +183,9 @@ input UpdateUserInput {
 }
 
 input CreateInvitationInput {
-	receiverFirstName: String!
+	receiverFirstName: String
 	receiverEmail: String
-	expireAt: Time
+	expireAt: Time!
 }
 
 input UpdateInvitationInput {

@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"log"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/app/api/gql"
@@ -14,6 +16,7 @@ import (
 
 func init() {
 	log.SetFlags(log.LstdFlags | log.Llongfile)
+	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
