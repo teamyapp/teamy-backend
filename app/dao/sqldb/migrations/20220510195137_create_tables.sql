@@ -69,10 +69,10 @@ CREATE TABLE invitation
 	receiver_last_name VARCHAR(50),
 	receiver_user_id BIGINT REFERENCES "user"(id) ON UPDATE CASCADE,
 	receiver_email VARCHAR(100),
-	team_id BIGINT REFERENCES team(id) ON UPDATE CASCADE,
+	team_id BIGINT NOT NULL REFERENCES team(id) ON UPDATE CASCADE,
 	expire_at TIMESTAMP NOT NULL,
-	status VARCHAR(20),
-	code VARCHAR(50),
+	status VARCHAR(20) NOT NULL,
+	code VARCHAR(50) NOT NULL,
 	create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

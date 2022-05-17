@@ -13,6 +13,11 @@ type Team struct {
 
 var _ dao.Team = (*Team)(nil)
 
+func (t Team) FindAllTeams() ([]entityv2.Team, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t Team) FindTeamByID(id uint64) (entityv2.Team, error) {
 	//TODO implement me
 	panic("implement me")

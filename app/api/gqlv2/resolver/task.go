@@ -33,7 +33,7 @@ var availableActions = map[entityv2.TaskStatus][]entityv2.TaskAction{
 }
 
 type Task struct {
-	deps Dependencies
+	deps *Dependencies
 	task entityv2.Task
 }
 
@@ -55,10 +55,7 @@ func (t Task) Creator(ct context.Context) (User, error) {
 		return User{}, err
 	}
 
-	return User{
-		user: user,
-		deps: t.deps,
-	}, nil
+	return newUser(t.deps, user), nil
 }
 
 func (t Task) Owner(ct context.Context) (*User, error) {
@@ -71,10 +68,8 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 		return nil, err
 	}
 
-	return &User{
-		user: owner,
-		deps: t.deps,
-	}, nil
+	gqlUser := newUser(t.deps, owner)
+	return &gqlUser, nil
 }
 
 func (t Task) OwningTeam(ct context.Context) (*Team, error) {
@@ -83,10 +78,8 @@ func (t Task) OwningTeam(ct context.Context) (*Team, error) {
 		return nil, err
 	}
 
-	return &Team{
-		team: team,
-		deps: t.deps,
-	}, nil
+	gqlTeam := newTeam(t.deps, team)
+	return &gqlTeam, nil
 }
 
 func (t Task) Status(ct context.Context) entityv2.TaskStatus {
@@ -100,10 +93,7 @@ func (t Task) Comments(ct context.Context) ([]Message, error) {
 	}
 
 	return collect.Map(messages, func(message entityv2.Message, _ int) Message {
-		return Message{
-			message: message,
-			deps:    t.deps,
-		}
+		return newMessage(t.deps, message)
 	}), nil
 }
 
@@ -121,4 +111,11 @@ func (t Task) DueAt(ct context.Context) *graphql.Time {
 
 func (t Task) AvailableActions(ct context.Context) []entityv2.TaskAction {
 	return availableActions[t.task.Status]
+}
+
+func newTask(deps *Dependencies, task entityv2.Task) Task {
+	return Task{
+		deps: deps,
+		task: task,
+	}
 }

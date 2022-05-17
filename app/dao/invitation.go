@@ -5,6 +5,7 @@ import (
 )
 
 type Invitation interface {
+	FindAllInvitations() ([]entityv2.Invitation, error)
 	FindInvitationByID(id uint64) (entityv2.Invitation, error)
 	FindInvitationsByTeamID(teamID uint64) ([]entityv2.Invitation, error)
 }
