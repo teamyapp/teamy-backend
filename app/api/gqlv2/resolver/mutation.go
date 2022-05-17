@@ -5,11 +5,10 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/teamyapp/cloud/app/ctx"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
-
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type Mutation struct {
@@ -168,7 +167,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 
 	invitation := entityv2.Invitation{
-		// TODO: use uuid
+		// TODO: ID generated from cloud backend
 		ID:                rand.Uint64(),
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
