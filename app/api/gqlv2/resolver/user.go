@@ -47,6 +47,9 @@ func (u User) Teams(ct context.Context, args struct {
 		}
 
 		teamEntity, err := u.deps.teamDao.FindTeamByID(*teamID)
+		if err != nil {
+			return nil, err
+		}
 		return []Team{newTeam(u.deps, teamEntity)}, nil
 	}
 

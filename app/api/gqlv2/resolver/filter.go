@@ -39,7 +39,7 @@ func matchTask(filter TaskFilter, task entityv2.Task) bool {
 		return false
 	}
 
-	if filter.Goal != nil && strings.Contains(task.Goal, *filter.Goal) {
+	if filter.Goal != nil && !strings.Contains(task.Goal, *filter.Goal) {
 		return false
 	}
 
