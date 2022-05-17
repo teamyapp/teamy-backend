@@ -2,10 +2,11 @@ package resolver
 
 import (
 	"context"
-	"github.com/teamyapp/cloud/app/ctx"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
 	"math/rand"
 	"time"
+
+	"github.com/teamyapp/cloud/app/ctx"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/entity"
@@ -167,6 +168,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 
 	invitation := entityv2.Invitation{
+		// TODO: use uuid
 		ID:                rand.Uint64(),
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
