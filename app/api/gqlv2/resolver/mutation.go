@@ -190,7 +190,6 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 
 	invitation := entityv2.Invitation{
-		// TODO: ID generated from cloud backend
 		ID:                genUniqueNumRes.UniqueNumber,
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
