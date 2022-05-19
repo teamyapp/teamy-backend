@@ -55,7 +55,7 @@ github.com/pkg/errors
 ## explicit; go 1.16
 github.com/rubenv/sql-migrate
 github.com/rubenv/sql-migrate/sqlparse
-# github.com/teamyapp/cloud v0.0.0-20220518083927-f08cb4172961
+# github.com/teamyapp/cloud v0.0.0-20220519073334-a938c55555c7
 ## explicit; go 1.18
 github.com/teamyapp/cloud/app/api/rpc
 github.com/teamyapp/cloud/app/api/rpc/proto

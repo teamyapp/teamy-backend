@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GeneratorClient interface {
 	GenerateUniqueNumber(ctx context.Context, in *GenerateUniqueNumberRequest, opts ...grpc.CallOption) (*GenerateUniqueNumberResponse, error)
+	GenerateUniqueString(ctx context.Context, in *GenerateUniqueStringRequest, opts ...grpc.CallOption) (*GenerateUniqueStringResponse, error)
 }
 
 type generatorClient struct {
@@ -42,11 +43,21 @@ func (c *generatorClient) GenerateUniqueNumber(ctx context.Context, in *Generate
 	return out, nil
 }
 
+func (c *generatorClient) GenerateUniqueString(ctx context.Context, in *GenerateUniqueStringRequest, opts ...grpc.CallOption) (*GenerateUniqueStringResponse, error) {
+	out := new(GenerateUniqueStringResponse)
+	err := c.cc.Invoke(ctx, "/Generator/GenerateUniqueString", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GeneratorServer is the server API for Generator service.
 // All implementations must embed UnimplementedGeneratorServer
 // for forward compatibility
 type GeneratorServer interface {
 	GenerateUniqueNumber(context.Context, *GenerateUniqueNumberRequest) (*GenerateUniqueNumberResponse, error)
+	GenerateUniqueString(context.Context, *GenerateUniqueStringRequest) (*GenerateUniqueStringResponse, error)
 	mustEmbedUnimplementedGeneratorServer()
 }
 
@@ -56,6 +67,9 @@ type UnimplementedGeneratorServer struct {
 
 func (UnimplementedGeneratorServer) GenerateUniqueNumber(context.Context, *GenerateUniqueNumberRequest) (*GenerateUniqueNumberResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateUniqueNumber not implemented")
+}
+func (UnimplementedGeneratorServer) GenerateUniqueString(context.Context, *GenerateUniqueStringRequest) (*GenerateUniqueStringResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateUniqueString not implemented")
 }
 func (UnimplementedGeneratorServer) mustEmbedUnimplementedGeneratorServer() {}
 
@@ -88,6 +102,24 @@ func _Generator_GenerateUniqueNumber_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Generator_GenerateUniqueString_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateUniqueStringRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GeneratorServer).GenerateUniqueString(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Generator/GenerateUniqueString",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GeneratorServer).GenerateUniqueString(ctx, req.(*GenerateUniqueStringRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Generator_ServiceDesc is the grpc.ServiceDesc for Generator service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -98,6 +130,10 @@ var Generator_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateUniqueNumber",
 			Handler:    _Generator_GenerateUniqueNumber_Handler,
+		},
+		{
+			MethodName: "GenerateUniqueString",
+			Handler:    _Generator_GenerateUniqueString_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

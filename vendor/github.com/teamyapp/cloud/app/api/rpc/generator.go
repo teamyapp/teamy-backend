@@ -13,12 +13,16 @@ type GeneratorService struct {
 	proto.UnimplementedGeneratorServer
 	uniqueNumberGeneratorFactory gen.UniqueNumberFactory
 	uniqueNumberGenerators       map[string]*gen.UniqueNumber
+	uniqueStringGenerators       map[string]*gen.UniqueString
 }
 
 var _ proto.GeneratorServer = (*GeneratorService)(nil)
 var _ Service = (*GeneratorService)(nil)
 
-func (g GeneratorService) GenerateUniqueNumber(ctx context.Context, request *proto.GenerateUniqueNumberRequest) (*proto.GenerateUniqueNumberResponse, error) {
+func (g GeneratorService) GenerateUniqueNumber(
+	ctx context.Context,
+	request *proto.GenerateUniqueNumberRequest,
+) (*proto.GenerateUniqueNumberResponse, error) {
 	uniqueNumGen, ok := g.uniqueNumberGenerators[request.SequenceName]
 	if !ok {
 		var err error
@@ -31,13 +35,37 @@ func (g GeneratorService) GenerateUniqueNumber(ctx context.Context, request *pro
 		g.uniqueNumberGenerators[request.SequenceName] = uniqueNumGen
 	}
 
-	num, err := uniqueNumGen.GenerateUniqueNumber()
+	uniqueNum, err := uniqueNumGen.GenerateUniqueNumber()
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	return &proto.GenerateUniqueNumberResponse{Number: num}, nil
+	return &proto.GenerateUniqueNumberResponse{UniqueNumber: uniqueNum}, nil
+}
+
+func (g GeneratorService) GenerateUniqueString(
+	ctx context.Context,
+	request *proto.GenerateUniqueStringRequest,
+) (*proto.GenerateUniqueStringResponse, error) {
+	uniqueStringGen, ok := g.uniqueStringGenerators[request.SequenceName]
+	if !ok {
+		strGen, err := gen.NewUniqueString(request.SequenceName, int(request.StringLength), request.Alphabet, g.uniqueNumberGeneratorFactory)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		uniqueStringGen = &strGen
+		g.uniqueStringGenerators[request.SequenceName] = uniqueStringGen
+	}
+
+	uniqueStr, err := uniqueStringGen.GenerateUniqueString()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &proto.GenerateUniqueStringResponse{UniqueString: uniqueStr}, nil
 }
 
 func (g GeneratorService) registerServer(server *grpc.Server) {
@@ -48,5 +76,6 @@ func NewGeneratorService(uniqueNumberGeneratorFactory gen.UniqueNumberFactory) G
 	return GeneratorService{
 		uniqueNumberGeneratorFactory: uniqueNumberGeneratorFactory,
 		uniqueNumberGenerators:       make(map[string]*gen.UniqueNumber),
+		uniqueStringGenerators:       make(map[string]*gen.UniqueString),
 	}
 }

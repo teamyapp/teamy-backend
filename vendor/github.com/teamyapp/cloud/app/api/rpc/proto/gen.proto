@@ -4,6 +4,7 @@ option go_package="github.com/cloud/app/api/rpc/proto";
 
 service Generator {
   rpc GenerateUniqueNumber(GenerateUniqueNumberRequest) returns (GenerateUniqueNumberResponse);
+  rpc GenerateUniqueString(GenerateUniqueStringRequest) returns (GenerateUniqueStringResponse);
 }
 
 message GenerateUniqueNumberRequest {
@@ -11,5 +12,15 @@ message GenerateUniqueNumberRequest {
 }
 
 message GenerateUniqueNumberResponse {
-  uint64 number = 1;
+  uint64 uniqueNumber = 1;
+}
+
+message GenerateUniqueStringRequest {
+  string sequenceName = 1;
+  int32 stringLength = 2;
+  string alphabet = 3;
+}
+
+message GenerateUniqueStringResponse {
+  string uniqueString = 1;
 }
