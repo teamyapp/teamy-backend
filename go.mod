@@ -8,10 +8,10 @@ require (
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/teamyapp/cloud v0.0.0-20220518083927-f08cb4172961
+	github.com/teamyapp/cloud v0.0.0-20220519073334-a938c55555c7
 )
 
-//replace github.com/teamyapp/cloud => /Users/harryliu/Documents/projects/teamyapp/apps/cloud
+//replace github.com/teamyapp/cloud => ../cloud
 
 require (
 	github.com/go-gorp/gorp/v3 v3.0.2 // indirect

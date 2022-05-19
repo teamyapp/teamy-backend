@@ -12,6 +12,9 @@ import (
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
+const invitationCodeLen = 8
+const invitationCodeAlphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
 type Mutation struct {
 	deps *Dependencies
 }
@@ -175,15 +178,27 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
+	genUniqueStringReq := &proto.GenerateUniqueStringRequest{
+		SequenceName: "invitationCode",
+		StringLength: invitationCodeLen,
+		Alphabet:     invitationCodeAlphabet,
+	}
+	genUniqueStringRes, err := genClient.GenerateUniqueString(ct, genUniqueStringReq)
+	if err != nil {
+		log.Println(err)
+		return Invitation{}, err
+	}
+
 	invitation := entityv2.Invitation{
-		ID:                genUniqueNumRes.Number,
+		// TODO: ID generated from cloud backend
+		ID:                genUniqueNumRes.UniqueNumber,
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
 		ReceiverEmail:     args.Invitation.ReceiverEmail,
 		TeamID:            teamID,
 		ExpireAt:          args.Invitation.ExpireAt.Time,
 		Status:            entityv2.InvitationStatusPending,
-		Code:              randSeq(10),
+		Code:              genUniqueStringRes.UniqueString,
 		CreatedAt:         time.Now(),
 	}
 
