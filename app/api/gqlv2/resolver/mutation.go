@@ -2,10 +2,11 @@ package resolver
 
 import (
 	"context"
-	"math/rand"
+	"log"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/app/api/rpc/proto"
 	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
@@ -166,9 +167,17 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
+	genClient := m.deps.cloudAPIClient.GeneratorClient()
+	genUniqueNumReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitation"}
+	genUniqueNumRes, err := genClient.GenerateUniqueNumber(ct, genUniqueNumReq)
+	if err != nil {
+		log.Println(err)
+		return Invitation{}, err
+	}
+
 	invitation := entityv2.Invitation{
 		// TODO: ID generated from cloud backend
-		ID:                rand.Uint64(),
+		ID:                genUniqueNumRes.Number,
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
 		ReceiverEmail:     args.Invitation.ReceiverEmail,

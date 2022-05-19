@@ -26,6 +26,7 @@ type Config struct {
 	GenRangeSize       int           `envconfig:"GEN_RANGE_SIZE" default:"100"`
 	WebAPIBaseURL      string        `envconfig:"WEB_API_BASE_URL" default:""`
 	WebAPIPort         int           `envconfig:"WEB_API_PORT" default:"9500"`
+	GRPCAPIPort        int           `envconfig:"GRPC_API_PORT" default:"9501"`
 }
 
 func AppConfigFromEnv() (Config, error) {
