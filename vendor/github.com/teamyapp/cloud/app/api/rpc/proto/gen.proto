@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package="github.com/cloud/app/api/rpc/proto";
+
+service Generator {
+  rpc GenerateUniqueNumber(GenerateUniqueNumberRequest) returns (GenerateUniqueNumberResponse);
+}
+
+message GenerateUniqueNumberRequest {
+  string sequenceName = 1;
+}
+
+message GenerateUniqueNumberResponse {
+  uint64 number = 1;
+}

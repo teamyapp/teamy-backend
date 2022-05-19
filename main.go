@@ -72,7 +72,15 @@ func StartGraphQLServer(cfg config.Config, sqlDB *sql.DB) {
 }
 
 func StartGraphQLV2Server(cfg config.Config, sqlDB *sql.DB) {
-	gqlV2Resolver := dep.InitGraphQLV2Resolver(sqlDB)
+	gqlV2Resolver, err := dep.InitGraphQLV2Resolver(
+		sqlDB,
+		dep.CloudAPIHost(cfg.CloudAPIHost),
+		dep.CloudAPIPort(cfg.CloudAPIPort),
+		dep.CloudAPIShouldEncrypt(cfg.CloudAPIShouldEncrypt))
+	if err != nil {
+		panic(err)
+	}
+
 	server, err := gqlv2.NewServer(cfg.IdentityAPIEndpoint, gqlV2Resolver, cfg.GraphQLAPIV2Port)
 	if err != nil {
 		panic(err)

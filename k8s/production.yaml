@@ -69,6 +69,16 @@ spec:
                   key: db-name
             - name: IDENTITY_API_ENDPOINT
               value: http://cloud.production.svc.cluster.local/identity
+            - name: GRAPH_QL_API_PORT
+              value: "9000"
+            - name: GRAPH_QL_API_V2_PORT
+              value: "9001"
+            - name: CLOUD_API_HOST
+              value: cloud
+            - name: CLOUD_API_PORT
+              value: "81"
+            - name: CLOUD_API_SHOULD_ENCRYPT
+              value: "false"
 ---
 apiVersion: v1
 kind: Service

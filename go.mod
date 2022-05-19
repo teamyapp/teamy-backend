@@ -8,15 +8,22 @@ require (
 	github.com/graph-gophers/graphql-go v1.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/teamyapp/cloud v0.0.0-20220512061748-cba9459a3918
+	github.com/teamyapp/cloud v0.0.0-20220518083927-f08cb4172961
 )
 
 //replace github.com/teamyapp/cloud => /Users/harryliu/Documents/projects/teamyapp/apps/cloud
 
 require (
 	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/lib/pq v1.10.5 // indirect
 	github.com/rubenv/sql-migrate v1.1.1 // indirect
+	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
+	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
+	golang.org/x/text v0.3.6 // indirect
+	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
+	google.golang.org/grpc v1.38.0 // indirect
+	google.golang.org/protobuf v1.26.0 // indirect
 )

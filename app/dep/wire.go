@@ -6,6 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
+	"github.com/teamyapp/cloud/app/api/rpc"
 	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
@@ -52,11 +53,29 @@ var daoSet = wire.NewSet(
 	sqldb.NewUser,
 )
 
-func InitGraphQLV2Resolver(sqlDB *sql.DB) resolver2.Resolver {
+func InitGraphQLV2Resolver(
+	sqlDB *sql.DB,
+	cloudAPIHost CloudAPIHost,
+	cloudAPIPort CloudAPIPort,
+	cloudAPIShouldEncrypt CloudAPIShouldEncrypt,
+) (resolver2.Resolver, error) {
 	wire.Build(
 		daoSet,
+		newClientAPIClient,
 		resolver2.NewDependencies,
 		resolver2.NewResolver,
 	)
-	return resolver2.Resolver{}
+	return resolver2.Resolver{}, nil
+}
+
+type CloudAPIHost string
+type CloudAPIPort int
+type CloudAPIShouldEncrypt bool
+
+func newClientAPIClient(
+	host CloudAPIHost,
+	port CloudAPIPort,
+	shouldEncrypt CloudAPIShouldEncrypt,
+) (*rpc.CloudAPIClient, error) {
+	return rpc.NewCloudAPIClient(string(host), int(port), bool(shouldEncrypt))
 }
