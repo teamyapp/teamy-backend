@@ -168,7 +168,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 
 	genClient := m.deps.cloudAPIClient.GeneratorClient()
-	genUniqueNumReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitation"}
+	genUniqueNumReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
 	genUniqueNumRes, err := genClient.GenerateUniqueNumber(ct, genUniqueNumReq)
 	if err != nil {
 		log.Println(err)
