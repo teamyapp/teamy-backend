@@ -141,7 +141,6 @@ input CreateTaskInput {
 	goal: String!
 	context: String
 	ownerUserId: ID
-	status: TaskStatus!
 	dueAt: Time
 }
 

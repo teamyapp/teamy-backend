@@ -28,8 +28,6 @@ CREATE TABLE thread
 CREATE TABLE task
 (
 	id               BIGINT PRIMARY KEY,
-	created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	updated_at       TIMESTAMP,
 	goal             VARCHAR(240) NOT NULL,
 	due_at           TIMESTAMP,
 	context          TEXT,
@@ -38,7 +36,9 @@ CREATE TABLE task
 	owning_team_id	 BIGINT NOT NULL REFERENCES team(id) ON UPDATE CASCADE,
 	status           VARCHAR(20) NOT NULL,
 	effort			 INTEGER,
-	comments_thread_id BIGINT NOT NULL REFERENCES thread(id) ON UPDATE CASCADE
+	comments_thread_id BIGINT NOT NULL REFERENCES thread(id) ON UPDATE CASCADE,
+	created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at       TIMESTAMP
 );
 
 CREATE TABLE team_member

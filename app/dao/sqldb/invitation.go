@@ -159,7 +159,8 @@ func (i Invitation) FindAllInvitations() ([]entityv2.Invitation, error) {
 
 func (i Invitation) CreateInvitation(invitation entityv2.Invitation) error {
 	statement := `
-	INSERT INTO invitation(
+	INSERT INTO invitation
+	(
 	    id,
 		sender_user_id,
 		receiver_first_name,

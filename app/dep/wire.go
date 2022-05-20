@@ -45,12 +45,14 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Team), new(sqldb.Team)),
 	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
 	wire.Bind(new(dao.User), new(sqldb.User)),
+	wire.Bind(new(dao.Thread), new(sqldb.Thread)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
 	sqldb.NewTeam,
 	sqldb.NewTeamMember,
 	sqldb.NewUser,
+	sqldb.NewThread,
 )
 
 func InitGraphQLV2Resolver(

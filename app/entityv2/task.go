@@ -6,8 +6,6 @@ import (
 
 type Task struct {
 	ID               uint64
-	CreatedAt        time.Time
-	UpdatedAt        *time.Time
 	Goal             string
 	DueAt            *time.Time
 	Context          *string
@@ -17,4 +15,6 @@ type Task struct {
 	Status           TaskStatus
 	Effort           *uint
 	CommentsThreadID uint64
+	CreatedAt        time.Time
+	UpdatedAt        *time.Time
 }
