@@ -43,21 +43,26 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	task := entityv2.Task{
-		ID:        genTaskIDRes.UniqueNumber,
-		Goal:      args.Task.Goal,
-		Context:   args.Task.Context,
-		Status:    entityv2.TaskStatusUpcoming,
-		CreatorID: userID,
-		CreatedAt: time.Now(),
-	}
-
 	owningTeamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		return Task{}, err
 	}
 
-	task.OwningTeamID = owningTeamID
+	threadID, err := m.createThread(ct)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task := entityv2.Task{
+		ID:               genTaskIDRes.UniqueNumber,
+		Goal:             args.Task.Goal,
+		Context:          args.Task.Context,
+		Status:           entityv2.TaskStatusUpcoming,
+		CreatorID:        userID,
+		OwningTeamID:     owningTeamID,
+		CommentsThreadID: threadID,
+		CreatedAt:        time.Now(),
+	}
 
 	if args.Task.DueAt != nil {
 		dueAt := (*args.Task.DueAt).Time
@@ -70,12 +75,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 	}
 
 	task.OwnerUserID = ownerUserID
-	threadID, err := m.createThread(ct)
-	if err != nil {
-		return Task{}, err
-	}
 
-	task.CommentsThreadID = threadID
 	err = m.deps.taskDao.CreateTask(task)
 	if err != nil {
 		return Task{}, err
@@ -221,8 +221,8 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 
 	genClient := m.deps.cloudAPIClient.GeneratorClient()
-	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
-	genTaskIDRes, err := genClient.GenerateUniqueNumber(ct, genTaskIDReq)
+	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
+	genInvitationIDRes, err := genClient.GenerateUniqueNumber(ct, genInvitationIDReq)
 	if err != nil {
 		log.Println(err)
 		return Invitation{}, err
@@ -240,7 +240,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 
 	invitation := entityv2.Invitation{
-		ID:                genTaskIDRes.UniqueNumber,
+		ID:                genInvitationIDRes.UniqueNumber,
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
 		ReceiverEmail:     args.Invitation.ReceiverEmail,
