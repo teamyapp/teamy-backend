@@ -2,7 +2,9 @@ package resolver
 
 import (
 	"context"
+	"log"
 
+	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/collect"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
@@ -12,19 +14,57 @@ type Query struct {
 }
 
 func (q Query) Me(ct context.Context) (User, error) {
-	panic("implement me")
+	userID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		log.Println(err)
+		return User{}, err
+	}
+
+	user, err := q.deps.userDao.FindUserByID(userID)
+	if err != nil {
+		log.Println(err)
+		return User{}, err
+	}
+
+	return newUser(q.deps, user), err
 }
 
 func (q Query) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	panic("implement me")
+	tasks, err := q.deps.taskDao.FindAllTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	if args.Filter != nil {
+		tasks = collect.Filter(tasks, func(task entityv2.Task) bool {
+			return matchTask(*args.Filter, task)
+		})
+	}
+
+	return collect.Map(tasks, func(task entityv2.Task, _ int) Task {
+		return newTask(q.deps, task)
+	}), nil
 }
 
 func (q Query) Teams(ct context.Context, args struct {
 	Filter *TeamFilter
 }) ([]Team, error) {
-	panic("implement me")
+	teams, err := q.deps.teamDao.FindAllTeams()
+	if err != nil {
+		return nil, err
+	}
+
+	if args.Filter != nil {
+		teams = collect.Filter(teams, func(team entityv2.Team) bool {
+			return matchTeam(*args.Filter, team)
+		})
+	}
+
+	return collect.Map(teams, func(team entityv2.Team, _ int) Team {
+		return newTeam(q.deps, team)
+	}), nil
 }
 
 func (q Query) Invitations(ct context.Context, args struct {
