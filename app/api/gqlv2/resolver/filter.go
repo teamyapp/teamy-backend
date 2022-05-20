@@ -46,6 +46,21 @@ func matchTask(filter TaskFilter, task entityv2.Task) bool {
 	return true
 }
 
+func matchTeam(filter TeamFilter, team entityv2.Team) bool {
+	if filter.TeamID != nil {
+		teamID, err := fromGraphQLIDPtr(filter.TeamID)
+		if err != nil {
+			return false
+		}
+
+		if *teamID != team.ID {
+			return false
+		}
+	}
+
+	return true
+}
+
 func matchInvitation(filter InvitationFilter, invitation entityv2.Invitation) bool {
 	if filter.InvitationID != nil {
 		invitationID, err := fromGraphQLIDPtr(filter.InvitationID)

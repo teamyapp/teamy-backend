@@ -57,18 +57,15 @@ func (q Query) Teams(ct context.Context, args struct {
 		return nil, err
 	}
 
-	if args.Filter == nil || args.Filter.TeamID == nil {
-		return collect.Map(teams, func(team entityv2.Team, _ int) Team {
-			return newTeam(q.deps, team)
-		}), nil
+	if args.Filter != nil {
+		teams = collect.Filter(teams, func(team entityv2.Team) bool {
+			return matchTeam(*args.Filter, team)
+		})
 	}
 
-	teamID, err := fromGraphQLIDPtr(args.Filter.TeamID)
-	if err != nil {
-		return nil, err
-	}
-	filteredTeam, err := q.deps.teamDao.FindTeamByID(*teamID)
-	return []Team{newTeam(q.deps, filteredTeam)}, nil
+	return collect.Map(teams, func(team entityv2.Team, _ int) Team {
+		return newTeam(q.deps, team)
+	}), nil
 }
 
 func (q Query) Invitations(ct context.Context, args struct {
