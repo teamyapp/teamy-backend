@@ -29,7 +29,6 @@ CREATE TABLE task
 (
 	id               BIGINT PRIMARY KEY,
 	goal             VARCHAR(240) NOT NULL,
-	due_at           TIMESTAMP,
 	context          TEXT,
 	creator_user_id  BIGINT NOT NULL REFERENCES "user"(id) ON UPDATE CASCADE,
 	owner_user_id    BIGINT REFERENCES "user"(id) ON UPDATE CASCADE,
@@ -37,6 +36,7 @@ CREATE TABLE task
 	status           VARCHAR(20) NOT NULL,
 	effort			 INTEGER,
 	comments_thread_id BIGINT NOT NULL REFERENCES thread(id) ON UPDATE CASCADE,
+	due_at           TIMESTAMP,
 	created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	updated_at       TIMESTAMP
 );

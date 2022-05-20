@@ -35,9 +35,11 @@ func (t Task) CreateTask(task entityv2.Task) error {
 		owning_team_id,
 		status,
 		effort,
-		comments_thread_id
+		comments_thread_id,
+	 	due_at,
+	 	created_at
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
 `,
 		task.ID,
 		task.Goal,
@@ -48,6 +50,8 @@ func (t Task) CreateTask(task entityv2.Task) error {
 		task.Status,
 		task.Effort,
 		task.CommentsThreadID,
+		task.DueAt,
+		task.CreatedAt,
 	)
 
 	return err
