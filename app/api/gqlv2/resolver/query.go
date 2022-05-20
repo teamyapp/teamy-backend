@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/teamyapp/cloud/app/ctx"
-
 	"github.com/teamyapp/teamy-backend/app/collect"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
