@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
+
 	"github.com/teamyapp/teamy-backend/app/dao"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
-	"log"
 )
 
 type User struct {
