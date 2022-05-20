@@ -53,6 +53,11 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
+	ownerUserID, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
+	if err != nil {
+		return Task{}, err
+	}
+
 	task := entityv2.Task{
 		ID:               genTaskIDRes.UniqueNumber,
 		Goal:             args.Task.Goal,
@@ -60,6 +65,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		Status:           entityv2.TaskStatusUpcoming,
 		CreatorID:        userID,
 		OwningTeamID:     owningTeamID,
+		OwnerUserID:      ownerUserID,
 		CommentsThreadID: threadID,
 		CreatedAt:        time.Now(),
 	}
@@ -68,13 +74,6 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		dueAt := (*args.Task.DueAt).Time
 		task.DueAt = &dueAt
 	}
-
-	ownerUserID, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	task.OwnerUserID = ownerUserID
 
 	err = m.deps.taskDao.CreateTask(task)
 	if err != nil {
