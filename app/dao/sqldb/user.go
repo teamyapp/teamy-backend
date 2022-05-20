@@ -2,6 +2,9 @@ package sqldb
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
+	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
@@ -14,13 +17,77 @@ type User struct {
 var _ dao.User = (*User)(nil)
 
 func (u User) FindUserByID(id uint64) (entityv2.User, error) {
-	//TODO implement me
-	panic("implement me")
+	statement := `
+	SELECT
+		id,
+		first_name,
+		last_name,
+		profile_url,
+		created_at,
+		updated_at
+	FROM "user"
+	WHERE id = $1;
+`
+	user := entityv2.User{}
+	err := u.db.QueryRow(statement, id).
+		Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.ProfileURL,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entityv2.User{}, dao.ErrNotFound(fmt.Sprintf(
+			"user not found: id=%v",
+			id))
+	}
+
+	return user, err
 }
 
 func (u User) FindUsersByIDs(ids []uint64) ([]entityv2.User, error) {
-	//TODO implement me
-	panic("implement me")
+	idsString := toIDsString(ids)
+	query := fmt.Sprintf(`
+	SELECT
+		id,
+		first_name,
+		last_name,
+		profile_url,
+		created_at,
+		updated_at
+	FROM "user"
+	WHERE id IN (%s)`, idsString)
+	rows, err := u.db.Query(query)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []entityv2.User
+	for rows.Next() {
+		var user entityv2.User
+		err = rows.
+			Scan(
+				&user.ID,
+				&user.FirstName,
+				&user.LastName,
+				&user.ProfileURL,
+				&user.CreatedAt,
+				&user.UpdatedAt,
+			)
+		if err != nil {
+			log.Println(user.ID, err)
+			continue
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }
 
 func NewUser(sqlDB *sql.DB) User {
