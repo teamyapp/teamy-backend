@@ -4,12 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"strconv"
-	"strings"
-
 	"github.com/teamyapp/teamy-backend/app/dao"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"log"
 )
 
 type User struct {
@@ -52,7 +49,6 @@ func (u User) FindUserByID(id uint64) (entityv2.User, error) {
 
 func (u User) FindUsersByIDs(ids []uint64) ([]entityv2.User, error) {
 	idsString := toIDsString(ids)
-
 	query := fmt.Sprintf(`
 	SELECT
 		id,
@@ -86,6 +82,7 @@ func (u User) FindUsersByIDs(ids []uint64) ([]entityv2.User, error) {
 			log.Println(user.ID, err)
 			continue
 		}
+
 		users = append(users, user)
 	}
 
@@ -94,12 +91,4 @@ func (u User) FindUsersByIDs(ids []uint64) ([]entityv2.User, error) {
 
 func NewUser(sqlDB *sql.DB) User {
 	return User{db: sqlDB}
-}
-
-func toIDsString(ids []uint64) string {
-	idStrings := make([]string, 0)
-	for _, singleID := range ids {
-		idStrings = append(idStrings, strconv.FormatUint(singleID, 10))
-	}
-	return strings.Join(idStrings, ",")
 }
