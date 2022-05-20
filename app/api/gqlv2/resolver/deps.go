@@ -11,6 +11,7 @@ type Dependencies struct {
 	teamMemberDao  dao.TeamMember
 	invitationDao  dao.Invitation
 	taskDao        dao.Task
+	threadDao      dao.Thread
 	messageDao     dao.Message
 	cloudAPIClient *rpc.CloudAPIClient
 }
@@ -21,6 +22,7 @@ func NewDependencies(
 	teamMemberDao dao.TeamMember,
 	invitationDao dao.Invitation,
 	taskDao dao.Task,
+	threadDao dao.Thread,
 	messageDao dao.Message,
 	cloudAPIClient *rpc.CloudAPIClient,
 ) *Dependencies {
@@ -30,6 +32,7 @@ func NewDependencies(
 		teamMemberDao:  teamMemberDao,
 		invitationDao:  invitationDao,
 		taskDao:        taskDao,
+		threadDao:      threadDao,
 		messageDao:     messageDao,
 		cloudAPIClient: cloudAPIClient,
 	}

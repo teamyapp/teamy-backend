@@ -27,11 +27,60 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		Goal        string
 		Context     *string
 		OwnerUserID *graphql.ID
-		Status      entity.TaskStatus
 		DueAt       *graphql.Time
 	}
 }) (Task, error) {
-	panic("implement me")
+	userID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		return Task{}, err
+	}
+
+	genClient := m.deps.cloudAPIClient.GeneratorClient()
+	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
+	genTaskIDRes, err := genClient.GenerateUniqueNumber(ct, genTaskIDReq)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	owningTeamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	threadID, err := m.createThread(ct)
+	if err != nil {
+		return Task{}, err
+	}
+
+	ownerUserID, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task := entityv2.Task{
+		ID:               genTaskIDRes.UniqueNumber,
+		Goal:             args.Task.Goal,
+		Context:          args.Task.Context,
+		Status:           entityv2.TaskStatusUpcoming,
+		CreatorID:        userID,
+		OwningTeamID:     owningTeamID,
+		OwnerUserID:      ownerUserID,
+		CommentsThreadID: threadID,
+		CreatedAt:        time.Now(),
+	}
+
+	if args.Task.DueAt != nil {
+		dueAt := (*args.Task.DueAt).Time
+		task.DueAt = &dueAt
+	}
+
+	err = m.deps.taskDao.CreateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) UpdateTask(ct context.Context, args struct {
@@ -171,33 +220,33 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 
 	genClient := m.deps.cloudAPIClient.GeneratorClient()
-	genUniqueNumReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
-	genUniqueNumRes, err := genClient.GenerateUniqueNumber(ct, genUniqueNumReq)
+	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
+	genInvitationIDRes, err := genClient.GenerateUniqueNumber(ct, genInvitationIDReq)
 	if err != nil {
 		log.Println(err)
 		return Invitation{}, err
 	}
 
-	genUniqueStringReq := &proto.GenerateUniqueStringRequest{
+	genStringReq := &proto.GenerateUniqueStringRequest{
 		SequenceName: "invitationCode",
 		StringLength: invitationCodeLen,
 		Alphabet:     invitationCodeAlphabet,
 	}
-	genUniqueStringRes, err := genClient.GenerateUniqueString(ct, genUniqueStringReq)
+	genStringRes, err := genClient.GenerateUniqueString(ct, genStringReq)
 	if err != nil {
 		log.Println(err)
 		return Invitation{}, err
 	}
 
 	invitation := entityv2.Invitation{
-		ID:                genUniqueNumRes.UniqueNumber,
+		ID:                genInvitationIDRes.UniqueNumber,
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
 		ReceiverEmail:     args.Invitation.ReceiverEmail,
 		TeamID:            teamID,
 		ExpireAt:          args.Invitation.ExpireAt.Time,
 		Status:            entityv2.InvitationStatusPending,
-		Code:              genUniqueStringRes.UniqueString,
+		Code:              genStringRes.UniqueString,
 		CreatedAt:         time.Now(),
 	}
 
@@ -237,6 +286,19 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	InvitationCode string
 }) (Invitation, error) {
 	panic("implement me")
+}
+
+func (m Mutation) createThread(ct context.Context) (uint64, error) {
+	genClient := m.deps.cloudAPIClient.GeneratorClient()
+	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
+	genThreadIDRes, err := genClient.GenerateUniqueNumber(ct, genThreadIDReq)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+
+	threadID := genThreadIDRes.UniqueNumber
+	return threadID, m.deps.threadDao.CreateThread(threadID)
 }
 
 func NewMutation(deps *Dependencies) Mutation {
