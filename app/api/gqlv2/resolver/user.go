@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/app/collect"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
@@ -40,30 +41,20 @@ func (u User) Teams(ct context.Context, args struct {
 		return nil, err
 	}
 
-	if args.Filter.TeamID != nil {
-		teamID, err := fromGraphQLIDPtr(args.Filter.TeamID)
-		if err != nil {
-			return nil, err
-		}
-
-		teamEntity, err := u.deps.teamDao.FindTeamByID(*teamID)
-		if err != nil {
-			return nil, err
-		}
-		return []Team{newTeam(u.deps, teamEntity)}, nil
-	}
-
 	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ids)
 	if err != nil {
 		return nil, err
 	}
 
-	teams := make([]Team, 0, 0)
-	for _, teamEntity := range teamEntities {
-		teams = append(teams, newTeam(u.deps, teamEntity))
+	if args.Filter != nil {
+		teamEntities = collect.Filter(teamEntities, func(team entityv2.Team) bool {
+			return matchTeam(*args.Filter, team)
+		})
 	}
 
-	return teams, nil
+	return collect.Map(teamEntities, func(team entityv2.Team, _ int) Team {
+		return newTeam(u.deps, team)
+	}), nil
 }
 
 func newUser(deps *Dependencies, user entityv2.User) User {
