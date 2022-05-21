@@ -2,6 +2,8 @@ package sqldb
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
@@ -12,6 +14,49 @@ type Task struct {
 }
 
 var _ dao.Task = (*Task)(nil)
+
+func (t Task) FindTaskByID(taskID uint64) (entityv2.Task, error) {
+	task := entityv2.Task{}
+	err := t.db.QueryRow(`
+		SELECT
+			id,
+			goal,
+			context,
+			creator_user_id,
+			owner_user_id,
+			owning_team_id,
+			status,
+			effort,
+			comments_thread_id,
+			due_at,
+			created_at,
+			updated_at
+		FROM task
+		WHERE id = $1;`,
+		taskID).
+		Scan(
+			&task.ID,
+			&task.Goal,
+			&task.Context,
+			&task.CreatorUserID,
+			&task.OwnerUserID,
+			&task.OwningTeamID,
+			&task.Status,
+			&task.Effort,
+			&task.CommentsThreadID,
+			&task.DueAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entityv2.Task{}, dao.ErrNotFound(fmt.Sprintf(
+			"user not found: id=%v",
+			taskID))
+	}
+
+	return task, err
+}
 
 func (t Task) FindAllTasks() ([]entityv2.Task, error) {
 	//TODO implement me
@@ -25,26 +70,25 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error) {
 
 func (t Task) CreateTask(task entityv2.Task) error {
 	_, err := t.db.Exec(`
-	INSERT INTO task
-	(
-		id,
-		goal,
-		context,
-		creator_user_id,
-		owner_user_id,
-		owning_team_id,
-		status,
-		effort,
-		comments_thread_id,
-	 	due_at,
-	 	created_at
-	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
-`,
+		INSERT INTO task
+		(
+			id,
+			goal,
+			context,
+			creator_user_id,
+			owner_user_id,
+			owning_team_id,
+			status,
+			effort,
+			comments_thread_id,
+			due_at,
+			created_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`,
 		task.ID,
 		task.Goal,
 		task.Context,
-		task.CreatorID,
+		task.CreatorUserID,
 		task.OwnerUserID,
 		task.OwningTeamID,
 		task.Status,
@@ -53,7 +97,32 @@ func (t Task) CreateTask(task entityv2.Task) error {
 		task.DueAt,
 		task.CreatedAt,
 	)
+	return err
+}
 
+func (t Task) UpdateTask(task entityv2.Task) error {
+	_, err := t.db.Exec(`
+		UPDATE task
+		SET
+			goal = $1,
+			context = $2,
+			owner_user_id = $3,
+			owning_team_id = $4,
+			status = $5,
+			effort = $6,
+			due_at = $7,
+			updated_at = $8
+		WHERE id = $9;`,
+		task.Goal,
+		task.Context,
+		task.OwnerUserID,
+		task.OwningTeamID,
+		task.Status,
+		task.Effort,
+		task.DueAt,
+		task.UpdatedAt,
+		task.ID,
+	)
 	return err
 }
 

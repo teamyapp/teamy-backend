@@ -4,6 +4,6 @@ import "github.com/teamyapp/teamy-backend/app/entityv2"
 
 type Team interface {
 	FindAllTeams() ([]entityv2.Team, error)
-	FindTeamByID(id uint64) (entityv2.Team, error)
-	FindTeamsByIDs(ids []uint64) ([]entityv2.Team, error)
+	FindTeamByID(teamID uint64) (entityv2.Team, error)
+	FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error)
 }

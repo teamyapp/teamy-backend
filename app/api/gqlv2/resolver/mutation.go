@@ -63,7 +63,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		Goal:             args.Task.Goal,
 		Context:          args.Task.Context,
 		Status:           entityv2.TaskStatusUpcoming,
-		CreatorID:        userID,
+		CreatorUserID:    userID,
 		OwningTeamID:     owningTeamID,
 		OwnerUserID:      ownerUserID,
 		CommentsThreadID: threadID,
@@ -86,14 +86,44 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 func (m Mutation) UpdateTask(ct context.Context, args struct {
 	TaskID graphql.ID
 	Input  struct {
-		Goal        *string
+		Goal        string
 		Context     *string
 		OwnerUserID *graphql.ID
-		Status      *entity.TaskStatus
+		Status      entityv2.TaskStatus
+		Effort      *int32
 		DueAt       *graphql.Time
 	}
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task.Goal = args.Input.Goal
+	task.Context = args.Input.Context
+	ownerUserID, err := fromGraphQLIDPtr(args.Input.OwnerUserID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task.OwnerUserID = ownerUserID
+	task.Status = args.Input.Status
+	task.Effort = intPtrFromIntPtr(args.Input.Effort)
+	task.DueAt = fromGraphQLTimePtr(args.Input.DueAt)
+
+	updatedAt := time.Now()
+	task.UpdatedAt = &updatedAt
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) DeleteTask(ct context.Context, args struct {
