@@ -2,6 +2,7 @@ package sqldb
 
 import (
 	"database/sql"
+	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
 )
@@ -13,13 +14,63 @@ type TeamMember struct {
 var _ dao.TeamMember = (*TeamMember)(nil)
 
 func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
-	//TODO implement me
-	panic("implement me")
+	statement := `
+	SELECT
+		team_id
+	FROM team_member
+	WHERE user_id = $1;
+`
+	rows, err := t.db.Query(statement, int64(userID))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+	teamIDs := make([]uint64, 0)
+	for rows.Next() {
+		var teamID uint64
+		err = rows.Scan(
+			&teamID,
+		)
+		if err != nil {
+			log.Println(err)
+		}
+
+		teamIDs = append(teamIDs, teamID)
+	}
+
+	return teamIDs, err
 }
 
 func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
-	//TODO implement me
-	panic("implement me")
+	statement := `
+	SELECT
+		user_id
+	FROM team_member
+	WHERE team_id = $1;
+`
+	rows, err := t.db.Query(statement, int64(teamID))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+	teamMemberIDs := make([]uint64, 0)
+	for rows.Next() {
+		var teamMemberID uint64
+		err = rows.Scan(
+			&teamMemberID,
+		)
+		if err != nil {
+			log.Println(err)
+		}
+
+		teamMemberIDs = append(teamMemberIDs, teamMemberID)
+	}
+
+	return teamMemberIDs, err
 }
 
 func NewTeamMember(sqlDB *sql.DB) TeamMember {
