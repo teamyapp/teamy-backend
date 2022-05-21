@@ -148,6 +148,7 @@ input UpdateTaskInput {
 	goal: String!
 	context: String
 	ownerUserId: ID
+	owningTeamId: ID!
 	status: TaskStatus!
 	effort: Int
 	dueAt: Time
