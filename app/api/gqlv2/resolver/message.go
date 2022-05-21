@@ -20,6 +20,19 @@ func (m Message) Body(ct context.Context) string {
 	return m.message.Body
 }
 
+func (m Message) Author(ct context.Context) (User, error) {
+	user, err := m.deps.userDao.FindUserByID(m.message.AuthorUserID)
+	if err != nil {
+		return User{}, nil
+	}
+
+	return newUser(m.deps, user), nil
+}
+
+func (m Message) Thread(ct context.Context) (Thread, error) {
+	return newThread(m.deps, m.message.ThreadID), nil
+}
+
 func (m Message) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(m.message.CreatedAt)
 }

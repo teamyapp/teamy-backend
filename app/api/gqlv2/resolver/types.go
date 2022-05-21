@@ -11,12 +11,16 @@ func toGraphQLID(id uint64) graphql.ID {
 	return graphql.ID(strconv.FormatUint(id, 10))
 }
 
-func toGraphQLTime(time time.Time) graphql.Time {
-	return graphql.Time{Time: time}
+func toGraphQLTime(tm time.Time) graphql.Time {
+	return graphql.Time{Time: tm}
 }
 
-func toGraphQLTimePtr(time *time.Time) *graphql.Time {
-	return &graphql.Time{Time: *time}
+func toGraphQLTimePtr(tm *time.Time) *graphql.Time {
+	if tm == nil {
+		return nil
+	}
+
+	return &graphql.Time{Time: *tm}
 }
 
 func fromGraphQLTimePtr(tm *graphql.Time) *time.Time {

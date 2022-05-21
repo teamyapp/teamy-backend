@@ -59,8 +59,15 @@ type Task {
 type Message {
 	id: ID!
 	body: String!
+	author: User!
+	thread: Thread!
 	createdAt: Time!
 	updatedAt: Time
+}
+
+type Thread {
+	id: ID!
+	messages: [Message!]!
 }
 
 type Team {

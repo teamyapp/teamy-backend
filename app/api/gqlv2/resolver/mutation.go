@@ -35,7 +35,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	genClient := m.deps.cloudAPIClient.GeneratorClient()
+	genClient := m.GeneratorClient()
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := genClient.GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
@@ -166,7 +166,38 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		Body string
 	}
 }) (Message, error) {
-	panic("implement me")
+	userID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		return Message{}, err
+	}
+
+	genClient := m.GeneratorClient()
+	genMessageIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "messageID"}
+	genMessageIDRes, err := genClient.GenerateUniqueNumber(ct, genMessageIDReq)
+	if err != nil {
+		log.Println(err)
+		return Message{}, err
+	}
+
+	threadID, err := fromGraphQLID(args.ThreadID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	message := entityv2.Message{
+		ID:           genMessageIDRes.UniqueNumber,
+		Body:         args.Message.Body,
+		ThreadID:     threadID,
+		AuthorUserID: userID,
+		CreatedAt:    time.Now(),
+	}
+
+	err = m.deps.messageDao.CreateMessage(message)
+	if err != nil {
+		return Message{}, err
+	}
+
+	return newMessage(m.deps, message), nil
 }
 
 func (m Mutation) UpdateMessage(ct context.Context, args struct {
@@ -275,7 +306,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	genClient := m.deps.cloudAPIClient.GeneratorClient()
+	genClient := m.GeneratorClient()
 	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
 	genInvitationIDRes, err := genClient.GenerateUniqueNumber(ct, genInvitationIDReq)
 	if err != nil {
@@ -355,6 +386,10 @@ func (m Mutation) createThread(ct context.Context) (uint64, error) {
 
 	threadID := genThreadIDRes.UniqueNumber
 	return threadID, m.deps.threadDao.CreateThread(threadID)
+}
+
+func (m Mutation) GeneratorClient() proto.GeneratorClient {
+	return m.deps.cloudAPIClient.GeneratorClient()
 }
 
 func NewMutation(deps *Dependencies) Mutation {
