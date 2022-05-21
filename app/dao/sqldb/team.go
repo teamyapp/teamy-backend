@@ -80,7 +80,6 @@ func (t Team) FindTeamByID(id uint64) (entityv2.Team, error) {
 			&team.CreatedAt,
 			&team.UpdatedAt,
 		)
-
 	if err != nil {
 		log.Println(err)
 	}
