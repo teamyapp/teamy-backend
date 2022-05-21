@@ -124,7 +124,7 @@ type User {
 input TaskFilter {
 	taskId: ID
 	ownerId: ID
-	goal: String
+	goalContains: String
 	status: TaskStatus
 }
 

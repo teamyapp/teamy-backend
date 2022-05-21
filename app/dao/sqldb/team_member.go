@@ -35,6 +35,7 @@ func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
 		)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		teamIDs = append(teamIDs, teamID)
@@ -65,6 +66,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 		)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		teamMemberIDs = append(teamMemberIDs, teamMemberID)

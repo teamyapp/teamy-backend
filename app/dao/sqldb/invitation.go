@@ -100,6 +100,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entityv2.Invitatio
 		)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		invitations = append(invitations, invitation)
@@ -149,6 +150,7 @@ func (i Invitation) FindAllInvitations() ([]entityv2.Invitation, error) {
 		)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		invitations = append(invitations, invitation)

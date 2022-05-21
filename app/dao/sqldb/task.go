@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
@@ -59,13 +60,108 @@ func (t Task) FindTaskByID(taskID uint64) (entityv2.Task, error) {
 }
 
 func (t Task) FindAllTasks() ([]entityv2.Task, error) {
-	//TODO implement me
-	panic("implement me")
+	statement := `
+	SELECT
+		id,
+		goal,
+		context,
+		creator_user_id,
+		owner_user_id,
+		owning_team_id,
+		status,
+		effort,
+		comments_thread_id,
+		due_at,
+		created_at,
+		updated_at
+	FROM task;
+`
+	rows, err := t.db.Query(statement)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	tasks := make([]entityv2.Task, 0)
+	for rows.Next() {
+		task := entityv2.Task{}
+		err = rows.Scan(
+			&task.ID,
+			&task.Goal,
+			&task.Context,
+			&task.CreatorUserID,
+			&task.OwnerUserID,
+			&task.OwningTeamID,
+			&task.Status,
+			&task.Effort,
+			&task.CommentsThreadID,
+			&task.DueAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, err
 }
 
 func (t Task) FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error) {
-	//TODO implement me
-	panic("implement me")
+	statement := `
+	SELECT
+		id,
+		goal,
+		context,
+		creator_user_id,
+		owner_user_id,
+		owning_team_id,
+		status,
+		effort,
+		comments_thread_id,
+		due_at,
+		created_at,
+		updated_at
+	FROM task
+	WHERE team_id = $1;
+`
+	rows, err := t.db.Query(statement, teamID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	tasks := make([]entityv2.Task, 0)
+	for rows.Next() {
+		task := entityv2.Task{}
+		err = rows.Scan(
+			&task.ID,
+			&task.Goal,
+			&task.Context,
+			&task.CreatorUserID,
+			&task.OwnerUserID,
+			&task.OwningTeamID,
+			&task.Status,
+			&task.Effort,
+			&task.CommentsThreadID,
+			&task.DueAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, err
 }
 
 func (t Task) CreateTask(task entityv2.Task) error {
