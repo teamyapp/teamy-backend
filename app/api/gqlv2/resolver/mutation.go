@@ -115,7 +115,6 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 	task.Status = args.Input.Status
 	task.Effort = intPtrFromIntPtr(args.Input.Effort)
 	task.DueAt = fromGraphQLTimePtr(args.Input.DueAt)
-
 	updatedAt := time.Now()
 	task.UpdatedAt = &updatedAt
 	err = m.deps.taskDao.UpdateTask(task)
