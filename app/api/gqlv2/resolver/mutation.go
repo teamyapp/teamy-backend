@@ -272,7 +272,7 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		ProfileURL *string
 	}
 }) (User, error) {
-	genClient := m.deps.cloudAPIClient.GeneratorClient()
+	genClient := m.GeneratorClient()
 	genUserIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "userID"}
 	genUserIDRes, err := genClient.GenerateUniqueNumber(ct, genUserIDReq)
 	if err != nil {
