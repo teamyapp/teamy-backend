@@ -119,14 +119,10 @@ func (m Message) UpdateMessage(message entityv2.Message) error {
 		SET
 			id = $1,
 			body = $2,
-			thread_id = $3,
-			author_user_id = $4,
-			updated_at = $5
-		WHERE id = $6;`,
+			updated_at = $3
+		WHERE id = $4;`,
 		message.ID,
 		message.Body,
-		message.ThreadID,
-		message.AuthorUserID,
 		message.UpdatedAt,
 		message.ID,
 	)
