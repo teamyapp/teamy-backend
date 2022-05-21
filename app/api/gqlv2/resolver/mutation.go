@@ -135,7 +135,27 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 func (m Mutation) DeleteTask(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	err = m.deps.taskDao.DeleteTask(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	err = m.deps.threadDao.DeleteThread(task.CommentsThreadID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 /* Message */

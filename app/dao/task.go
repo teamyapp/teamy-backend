@@ -10,4 +10,5 @@ type Task interface {
 	FindAllTasks() ([]entityv2.Task, error)
 	CreateTask(task entityv2.Task) error
 	UpdateTask(task entityv2.Task) error
+	DeleteTask(taskID uint64) error
 }
