@@ -56,7 +56,7 @@ func (t Team) FindAllTeams() ([]entityv2.Team, error) {
 	return teams, err
 }
 
-func (t Team) FindTeamByID(id uint64) (entityv2.Team, error) {
+func (t Team) FindTeamByID(teamID uint64) (entityv2.Team, error) {
 	statement := `
 	SELECT
 		id,
@@ -70,7 +70,7 @@ func (t Team) FindTeamByID(id uint64) (entityv2.Team, error) {
 	WHERE id = $1;
 `
 	team := entityv2.Team{}
-	err := t.db.QueryRow(statement, id).
+	err := t.db.QueryRow(statement, teamID).
 		Scan(
 			&team.ID,
 			&team.Name,
@@ -87,8 +87,8 @@ func (t Team) FindTeamByID(id uint64) (entityv2.Team, error) {
 	return team, err
 }
 
-func (t Team) FindTeamsByIDs(ids []uint64) ([]entityv2.Team, error) {
-	idsString := toIDsString(ids)
+func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error) {
+	idsString := toIDsString(teamIDs)
 	query := fmt.Sprintf(`
 	SELECT
 		id,

@@ -50,7 +50,7 @@ func (t Task) Context(ct context.Context) *string {
 }
 
 func (t Task) Creator(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(t.task.CreatorID)
+	user, err := t.deps.userDao.FindUserByID(t.task.CreatorUserID)
 	if err != nil {
 		return User{}, err
 	}

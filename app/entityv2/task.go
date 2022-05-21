@@ -9,11 +9,11 @@ type Task struct {
 	Goal             string
 	DueAt            *time.Time
 	Context          *string
-	CreatorID        uint64
+	CreatorUserID    uint64
 	OwnerUserID      *uint64
 	OwningTeamID     uint64
 	Status           TaskStatus
-	Effort           *uint
+	Effort           *int
 	CommentsThreadID uint64
 	CreatedAt        time.Time
 	UpdatedAt        *time.Time

@@ -16,7 +16,7 @@ type User struct {
 
 var _ dao.User = (*User)(nil)
 
-func (u User) FindUserByID(id uint64) (entityv2.User, error) {
+func (u User) FindUserByID(userID uint64) (entityv2.User, error) {
 	statement := `
 	SELECT
 		id,
@@ -29,7 +29,7 @@ func (u User) FindUserByID(id uint64) (entityv2.User, error) {
 	WHERE id = $1;
 `
 	user := entityv2.User{}
-	err := u.db.QueryRow(statement, id).
+	err := u.db.QueryRow(statement, userID).
 		Scan(
 			&user.ID,
 			&user.FirstName,
@@ -42,14 +42,14 @@ func (u User) FindUserByID(id uint64) (entityv2.User, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return entityv2.User{}, dao.ErrNotFound(fmt.Sprintf(
 			"user not found: id=%v",
-			id))
+			userID))
 	}
 
 	return user, err
 }
 
-func (u User) FindUsersByIDs(ids []uint64) ([]entityv2.User, error) {
-	idsString := toIDsString(ids)
+func (u User) FindUsersByIDs(userIDs []uint64) ([]entityv2.User, error) {
+	idsString := toIDsString(userIDs)
 	query := fmt.Sprintf(`
 	SELECT
 		id,

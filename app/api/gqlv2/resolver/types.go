@@ -19,6 +19,14 @@ func toGraphQLTimePtr(time *time.Time) *graphql.Time {
 	return &graphql.Time{Time: *time}
 }
 
+func fromGraphQLTimePtr(tm *graphql.Time) *time.Time {
+	if tm == nil {
+		return nil
+	}
+
+	return &tm.Time
+}
+
 func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	if graphqlID == nil {
 		return nil, nil
@@ -30,6 +38,15 @@ func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	}
 
 	return &id, err
+}
+
+func intPtrFromIntPtr(num *int32) *int {
+	if num == nil {
+		return nil
+	}
+
+	newNum := int(*num)
+	return &newNum
 }
 
 func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
