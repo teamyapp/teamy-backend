@@ -180,7 +180,7 @@ input UpdateTeamInput {
 
 input CreateUserInput {
 	lastName: String!
-	firstName: String
+	firstName: String!
 	profileUrl: String
 }
 
