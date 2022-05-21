@@ -126,6 +126,15 @@ func (t Task) UpdateTask(task entityv2.Task) error {
 	return err
 }
 
+func (t Task) DeleteTask(taskID uint64) error {
+	_, err := t.db.Exec(`
+		DELETE FROM task
+		WHERE id = $1;
+		`,
+		taskID)
+	return err
+}
+
 func NewTask(sqlDB *sql.DB) Task {
 	return Task{db: sqlDB}
 }

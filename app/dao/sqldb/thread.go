@@ -14,9 +14,19 @@ var _ dao.Thread = (*Thread)(nil)
 
 func (t Thread) CreateThread(threadID uint64) error {
 	_, err := t.db.Exec(`
-	INSERT INTO thread (id)
-	VALUES ($1);
-`, threadID)
+		INSERT INTO thread (id)
+		VALUES ($1);
+		`,
+		threadID)
+	return err
+}
+
+func (t Thread) DeleteThread(threadID uint64) error {
+	_, err := t.db.Exec(`
+		DELETE FROM thread
+		WHERE id = $1;
+		`,
+		threadID)
 	return err
 }
 
