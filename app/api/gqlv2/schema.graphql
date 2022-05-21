@@ -166,7 +166,7 @@ input CreateMessageInput {
 }
 
 input UpdateMessageInput {
-	body: String
+	body: String!
 }
 
 input CreateTeamInput {

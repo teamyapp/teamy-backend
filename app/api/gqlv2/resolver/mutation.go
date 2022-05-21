@@ -203,10 +203,28 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	MessageID graphql.ID
 	Input     struct {
-		Body *string
+		Body string
 	}
 }) (Message, error) {
-	panic("implement me")
+	messageID, err := fromGraphQLID(args.MessageID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	message, err := m.deps.messageDao.FindMessageByID(messageID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	message.Body = args.Input.Body
+	now := time.Now()
+	message.UpdatedAt = &now
+	err = m.deps.messageDao.UpdateMessage(message)
+	if err != nil {
+		return Message{}, err
+	}
+
+	return newMessage(m.deps, message), nil
 }
 
 func (m Mutation) DeleteMessage(ct context.Context, args struct {
