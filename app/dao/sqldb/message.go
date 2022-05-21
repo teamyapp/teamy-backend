@@ -2,6 +2,8 @@ package sqldb
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
@@ -15,8 +17,34 @@ type Message struct {
 var _ dao.Message = (*Message)(nil)
 
 func (m Message) FindMessageByID(messageID uint64) (entityv2.Message, error) {
-	//TODO implement me
-	panic("implement me")
+	message := entityv2.Message{}
+	err := m.db.QueryRow(`
+		SELECT
+			id,
+			body,
+			thread_id,
+			author_user_id,
+			created_at,
+			updated_at
+		FROM message
+		WHERE id = $1;`,
+		messageID).
+		Scan(
+			&message.ID,
+			&message.Body,
+			&message.ThreadID,
+			&message.AuthorUserID,
+			&message.CreatedAt,
+			&message.UpdatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entityv2.Message{}, dao.ErrNotFound(fmt.Sprintf(
+			"message not found: id=%v",
+			message))
+	}
+
+	return message, err
 }
 
 func (m Message) FindMessagesByIDs(messageIDs []uint64) ([]entityv2.Message, error) {
@@ -81,6 +109,26 @@ func (m Message) CreateMessage(message entityv2.Message) error {
 		message.ThreadID,
 		message.AuthorUserID,
 		message.CreatedAt,
+	)
+	return err
+}
+
+func (m Message) UpdateMessage(message entityv2.Message) error {
+	_, err := m.db.Exec(`
+		UPDATE message
+		SET
+			id = $1,
+			body = $2,
+			thread_id = $3,
+			author_user_id = $4,
+			updated_at = $5
+		WHERE id = $6;`,
+		message.ID,
+		message.Body,
+		message.ThreadID,
+		message.AuthorUserID,
+		message.UpdatedAt,
+		message.ID,
 	)
 	return err
 }
