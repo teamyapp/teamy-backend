@@ -51,7 +51,7 @@ func (t Task) FindTaskByID(taskID uint64) (entityv2.Task, error) {
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return entityv2.Task{}, dao.ErrNotFound(fmt.Sprintf(
-			"user not found: id=%v",
+			"task not found: id=%v",
 			taskID))
 	}
 
