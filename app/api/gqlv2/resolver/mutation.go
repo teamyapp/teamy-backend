@@ -268,11 +268,32 @@ func (m Mutation) PromoteTeamTaskToNeedAttention(ct context.Context, args struct
 func (m Mutation) CreateUser(ct context.Context, args struct {
 	User struct {
 		LastName   string
-		FirstName  *string
+		FirstName  string
 		ProfileURL *string
 	}
 }) (User, error) {
-	panic("implement me")
+	genClient := m.GeneratorClient()
+	genUserIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "userID"}
+	genUserIDRes, err := genClient.GenerateUniqueNumber(ct, genUserIDReq)
+	if err != nil {
+		log.Println(err)
+		return User{}, err
+	}
+
+	user := entityv2.User{
+		ID:         genUserIDRes.UniqueNumber,
+		CreatedAt:  time.Now(),
+		FirstName:  args.User.FirstName,
+		LastName:   args.User.LastName,
+		ProfileURL: args.User.ProfileURL,
+	}
+
+	err = m.deps.userDao.CreateUser(user)
+	if err != nil {
+		return User{}, err
+	}
+
+	return newUser(m.deps, user), nil
 }
 
 func (m Mutation) UpdateUser(ct context.Context, args struct {

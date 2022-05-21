@@ -90,6 +90,26 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entityv2.User, error) {
 	return users, nil
 }
 
+func (u User) CreateUser(user entityv2.User) error {
+	_, err := u.db.Exec(`
+		INSERT INTO "user"
+		(
+			id,
+			first_name,
+			last_name,
+			profile_url,
+			created_at
+		)
+		VALUES ($1, $2, $3, $4, $5);`,
+		user.ID,
+		user.FirstName,
+		user.LastName,
+		user.ProfileURL,
+		user.CreatedAt,
+	)
+	return err
+}
+
 func NewUser(sqlDB *sql.DB) User {
 	return User{db: sqlDB}
 }
