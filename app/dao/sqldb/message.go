@@ -117,11 +117,9 @@ func (m Message) UpdateMessage(message entityv2.Message) error {
 	_, err := m.db.Exec(`
 		UPDATE message
 		SET
-			id = $1,
-			body = $2,
-			updated_at = $3
-		WHERE id = $4;`,
-		message.ID,
+			body = $1,
+			updated_at = $2
+		WHERE id = $3;`,
 		message.Body,
 		message.UpdatedAt,
 		message.ID,
