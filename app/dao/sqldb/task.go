@@ -102,6 +102,7 @@ func (t Task) FindAllTasks() ([]entityv2.Task, error) {
 		)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		tasks = append(tasks, task)
@@ -154,6 +155,7 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error) {
 		)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		tasks = append(tasks, task)

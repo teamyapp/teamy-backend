@@ -48,6 +48,7 @@ func (t Team) FindAllTeams() ([]entityv2.Team, error) {
 		)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		teams = append(teams, team)
