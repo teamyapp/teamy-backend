@@ -24,7 +24,7 @@ func (t Team) FindAllTeams() ([]entityv2.Team, error) {
 		creator_id,
 		owner_id,
 		created_at,
-		updated_at,
+		updated_at
 	FROM team;
 `
 	rows, err := t.db.Query(statement)

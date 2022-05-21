@@ -8,10 +8,10 @@ import (
 )
 
 type TaskFilter struct {
-	TaskID  *graphql.ID
-	OwnerID *graphql.ID
-	Goal    *string
-	Status  *entityv2.TaskStatus
+	TaskID       *graphql.ID
+	OwnerID      *graphql.ID
+	GoalContains *string
+	Status       *entityv2.TaskStatus
 }
 
 type TeamFilter struct {
@@ -24,13 +24,24 @@ type InvitationFilter struct {
 }
 
 func matchTask(filter TaskFilter, task entityv2.Task) bool {
+	if filter.TaskID != nil {
+		taskID, err := fromGraphQLIDPtr(filter.TaskID)
+		if err != nil {
+			return false
+		}
+
+		if *taskID != task.ID {
+			return false
+		}
+	}
+
 	if filter.OwnerID != nil {
 		ownerID, err := fromGraphQLIDPtr(filter.OwnerID)
 		if err != nil {
 			return false
 		}
 
-		if ownerID != task.OwnerUserID {
+		if task.OwnerUserID == nil || *ownerID != *task.OwnerUserID {
 			return false
 		}
 	}
@@ -39,7 +50,8 @@ func matchTask(filter TaskFilter, task entityv2.Task) bool {
 		return false
 	}
 
-	if filter.Goal != nil && !strings.Contains(task.Goal, *filter.Goal) {
+	if filter.GoalContains != nil &&
+		!strings.Contains(strings.ToLower(task.Goal), strings.ToLower(*filter.GoalContains)) {
 		return false
 	}
 
