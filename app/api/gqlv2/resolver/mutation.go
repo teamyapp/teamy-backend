@@ -308,7 +308,6 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 
 	team.Name = args.Input.Name
 	team.IconURL = args.Input.IconURL
-
 	ownerID, err := fromGraphQLID(args.Input.OwnerID)
 	if err != nil {
 		return Team{}, err
@@ -431,12 +430,32 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 func (m Mutation) UpdateUser(ct context.Context, args struct {
 	UserID graphql.ID
 	Input  struct {
-		LastName   *string
-		FirstName  *string
+		LastName   string
+		FirstName  string
 		ProfileURL *string
 	}
 }) (User, error) {
-	panic("implement me")
+	userID, err := fromGraphQLID(args.UserID)
+	if err != nil {
+		return User{}, err
+	}
+
+	user, err := m.deps.userDao.FindUserByID(userID)
+	if err != nil {
+		return User{}, err
+	}
+
+	user.FirstName = args.Input.FirstName
+	user.LastName = args.Input.LastName
+	user.ProfileURL = args.Input.ProfileURL
+	updatedAt := time.Now()
+	user.UpdatedAt = &updatedAt
+	err = m.deps.userDao.UpdateUser(user)
+	if err != nil {
+		return User{}, err
+	}
+
+	return newUser(m.deps, user), nil
 }
 
 /* Invitation */
@@ -489,7 +508,6 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		Code:              genStringRes.UniqueString,
 		CreatedAt:         time.Now(),
 	}
-
 	err = m.deps.invitationDao.CreateInvitation(invitation)
 	if err != nil {
 		return Invitation{}, err

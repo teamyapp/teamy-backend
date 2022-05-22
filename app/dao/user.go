@@ -6,4 +6,5 @@ type User interface {
 	FindUserByID(userID uint64) (entityv2.User, error)
 	FindUsersByIDs(userIDs []uint64) ([]entityv2.User, error)
 	CreateUser(user entityv2.User) error
+	UpdateUser(user entityv2.User) error
 }

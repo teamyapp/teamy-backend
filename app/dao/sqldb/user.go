@@ -110,6 +110,24 @@ func (u User) CreateUser(user entityv2.User) error {
 	return err
 }
 
+func (u User) UpdateUser(user entityv2.User) error {
+	_, err := u.db.Exec(`
+		UPDATE "user"
+		SET
+			first_name = $1,
+			last_name = $2,
+			profile_url = $3,
+			updated_at = $4
+		WHERE id = $5;`,
+		user.FirstName,
+		user.LastName,
+		user.ProfileURL,
+		user.UpdatedAt,
+		user.ID,
+	)
+	return err
+}
+
 func NewUser(sqlDB *sql.DB) User {
 	return User{db: sqlDB}
 }
