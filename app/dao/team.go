@@ -7,4 +7,5 @@ type Team interface {
 	FindTeamByID(teamID uint64) (entityv2.Team, error)
 	FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error)
 	CreateTeam(team entityv2.Team) error
+	UpdateTeam(team entityv2.Team) error
 }

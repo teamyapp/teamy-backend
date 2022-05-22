@@ -293,23 +293,98 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	Input  struct {
 		Name    *string
 		IconURL *string
+		OwnerID *graphql.ID
 	}
 }) (Team, error) {
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	if args.Input.Name != nil {
+		team.Name = *args.Input.Name
+	}
+
+	team.IconURL = args.Input.IconURL
+
+	ownerID, err := fromGraphQLIDPtr(args.Input.OwnerID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	if ownerID != nil {
+		team.OwnerUserID = *ownerID
+	}
+
+	updatedAt := time.Now()
+	team.UpdatedAt = &updatedAt
+	err = m.deps.teamDao.UpdateTeam(team)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return newTeam(m.deps, team), err
 }
 
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		log.Println(err)
+		return Team{}, err
+	}
+
+	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	memberID, err := fromGraphQLID(args.MemberID)
+	if err != nil {
+		log.Println(err)
+		return Team{}, err
+	}
+
+	err = m.deps.teamMemberDao.AddMemberToTeam(teamID, memberID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return newTeam(m.deps, team), err
 }
 
 func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	memberID, err := fromGraphQLID(args.MemberID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	err = m.deps.teamMemberDao.RemoveMemberFromTeam(teamID, memberID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return newTeam(m.deps, team), nil
 }
 
 func (m Mutation) RemoveTaskFromTeam(ct context.Context, args struct {

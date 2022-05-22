@@ -92,6 +92,15 @@ func (t TeamMember) AddMemberToTeam(teamID uint64, userID uint64) error {
 	return err
 }
 
+func (t TeamMember) RemoveMemberFromTeam(teamID uint64, userID uint64) error {
+	_, err := t.db.Exec(`
+		DELETE FROM team_member
+		WHERE team_id = $1 AND user_id = $2;
+		`,
+		teamID, userID)
+	return err
+}
+
 func NewTeamMember(sqlDB *sql.DB) TeamMember {
 	return TeamMember{db: sqlDB}
 }
