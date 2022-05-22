@@ -255,7 +255,37 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		Name string
 	}
 }) (Team, error) {
-	panic("implement me")
+	userID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		return Team{}, err
+	}
+
+	genClient := m.GeneratorClient()
+	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
+	genTeamIDRes, err := genClient.GenerateUniqueNumber(ct, genTeamIDReq)
+	if err != nil {
+		log.Println(err)
+		return Team{}, err
+	}
+
+	team := entityv2.Team{
+		ID:            genTeamIDRes.UniqueNumber,
+		Name:          args.Team.Name,
+		CreatorUserID: userID,
+		OwnerUserID:   userID,
+		CreatedAt:     time.Now(),
+	}
+	err = m.deps.teamDao.CreateTeam(team)
+	if err != nil {
+		return Team{}, err
+	}
+
+	err = m.deps.teamMemberDao.AddMemberToTeam(team.ID, userID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return newTeam(m.deps, team), nil
 }
 
 func (m Mutation) UpdateTeam(ct context.Context, args struct {

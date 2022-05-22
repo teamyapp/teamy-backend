@@ -30,7 +30,7 @@ func (t Team) CreatedAt(ct context.Context) graphql.Time {
 }
 
 func (t Team) Creator(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(t.team.CreatorID)
+	user, err := t.deps.userDao.FindUserByID(t.team.CreatorUserID)
 	if err != nil {
 		return User{}, nil
 	}
@@ -39,7 +39,7 @@ func (t Team) Creator(ct context.Context) (User, error) {
 }
 
 func (t Team) Owner(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(t.team.OwnerID)
+	user, err := t.deps.userDao.FindUserByID(t.team.OwnerUserID)
 	if err != nil {
 		return User{}, nil
 	}
