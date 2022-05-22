@@ -186,8 +186,8 @@ input CreateUserInput {
 }
 
 input UpdateUserInput {
-	lastName: String
-	firstName: String
+	lastName: String!
+	firstName: String!
 	profileUrl: String
 }
 
