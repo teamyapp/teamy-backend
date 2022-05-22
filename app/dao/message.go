@@ -8,4 +8,5 @@ type Message interface {
 	FindMessagesByThreadID(threadID uint64) ([]entityv2.Message, error)
 	CreateMessage(message entityv2.Message) error
 	UpdateMessage(message entityv2.Message) error
+	DeleteMessage(messageID uint64) error
 }
