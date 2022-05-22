@@ -269,13 +269,12 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 	}
 
 	team := entityv2.Team{
-		ID:        genTeamIDRes.UniqueNumber,
-		Name:      args.Team.Name,
-		CreatorID: userID,
-		OwnerID:   userID,
-		CreatedAt: time.Now(),
+		ID:            genTeamIDRes.UniqueNumber,
+		Name:          args.Team.Name,
+		CreatorUserID: userID,
+		OwnerUserID:   userID,
+		CreatedAt:     time.Now(),
 	}
-
 	err = m.deps.teamDao.CreateTeam(team)
 	if err != nil {
 		return Team{}, err

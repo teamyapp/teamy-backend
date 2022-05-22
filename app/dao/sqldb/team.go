@@ -41,8 +41,8 @@ func (t Team) FindAllTeams() ([]entityv2.Team, error) {
 			&team.ID,
 			&team.Name,
 			&team.IconURL,
-			&team.CreatorID,
-			&team.OwnerID,
+			&team.CreatorUserID,
+			&team.OwnerUserID,
 			&team.CreatedAt,
 			&team.UpdatedAt,
 		)
@@ -76,8 +76,8 @@ func (t Team) FindTeamByID(teamID uint64) (entityv2.Team, error) {
 			&team.ID,
 			&team.Name,
 			&team.IconURL,
-			&team.CreatorID,
-			&team.OwnerID,
+			&team.CreatorUserID,
+			&team.OwnerUserID,
 			&team.CreatedAt,
 			&team.UpdatedAt,
 		)
@@ -116,8 +116,8 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error) {
 				&team.ID,
 				&team.Name,
 				&team.IconURL,
-				&team.CreatorID,
-				&team.OwnerID,
+				&team.CreatorUserID,
+				&team.OwnerUserID,
 				&team.CreatedAt,
 				&team.UpdatedAt,
 			)
@@ -145,8 +145,8 @@ func (t Team) CreateTeam(team entityv2.Team) error {
 		VALUES ($1, $2, $3, $4, $5);`,
 		team.ID,
 		team.Name,
-		team.CreatorID,
-		team.OwnerID,
+		team.CreatorUserID,
+		team.OwnerUserID,
 		team.CreatedAt,
 	)
 	return err
