@@ -127,6 +127,15 @@ func (m Message) UpdateMessage(message entityv2.Message) error {
 	return err
 }
 
+func (m Message) DeleteMessage(messageID uint64) error {
+	_, err := m.db.Exec(`
+		DELETE FROM message
+		WHERE id = $1;
+		`,
+		messageID)
+	return err
+}
+
 func NewMessage(sqlDB *sql.DB) Message {
 	return Message{db: sqlDB}
 }

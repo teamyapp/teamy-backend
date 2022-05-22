@@ -230,7 +230,22 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 func (m Mutation) DeleteMessage(ct context.Context, args struct {
 	MessageID graphql.ID
 }) (Message, error) {
-	panic("implement me")
+	messageID, err := fromGraphQLID(args.MessageID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	message, err := m.deps.messageDao.FindMessageByID(messageID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	err = m.deps.messageDao.DeleteMessage(messageID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	return newMessage(m.deps, message), nil
 }
 
 /* Team */
