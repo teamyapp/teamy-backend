@@ -132,6 +132,26 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error) {
 	return teams, nil
 }
 
+func (t Team) CreateTeam(team entityv2.Team) error {
+	_, err := t.db.Exec(`
+		INSERT INTO team
+		    (
+				 id,
+				 name,
+				 creator_id,
+				 owner_id,
+				 created_at
+		    )
+		VALUES ($1, $2, $3, $4, $5);`,
+		team.ID,
+		team.Name,
+		team.CreatorID,
+		team.OwnerID,
+		team.CreatedAt,
+	)
+	return err
+}
+
 func NewTeam(sqlDB *sql.DB) Team {
 	return Team{db: sqlDB}
 }

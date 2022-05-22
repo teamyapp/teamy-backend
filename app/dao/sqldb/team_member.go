@@ -3,6 +3,7 @@ package sqldb
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
 )
@@ -73,6 +74,22 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 	}
 
 	return teamMemberIDs, err
+}
+
+func (t TeamMember) AddMemberToTeam(teamID uint64, userID uint64) error {
+	_, err := t.db.Exec(`
+		INSERT INTO team_member
+		(
+		 	team_id,
+		 	user_id,
+		 	created_at
+		)
+		VALUES ($1, $2, $3);`,
+		teamID,
+		userID,
+		time.Now(),
+	)
+	return err
 }
 
 func NewTeamMember(sqlDB *sql.DB) TeamMember {
