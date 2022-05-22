@@ -76,7 +76,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 	return teamMemberIDs, err
 }
 
-func (t TeamMember) AddMemberToTeam(teamID uint64, userID uint64) error {
+func (t TeamMember) CreateTeamMember(teamID uint64, userID uint64) error {
 	_, err := t.db.Exec(`
 		INSERT INTO team_member
 		(
@@ -92,7 +92,7 @@ func (t TeamMember) AddMemberToTeam(teamID uint64, userID uint64) error {
 	return err
 }
 
-func (t TeamMember) RemoveMemberFromTeam(teamID uint64, userID uint64) error {
+func (t TeamMember) DeleteTeamMember(teamID uint64, userID uint64) error {
 	_, err := t.db.Exec(`
 		DELETE FROM team_member
 		WHERE team_id = $1 AND user_id = $2;

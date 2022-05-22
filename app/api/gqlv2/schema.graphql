@@ -174,9 +174,9 @@ input CreateTeamInput {
 }
 
 input UpdateTeamInput {
-	name: String
+	name: String!
 	iconUrl: String
-	ownerId: ID
+	ownerId: ID!
 }
 
 input CreateUserInput {
