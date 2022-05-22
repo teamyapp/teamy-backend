@@ -280,7 +280,7 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		return Team{}, err
 	}
 
-	err = m.deps.teamMemberDao.AddMemberToTeam(team.ID, userID)
+	err = m.deps.teamMemberDao.CreateTeamMember(team.ID, userID)
 	if err != nil {
 		return Team{}, err
 	}
@@ -291,25 +291,94 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 	Input  struct {
-		Name    *string
+		Name    string
 		IconURL *string
+		OwnerID graphql.ID
 	}
 }) (Team, error) {
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	team.Name = args.Input.Name
+	team.IconURL = args.Input.IconURL
+
+	ownerID, err := fromGraphQLID(args.Input.OwnerID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	team.OwnerUserID = ownerID
+	updatedAt := time.Now()
+	team.UpdatedAt = &updatedAt
+	err = m.deps.teamDao.UpdateTeam(team)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return newTeam(m.deps, team), err
 }
 
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		log.Println(err)
+		return Team{}, err
+	}
+
+	memberID, err := fromGraphQLID(args.MemberID)
+	if err != nil {
+		log.Println(err)
+		return Team{}, err
+	}
+
+	err = m.deps.teamMemberDao.CreateTeamMember(teamID, memberID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return newTeam(m.deps, team), nil
 }
 
 func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 	TeamID   graphql.ID
 	MemberID graphql.ID
 }) (Team, error) {
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	memberID, err := fromGraphQLID(args.MemberID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	err = m.deps.teamMemberDao.DeleteTeamMember(teamID, memberID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	if err != nil {
+		return Team{}, err
+	}
+
+	return newTeam(m.deps, team), nil
 }
 
 func (m Mutation) RemoveTaskFromTeam(ct context.Context, args struct {

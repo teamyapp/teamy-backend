@@ -152,6 +152,24 @@ func (t Team) CreateTeam(team entityv2.Team) error {
 	return err
 }
 
+func (t Team) UpdateTeam(team entityv2.Team) error {
+	_, err := t.db.Exec(`
+		UPDATE team
+		SET
+			name = $1,
+			icon_url = $2,
+			owner_id = $3,
+			updated_at = $4
+		WHERE id = $5;`,
+		team.Name,
+		team.IconURL,
+		team.OwnerUserID,
+		team.UpdatedAt,
+		team.ID,
+	)
+	return err
+}
+
 func NewTeam(sqlDB *sql.DB) Team {
 	return Team{db: sqlDB}
 }
