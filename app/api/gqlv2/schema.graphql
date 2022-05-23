@@ -26,7 +26,7 @@ type Mutation {
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	addMemberToTeam(teamId: ID!, memberId: ID!): Team!
 	removeMemberFromTeam(teamId: ID!, memberId: ID!): Team!
-	removeTaskFromTeam(teamId: ID!, taskID: ID!): Team!
+	removeTaskFromTeam(teamId: ID!, taskId: ID!): Team!
 	promoteTeamTaskToNeedAttention(teamId: ID!, taskId: ID!): Team!
 
 	# User
