@@ -13,7 +13,6 @@ import (
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
-const NonexistentTeamID = 0
 const invitationCodeLen = 20
 
 var invitationCodeAlphabet = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
