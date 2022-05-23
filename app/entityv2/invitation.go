@@ -16,4 +16,5 @@ type Invitation struct {
 	Status            InvitationStatus
 	Code              string
 	CreatedAt         time.Time
+	UpdatedAt         *time.Time
 }

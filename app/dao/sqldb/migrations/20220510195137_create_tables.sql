@@ -73,7 +73,8 @@ CREATE TABLE invitation
 	expire_at           TIMESTAMP NOT NULL,
 	status              VARCHAR(20) NOT NULL,
 	code                VARCHAR(50) NOT NULL,
-	create_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	create_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at          TIMESTAMP
 );
 
 -- +migrate Down
