@@ -2,18 +2,20 @@ package resolver
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/app/api/rpc/proto"
 	"github.com/teamyapp/cloud/app/ctx"
-	"github.com/teamyapp/teamy-backend/app/entity"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
-const invitationCodeLen = 8
-const invitationCodeAlphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const invitationCodeLen = 20
+
+var invitationCodeAlphabet = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 type Mutation struct {
 	deps *Dependencies
@@ -464,6 +466,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	TeamID     graphql.ID
 	Invitation struct {
 		ReceiverFirstName *string
+		ReceiverLastName  *string
 		ReceiverEmail     *string
 		ExpireAt          graphql.Time
 	}
@@ -486,17 +489,6 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	genStringReq := &proto.GenerateUniqueStringRequest{
-		SequenceName: "invitationCode",
-		StringLength: invitationCodeLen,
-		Alphabet:     invitationCodeAlphabet,
-	}
-	genStringRes, err := genClient.GenerateUniqueString(ct, genStringReq)
-	if err != nil {
-		log.Println(err)
-		return Invitation{}, err
-	}
-
 	invitation := entityv2.Invitation{
 		ID:                genInvitationIDRes.UniqueNumber,
 		SenderUserID:      senderID,
@@ -505,7 +497,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		TeamID:            teamID,
 		ExpireAt:          args.Invitation.ExpireAt.Time,
 		Status:            entityv2.InvitationStatusPending,
-		Code:              genStringRes.UniqueString,
+		Code:              randString(invitationCodeAlphabet, invitationCodeLen),
 		CreatedAt:         time.Now(),
 	}
 	err = m.deps.invitationDao.CreateInvitation(invitation)
@@ -519,31 +511,146 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 	InvitationID graphql.ID
 	Input        struct {
-		SenderUserID   *graphql.ID
-		ReceiverUserID *graphql.ID
-		ExpireAt       *graphql.Time
-		Status         *entity.InvitationStatus
+		ReceiverFirstName *string
+		ReceiverLastName  *string
+		ExpireAt          graphql.Time
 	}
 }) (Invitation, error) {
-	panic("implement me")
+	invitationID, err := fromGraphQLID(args.InvitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation.ReceiverFirstName = args.Input.ReceiverFirstName
+	invitation.ReceiverLastName = args.Input.ReceiverLastName
+	invitation.ExpireAt = args.Input.ExpireAt.Time
+	now := time.Now()
+	invitation.UpdatedAt = &now
+	err = m.deps.invitationDao.UpdateInvitation(invitation)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	return newInvitation(m.deps, invitation), nil
 }
 
 func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 	InvitationID graphql.ID
 }) (Invitation, error) {
-	panic("implement me")
+	invitationID, err := fromGraphQLID(args.InvitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	err = m.deps.invitationDao.DeleteInvitation(invitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	return newInvitation(m.deps, invitation), nil
 }
 
 func (m Mutation) AcceptInvitation(ct context.Context, args struct {
+	InvitationID   graphql.ID
 	InvitationCode string
 }) (Invitation, error) {
-	panic("implement me")
+	receiverUserID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitationID, err := fromGraphQLID(args.InvitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	if invitation.Code != args.InvitationCode {
+		return Invitation{}, fmt.Errorf("invalid invitation code: id=%v, code=%s\n", args.InvitationID, args.InvitationCode)
+	}
+
+	err = m.ensureInvitationPending(invitation)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation.Status = entityv2.InvitationStatusAccepted
+	invitation.ReceiverUserID = &receiverUserID
+	now := time.Now()
+	invitation.UpdatedAt = &now
+	err = m.deps.invitationDao.UpdateInvitation(invitation)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	return newInvitation(m.deps, invitation), nil
 }
 
 func (m Mutation) DeclineInvitation(ct context.Context, args struct {
+	InvitationID   graphql.ID
 	InvitationCode string
 }) (Invitation, error) {
-	panic("implement me")
+	receiverUserID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitationID, err := fromGraphQLID(args.InvitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	if invitation.Code != args.InvitationCode {
+		return Invitation{}, fmt.Errorf("invalid invitation code: id=%v, code=%s\n", args.InvitationID, args.InvitationCode)
+	}
+
+	err = m.ensureInvitationPending(invitation)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	invitation.Status = entityv2.InvitationStatusDeclined
+	invitation.ReceiverUserID = &receiverUserID
+	now := time.Now()
+	invitation.UpdatedAt = &now
+	err = m.deps.invitationDao.UpdateInvitation(invitation)
+	if err != nil {
+		return Invitation{}, err
+	}
+
+	return newInvitation(m.deps, invitation), nil
+}
+
+func (m Mutation) ensureInvitationPending(invitation entityv2.Invitation) error {
+	switch invitation.Status {
+	case entityv2.InvitationStatusExpired:
+		return fmt.Errorf("invitation is expired: id=%v", invitation.ID)
+	case entityv2.InvitationStatusInvoked:
+		return fmt.Errorf("invitation is revoked: id=%v", invitation.ID)
+	case entityv2.InvitationStatusAccepted, entityv2.InvitationStatusDeclined:
+		return fmt.Errorf("invitation is already responded: id=%v", invitation.ID)
+	default:
+		return nil
+	}
 }
 
 func (m Mutation) createThread(ct context.Context) (uint64, error) {
@@ -567,4 +674,18 @@ func NewMutation(deps *Dependencies) Mutation {
 	return Mutation{
 		deps: deps,
 	}
+}
+
+func randString(alphabet []rune, length int) string {
+	alphabetEndIndex := len(alphabet) - 1
+	result := make([]rune, length)
+	for i := 0; i < length; i++ {
+		randomIndex := randInt(0, alphabetEndIndex)
+		result[i] = alphabet[randomIndex]
+	}
+	return string(result)
+}
+
+func randInt(min int, max int) int {
+	return min + rand.Intn(max-min+1)
 }

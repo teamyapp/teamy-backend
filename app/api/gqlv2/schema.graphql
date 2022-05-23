@@ -36,8 +36,8 @@ type Mutation {
 	# Invitation
 	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!
 	updateInvitation(invitationId: ID!, input: UpdateInvitationInput!): Invitation!
-	acceptInvitation(invitationCode: String!): Invitation!
-	declineInvitation(invitationCode: String!): Invitation!
+	acceptInvitation(invitationId: ID!, invitationCode: String!): Invitation!
+	declineInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	deleteInvitation(invitationId: ID!): Invitation!
 }
 
@@ -92,6 +92,7 @@ type Invitation {
 	joiningTeam: Team!
 	expireAt: Time!
 	createdAt: Time!
+	updatedAt: Time
 	status: InvitationStatus!
 	code: String!
 }
@@ -198,10 +199,9 @@ input CreateInvitationInput {
 }
 
 input UpdateInvitationInput {
-	senderUserId: ID
-	receiverUserId: ID
-	expireAt: Time
-	status: InvitationStatus
+	receiverFirstName: String
+	receiverLastName: String
+	expireAt: Time!
 }
 
 scalar Time

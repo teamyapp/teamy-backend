@@ -68,6 +68,10 @@ func (i Invitation) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(i.invitation.CreatedAt)
 }
 
+func (i Invitation) UpdatedAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(i.invitation.UpdatedAt)
+}
+
 func (i Invitation) Status(ct context.Context) entityv2.InvitationStatus {
 	return i.invitation.Status
 }
