@@ -29,7 +29,7 @@ func (i Invitation) FindInvitationByID(invitationID uint64) (entityv2.Invitation
 		expire_at,
 		status,
 		code,
-		create_at,
+		created_at,
 		updated_at
 	FROM invitation
 	WHERE id = $1;
@@ -72,7 +72,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entityv2.Invitatio
 		expire_at,
 		status,
 		code,
-		create_at,
+		created_at,
 		updated_at
 	FROM invitation
 	WHERE team_id = $1;
@@ -125,7 +125,7 @@ func (i Invitation) FindAllInvitations() ([]entityv2.Invitation, error) {
 		expire_at,
 		status,
 		code,
-		create_at,
+		created_at,
 		updated_at
 	FROM invitation;
 `
@@ -176,7 +176,7 @@ func (i Invitation) CreateInvitation(invitation entityv2.Invitation) error {
 		expire_at,
 		status,
 		code,
-		create_at
+		created_at
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 `
