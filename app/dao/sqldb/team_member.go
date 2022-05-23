@@ -101,6 +101,21 @@ func (t TeamMember) DeleteTeamMember(teamID uint64, userID uint64) error {
 	return err
 }
 
+func (t TeamMember) UpdateTeamMember(teamID uint64, userID *uint64, needAttentionTaskID *uint64, updatedAt time.Time) error {
+	_, err := t.db.Exec(`
+		UPDATE team_member
+		SET
+			need_attention_task_id = $1,
+			updated_at = $2
+		WHERE team_id = $3 AND user_id = $4;`,
+		needAttentionTaskID,
+		updatedAt,
+		teamID,
+		userID,
+	)
+	return err
+}
+
 func NewTeamMember(sqlDB *sql.DB) TeamMember {
 	return TeamMember{db: sqlDB}
 }

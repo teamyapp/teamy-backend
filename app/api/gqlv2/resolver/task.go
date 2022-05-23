@@ -13,12 +13,6 @@ var availableActions = map[entityv2.TaskStatus][]entityv2.TaskAction{
 		entityv2.TaskActionDelete,
 		entityv2.TaskActionAssignOwner,
 	},
-	entityv2.TaskStatusNeedAttention: {
-		entityv2.TaskActionMarkComplete,
-		entityv2.TaskActionReportBlocked,
-		entityv2.TaskActionAssignOwner,
-		entityv2.TaskActionDelete,
-	},
 	entityv2.TaskStatusInProgress: {
 		entityv2.TaskActionMarkComplete,
 		entityv2.TaskActionReportBlocked,
