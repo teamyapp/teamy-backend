@@ -148,9 +148,16 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 	}
 
 	if task.Status == entityv2.TaskStatusInProgress && task.OwnerUserID != nil {
-		err = m.deps.teamMemberDao.UpdateTeamMember(task.OwningTeamID, task.OwnerUserID, nil, time.Now())
+		needAttentionID, err := m.deps.teamMemberDao.FindNeedAttentionTaskID(*task.OwnerUserID, task.OwningTeamID)
 		if err != nil {
 			return Task{}, err
+		}
+
+		if needAttentionID != nil && *needAttentionID == task.ID {
+			err = m.deps.teamMemberDao.UpdateTeamMember(task.OwningTeamID, task.OwnerUserID, nil, time.Now())
+			if err != nil {
+				return Task{}, err
+			}
 		}
 	}
 

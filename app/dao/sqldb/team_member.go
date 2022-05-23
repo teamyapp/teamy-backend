@@ -76,6 +76,23 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 	return teamMemberIDs, err
 }
 
+func (t TeamMember) FindNeedAttentionTaskID(userID uint64, teamID uint64) (*uint64, error) {
+	statement := `
+	SELECT
+		need_attention_task_id
+	FROM team_member
+	WHERE team_id = $1 AND user_id = $2;
+`
+	var needAttentionTaskID *uint64
+	err := t.db.QueryRow(statement, teamID, userID).Scan(&needAttentionTaskID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return needAttentionTaskID, err
+}
+
 func (t TeamMember) CreateTeamMember(teamID uint64, userID uint64) error {
 	_, err := t.db.Exec(`
 		INSERT INTO team_member
