@@ -76,6 +76,23 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 	return teamMemberIDs, err
 }
 
+func (t TeamMember) FindNeedAttentionTaskID(userID uint64, teamID uint64) (*uint64, error) {
+	statement := `
+	SELECT
+		need_attention_task_id
+	FROM team_member
+	WHERE team_id = $1 AND user_id = $2;
+`
+	var needAttentionTaskID *uint64
+	err := t.db.QueryRow(statement, teamID, userID).Scan(&needAttentionTaskID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return needAttentionTaskID, err
+}
+
 func (t TeamMember) CreateTeamMember(teamID uint64, userID uint64) error {
 	_, err := t.db.Exec(`
 		INSERT INTO team_member
@@ -98,6 +115,21 @@ func (t TeamMember) DeleteTeamMember(teamID uint64, userID uint64) error {
 		WHERE team_id = $1 AND user_id = $2;
 		`,
 		teamID, userID)
+	return err
+}
+
+func (t TeamMember) UpdateTeamMember(teamID uint64, userID *uint64, needAttentionTaskID *uint64, updatedAt time.Time) error {
+	_, err := t.db.Exec(`
+		UPDATE team_member
+		SET
+			need_attention_task_id = $1,
+			updated_at = $2
+		WHERE team_id = $3 AND user_id = $4;`,
+		needAttentionTaskID,
+		updatedAt,
+		teamID,
+		userID,
+	)
 	return err
 }
 

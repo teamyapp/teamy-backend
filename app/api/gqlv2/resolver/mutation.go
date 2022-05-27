@@ -147,6 +147,20 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
+	if task.Status == entityv2.TaskStatusInProgress && task.OwnerUserID != nil {
+		needAttentionID, err := m.deps.teamMemberDao.FindNeedAttentionTaskID(*task.OwnerUserID, task.OwningTeamID)
+		if err != nil {
+			return Task{}, err
+		}
+
+		if needAttentionID != nil && *needAttentionID == task.ID {
+			err = m.deps.teamMemberDao.UpdateTeamMember(task.OwningTeamID, task.OwnerUserID, nil, time.Now())
+			if err != nil {
+				return Task{}, err
+			}
+		}
+	}
+
 	err = m.deps.taskDao.DeleteTask(taskID)
 	if err != nil {
 		return Task{}, err
@@ -155,6 +169,37 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 	err = m.deps.threadDao.DeleteThread(task.CommentsThreadID)
 	if err != nil {
 		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
+}
+
+func (m Mutation) PromoteTeamTaskToNeedAttention(ct context.Context, args struct {
+	TeamID graphql.ID
+	TaskID graphql.ID
+}) (Task, error) {
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	task.Status = entityv2.TaskStatusInProgress
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	if task.OwnerUserID != nil {
+		err = m.deps.teamMemberDao.UpdateTeamMember(teamID, task.OwnerUserID, &taskID, time.Now())
+		if err != nil {
+			return Task{}, err
+		}
 	}
 
 	return newTask(m.deps, task), nil
@@ -380,20 +425,6 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 	}
 
 	return newTeam(m.deps, team), nil
-}
-
-func (m Mutation) RemoveTaskFromTeam(ct context.Context, args struct {
-	TeamID graphql.ID
-	TaskID graphql.ID
-}) (Team, error) {
-	panic("implement me")
-}
-
-func (m Mutation) PromoteTeamTaskToNeedAttention(ct context.Context, args struct {
-	TeamID graphql.ID
-	TaskID graphql.ID
-}) (Team, error) {
-	panic("implement me")
 }
 
 /* User */

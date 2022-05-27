@@ -15,6 +15,7 @@ type Mutation {
 	createTask(teamId: ID!, task: CreateTaskInput!): Task!
 	updateTask(taskId: ID!, input: UpdateTaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
+	promoteTeamTaskToNeedAttention(teamId: ID!, taskId: ID!): Task!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
@@ -26,8 +27,6 @@ type Mutation {
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	addMemberToTeam(teamId: ID!, memberId: ID!): Team!
 	removeMemberFromTeam(teamId: ID!, memberId: ID!): Team!
-	removeTaskFromTeam(teamId: ID!, taskId: ID!): Team!
-	promoteTeamTaskToNeedAttention(teamId: ID!, taskId: ID!): Team!
 
 	# User
 	createUser(user: CreateUserInput!): User!
@@ -113,7 +112,6 @@ enum TaskAction {
 }
 
 enum TaskStatus {
-	NEED_ATTENTION
 	UPCOMING
 	IN_PROGRESS
 	DELIVERED
