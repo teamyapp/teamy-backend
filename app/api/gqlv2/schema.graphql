@@ -15,7 +15,11 @@ type Mutation {
 	createTask(teamId: ID!, task: CreateTaskInput!): Task!
 	updateTask(taskId: ID!, input: UpdateTaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
-	promoteTeamTaskToNeedAttention(teamId: ID!, taskId: ID!): Task!
+	moveTaskToUpcoming(taskId: ID!): Task!
+	moveTaskToInProgress(taskId: ID!): Task!
+	moveTaskToDelivered(taskId: ID!): Task!
+	moveTaskToBlocked(taskId: ID!, reason: String!): Task!
+	moveTaskToAwaiting(taskId: ID!, awaitOnTaskId: ID!): Task!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
@@ -155,7 +159,6 @@ input UpdateTaskInput {
 	context: String
 	ownerUserId: ID
 	owningTeamId: ID!
-	status: TaskStatus!
 	effort: Int
 	dueAt: Time
 }

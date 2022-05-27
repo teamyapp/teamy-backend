@@ -45,7 +45,6 @@ CREATE TABLE team_member
 (
 	team_id                BIGINT NOT NULL REFERENCES team (id) ON UPDATE CASCADE ON DELETE CASCADE,
 	user_id                BIGINT NOT NULL REFERENCES "user" (id) ON UPDATE CASCADE ON DELETE CASCADE,
-	need_attention_task_id BIGINT REFERENCES task (id) ON UPDATE CASCADE,
 	created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	updated_at             TIMESTAMP,
 	CONSTRAINT pk_team_member PRIMARY KEY (team_id, user_id)
