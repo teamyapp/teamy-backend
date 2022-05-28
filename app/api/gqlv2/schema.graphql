@@ -19,7 +19,7 @@ type Mutation {
 	moveTaskToInProgress(taskId: ID!): Task!
 	moveTaskToDelivered(taskId: ID!): Task!
 	moveTaskToBlocked(taskId: ID!, reason: String!): Task!
-	moveTaskToAwaiting(taskId: ID!, awaitOnTaskId: ID!): Task!
+	moveTaskToAwaiting(taskId: ID!, awaitOnTaskIds: [ID!]!): Task!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!

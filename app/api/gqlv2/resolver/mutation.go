@@ -161,19 +161,73 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task.Status = entityv2.TaskStatusUpcoming
+	updatedAt := time.Now()
+	task.UpdatedAt = &updatedAt
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task.Status = entityv2.TaskStatusInProgress
+	updatedAt := time.Now()
+	task.UpdatedAt = &updatedAt
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task.Status = entityv2.TaskStatusDelivered
+	updatedAt := time.Now()
+	task.UpdatedAt = &updatedAt
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
@@ -184,8 +238,8 @@ func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 }
 
 func (m Mutation) MoveTaskToAwaiting(ct context.Context, args struct {
-	TaskID        graphql.ID
-	AwaitOnTaskId graphql.ID
+	TaskID         graphql.ID
+	AwaitOnTaskIds []graphql.ID
 }) (Task, error) {
 	panic("implement me")
 }
