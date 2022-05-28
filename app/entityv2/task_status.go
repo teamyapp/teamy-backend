@@ -3,7 +3,19 @@ package entityv2
 type TaskStatus string
 
 const (
-	TaskStatusUpcoming   TaskStatus = "UPCOMING"
+	TaskStatusUpcoming TaskStatus = "UPCOMING"
+	// TaskStatusInProgress requires each person has only 1 task in progress
 	TaskStatusInProgress TaskStatus = "IN_PROGRESS"
-	TaskStatusDelivered  TaskStatus = "DELIVERED"
+	TaskStatusPaused     TaskStatus = "PAUSED"
+	TaskStatusAwaiting   TaskStatus = "AWAITING"
+	/*
+		TaskStatusBlocked
+		To unblock a task
+		1) Delete the task
+		2) Mark task awaiting on other task
+		3) Collect extra context
+		4) Received help (comment) from colleague
+	*/
+	TaskStatusBlocked   TaskStatus = "BLOCKED"
+	TaskStatusDelivered TaskStatus = "DELIVERED"
 )

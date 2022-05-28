@@ -92,7 +92,6 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		Context      *string
 		OwnerUserID  *graphql.ID
 		OwningTeamID graphql.ID
-		Status       entityv2.TaskStatus
 		Effort       *int32
 		DueAt        *graphql.Time
 	}
@@ -121,7 +120,6 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 	}
 
 	task.OwningTeamID = owningTeamID
-	task.Status = args.Input.Status
 	task.Effort = intPtrFromIntPtr(args.Input.Effort)
 	task.DueAt = fromGraphQLTimePtr(args.Input.DueAt)
 	updatedAt := time.Now()
@@ -147,20 +145,6 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	if task.Status == entityv2.TaskStatusInProgress && task.OwnerUserID != nil {
-		needAttentionID, err := m.deps.teamMemberDao.FindNeedAttentionTaskID(*task.OwnerUserID, task.OwningTeamID)
-		if err != nil {
-			return Task{}, err
-		}
-
-		if needAttentionID != nil && *needAttentionID == task.ID {
-			err = m.deps.teamMemberDao.UpdateTeamMember(task.OwningTeamID, task.OwnerUserID, nil, time.Now())
-			if err != nil {
-				return Task{}, err
-			}
-		}
-	}
-
 	err = m.deps.taskDao.DeleteTask(taskID)
 	if err != nil {
 		return Task{}, err
@@ -174,35 +158,36 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 	return newTask(m.deps, task), nil
 }
 
-func (m Mutation) PromoteTeamTaskToNeedAttention(ct context.Context, args struct {
-	TeamID graphql.ID
+func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		return Task{}, err
-	}
+	panic("implement me")
+}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		return Task{}, err
-	}
+func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
+	TaskID graphql.ID
+}) (Task, error) {
+	panic("implement me")
+}
 
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
-	task.Status = entityv2.TaskStatusInProgress
-	err = m.deps.taskDao.UpdateTask(task)
-	if err != nil {
-		return Task{}, err
-	}
+func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
+	TaskID graphql.ID
+}) (Task, error) {
+	panic("implement me")
+}
 
-	if task.OwnerUserID != nil {
-		err = m.deps.teamMemberDao.UpdateTeamMember(teamID, task.OwnerUserID, &taskID, time.Now())
-		if err != nil {
-			return Task{}, err
-		}
-	}
+func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
+	TaskID graphql.ID
+	Reason string
+}) (Task, error) {
+	panic("implement me")
+}
 
-	return newTask(m.deps, task), nil
+func (m Mutation) MoveTaskToAwaiting(ct context.Context, args struct {
+	TaskID        graphql.ID
+	AwaitOnTaskId graphql.ID
+}) (Task, error) {
+	panic("implement me")
 }
 
 /* Message */
