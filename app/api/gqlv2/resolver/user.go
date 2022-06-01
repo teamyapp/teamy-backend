@@ -41,6 +41,10 @@ func (u User) Teams(ct context.Context, args struct {
 		return nil, err
 	}
 
+	if len(ids) < 1 {
+		return []Team{}, nil
+	}
+
 	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ids)
 	if err != nil {
 		return nil, err

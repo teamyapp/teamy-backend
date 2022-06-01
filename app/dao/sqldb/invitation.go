@@ -171,6 +171,7 @@ func (i Invitation) CreateInvitation(invitation entityv2.Invitation) error {
 	    id,
 		sender_user_id,
 		receiver_first_name,
+	 	receiver_last_name,
 		receiver_email,
 	    team_id,
 		expire_at,
@@ -178,12 +179,13 @@ func (i Invitation) CreateInvitation(invitation entityv2.Invitation) error {
 		code,
 		created_at
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 `
 	_, err := i.db.Exec(statement,
 		int64(invitation.ID),
 		invitation.SenderUserID,
 		invitation.ReceiverFirstName,
+		invitation.ReceiverLastName,
 		invitation.ReceiverEmail,
 		invitation.TeamID,
 		invitation.ExpireAt,

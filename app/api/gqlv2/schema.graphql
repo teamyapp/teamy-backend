@@ -29,8 +29,8 @@ type Mutation {
 	# Team
 	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
-	addMemberToTeam(teamId: ID!, memberId: ID!): Team!
-	removeMemberFromTeam(teamId: ID!, memberId: ID!): Team!
+	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
+	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
 
 	# User
 	createUser(user: CreateUserInput!): User!
@@ -56,6 +56,7 @@ type Task {
 	createdAt: Time!
 	updatedAt: Time
 	dueAt: Time
+	effort: Int
 	availableActions: [TaskAction!]!
 }
 
@@ -119,6 +120,8 @@ enum TaskStatus {
 	UPCOMING
 	IN_PROGRESS
 	DELIVERED
+	PAUSED
+	BLOCK
 }
 
 type User {
@@ -178,7 +181,7 @@ input CreateTeamInput {
 input UpdateTeamInput {
 	name: String!
 	iconUrl: String
-	ownerId: ID!
+	ownerUserId: ID!
 }
 
 input CreateUserInput {
@@ -195,6 +198,7 @@ input UpdateUserInput {
 
 input CreateInvitationInput {
 	receiverFirstName: String
+	receiverLastName: String
 	receiverEmail: String
 	expireAt: Time!
 }
