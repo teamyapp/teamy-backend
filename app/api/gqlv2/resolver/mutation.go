@@ -257,8 +257,8 @@ func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 }
 
 func (m Mutation) MoveTaskToAwaiting(ct context.Context, args struct {
-	TaskID        graphql.ID
-	AwaitOnTaskId graphql.ID
+	TaskID         graphql.ID
+	AwaitOnTaskIds []graphql.ID
 }) (Task, error) {
 	panic("implement me")
 }
