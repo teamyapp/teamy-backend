@@ -127,7 +127,7 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error) {
 		created_at,
 		updated_at
 	FROM task
-	WHERE team_id = $1;
+	WHERE owning_team_id = $1;
 `
 	rows, err := t.db.Query(statement, teamID)
 	if err != nil {

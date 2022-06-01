@@ -53,6 +53,15 @@ func intPtrFromIntPtr(num *int32) *int {
 	return &newNum
 }
 
+func int32PtrFromIntPtr(num *int) *int32 {
+	if num == nil {
+		return nil
+	}
+
+	newNum := int32(*num)
+	return &newNum
+}
+
 func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
 	return strconv.ParseUint(string(graphqlID), 10, 64)
 }

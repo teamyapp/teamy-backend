@@ -100,7 +100,7 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error) {
 		created_at,
 		updated_at
 	FROM team
-	WHERE id IN (%s)`, idsString)
+	WHERE id IN (%s);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
 		log.Println(err)

@@ -13,6 +13,11 @@ var availableActions = map[entityv2.TaskStatus][]entityv2.TaskAction{
 		entityv2.TaskActionDelete,
 		entityv2.TaskActionAssignOwner,
 	},
+	entityv2.TaskStatusPaused: {
+		entityv2.TaskActionStart,
+		entityv2.TaskActionDelete,
+		entityv2.TaskActionAssignOwner,
+	},
 	entityv2.TaskStatusInProgress: {
 		entityv2.TaskActionMarkComplete,
 		entityv2.TaskActionReportBlocked,
@@ -93,6 +98,10 @@ func (t Task) UpdatedAt(ct context.Context) *graphql.Time {
 
 func (t Task) DueAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.DueAt)
+}
+
+func (t Task) Effort(ct context.Context) *int32 {
+	return int32PtrFromIntPtr(t.task.Effort)
 }
 
 func (t Task) AvailableActions(ct context.Context) []entityv2.TaskAction {

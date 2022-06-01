@@ -10,6 +10,7 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/app/api/rpc/proto"
 	"github.com/teamyapp/cloud/app/ctx"
+	"github.com/teamyapp/teamy-backend/app/collect"
 	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
@@ -167,13 +168,85 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	userID, err := ctx.UserIDFromContext(ct)
+	if err != nil {
+		return Task{}, err
+	}
+
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	tasks, err := m.deps.taskDao.FindTasksByTeamID(task.OwningTeamID)
+	if err != nil {
+
+	}
+
+	if task.OwnerUserID == nil {
+		task.OwnerUserID = &userID
+	}
+
+	inProgressTasks := collect.Filter(tasks, func(eachTask entityv2.Task) bool {
+		if eachTask.OwnerUserID == nil {
+			return false
+		}
+
+		if *eachTask.OwnerUserID != *task.OwnerUserID {
+			return false
+		}
+
+		return eachTask.Status == entityv2.TaskStatusInProgress
+	})
+
+	now := time.Now()
+	if len(inProgressTasks) > 0 {
+		inProgressTask := inProgressTasks[0]
+		inProgressTask.Status = entityv2.TaskStatusPaused
+		inProgressTask.UpdatedAt = &now
+		err = m.deps.taskDao.UpdateTask(inProgressTask)
+		if err != nil {
+			return Task{}, err
+		}
+	}
+
+	task.Status = entityv2.TaskStatusInProgress
+	task.UpdatedAt = &now
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task.Status = entityv2.TaskStatusDelivered
+	now := time.Now()
+	task.UpdatedAt = &now
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
@@ -323,9 +396,9 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 	Input  struct {
-		Name    string
-		IconURL *string
-		OwnerID graphql.ID
+		Name        string
+		IconURL     *string
+		OwnerUserID graphql.ID
 	}
 }) (Team, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
@@ -340,12 +413,12 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 
 	team.Name = args.Input.Name
 	team.IconURL = args.Input.IconURL
-	ownerID, err := fromGraphQLID(args.Input.OwnerID)
+	ownerUserID, err := fromGraphQLID(args.Input.OwnerUserID)
 	if err != nil {
 		return Team{}, err
 	}
 
-	team.OwnerUserID = ownerID
+	team.OwnerUserID = ownerUserID
 	updatedAt := time.Now()
 	team.UpdatedAt = &updatedAt
 	err = m.deps.teamDao.UpdateTeam(team)
@@ -357,59 +430,59 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 }
 
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
-	TeamID   graphql.ID
-	MemberID graphql.ID
-}) (Team, error) {
+	TeamID       graphql.ID
+	MemberUserID graphql.ID
+}) (User, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		log.Println(err)
-		return Team{}, err
+		return User{}, err
 	}
 
-	memberID, err := fromGraphQLID(args.MemberID)
+	memberUserID, err := fromGraphQLID(args.MemberUserID)
 	if err != nil {
 		log.Println(err)
-		return Team{}, err
+		return User{}, err
 	}
 
-	err = m.deps.teamMemberDao.CreateTeamMember(teamID, memberID)
+	err = m.deps.teamMemberDao.CreateTeamMember(teamID, memberUserID)
 	if err != nil {
-		return Team{}, err
+		return User{}, err
 	}
 
-	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	user, err := m.deps.userDao.FindUserByID(memberUserID)
 	if err != nil {
-		return Team{}, err
+		return User{}, err
 	}
 
-	return newTeam(m.deps, team), nil
+	return newUser(m.deps, user), nil
 }
 
 func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
-	TeamID   graphql.ID
-	MemberID graphql.ID
-}) (Team, error) {
+	TeamID       graphql.ID
+	MemberUserID graphql.ID
+}) (User, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
-		return Team{}, err
+		return User{}, err
 	}
 
-	memberID, err := fromGraphQLID(args.MemberID)
+	memberUserID, err := fromGraphQLID(args.MemberUserID)
 	if err != nil {
-		return Team{}, err
+		return User{}, err
 	}
 
-	err = m.deps.teamMemberDao.DeleteTeamMember(teamID, memberID)
+	err = m.deps.teamMemberDao.DeleteTeamMember(teamID, memberUserID)
 	if err != nil {
-		return Team{}, err
+		return User{}, err
 	}
 
-	team, err := m.deps.teamDao.FindTeamByID(teamID)
+	user, err := m.deps.userDao.FindUserByID(memberUserID)
 	if err != nil {
-		return Team{}, err
+		return User{}, err
 	}
 
-	return newTeam(m.deps, team), nil
+	return newUser(m.deps, user), nil
 }
 
 /* User */
@@ -421,16 +494,13 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		ProfileURL *string
 	}
 }) (User, error) {
-	genClient := m.GeneratorClient()
-	genUserIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "userID"}
-	genUserIDRes, err := genClient.GenerateUniqueNumber(ct, genUserIDReq)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
-		log.Println(err)
 		return User{}, err
 	}
 
 	user := entityv2.User{
-		ID:         genUserIDRes.UniqueNumber,
+		ID:         userID,
 		CreatedAt:  time.Now(),
 		FirstName:  args.User.FirstName,
 		LastName:   args.User.LastName,
@@ -509,6 +579,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		ID:                genInvitationIDRes.UniqueNumber,
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
+		ReceiverLastName:  args.Invitation.ReceiverLastName,
 		ReceiverEmail:     args.Invitation.ReceiverEmail,
 		TeamID:            teamID,
 		ExpireAt:          args.Invitation.ExpireAt.Time,
