@@ -1,67 +1,88 @@
 package resolver
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entity"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type Invitation struct {
-	deps *Dependencies
-	entity.Invitation
+	deps       *Dependencies
+	invitation entityv2.Invitation
 }
 
-func (i Invitation) ID() graphql.ID {
-	return toGraphQLID(i.Invitation.ID)
+func (i Invitation) ID(ct context.Context) graphql.ID {
+	return toGraphQLID(i.invitation.ID)
 }
 
-func (i Invitation) Sender() (User, error) {
-	user, err := i.deps.Data.GetUser(i.Invitation.SenderUserID)
+func (i Invitation) Sender(ct context.Context) (User, error) {
+	sender, err := i.deps.userDao.FindUserByID(i.invitation.SenderUserID)
 	if err != nil {
 		return User{}, err
 	}
 
-	return User{
-		deps: i.deps,
-		user: user,
-	}, nil
+	return newUser(i.deps, sender), nil
 }
 
-func (i Invitation) Receiver() (*User, error) {
-	if i.Invitation.ReceiverUserID == nil {
+func (i Invitation) ReceiverFirstName(ct context.Context) *string {
+	return i.invitation.ReceiverFirstName
+}
+
+func (i Invitation) ReceiverLastName(ct context.Context) *string {
+	return i.invitation.ReceiverLastName
+}
+
+func (i Invitation) ReceiverEmail(ct context.Context) *string {
+	return i.invitation.ReceiverEmail
+}
+
+func (i Invitation) Receiver(ct context.Context) (*User, error) {
+	if i.invitation.ReceiverUserID == nil {
 		return nil, nil
 	}
 
-	user, err := i.deps.Data.GetUser(*i.Invitation.ReceiverUserID)
+	receiver, err := i.deps.userDao.FindUserByID(*i.invitation.ReceiverUserID)
 	if err != nil {
 		return &User{}, err
 	}
 
-	return &User{
-		deps: i.deps,
-		user: user,
-	}, nil
+	gqlUser := newUser(i.deps, receiver)
+	return &gqlUser, nil
 }
 
-func (i Invitation) Team() (Team, error) {
-	teams := i.deps.Data.FilterTeams(func(team entity.Team) bool {
-		return team.ID == i.Invitation.TeamID
-	})
-	if len(teams) < 1 {
-		return Team{}, fmt.Errorf("team not found: teamID=%v", i.Invitation.TeamID)
-	}
-	if len(teams) > 1 {
-		return Team{}, fmt.Errorf("more than 1 team found: teamID=%v", i.Invitation.TeamID)
+func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
+	team, err := i.deps.teamDao.FindTeamByID(i.invitation.TeamID)
+	if err != nil {
+		return Team{}, err
 	}
 
-	return Team{deps: i.deps, Team: teams[0]}, nil
+	return newTeam(i.deps, team), nil
 }
 
-func (i Invitation) ExpireAt() graphql.Time {
-	return graphql.Time{Time: i.Invitation.ExpireAt}
+func (i Invitation) ExpireAt(ct context.Context) graphql.Time {
+	return toGraphQLTime(i.invitation.ExpireAt)
 }
 
-func (i Invitation) CreatedAt() graphql.Time {
-	return graphql.Time{Time: i.Invitation.CreatedAt}
+func (i Invitation) CreatedAt(ct context.Context) graphql.Time {
+	return toGraphQLTime(i.invitation.CreatedAt)
+}
+
+func (i Invitation) UpdatedAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(i.invitation.UpdatedAt)
+}
+
+func (i Invitation) Status(ct context.Context) entityv2.InvitationStatus {
+	return i.invitation.Status
+}
+
+func (i Invitation) Code(ct context.Context) string {
+	return i.invitation.Code
+}
+
+func newInvitation(deps *Dependencies, invitation entityv2.Invitation) Invitation {
+	return Invitation{
+		deps:       deps,
+		invitation: invitation,
+	}
 }

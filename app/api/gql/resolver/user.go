@@ -4,251 +4,63 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/pkg/errors"
-	"github.com/teamyapp/cloud/app/ctx"
-	"github.com/teamyapp/teamy-backend/app/entity"
+	"github.com/teamyapp/teamy-backend/app/collect"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type User struct {
 	deps *Dependencies
-	user entity.User
+	user entityv2.User
 }
 
-type UserInput struct {
-	ID         *graphql.ID
-	FirstName  *string
-	LastName   *string
-	ProfileUrl *string
-}
-
-func (u User) ID() graphql.ID {
+func (u User) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(u.user.ID)
 }
 
-func (u User) FirstName() string {
+func (u User) FirstName(ct context.Context) string {
 	return u.user.FirstName
 }
 
-func (u User) LastName() string {
+func (u User) LastName(ct context.Context) string {
 	return u.user.LastName
 }
 
-func (u User) ProfileURL() string {
+func (u User) ProfileURL(ct context.Context) *string {
 	return u.user.ProfileURL
 }
 
-func (u User) ActiveTeam() (*Team, error) {
-	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
-		return t.ID == u.user.ActiveTeamID
-	})
-	if len(teams) == 0 {
-		return nil, nil
-	}
-	gqlTeam := newTeam(u.deps, teams[0])
-	return &gqlTeam, nil
+func (u User) CreatedAt(ct context.Context) graphql.Time {
+	return toGraphQLTime(u.user.CreatedAt)
 }
 
 func (u User) Teams(ct context.Context, args struct {
-	IDs *[]graphql.ID
+	Filter *TeamFilter
 }) ([]Team, error) {
-	var idsMap map[uint64]bool
-	var err error
-
-	// todo: use OrderredSet instead of toIDsMap
-	if args.IDs != nil {
-		idsMap, err = toIDsMap(*args.IDs)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		idsMap = make(map[uint64]bool)
+	ids, err := u.deps.teamMemberDao.FindTeamIDsByUserID(u.user.ID)
+	if err != nil {
+		return nil, err
 	}
 
-	teams := u.deps.Data.FilterTeams(func(t entity.Team) bool {
-		if t.CreatorID != u.user.ID &&
-			!contains(t.MemberIDs, u.user.ID) {
-			return false
-		}
+	if len(ids) < 1 {
+		return []Team{}, nil
+	}
 
-		if args.IDs == nil {
-			return true
-		}
+	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
 
-		_, ok := idsMap[t.ID]
-		return ok
-	})
-	return newTeams(u.deps, teams), nil
+	if args.Filter != nil {
+		teamEntities = collect.Filter(teamEntities, func(team entityv2.Team) bool {
+			return matchTeam(*args.Filter, team)
+		})
+	}
+
+	return collect.Map(teamEntities, func(team entityv2.Team, _ int) Team {
+		return newTeam(u.deps, team)
+	}), nil
 }
 
-func (u User) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
-	q := NewQuery(u.deps)
-	if args.Input != nil {
-		userID := toGraphQLID(u.user.ID)
-		args.Input.CreatorID = &userID
-	}
-	return q.Tasks(args)
-}
-
-func (u User) CreatedAt() graphql.Time {
-	return graphql.Time{Time: u.user.CreatedAt}
-}
-
-func newUser(deps *Dependencies, user entity.User) User {
-	return User{
-		deps: deps,
-		user: user,
-	}
-}
-
-/*
-	Mutation
-*/
-
-func (m Mutation) CreateUser(
-	ct context.Context,
-	args struct {
-		Input struct {
-			FirstName  string
-			LastName   string
-			ProfileURL *string
-		}
-	},
-) (UserUpdate, error) {
-	userID, err := ctx.UserIDFromContext(ct)
-	if err != nil {
-		return UserUpdate{}, err
-	}
-
-	profileURL := ""
-	if args.Input.ProfileURL != nil {
-		profileURL = *args.Input.ProfileURL
-	}
-	user, err := m.deps.Data.CreateUser(entity.User{
-		ID:         userID,
-		FirstName:  args.Input.FirstName,
-		LastName:   args.Input.LastName,
-		ProfileURL: profileURL,
-	})
-	if err != nil {
-		return UserUpdate{}, err
-	}
-	return UserUpdate{deps: m.deps, user: user}, nil
-}
-
-func (m Mutation) User(ct context.Context, args struct{ ID graphql.ID }) (UserUpdate, error) {
-	userID, err := ctx.UserIDFromContext(ct)
-	if err != nil {
-		return UserUpdate{}, err
-	}
-
-	entityID, err := fromGraphQLID(args.ID)
-	if err != nil {
-		return UserUpdate{}, err
-	}
-
-	if userID != entityID {
-		return UserUpdate{},
-			errors.Errorf("the logged in user %v is not allowed to mutate user %v", userID, entityID)
-	}
-
-	user, err := m.deps.Data.GetUser(entityID)
-	if err != nil {
-		return UserUpdate{}, err
-	}
-
-	return UserUpdate{
-		deps: m.deps,
-		user: user,
-	}, nil
-}
-
-type UserUpdate struct {
-	deps *Dependencies
-	user entity.User
-}
-
-func (up UserUpdate) User() User {
-	return newUser(up.deps, up.user)
-}
-
-func (up UserUpdate) UpdateActiveTeam(ct context.Context, args struct {
-	TeamID graphql.ID
-}) (UserUpdate, error) {
-	user, err := up.deps.Data.GetUser(up.user.ID)
-	if err != nil {
-		return UserUpdate{}, err
-	}
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		return UserUpdate{}, err
-	}
-
-	teams := up.deps.Data.FilterTeams(func(t entity.Team) bool { return t.ID == teamID })
-	if len(teams) == 0 {
-		return UserUpdate{}, errors.Errorf("team %v does not exist", teamID)
-	}
-
-	if !teams[0].MemberIDs.Has(up.user.ID) { // if not a team member
-		return UserUpdate{}, errors.Errorf("user %v is not a member of team %v", up.user.ID, teamID)
-	}
-
-	user, err = up.deps.Data.UpdateUser((user.ID), func(u entity.User) entity.User {
-		u.ActiveTeamID = teamID
-		return u
-	})
-	if err != nil {
-		return UserUpdate{}, err
-	}
-
-	up.user = user
-	return up, err
-}
-
-func (up UserUpdate) UpdateUser(
-	ct context.Context,
-	args struct {
-		Input struct {
-			FirstName  *string
-			LastName   *string
-			ProfileUrl *string
-		}
-	},
-) (UserUpdate, error) {
-	user, err := up.deps.Data.UpdateUser(up.user.ID, func(u entity.User) entity.User {
-		if args.Input.LastName != nil {
-			u.LastName = *args.Input.LastName
-		}
-		if args.Input.FirstName != nil {
-			u.FirstName = *args.Input.FirstName
-		}
-		if args.Input.ProfileUrl != nil {
-			u.ProfileURL = *args.Input.ProfileUrl
-		}
-		return u
-	})
-	if err != nil {
-		return UserUpdate{}, err
-	}
-	up.user = user
-	return up, nil
-}
-
-//
-// Deprecated
-//
-func (m Mutation) UpdateActiveTeam(ct context.Context, args struct {
-	TeamID graphql.ID
-}) (User, error) {
-	userID, err := ctx.UserIDFromContext(ct)
-	if err != nil {
-		return User{}, err
-	}
-
-	userUpdate, err := m.User(ct, struct{ ID graphql.ID }{ID: toGraphQLID(userID)})
-	if err != nil {
-		return User{}, err
-	}
-
-	up, err := userUpdate.UpdateActiveTeam(ct, args)
-	return newUser(m.deps, up.user), err
+func newUser(deps *Dependencies, user entityv2.User) User {
+	return User{deps: deps, user: user}
 }

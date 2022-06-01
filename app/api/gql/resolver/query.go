@@ -2,37 +2,15 @@ package resolver
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"sort"
 
-	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/app/ctx"
-	"github.com/teamyapp/teamy-backend/app/entity"
+	"github.com/teamyapp/teamy-backend/app/collect"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type Query struct {
 	deps *Dependencies
-}
-
-func (q Query) Task(args struct {
-	ID graphql.ID
-}) (Task, error) {
-	task, err := q.deps.Data.GetTask(args.ID)
-	if err != nil {
-		return Task{}, err
-	}
-	return newTask(q.deps, task), nil
-}
-
-func (q Query) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
-	tasks := q.deps.Data.FilterTasks(func(t entity.Task) bool {
-		return taskFilterFunc(t, args.Input)
-	})
-	sort.Slice(tasks, func(i, j int) bool {
-		return tasks[i].ID < tasks[j].ID
-	})
-	return newTasks(q.deps, tasks), nil
 }
 
 func (q Query) Me(ct context.Context) (User, error) {
@@ -42,95 +20,70 @@ func (q Query) Me(ct context.Context) (User, error) {
 		return User{}, err
 	}
 
-	user, err := q.deps.Data.GetUser(userID)
-	if err != nil {
-		log.Printf("%+v\n", err)
-		return User{}, err
-	}
+	user, err := q.deps.userDao.FindUserByID(userID)
 	if err != nil {
 		log.Println(err)
 		return User{}, err
 	}
 
-	return newUser(q.deps, user), nil
+	return newUser(q.deps, user), err
 }
 
-// debug only
-func (q Query) Teams(ct context.Context, args struct {
-	IDs *[]graphql.ID
-}) ([]Team, error) {
-	var teams []entity.Team
+func (q Query) Tasks(ct context.Context, args struct {
+	Filter *TaskFilter
+}) ([]Task, error) {
+	tasks, err := q.deps.taskDao.FindAllTasks()
+	if err != nil {
+		return nil, err
+	}
 
-	if args.IDs == nil {
-		teams = q.deps.Data.FilterTeams(func(team entity.Team) bool { return true })
-	} else {
-		idsMap, err := toIDsMap(*args.IDs)
-		if err != nil {
-			return nil, err
-		}
-
-		teams = q.deps.Data.FilterTeams(func(team entity.Team) bool {
-			_, ok := idsMap[team.ID]
-			return ok
+	if args.Filter != nil {
+		tasks = collect.Filter(tasks, func(task entityv2.Task) bool {
+			return matchTask(*args.Filter, task)
 		})
 	}
 
-	return newTeams(q.deps, teams), nil
+	return collect.Map(tasks, func(task entityv2.Task, _ int) Task {
+		return newTask(q.deps, task)
+	}), nil
+}
+
+func (q Query) Teams(ct context.Context, args struct {
+	Filter *TeamFilter
+}) ([]Team, error) {
+	teams, err := q.deps.teamDao.FindAllTeams()
+	if err != nil {
+		return nil, err
+	}
+
+	if args.Filter != nil {
+		teams = collect.Filter(teams, func(team entityv2.Team) bool {
+			return matchTeam(*args.Filter, team)
+		})
+	}
+
+	return collect.Map(teams, func(team entityv2.Team, _ int) Team {
+		return newTeam(q.deps, team)
+	}), nil
 }
 
 func (q Query) Invitations(ct context.Context, args struct {
-	Input struct {
-		ID   *graphql.ID
-		Code *string
-	}
+	Filter *InvitationFilter
 }) ([]Invitation, error) {
-	if args.Input.ID != nil {
-		id, err := fromGraphQLID(*args.Input.ID)
-		if err != nil {
-			return nil, err
-		}
-		invitations := q.deps.Data.FilterInvitations(func(invitation entity.Invitation) bool {
-			return invitation.ID == id
-		})
-		if len(invitations) != 1 {
-			return nil, fmt.Errorf("must find only 1 invitation: id=%v", id)
-		}
-		invitation := invitations[0]
-
-		userID, err := ctx.UserIDFromContext(ct)
-		if err != nil {
-			return nil, err
-		}
-
-		teams := q.deps.Data.FilterTeams(func(team entity.Team) bool {
-			return team.ID == invitation.TeamID && team.CreatorID == userID
-		})
-		if len(teams) != 1 {
-			return nil, fmt.Errorf("must find only 1 team: %v", id)
-		}
-
-		return []Invitation{{deps: q.deps, Invitation: invitation}}, nil
+	invitations, err := q.deps.invitationDao.FindAllInvitations()
+	if err != nil {
+		return nil, err
 	}
 
-	if args.Input.Code != nil {
-		invitations := q.deps.Data.FilterInvitations(func(invitation entity.Invitation) bool {
-			return invitation.Code == *args.Input.Code
+	if args.Filter != nil {
+		invitations = collect.Filter(invitations, func(invitation entityv2.Invitation) bool {
+			return matchInvitation(*args.Filter, invitation)
 		})
-		if len(invitations) != 1 {
-			return nil, fmt.Errorf("must find only 1 invitation: code=%v", args.Input.Code)
-		}
-		return []Invitation{{deps: q.deps, Invitation: invitations[0]}}, nil
 	}
 
-	invitations := q.deps.Data.FilterInvitations(func(invitation entity.Invitation) bool {
-		return true
-	})
-
-	gqlInvitations := make([]Invitation, 0)
-	for _, invitation := range invitations {
-		gqlInvitations = append(gqlInvitations, Invitation{deps: q.deps, Invitation: invitation})
-	}
-	return gqlInvitations, nil
+	return collect.Map(invitations, func(invitation entityv2.Invitation, _ int) Invitation {
+		return newInvitation(q.deps, invitation)
+	}), nil
 }
 
 func NewQuery(deps *Dependencies) Query {

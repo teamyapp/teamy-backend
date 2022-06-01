@@ -1,196 +1,116 @@
 package resolver
 
 import (
-	"fmt"
-	"log"
-	"strconv"
-	"strings"
+	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
-	"github.com/teamyapp/teamy-backend/app/entity"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
+
+var availableActions = map[entityv2.TaskStatus][]entityv2.TaskAction{
+	entityv2.TaskStatusUpcoming: {
+		entityv2.TaskActionStart,
+		entityv2.TaskActionDelete,
+		entityv2.TaskActionAssignOwner,
+	},
+	entityv2.TaskStatusPaused: {
+		entityv2.TaskActionStart,
+		entityv2.TaskActionDelete,
+		entityv2.TaskActionAssignOwner,
+	},
+	entityv2.TaskStatusInProgress: {
+		entityv2.TaskActionMarkComplete,
+		entityv2.TaskActionReportBlocked,
+		entityv2.TaskActionAssignOwner,
+		entityv2.TaskActionDelete,
+	},
+	entityv2.TaskStatusDelivered: {
+		entityv2.TaskActionDelete,
+		entityv2.TaskActionAssignOwner,
+	},
+}
 
 type Task struct {
 	deps *Dependencies
-	task entity.Task
+	task entityv2.Task
 }
 
-type TaskFilter struct {
-	ID        *graphql.ID
-	CreatorID *graphql.ID
-	OwnerID   *graphql.ID
-	Text      *string
-	Status    *entity.TaskStatus
-}
-
-func (t Task) ID() graphql.ID {
+func (t Task) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(t.task.ID)
 }
 
-func (t Task) Goal() string {
+func (t Task) Goal(ct context.Context) string {
 	return t.task.Goal
 }
 
-func (t Task) DueAt() *graphql.Time {
-	return toGraphQLTime(t.task.DueAt)
-}
-
-func (t Task) Context() string {
+func (t Task) Context(ct context.Context) *string {
 	return t.task.Context
 }
 
-func (t Task) Owner() (*User, error) {
-	if t.task.OwnerUserId == nil {
+func (t Task) Creator(ct context.Context) (User, error) {
+	user, err := t.deps.userDao.FindUserByID(t.task.CreatorUserID)
+	if err != nil {
+		return User{}, err
+	}
+
+	return newUser(t.deps, user), nil
+}
+
+func (t Task) Owner(ct context.Context) (*User, error) {
+	if t.task.OwnerUserID == nil {
 		return nil, nil
 	}
 
-	if *t.task.OwnerUserId == 0 {
-		u := newUser(t.deps, entity.GhostUser())
-		return &u, nil
-	}
-
-	user, err := t.deps.Data.GetUser(*t.task.OwnerUserId)
+	owner, err := t.deps.userDao.FindUserByID(*t.task.OwnerUserID)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 
-	gqlUser := newUser(t.deps, user)
+	gqlUser := newUser(t.deps, owner)
 	return &gqlUser, nil
 }
-func (t Task) OwnedByTeam() (*Team, error) {
-	teams := t.deps.Data.FilterTeams(func(team entity.Team) bool {
-		return t.task.OwnedByTeam == team.ID
-	})
-	if len(teams) == 0 {
-		return nil, nil
-	}
-	team := newTeam(t.deps, teams[0])
-	return &team, nil
-}
-func (t Task) Creator() (User, error) {
-	rs := t.deps.Data.FilterCreationRelation(func(cr datastore.CreationRelation) bool {
-		return toGraphQLID(t.task.ID) == cr.TaskID
-	})
-	if len(rs) == 0 {
-		return User{}, fmt.Errorf("this task %v has no creator recorded", t.task.ID)
-	}
-	id, err := strconv.Atoi(string(rs[0].UserID))
+
+func (t Task) OwningTeam(ct context.Context) (*Team, error) {
+	team, err := t.deps.teamDao.FindTeamByID(t.task.OwningTeamID)
 	if err != nil {
-		return User{}, err
+		return nil, err
 	}
 
-	user, err := t.deps.Data.GetUser(uint64(id))
-	if err != nil {
-		log.Println(err)
-		return User{}, err
-	}
-
-	gqlUser := newUser(t.deps, user)
-	return gqlUser, nil
+	gqlTeam := newTeam(t.deps, team)
+	return &gqlTeam, nil
 }
 
-func (t Task) WorkScope() Option {
-	panic("not implemented")
+func (t Task) Status(ct context.Context) entityv2.TaskStatus {
+	return t.task.Status
 }
 
-// func (t Task) Effort() *int32 {
-// 	return toGraphQLInt(t.task.Effort)
-// }
-
-func (t Task) DependsOn() []Task {
-	panic("not implemented")
+func (t Task) Comments(ct context.Context) Thread {
+	return newThread(t.deps, t.task.CommentsThreadID)
 }
 
-// func (t Task) NumOfUnknowns() *int32 {
-// 	return toGraphQLInt(t.task.NumOfUnknowns)
-// }
+func (t Task) CreatedAt(ct context.Context) graphql.Time {
+	return toGraphQLTime(t.task.CreatedAt)
+}
 
-func (t Task) AvailableActions() []entity.TaskAction {
+func (t Task) UpdatedAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(t.task.UpdatedAt)
+}
+
+func (t Task) DueAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(t.task.DueAt)
+}
+
+func (t Task) Effort(ct context.Context) *int32 {
+	return int32PtrFromIntPtr(t.task.Effort)
+}
+
+func (t Task) AvailableActions(ct context.Context) []entityv2.TaskAction {
 	return availableActions[t.task.Status]
 }
 
-func (t Task) AvailableWorkScopes() []Option {
-	panic("not implemented")
-}
-
-func (t Task) LifetimeEvents() []LifetimeEvent {
-	events := t.deps.Data.FilterLifetimeEvents(func(e datastore.LifetimeEvent) bool {
-		return e.EventType.Creation.TaskID == toGraphQLID(t.task.ID)
-	})
-	return LifetimeEvents(events)
-}
-
-func (t Task) Mentions() ([]Mention, error) {
-	return ParseMentions(t.Context()), nil
-}
-
-func (t Task) Comments() []Comment {
-	cs := t.deps.Data.FilterComments(func(c entity.Comment) bool {
-		return c.TaskID == toGraphQLID(t.task.ID)
-	})
-	return Comments(t.deps, cs)
-}
-
-func (t Task) Status() (entity.TaskStatus, error) {
-	// TODO: add status to task
-	return t.task.Status, nil
-}
-
-func (t Task) CreatedAt() graphql.Time {
-	return graphql.Time{Time: t.task.CreatedAt}
-}
-
-func newTask(deps *Dependencies, task entity.Task) Task {
+func newTask(deps *Dependencies, task entityv2.Task) Task {
 	return Task{
 		deps: deps,
 		task: task,
 	}
-}
-
-func newTasks(deps *Dependencies, tasks []entity.Task) (ts []Task) {
-	for _, t := range tasks {
-		ts = append(ts, newTask(deps, t))
-	}
-	return
-}
-
-func taskFilterFunc(t entity.Task, input *TaskFilter) bool {
-	if input == nil {
-		return true
-	}
-	// filter by Creator
-	matchCreator := true
-	if input.CreatorID != nil {
-		creatorID := *input.CreatorID
-		matchCreator = t.CreatorID == creatorID
-	}
-	// filter by Owner
-	matchOwner := true
-	if input.OwnerID != nil && t.OwnerUserId != nil {
-		ownerID := *input.OwnerID
-		id, err := fromGraphQLID(ownerID)
-		if err != nil {
-			return false
-		}
-		matchOwner = (*t.OwnerUserId) == id
-	}
-	// filter by status
-	matchStatus := true
-	if input.Status != nil {
-		status := *(input.Status)
-		matchStatus = t.Status == status
-	}
-	// full text search
-	// todo: need to implement a better full text search
-	// by using the full-text search engine in postgres
-	matchText := true
-	if input.Text != nil {
-		text := *(input.Text)
-		matchGoal := strings.Contains(t.Goal, text)
-		matchContext := strings.Contains(t.Context, text)
-		matchText = matchGoal || matchContext
-	}
-	return matchCreator && matchStatus && matchText && matchOwner
 }

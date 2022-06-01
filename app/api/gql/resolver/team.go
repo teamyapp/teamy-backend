@@ -2,112 +2,108 @@ package resolver
 
 import (
 	"context"
-	"fmt"
-	"sort"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/app/ctx"
-	"github.com/teamyapp/teamy-backend/app/entity"
+	"github.com/teamyapp/teamy-backend/app/collect"
+	"github.com/teamyapp/teamy-backend/app/entityv2"
 )
 
 type Team struct {
 	deps *Dependencies
-	entity.Team
+	team entityv2.Team
 }
 
-func (t Team) CreatedAt() graphql.Time {
-	return graphql.Time{Time: t.Team.CreatedAt}
+func (t Team) ID(ct context.Context) graphql.ID {
+	return toGraphQLID(t.team.ID)
 }
 
-func (t Team) ID() graphql.ID {
-	return toGraphQLID(t.Team.ID)
+func (t Team) Name(ct context.Context) string {
+	return t.team.Name
 }
 
-func (t Team) Members() ([]User, error) {
-	members, err := t.deps.Data.GetUsers(t.Team.MemberIDs)
-	return toGraphQLUsers(t.deps, members), err
+func (t Team) IconURL(ct context.Context) *string {
+	return t.team.IconURL
 }
 
-func (t Team) Tasks(args struct{ Input *TaskFilter }) ([]Task, error) {
-	tasks := t.deps.Data.FilterTasks(func(task entity.Task) bool {
-		for _, taskID := range t.Team.Tasks {
-			if task.ID == taskID {
-				return taskFilterFunc(task, args.Input)
-			}
-		}
-		return false
-	})
-	sort.Slice(tasks, func(i, j int) bool {
-		return tasks[i].ID < tasks[j].ID
-	})
-	return newTasks(t.deps, tasks), nil
+func (t Team) CreatedAt(ct context.Context) graphql.Time {
+	return toGraphQLTime(t.team.CreatedAt)
 }
 
-func (t Team) Creator() (User, error) {
-	fmt.Println(t.Team.CreatorID)
-	user, err := t.deps.Data.GetUser(t.Team.CreatorID)
-	return newUser(t.deps, user), err
-}
-func (t Team) Owner() (User, error) {
-	user, err := t.deps.Data.GetUser(t.Team.CreatorID)
-	return newUser(t.deps, user), err
-}
-func (t Team) Admins() ([]User, error) {
-	user, err := t.deps.Data.GetUser(t.Team.CreatorID)
-	return []User{newUser(t.deps, user)}, err
+func (t Team) Creator(ct context.Context) (User, error) {
+	user, err := t.deps.userDao.FindUserByID(t.team.CreatorUserID)
+	if err != nil {
+		return User{}, nil
+	}
+
+	return newUser(t.deps, user), nil
 }
 
-func (t Team) TasksNeedAttention(ct context.Context, args struct{ IsMine bool }) ([]Task, error) {
-	userID, err := ctx.UserIDFromContext(ct)
+func (t Team) Owner(ct context.Context) (User, error) {
+	user, err := t.deps.userDao.FindUserByID(t.team.OwnerUserID)
+	if err != nil {
+		return User{}, nil
+	}
+
+	return newUser(t.deps, user), nil
+}
+
+func (t Team) Members(ct context.Context) ([]User, error) {
+	teamMemberIDs, err := t.deps.teamMemberDao.FindTeamMemberIDsByTeamID(t.team.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	// ideally prefer not to have data corruption
-	tasks := t.deps.Data.FilterTasks(func(task entity.Task) bool {
-		for ownerID, taskID := range t.NeedAttentionTasks {
-			if taskID == task.ID && task.Status == entity.TaskStatusInProgress {
-				if args.IsMine {
-					if task.OwnerUserId == nil {
-						return false
-					} else {
-						return ownerID == userID && userID == *task.OwnerUserId
-					}
-				} else {
-					return true
-				}
-			}
-		}
-		return false
-	})
-	return newTasks(t.deps, tasks), nil
+	userEntities, err := t.deps.userDao.FindUsersByIDs(teamMemberIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return collect.Map(userEntities, func(userEntity entityv2.User, _ int) User {
+		return newUser(t.deps, userEntity)
+	}), nil
 }
 
-func (t Team) Invitations() []Invitation {
-	invitations := t.deps.Data.FilterInvitations(func(invitation entity.Invitation) bool {
-		return t.InvitationIDs.Has(invitation.ID)
-	})
+func (t Team) Tasks(ct context.Context, args struct {
+	Filter *TaskFilter
+}) ([]Task, error) {
+	tasks, err := t.deps.taskDao.FindTasksByTeamID(t.team.ID)
+	if err != nil {
+		return nil, err
+	}
 
-	gqlInvitations := make([]Invitation, 0)
-	for _, invitation := range invitations {
-		gqlInvitations = append(gqlInvitations, Invitation{
-			deps:       t.deps,
-			Invitation: invitation,
+	if args.Filter != nil {
+		tasks = collect.Filter(tasks, func(task entityv2.Task) bool {
+			return matchTask(*args.Filter, task)
 		})
 	}
-	return gqlInvitations
+
+	return collect.Map(tasks, func(task entityv2.Task, _ int) Task {
+		return newTask(t.deps, task)
+	}), nil
 }
 
-func newTeam(deps *Dependencies, team entity.Team) Team {
+func (t Team) Invitations(ct context.Context, args struct {
+	Filter *InvitationFilter
+}) ([]Invitation, error) {
+	invitationEntities, err := t.deps.invitationDao.FindInvitationsByTeamID(t.team.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if args.Filter != nil {
+		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entityv2.Invitation) bool {
+			return matchInvitation(*args.Filter, invitationEntity)
+		})
+	}
+
+	return collect.Map(invitationEntities, func(invitationEntity entityv2.Invitation, _ int) Invitation {
+		return newInvitation(t.deps, invitationEntity)
+	}), nil
+}
+
+func newTeam(deps *Dependencies, team entityv2.Team) Team {
 	return Team{
 		deps: deps,
-		Team: team,
+		team: team,
 	}
-}
-
-func newTeams(deps *Dependencies, teams []entity.Team) (ts []Team) {
-	for _, t := range teams {
-		ts = append(ts, newTeam(deps, t))
-	}
-	return
 }
