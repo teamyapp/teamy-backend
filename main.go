@@ -9,7 +9,6 @@ import (
 
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/app/api/gql"
-	"github.com/teamyapp/teamy-backend/app/api/gqlv2"
 	"github.com/teamyapp/teamy-backend/app/config"
 	"github.com/teamyapp/teamy-backend/app/dep"
 )
@@ -44,12 +43,6 @@ func main() {
 			defer wg.Done()
 			StartGraphQLServer(cfg, sqlDB)
 		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			StartGraphQLV2Server(cfg, sqlDB)
-		}()
 		wg.Wait()
 		return nil
 	})
@@ -61,18 +54,7 @@ func main() {
 }
 
 func StartGraphQLServer(cfg config.Config, sqlDB *sql.DB) {
-	gqlResolver := dep.InitGraphQLResolver(sqlDB)
-	server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.GraphQLAPIPort)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIPort)
-	panic(server.ListenAndServe())
-}
-
-func StartGraphQLV2Server(cfg config.Config, sqlDB *sql.DB) {
-	gqlV2Resolver, err := dep.InitGraphQLV2Resolver(
+	gqlResolver, err := dep.InitGraphQLResolver(
 		sqlDB,
 		dep.CloudAPIHost(cfg.CloudAPIHost),
 		dep.CloudAPIPort(cfg.CloudAPIPort),
@@ -81,11 +63,11 @@ func StartGraphQLV2Server(cfg config.Config, sqlDB *sql.DB) {
 		panic(err)
 	}
 
-	server, err := gqlv2.NewServer(cfg.IdentityAPIEndpoint, gqlV2Resolver, cfg.GraphQLAPIV2Port)
+	server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.GraphQLAPIV2Port)
 	if err != nil {
 		panic(err)
 	}
 
-	log.Printf("GraphQL V2 server started at %d\n", cfg.GraphQLAPIV2Port)
+	log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIV2Port)
 	panic(server.ListenAndServe())
 }

@@ -1,28 +1,39 @@
 package resolver
 
 import (
-	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
-	"github.com/teamyapp/teamy-backend/app/repo"
-	"github.com/teamyapp/teamy-backend/app/service"
+	"github.com/teamyapp/cloud/app/api/rpc"
+	"github.com/teamyapp/teamy-backend/app/dao"
 )
 
 type Dependencies struct {
-	// taskRepo              repo.Task
-	teamRepo              repo.Team
-	prioritizationService service.Prioritization
-	Data                  *datastore.DataStore
+	userDao        dao.User
+	teamDao        dao.Team
+	teamMemberDao  dao.TeamMember
+	invitationDao  dao.Invitation
+	taskDao        dao.Task
+	threadDao      dao.Thread
+	messageDao     dao.Message
+	cloudAPIClient *rpc.CloudAPIClient
 }
 
 func NewDependencies(
-	// taskRepo repo.Task,
-	teamRepo repo.Team,
-	prioritizationService service.Prioritization,
-	data *datastore.DataStore,
+	userDao dao.User,
+	teamDao dao.Team,
+	teamMemberDao dao.TeamMember,
+	invitationDao dao.Invitation,
+	taskDao dao.Task,
+	threadDao dao.Thread,
+	messageDao dao.Message,
+	cloudAPIClient *rpc.CloudAPIClient,
 ) *Dependencies {
 	return &Dependencies{
-		// taskRepo:              taskRepo,
-		teamRepo:              teamRepo,
-		prioritizationService: prioritizationService,
-		Data:                  data,
+		userDao:        userDao,
+		teamDao:        teamDao,
+		teamMemberDao:  teamMemberDao,
+		invitationDao:  invitationDao,
+		taskDao:        taskDao,
+		threadDao:      threadDao,
+		messageDao:     messageDao,
+		cloudAPIClient: cloudAPIClient,
 	}
 }

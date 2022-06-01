@@ -1,83 +1,34 @@
 package resolver
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/opentracing/opentracing-go/log"
-	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
-// var gqlTaskActionMap = map[entity.TaskAction]TaskAction{
-// 	entity.TaskActionStart:         TaskActionStart,
-// 	entity.TaskActionDelete:        TaskActionDelete,
-// 	entity.TaskActionAssignOwner:   TaskActionAssignOwner,
-// 	entity.TaskActionReportBlocked: TaskActionReportBlocked,
-// 	entity.TaskActionMarkComplete:  TaskActionMarkComplete,
-// }
-
-func toGraphQLTasks(deps *Dependencies, tasks []entity.Task) []Task {
-	gqlTasks := make([]Task, 0)
-	for _, task := range tasks {
-		gqlTasks = append(gqlTasks, newTask(deps, task))
-	}
-	return gqlTasks
-}
-
-func toGraphQLInt(num *int) *int32 {
-	if num == nil {
-		return nil
-	}
-	gqlInt := int32(*num)
-	return &gqlInt
-}
-
 func toGraphQLID(id uint64) graphql.ID {
-	return graphql.ID(fmt.Sprintf("%d", id))
+	return graphql.ID(strconv.FormatUint(id, 10))
 }
 
-func toGraphQLIDs(ids []uint64) []graphql.ID {
-	graphqlIDs := make([]graphql.ID, 0)
-	for _, id := range ids {
-		graphqlIDs = append(graphqlIDs, toGraphQLID(id))
-	}
-	return graphqlIDs
+func toGraphQLTime(tm time.Time) graphql.Time {
+	return graphql.Time{Time: tm}
 }
 
-func toGraphQLTime(time *time.Time) *graphql.Time {
-	if time == nil {
-		return nil
-	}
-	return &graphql.Time{Time: *time}
-}
-
-// func toGraphQLTaskActions(taskActions []entity.TaskAction) []TaskAction {
-// 	actions := make([]TaskAction, 0)
-// 	for _, action := range taskActions {
-// 		actions = append(actions, gqlTaskActionMap[action])
-// 	}
-// 	return actions
-// }
-
-func toGraphQLUsers(deps *Dependencies, users []entity.User) []User {
-	if users == nil {
+func toGraphQLTimePtr(tm *time.Time) *graphql.Time {
+	if tm == nil {
 		return nil
 	}
 
-	gqlUsers := make([]User, 0)
-	for _, user := range users {
-		gqlUsers = append(gqlUsers, newUser(deps, user))
-	}
-	return gqlUsers
+	return &graphql.Time{Time: *tm}
 }
 
-func fromGraphQLTime(graphqlTime *graphql.Time) *time.Time {
-	if graphqlTime == nil {
+func fromGraphQLTimePtr(tm *graphql.Time) *time.Time {
+	if tm == nil {
 		return nil
 	}
-	return &graphqlTime.Time
+
+	return &tm.Time
 }
 
 func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
@@ -87,79 +38,30 @@ func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 
 	id, err := fromGraphQLID(*graphqlID)
 	if err != nil {
-		log.Error(err)
+		return nil, err
 	}
+
 	return &id, err
 }
 
-func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
-	id, err := strconv.Atoi(string(graphqlID))
-	if err != nil {
-		log.Error(err)
-	}
-	return (uint64)(id), err
-}
-
-func fromGraphQLIDsPtr(graphqlIDs *[]graphql.ID) ([]uint64, error) {
-	if graphqlIDs == nil || len(*graphqlIDs) == 0 {
-		return nil, nil
-	}
-	return fromGraphQLIDs(*graphqlIDs)
-}
-
-func fromGraphQLIDs(graphqlIDs []graphql.ID) ([]uint64, error) {
-	ids := make([]uint64, 0)
-	for _, graphqlID := range graphqlIDs {
-		id, err := fromGraphQLID(graphqlID)
-		if err != nil {
-			return ids, err
-		}
-		ids = append(ids, id)
-	}
-
-	return ids, nil
-}
-
-func fromInt32(num *int32) *int {
+func intPtrFromIntPtr(num *int32) *int {
 	if num == nil {
 		return nil
 	}
-	intNum := int(*num)
-	return &intNum
+
+	newNum := int(*num)
+	return &newNum
 }
 
-func fromGraphQLTaskInput(taskInput TaskInput) (entity.Task, error) {
-	goal := ""
-	if taskInput.Goal != nil {
-		goal = *taskInput.Goal
+func int32PtrFromIntPtr(num *int) *int32 {
+	if num == nil {
+		return nil
 	}
 
-	ownerId, err := fromGraphQLIDPtr(taskInput.OwnerUserID)
-	if err != nil {
-		log.Error(err)
-		return entity.Task{}, err
-	}
-	context := ""
-	if taskInput.Context != nil {
-		context = *taskInput.Context
-	}
-	task := entity.Task{
-		Goal:        goal,
-		DueAt:       fromGraphQLTime(taskInput.DueAt),
-		Context:     context,
-		OwnerUserId: ownerId,
-	}
-	return task, nil
+	newNum := int32(*num)
+	return &newNum
 }
 
-func toIDsMap(gqlIDs []graphql.ID) (map[uint64]bool, error) {
-	ids, err := fromGraphQLIDs(gqlIDs)
-	if err != nil {
-		return nil, err
-	}
-	idsMap := make(map[uint64]bool)
-	for _, id := range ids {
-		idsMap[id] = true
-	}
-	return idsMap, nil
+func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
+	return strconv.ParseUint(string(graphqlID), 10, 64)
 }

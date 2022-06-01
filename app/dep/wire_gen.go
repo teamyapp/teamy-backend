@@ -11,28 +11,14 @@ import (
 
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api/rpc"
-	"github.com/teamyapp/teamy-backend/app/api/gql/datastore"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
-	resolver2 "github.com/teamyapp/teamy-backend/app/api/gqlv2/resolver"
 	"github.com/teamyapp/teamy-backend/app/dao"
 	"github.com/teamyapp/teamy-backend/app/dao/sqldb"
-	"github.com/teamyapp/teamy-backend/app/repo"
-	"github.com/teamyapp/teamy-backend/app/service"
 )
 
 // Injectors from wire.go:
 
-func InitGraphQLResolver(sqlDB *sql.DB) resolver.Resolver {
-	sqlTeam := repo.NewSQLTeam(sqlDB)
-	prioritization := service.NewPrioritization()
-	postgresPersister := datastore.NewPostgresPersister(sqlDB)
-	dataStore := datastore.NewDataStore(postgresPersister)
-	dependencies := resolver.NewDependencies(sqlTeam, prioritization, dataStore)
-	resolverResolver := resolver.NewResolver(dependencies)
-	return resolverResolver
-}
-
-func InitGraphQLV2Resolver(sqlDB *sql.DB, cloudAPIHost CloudAPIHost, cloudAPIPort CloudAPIPort, cloudAPIShouldEncrypt CloudAPIShouldEncrypt) (resolver2.Resolver, error) {
+func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIHost CloudAPIHost, cloudAPIPort CloudAPIPort, cloudAPIShouldEncrypt CloudAPIShouldEncrypt) (resolver.Resolver, error) {
 	user := sqldb.NewUser(sqlDB)
 	team := sqldb.NewTeam(sqlDB)
 	teamMember := sqldb.NewTeamMember(sqlDB)
@@ -42,16 +28,14 @@ func InitGraphQLV2Resolver(sqlDB *sql.DB, cloudAPIHost CloudAPIHost, cloudAPIPor
 	message := sqldb.NewMessage(sqlDB)
 	cloudAPIClient, err := newClientAPIClient(cloudAPIHost, cloudAPIPort, cloudAPIShouldEncrypt)
 	if err != nil {
-		return resolver2.Resolver{}, err
+		return resolver.Resolver{}, err
 	}
-	dependencies := resolver2.NewDependencies(user, team, teamMember, invitation, task, thread, message, cloudAPIClient)
-	resolverResolver := resolver2.NewResolver(dependencies)
+	dependencies := resolver.NewDependencies(user, team, teamMember, invitation, task, thread, message, cloudAPIClient)
+	resolverResolver := resolver.NewResolver(dependencies)
 	return resolverResolver, nil
 }
 
 // wire.go:
-
-var repoSet = wire.NewSet(wire.Bind(new(repo.Team), new(repo.SQLTeam)), wire.Bind(new(repo.Task), new(repo.SQLTask)), wire.Bind(new(repo.User), new(repo.SQLUser)), repo.NewSQLTeam, repo.NewSQLTask, repo.NewSQLUser)
 
 var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread)
 

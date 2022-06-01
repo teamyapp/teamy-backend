@@ -3,19 +3,18 @@ package gql
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/graph-gophers/graphql-go"
+	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/teamyapp/cloud/app/middleware"
-	"github.com/teamyapp/teamy-backend/app/api/gql/operations"
 	"github.com/teamyapp/teamy-backend/app/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/app/log"
 )
 
-//go:embed schema.graphqls
+//go:embed schema.graphql
 var rawSchema string
 
 //go:embed GraphQLIDE.html
@@ -29,7 +28,8 @@ func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (htt
 		return http.Server{}, err
 	}
 
-	handler := middleware.WithIdentity(identityAPIEndpoint, &Handler{Schema: schema})
+	relayHandler := relay.Handler{Schema: schema}
+	handler := middleware.WithIdentity(identityAPIEndpoint, logRequest(relayHandler.ServeHTTP))
 	mux := http.ServeMux{}
 	mux.HandleFunc("/graphql", requestID(enableCORS(handler.ServeHTTP)))
 	addr := fmt.Sprintf(":%d", port)
@@ -64,53 +64,16 @@ func requestID(handlerFunc http.HandlerFunc) http.HandlerFunc {
 			reqIDStr := reqID.String()
 			ctx := request.Context()
 			ctx = context.WithValue(ctx, requestIDKey, reqIDStr)
-			log.Info(ctx, "new request")
 			newRequest := request.WithContext(ctx)
 			handlerFunc(writer, newRequest)
 		}
 	}
 }
 
-type Handler struct {
-	Schema *graphql.Schema
-}
-
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(graphIDEHTML)
-		return
+func logRequest(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		ctx := request.Context()
+		log.Info(ctx, "new request")
+		handlerFunc(writer, request)
 	}
-	var params struct {
-		Query         string                 `json:"query"`
-		OperationName string                 `json:"operationName"`
-		Variables     map[string]interface{} `json:"variables"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// handle server stored queries
-	// Execute custom queries if specified
-	if params.Query == "" {
-		params.Query = operations.Operations()
-	}
-
-	ctx := r.Context()
-	log.Info(ctx, "begin GraphQL", params.Query)
-	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
-	if response.Extensions == nil {
-		response.Extensions = make(map[string]interface{})
-	}
-	response.Extensions["request-id"] = ctx.Value(requestIDKey)
-	log.Info(ctx, "end GraphQL")
-	responseJSON, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(responseJSON)
 }

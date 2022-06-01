@@ -6,8 +6,6 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.2.0
-	github.com/opentracing/opentracing-go v1.2.0
-	github.com/pkg/errors v0.9.1
 	github.com/teamyapp/cloud v0.0.0-20220519073334-a938c55555c7
 )
 
@@ -19,6 +17,7 @@ require (
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/lib/pq v1.10.5 // indirect
+	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/rubenv/sql-migrate v1.1.1 // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
