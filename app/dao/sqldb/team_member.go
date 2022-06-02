@@ -2,6 +2,7 @@ package sqldb
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"time"
 
@@ -74,6 +75,24 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 	}
 
 	return teamMemberIDs, err
+}
+
+func (t TeamMember) HasTeamMember(teamID uint64, userID uint64) (bool, error) {
+	statement := `
+	SELECT
+		*
+	FROM team_member
+	WHERE team_id = $1 AND user_id = $2;
+`
+	row := t.db.QueryRow(statement, int64(teamID), int64(userID))
+	err := row.Err()
+	if errors.Is(sql.ErrNoRows, err) {
+		return false, nil
+	} else if err == nil {
+		return true, nil
+	} else {
+		return false, err
+	}
 }
 
 func (t TeamMember) CreateTeamMember(teamID uint64, userID uint64) error {
