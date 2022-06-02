@@ -684,9 +684,16 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	err = m.deps.teamMemberDao.CreateTeamMember(invitation.TeamID, receiverUserID)
+	hasMember, err := m.deps.teamMemberDao.HasTeamMember(invitation.TeamID, receiverUserID)
 	if err != nil {
 		return Invitation{}, err
+	}
+
+	if !hasMember {
+		err = m.deps.teamMemberDao.CreateTeamMember(invitation.TeamID, receiverUserID)
+		if err != nil {
+			return Invitation{}, err
+		}
 	}
 
 	return newInvitation(m.deps, invitation), nil
