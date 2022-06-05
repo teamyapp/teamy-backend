@@ -3,7 +3,7 @@ package resolver
 import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/collect"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Thread struct {
@@ -21,7 +21,7 @@ func (t Thread) Messages() ([]Message, error) {
 		return nil, err
 	}
 
-	return collect.Map(messages, func(message entityv2.Message, _ int) Message {
+	return collect.Map(messages, func(message entity.Message, _ int) Message {
 		return newMessage(t.deps, message)
 	}), nil
 }

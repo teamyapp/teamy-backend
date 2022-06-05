@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Team struct {
@@ -15,7 +15,7 @@ type Team struct {
 
 var _ dao.Team = (*Team)(nil)
 
-func (t Team) FindAllTeams() ([]entityv2.Team, error) {
+func (t Team) FindAllTeams() ([]entity.Team, error) {
 	statement := `
 	SELECT
 		id,
@@ -34,9 +34,9 @@ func (t Team) FindAllTeams() ([]entityv2.Team, error) {
 	}
 	defer rows.Close()
 
-	teams := make([]entityv2.Team, 0)
+	teams := make([]entity.Team, 0)
 	for rows.Next() {
-		team := entityv2.Team{}
+		team := entity.Team{}
 		err = rows.Scan(
 			&team.ID,
 			&team.Name,
@@ -57,7 +57,7 @@ func (t Team) FindAllTeams() ([]entityv2.Team, error) {
 	return teams, err
 }
 
-func (t Team) FindTeamByID(teamID uint64) (entityv2.Team, error) {
+func (t Team) FindTeamByID(teamID uint64) (entity.Team, error) {
 	statement := `
 	SELECT
 		id,
@@ -70,7 +70,7 @@ func (t Team) FindTeamByID(teamID uint64) (entityv2.Team, error) {
 	FROM team
 	WHERE id = $1;
 `
-	team := entityv2.Team{}
+	team := entity.Team{}
 	err := t.db.QueryRow(statement, teamID).
 		Scan(
 			&team.ID,
@@ -88,7 +88,7 @@ func (t Team) FindTeamByID(teamID uint64) (entityv2.Team, error) {
 	return team, err
 }
 
-func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error) {
+func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
 	idsString := toIDsString(teamIDs)
 	query := fmt.Sprintf(`
 	SELECT
@@ -108,9 +108,9 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error) {
 	}
 
 	defer rows.Close()
-	var teams []entityv2.Team
+	var teams []entity.Team
 	for rows.Next() {
-		var team entityv2.Team
+		var team entity.Team
 		err = rows.
 			Scan(
 				&team.ID,
@@ -132,7 +132,7 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entityv2.Team, error) {
 	return teams, nil
 }
 
-func (t Team) CreateTeam(team entityv2.Team) error {
+func (t Team) CreateTeam(team entity.Team) error {
 	_, err := t.db.Exec(`
 		INSERT INTO team
 		    (
@@ -152,7 +152,7 @@ func (t Team) CreateTeam(team entityv2.Team) error {
 	return err
 }
 
-func (t Team) UpdateTeam(team entityv2.Team) error {
+func (t Team) UpdateTeam(team entity.Team) error {
 	_, err := t.db.Exec(`
 		UPDATE team
 		SET

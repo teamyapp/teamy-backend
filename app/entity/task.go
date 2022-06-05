@@ -2,24 +2,19 @@ package entity
 
 import (
 	"time"
-
-	"github.com/graph-gophers/graphql-go"
 )
 
 type Task struct {
-	ID          uint64
-	CreatedAt   time.Time
-	UpdatedAt   *time.Time
-	Goal        string
-	DueAt       *time.Time
-	Context     string
-	CreatorID   graphql.ID
-	OwnerUserId *uint64
-	OwnedByTeam uint64
-	// WorkScopeIndex   *int
-	// Effort           *int
-	// DependsOnTaskIDs []uint64
-	// NumOfUnknowns    *int
-	AvailableActions []TaskAction
+	ID               uint64
+	Goal             string
+	DueAt            *time.Time
+	Context          *string
+	CreatorUserID    uint64
+	OwnerUserID      *uint64
+	OwningTeamID     uint64
 	Status           TaskStatus
+	Effort           *int
+	CommentsThreadID uint64
+	CreatedAt        time.Time
+	UpdatedAt        *time.Time
 }

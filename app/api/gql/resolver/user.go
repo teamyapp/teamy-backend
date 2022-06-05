@@ -5,12 +5,12 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/collect"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type User struct {
 	deps *Dependencies
-	user entityv2.User
+	user entity.User
 }
 
 func (u User) ID(ct context.Context) graphql.ID {
@@ -51,16 +51,16 @@ func (u User) Teams(ct context.Context, args struct {
 	}
 
 	if args.Filter != nil {
-		teamEntities = collect.Filter(teamEntities, func(team entityv2.Team) bool {
+		teamEntities = collect.Filter(teamEntities, func(team entity.Team) bool {
 			return matchTeam(*args.Filter, team)
 		})
 	}
 
-	return collect.Map(teamEntities, func(team entityv2.Team, _ int) Team {
+	return collect.Map(teamEntities, func(team entity.Team, _ int) Team {
 		return newTeam(u.deps, team)
 	}), nil
 }
 
-func newUser(deps *Dependencies, user entityv2.User) User {
+func newUser(deps *Dependencies, user entity.User) User {
 	return User{deps: deps, user: user}
 }

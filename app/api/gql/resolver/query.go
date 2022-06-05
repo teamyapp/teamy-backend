@@ -6,7 +6,7 @@ import (
 
 	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/collect"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Query struct {
@@ -38,12 +38,12 @@ func (q Query) Tasks(ct context.Context, args struct {
 	}
 
 	if args.Filter != nil {
-		tasks = collect.Filter(tasks, func(task entityv2.Task) bool {
+		tasks = collect.Filter(tasks, func(task entity.Task) bool {
 			return matchTask(*args.Filter, task)
 		})
 	}
 
-	return collect.Map(tasks, func(task entityv2.Task, _ int) Task {
+	return collect.Map(tasks, func(task entity.Task, _ int) Task {
 		return newTask(q.deps, task)
 	}), nil
 }
@@ -57,12 +57,12 @@ func (q Query) Teams(ct context.Context, args struct {
 	}
 
 	if args.Filter != nil {
-		teams = collect.Filter(teams, func(team entityv2.Team) bool {
+		teams = collect.Filter(teams, func(team entity.Team) bool {
 			return matchTeam(*args.Filter, team)
 		})
 	}
 
-	return collect.Map(teams, func(team entityv2.Team, _ int) Team {
+	return collect.Map(teams, func(team entity.Team, _ int) Team {
 		return newTeam(q.deps, team)
 	}), nil
 }
@@ -76,12 +76,12 @@ func (q Query) Invitations(ct context.Context, args struct {
 	}
 
 	if args.Filter != nil {
-		invitations = collect.Filter(invitations, func(invitation entityv2.Invitation) bool {
+		invitations = collect.Filter(invitations, func(invitation entity.Invitation) bool {
 			return matchInvitation(*args.Filter, invitation)
 		})
 	}
 
-	return collect.Map(invitations, func(invitation entityv2.Invitation, _ int) Invitation {
+	return collect.Map(invitations, func(invitation entity.Invitation, _ int) Invitation {
 		return newInvitation(q.deps, invitation)
 	}), nil
 }

@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Invitation struct {
@@ -16,7 +16,7 @@ type Invitation struct {
 
 var _ dao.Invitation = (*Invitation)(nil)
 
-func (i Invitation) FindInvitationByID(invitationID uint64) (entityv2.Invitation, error) {
+func (i Invitation) FindInvitationByID(invitationID uint64) (entity.Invitation, error) {
 	statement := `
 	SELECT
 		id,
@@ -34,7 +34,7 @@ func (i Invitation) FindInvitationByID(invitationID uint64) (entityv2.Invitation
 	FROM invitation
 	WHERE id = $1;
 `
-	invitation := entityv2.Invitation{}
+	invitation := entity.Invitation{}
 	err := i.db.QueryRow(statement, invitationID).
 		Scan(
 			&invitation.ID,
@@ -52,14 +52,14 @@ func (i Invitation) FindInvitationByID(invitationID uint64) (entityv2.Invitation
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entityv2.Invitation{}, dao.ErrNotFound(fmt.Sprintf(
+		return entity.Invitation{}, dao.ErrNotFound(fmt.Sprintf(
 			"invitation not found: id=%v", invitationID))
 	}
 
 	return invitation, err
 }
 
-func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entityv2.Invitation, error) {
+func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation, error) {
 	statement := `
 	SELECT
 		id,
@@ -84,9 +84,9 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entityv2.Invitatio
 	}
 	defer rows.Close()
 
-	invitations := make([]entityv2.Invitation, 0)
+	invitations := make([]entity.Invitation, 0)
 	for rows.Next() {
-		invitation := entityv2.Invitation{}
+		invitation := entity.Invitation{}
 		err = rows.Scan(
 			&invitation.ID,
 			&invitation.SenderUserID,
@@ -112,7 +112,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entityv2.Invitatio
 	return invitations, err
 }
 
-func (i Invitation) FindAllInvitations() ([]entityv2.Invitation, error) {
+func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
 	statement := `
 	SELECT
 		id,
@@ -136,9 +136,9 @@ func (i Invitation) FindAllInvitations() ([]entityv2.Invitation, error) {
 	}
 	defer rows.Close()
 
-	invitations := make([]entityv2.Invitation, 0)
+	invitations := make([]entity.Invitation, 0)
 	for rows.Next() {
-		invitation := entityv2.Invitation{}
+		invitation := entity.Invitation{}
 		err = rows.Scan(
 			&invitation.ID,
 			&invitation.SenderUserID,
@@ -164,7 +164,7 @@ func (i Invitation) FindAllInvitations() ([]entityv2.Invitation, error) {
 	return invitations, err
 }
 
-func (i Invitation) CreateInvitation(invitation entityv2.Invitation) error {
+func (i Invitation) CreateInvitation(invitation entity.Invitation) error {
 	statement := `
 	INSERT INTO invitation
 	(
@@ -200,7 +200,7 @@ func (i Invitation) CreateInvitation(invitation entityv2.Invitation) error {
 	return err
 }
 
-func (i Invitation) UpdateInvitation(invitation entityv2.Invitation) error {
+func (i Invitation) UpdateInvitation(invitation entity.Invitation) error {
 	_, err := i.db.Exec(`
 		UPDATE invitation
 		SET

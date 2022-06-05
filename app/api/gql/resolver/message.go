@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Message struct {
 	deps    *Dependencies
-	message entityv2.Message
+	message entity.Message
 }
 
 func (m Message) ID(ct context.Context) graphql.ID {
@@ -41,7 +41,7 @@ func (m Message) UpdatedAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(m.message.UpdatedAt)
 }
 
-func newMessage(deps *Dependencies, message entityv2.Message) Message {
+func newMessage(deps *Dependencies, message entity.Message) Message {
 	return Message{
 		deps:    deps,
 		message: message,

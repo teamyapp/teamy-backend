@@ -5,12 +5,12 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/app/collect"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Team struct {
 	deps *Dependencies
-	team entityv2.Team
+	team entity.Team
 }
 
 func (t Team) ID(ct context.Context) graphql.ID {
@@ -58,7 +58,7 @@ func (t Team) Members(ct context.Context) ([]User, error) {
 		return nil, err
 	}
 
-	return collect.Map(userEntities, func(userEntity entityv2.User, _ int) User {
+	return collect.Map(userEntities, func(userEntity entity.User, _ int) User {
 		return newUser(t.deps, userEntity)
 	}), nil
 }
@@ -72,12 +72,12 @@ func (t Team) Tasks(ct context.Context, args struct {
 	}
 
 	if args.Filter != nil {
-		tasks = collect.Filter(tasks, func(task entityv2.Task) bool {
+		tasks = collect.Filter(tasks, func(task entity.Task) bool {
 			return matchTask(*args.Filter, task)
 		})
 	}
 
-	return collect.Map(tasks, func(task entityv2.Task, _ int) Task {
+	return collect.Map(tasks, func(task entity.Task, _ int) Task {
 		return newTask(t.deps, task)
 	}), nil
 }
@@ -91,17 +91,17 @@ func (t Team) Invitations(ct context.Context, args struct {
 	}
 
 	if args.Filter != nil {
-		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entityv2.Invitation) bool {
+		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entity.Invitation) bool {
 			return matchInvitation(*args.Filter, invitationEntity)
 		})
 	}
 
-	return collect.Map(invitationEntities, func(invitationEntity entityv2.Invitation, _ int) Invitation {
+	return collect.Map(invitationEntities, func(invitationEntity entity.Invitation, _ int) Invitation {
 		return newInvitation(t.deps, invitationEntity)
 	}), nil
 }
 
-func newTeam(deps *Dependencies, team entityv2.Team) Team {
+func newTeam(deps *Dependencies, team entity.Team) Team {
 	return Team{
 		deps: deps,
 		team: team,

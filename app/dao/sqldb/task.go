@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Task struct {
@@ -16,8 +16,8 @@ type Task struct {
 
 var _ dao.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(taskID uint64) (entityv2.Task, error) {
-	task := entityv2.Task{}
+func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
+	task := entity.Task{}
 	err := t.db.QueryRow(`
 		SELECT
 			id,
@@ -51,7 +51,7 @@ func (t Task) FindTaskByID(taskID uint64) (entityv2.Task, error) {
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entityv2.Task{}, dao.ErrNotFound(fmt.Sprintf(
+		return entity.Task{}, dao.ErrNotFound(fmt.Sprintf(
 			"task not found: id=%v",
 			taskID))
 	}
@@ -59,7 +59,7 @@ func (t Task) FindTaskByID(taskID uint64) (entityv2.Task, error) {
 	return task, err
 }
 
-func (t Task) FindAllTasks() ([]entityv2.Task, error) {
+func (t Task) FindAllTasks() ([]entity.Task, error) {
 	statement := `
 	SELECT
 		id,
@@ -83,9 +83,9 @@ func (t Task) FindAllTasks() ([]entityv2.Task, error) {
 	}
 	defer rows.Close()
 
-	tasks := make([]entityv2.Task, 0)
+	tasks := make([]entity.Task, 0)
 	for rows.Next() {
-		task := entityv2.Task{}
+		task := entity.Task{}
 		err = rows.Scan(
 			&task.ID,
 			&task.Goal,
@@ -111,7 +111,7 @@ func (t Task) FindAllTasks() ([]entityv2.Task, error) {
 	return tasks, err
 }
 
-func (t Task) FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error) {
+func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 	statement := `
 	SELECT
 		id,
@@ -136,9 +136,9 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error) {
 	}
 	defer rows.Close()
 
-	tasks := make([]entityv2.Task, 0)
+	tasks := make([]entity.Task, 0)
 	for rows.Next() {
-		task := entityv2.Task{}
+		task := entity.Task{}
 		err = rows.Scan(
 			&task.ID,
 			&task.Goal,
@@ -164,7 +164,7 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error) {
 	return tasks, err
 }
 
-func (t Task) CreateTask(task entityv2.Task) error {
+func (t Task) CreateTask(task entity.Task) error {
 	_, err := t.db.Exec(`
 		INSERT INTO task
 		(
@@ -196,7 +196,7 @@ func (t Task) CreateTask(task entityv2.Task) error {
 	return err
 }
 
-func (t Task) UpdateTask(task entityv2.Task) error {
+func (t Task) UpdateTask(task entity.Task) error {
 	_, err := t.db.Exec(`
 		UPDATE task
 		SET

@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Invitation struct {
 	deps       *Dependencies
-	invitation entityv2.Invitation
+	invitation entity.Invitation
 }
 
 func (i Invitation) ID(ct context.Context) graphql.ID {
@@ -72,7 +72,7 @@ func (i Invitation) UpdatedAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(i.invitation.UpdatedAt)
 }
 
-func (i Invitation) Status(ct context.Context) entityv2.InvitationStatus {
+func (i Invitation) Status(ct context.Context) entity.InvitationStatus {
 	return i.invitation.Status
 }
 
@@ -80,7 +80,7 @@ func (i Invitation) Code(ct context.Context) string {
 	return i.invitation.Code
 }
 
-func newInvitation(deps *Dependencies, invitation entityv2.Invitation) Invitation {
+func newInvitation(deps *Dependencies, invitation entity.Invitation) Invitation {
 	return Invitation{
 		deps:       deps,
 		invitation: invitation,
