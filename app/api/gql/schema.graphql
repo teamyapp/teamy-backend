@@ -119,9 +119,10 @@ enum TaskAction {
 enum TaskStatus {
 	UPCOMING
 	IN_PROGRESS
-	DELIVERED
 	PAUSED
+	AWAITING
 	BLOCK
+	DELIVERED
 }
 
 type User {

@@ -24,6 +24,10 @@ var availableActions = map[entity.TaskStatus][]entity.TaskAction{
 		entity.TaskActionAssignOwner,
 		entity.TaskActionDelete,
 	},
+	entity.TaskStatusAwaiting: {
+		entity.TaskActionAssignOwner,
+		entity.TaskActionDelete,
+	},
 	entity.TaskStatusDelivered: {
 		entity.TaskActionDelete,
 		entity.TaskActionAssignOwner,
