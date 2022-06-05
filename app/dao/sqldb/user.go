@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type User struct {
@@ -16,7 +16,7 @@ type User struct {
 
 var _ dao.User = (*User)(nil)
 
-func (u User) FindUserByID(userID uint64) (entityv2.User, error) {
+func (u User) FindUserByID(userID uint64) (entity.User, error) {
 	statement := `
 	SELECT
 		id,
@@ -28,7 +28,7 @@ func (u User) FindUserByID(userID uint64) (entityv2.User, error) {
 	FROM "user"
 	WHERE id = $1;
 `
-	user := entityv2.User{}
+	user := entity.User{}
 	err := u.db.QueryRow(statement, userID).
 		Scan(
 			&user.ID,
@@ -40,7 +40,7 @@ func (u User) FindUserByID(userID uint64) (entityv2.User, error) {
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entityv2.User{}, dao.ErrNotFound(fmt.Sprintf(
+		return entity.User{}, dao.ErrNotFound(fmt.Sprintf(
 			"user not found: id=%v",
 			userID))
 	}
@@ -48,7 +48,7 @@ func (u User) FindUserByID(userID uint64) (entityv2.User, error) {
 	return user, err
 }
 
-func (u User) FindUsersByIDs(userIDs []uint64) ([]entityv2.User, error) {
+func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
 	idsString := toIDsString(userIDs)
 	query := fmt.Sprintf(`
 	SELECT
@@ -67,9 +67,9 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entityv2.User, error) {
 	}
 	defer rows.Close()
 
-	var users []entityv2.User
+	var users []entity.User
 	for rows.Next() {
-		var user entityv2.User
+		var user entity.User
 		err = rows.
 			Scan(
 				&user.ID,
@@ -90,7 +90,7 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entityv2.User, error) {
 	return users, nil
 }
 
-func (u User) CreateUser(user entityv2.User) error {
+func (u User) CreateUser(user entity.User) error {
 	_, err := u.db.Exec(`
 		INSERT INTO "user"
 		(
@@ -110,7 +110,7 @@ func (u User) CreateUser(user entityv2.User) error {
 	return err
 }
 
-func (u User) UpdateUser(user entityv2.User) error {
+func (u User) UpdateUser(user entity.User) error {
 	_, err := u.db.Exec(`
 		UPDATE "user"
 		SET

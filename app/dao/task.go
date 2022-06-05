@@ -1,14 +1,14 @@
 package dao
 
 import (
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Task interface {
-	FindTaskByID(taskID uint64) (entityv2.Task, error)
-	FindTasksByTeamID(teamID uint64) ([]entityv2.Task, error)
-	FindAllTasks() ([]entityv2.Task, error)
-	CreateTask(task entityv2.Task) error
-	UpdateTask(task entityv2.Task) error
+	FindTaskByID(taskID uint64) (entity.Task, error)
+	FindTasksByTeamID(teamID uint64) ([]entity.Task, error)
+	FindAllTasks() ([]entity.Task, error)
+	CreateTask(task entity.Task) error
+	UpdateTask(task entity.Task) error
 	DeleteTask(taskID uint64) error
 }

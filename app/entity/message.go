@@ -1,4 +1,4 @@
-package entityv2
+package entity
 
 import "time"
 

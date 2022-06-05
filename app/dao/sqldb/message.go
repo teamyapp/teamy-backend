@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/teamyapp/teamy-backend/app/dao"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type Message struct {
@@ -16,8 +16,8 @@ type Message struct {
 
 var _ dao.Message = (*Message)(nil)
 
-func (m Message) FindMessageByID(messageID uint64) (entityv2.Message, error) {
-	message := entityv2.Message{}
+func (m Message) FindMessageByID(messageID uint64) (entity.Message, error) {
+	message := entity.Message{}
 	err := m.db.QueryRow(`
 		SELECT
 			id,
@@ -39,7 +39,7 @@ func (m Message) FindMessageByID(messageID uint64) (entityv2.Message, error) {
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entityv2.Message{}, dao.ErrNotFound(fmt.Sprintf(
+		return entity.Message{}, dao.ErrNotFound(fmt.Sprintf(
 			"message not found: id=%v",
 			message))
 	}
@@ -47,12 +47,12 @@ func (m Message) FindMessageByID(messageID uint64) (entityv2.Message, error) {
 	return message, err
 }
 
-func (m Message) FindMessagesByIDs(messageIDs []uint64) ([]entityv2.Message, error) {
+func (m Message) FindMessagesByIDs(messageIDs []uint64) ([]entity.Message, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m Message) FindMessagesByThreadID(threadID uint64) ([]entityv2.Message, error) {
+func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, error) {
 	statement := `
 	SELECT
 		id,
@@ -71,9 +71,9 @@ func (m Message) FindMessagesByThreadID(threadID uint64) ([]entityv2.Message, er
 	}
 	defer rows.Close()
 
-	messages := make([]entityv2.Message, 0)
+	messages := make([]entity.Message, 0)
 	for rows.Next() {
-		message := entityv2.Message{}
+		message := entity.Message{}
 		err = rows.Scan(
 			&message.ID,
 			&message.Body,
@@ -93,7 +93,7 @@ func (m Message) FindMessagesByThreadID(threadID uint64) ([]entityv2.Message, er
 	return messages, err
 }
 
-func (m Message) CreateMessage(message entityv2.Message) error {
+func (m Message) CreateMessage(message entity.Message) error {
 	_, err := m.db.Exec(`
 		INSERT INTO message
 		(
@@ -113,7 +113,7 @@ func (m Message) CreateMessage(message entityv2.Message) error {
 	return err
 }
 
-func (m Message) UpdateMessage(message entityv2.Message) error {
+func (m Message) UpdateMessage(message entity.Message) error {
 	_, err := m.db.Exec(`
 		UPDATE message
 		SET

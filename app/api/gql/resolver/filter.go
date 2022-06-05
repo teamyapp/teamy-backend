@@ -4,14 +4,14 @@ import (
 	"strings"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 type TaskFilter struct {
 	TaskID       *graphql.ID
 	OwnerID      *graphql.ID
 	GoalContains *string
-	Status       *entityv2.TaskStatus
+	Status       *entity.TaskStatus
 }
 
 type TeamFilter struct {
@@ -23,7 +23,7 @@ type InvitationFilter struct {
 	Code         *string
 }
 
-func matchTask(filter TaskFilter, task entityv2.Task) bool {
+func matchTask(filter TaskFilter, task entity.Task) bool {
 	if filter.TaskID != nil {
 		taskID, err := fromGraphQLIDPtr(filter.TaskID)
 		if err != nil {
@@ -58,7 +58,7 @@ func matchTask(filter TaskFilter, task entityv2.Task) bool {
 	return true
 }
 
-func matchTeam(filter TeamFilter, team entityv2.Team) bool {
+func matchTeam(filter TeamFilter, team entity.Team) bool {
 	if filter.TeamID != nil {
 		teamID, err := fromGraphQLIDPtr(filter.TeamID)
 		if err != nil {
@@ -73,7 +73,7 @@ func matchTeam(filter TeamFilter, team entityv2.Team) bool {
 	return true
 }
 
-func matchInvitation(filter InvitationFilter, invitation entityv2.Invitation) bool {
+func matchInvitation(filter InvitationFilter, invitation entity.Invitation) bool {
 	if filter.InvitationID != nil {
 		invitationID, err := fromGraphQLIDPtr(filter.InvitationID)
 		if err != nil {

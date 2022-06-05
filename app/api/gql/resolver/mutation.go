@@ -11,7 +11,7 @@ import (
 	"github.com/teamyapp/cloud/app/api/rpc/proto"
 	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/app/collect"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
 const invitationCodeLen = 20
@@ -61,11 +61,11 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	task := entityv2.Task{
+	task := entity.Task{
 		ID:               genTaskIDRes.UniqueNumber,
 		Goal:             args.Task.Goal,
 		Context:          args.Task.Context,
-		Status:           entityv2.TaskStatusUpcoming,
+		Status:           entity.TaskStatusUpcoming,
 		CreatorUserID:    userID,
 		OwningTeamID:     owningTeamID,
 		OwnerUserID:      ownerUserID,
@@ -192,7 +192,7 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 		task.OwnerUserID = &userID
 	}
 
-	inProgressTasks := collect.Filter(tasks, func(eachTask entityv2.Task) bool {
+	inProgressTasks := collect.Filter(tasks, func(eachTask entity.Task) bool {
 		if eachTask.OwnerUserID == nil {
 			return false
 		}
@@ -201,13 +201,13 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 			return false
 		}
 
-		return eachTask.Status == entityv2.TaskStatusInProgress
+		return eachTask.Status == entity.TaskStatusInProgress
 	})
 
 	now := time.Now()
 	if len(inProgressTasks) > 0 {
 		inProgressTask := inProgressTasks[0]
-		inProgressTask.Status = entityv2.TaskStatusPaused
+		inProgressTask.Status = entity.TaskStatusPaused
 		inProgressTask.UpdatedAt = &now
 		err = m.deps.taskDao.UpdateTask(inProgressTask)
 		if err != nil {
@@ -215,7 +215,7 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 		}
 	}
 
-	task.Status = entityv2.TaskStatusInProgress
+	task.Status = entity.TaskStatusInProgress
 	task.UpdatedAt = &now
 	err = m.deps.taskDao.UpdateTask(task)
 	if err != nil {
@@ -238,7 +238,7 @@ func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	task.Status = entityv2.TaskStatusDelivered
+	task.Status = entity.TaskStatusDelivered
 	now := time.Now()
 	task.UpdatedAt = &now
 	err = m.deps.taskDao.UpdateTask(task)
@@ -289,7 +289,7 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		return Message{}, err
 	}
 
-	message := entityv2.Message{
+	message := entity.Message{
 		ID:           genMessageIDRes.UniqueNumber,
 		Body:         args.Message.Body,
 		ThreadID:     threadID,
@@ -373,7 +373,7 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		return Team{}, err
 	}
 
-	team := entityv2.Team{
+	team := entity.Team{
 		ID:            genTeamIDRes.UniqueNumber,
 		Name:          args.Team.Name,
 		CreatorUserID: userID,
@@ -499,7 +499,7 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		return User{}, err
 	}
 
-	user := entityv2.User{
+	user := entity.User{
 		ID:         userID,
 		CreatedAt:  time.Now(),
 		FirstName:  args.User.FirstName,
@@ -575,7 +575,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	invitation := entityv2.Invitation{
+	invitation := entity.Invitation{
 		ID:                genInvitationIDRes.UniqueNumber,
 		SenderUserID:      senderID,
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
@@ -583,7 +583,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		ReceiverEmail:     args.Invitation.ReceiverEmail,
 		TeamID:            teamID,
 		ExpireAt:          args.Invitation.ExpireAt.Time,
-		Status:            entityv2.InvitationStatusPending,
+		Status:            entity.InvitationStatusPending,
 		Code:              randString(invitationCodeAlphabet, invitationCodeLen),
 		CreatedAt:         time.Now(),
 	}
@@ -675,7 +675,7 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	invitation.Status = entityv2.InvitationStatusAccepted
+	invitation.Status = entity.InvitationStatusAccepted
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
@@ -727,7 +727,7 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	invitation.Status = entityv2.InvitationStatusDeclined
+	invitation.Status = entity.InvitationStatusDeclined
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
@@ -739,13 +739,13 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	return newInvitation(m.deps, invitation), nil
 }
 
-func (m Mutation) ensureInvitationPending(invitation entityv2.Invitation) error {
+func (m Mutation) ensureInvitationPending(invitation entity.Invitation) error {
 	switch invitation.Status {
-	case entityv2.InvitationStatusExpired:
+	case entity.InvitationStatusExpired:
 		return fmt.Errorf("invitation is expired: id=%v", invitation.ID)
-	case entityv2.InvitationStatusInvoked:
+	case entity.InvitationStatusInvoked:
 		return fmt.Errorf("invitation is revoked: id=%v", invitation.ID)
-	case entityv2.InvitationStatusAccepted, entityv2.InvitationStatusDeclined:
+	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
 		return fmt.Errorf("invitation is already responded: id=%v", invitation.ID)
 	default:
 		return nil

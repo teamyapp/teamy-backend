@@ -4,35 +4,35 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/app/entityv2"
+	"github.com/teamyapp/teamy-backend/app/entity"
 )
 
-var availableActions = map[entityv2.TaskStatus][]entityv2.TaskAction{
-	entityv2.TaskStatusUpcoming: {
-		entityv2.TaskActionStart,
-		entityv2.TaskActionDelete,
-		entityv2.TaskActionAssignOwner,
+var availableActions = map[entity.TaskStatus][]entity.TaskAction{
+	entity.TaskStatusUpcoming: {
+		entity.TaskActionStart,
+		entity.TaskActionDelete,
+		entity.TaskActionAssignOwner,
 	},
-	entityv2.TaskStatusPaused: {
-		entityv2.TaskActionStart,
-		entityv2.TaskActionDelete,
-		entityv2.TaskActionAssignOwner,
+	entity.TaskStatusPaused: {
+		entity.TaskActionStart,
+		entity.TaskActionDelete,
+		entity.TaskActionAssignOwner,
 	},
-	entityv2.TaskStatusInProgress: {
-		entityv2.TaskActionMarkComplete,
-		entityv2.TaskActionReportBlocked,
-		entityv2.TaskActionAssignOwner,
-		entityv2.TaskActionDelete,
+	entity.TaskStatusInProgress: {
+		entity.TaskActionMarkComplete,
+		entity.TaskActionReportBlocked,
+		entity.TaskActionAssignOwner,
+		entity.TaskActionDelete,
 	},
-	entityv2.TaskStatusDelivered: {
-		entityv2.TaskActionDelete,
-		entityv2.TaskActionAssignOwner,
+	entity.TaskStatusDelivered: {
+		entity.TaskActionDelete,
+		entity.TaskActionAssignOwner,
 	},
 }
 
 type Task struct {
 	deps *Dependencies
-	task entityv2.Task
+	task entity.Task
 }
 
 func (t Task) ID(ct context.Context) graphql.ID {
@@ -80,7 +80,7 @@ func (t Task) OwningTeam(ct context.Context) (*Team, error) {
 	return &gqlTeam, nil
 }
 
-func (t Task) Status(ct context.Context) entityv2.TaskStatus {
+func (t Task) Status(ct context.Context) entity.TaskStatus {
 	return t.task.Status
 }
 
@@ -104,11 +104,11 @@ func (t Task) Effort(ct context.Context) *int32 {
 	return int32PtrFromIntPtr(t.task.Effort)
 }
 
-func (t Task) AvailableActions(ct context.Context) []entityv2.TaskAction {
+func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 	return availableActions[t.task.Status]
 }
 
-func newTask(deps *Dependencies, task entityv2.Task) Task {
+func newTask(deps *Dependencies, task entity.Task) Task {
 	return Task{
 		deps: deps,
 		task: task,
