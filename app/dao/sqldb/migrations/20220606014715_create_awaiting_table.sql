@@ -7,4 +7,3 @@ CREATE TABLE task_awaiting
 
 -- +migrate Down
 DROP TABLE task_awaiting;
-
