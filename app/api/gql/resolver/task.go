@@ -112,6 +112,10 @@ func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 	return availableActions[t.task.Status]
 }
 
+func (t Task) AwaitForTasks(ct context.Context) []Task {
+	return nil
+}
+
 func newTask(deps *Dependencies, task entity.Task) Task {
 	return Task{
 		deps: deps,
