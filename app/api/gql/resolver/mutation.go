@@ -256,9 +256,16 @@ func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) MoveTaskToAwaiting(ct context.Context, args struct {
+func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 	TaskID         graphql.ID
-	AwaitOnTaskIds []graphql.ID
+	AwaitForTaskId graphql.ID
+}) (Task, error) {
+	panic("implement me")
+}
+
+func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
+	TaskID         graphql.ID
+	AwaitForTaskId graphql.ID
 }) (Task, error) {
 	panic("implement me")
 }
