@@ -8,9 +8,12 @@ import (
 	"time"
 
 	"github.com/teamyapp/cloud/app/dao/sqldb"
-	"github.com/teamyapp/teamy-backend/app/api/gql"
-	"github.com/teamyapp/teamy-backend/app/config"
-	"github.com/teamyapp/teamy-backend/app/dep"
+	"github.com/teamyapp/teamy-backend/apps"
+	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
+	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
+	"github.com/teamyapp/teamy-backend/config"
+	"github.com/teamyapp/teamy-backend/core/api/gql"
+	"github.com/teamyapp/teamy-backend/core/dep"
 )
 
 func init() {
@@ -24,24 +27,34 @@ func main() {
 		log.Println(err)
 		panic(err)
 	}
+
 	log.Printf(
 		"Git Commit: https://github.com/%s/%s/commit/%s\n",
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
-
+	cloudAPIConfig := config.CloudAPIConfig{
+		Host:          cfg.CloudAPIHost,
+		Port:          cfg.CloudAPIPort,
+		ShouldEncrypt: cfg.CloudAPIShouldEncrypt,
+	}
 	err = sqldb.Use(cfg.Config, func(sqlDB *sql.DB) error {
-		err = sqldb.MigrateUp(sqlDB, sqldb.DefaultMigrationRoot)
+		err = sqldb.MigrateUp(sqlDB, "migrations")
 		if err != nil {
-			log.Println(err)
-			return err
+			panic(err)
 		}
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			StartGraphQLServer(cfg, sqlDB)
+			startGraphQLServer(cfg, cloudAPIConfig, sqlDB)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			startAppRunner(cloudAPIConfig, sqlDB)
 		}()
 		wg.Wait()
 		return nil
@@ -53,21 +66,42 @@ func main() {
 	}
 }
 
-func StartGraphQLServer(cfg config.Config, sqlDB *sql.DB) {
-	gqlResolver, err := dep.InitGraphQLResolver(
-		sqlDB,
-		dep.CloudAPIHost(cfg.CloudAPIHost),
-		dep.CloudAPIPort(cfg.CloudAPIPort),
-		dep.CloudAPIShouldEncrypt(cfg.CloudAPIShouldEncrypt))
+func startGraphQLServer(cfg config.Config, cloudAPIConfig config.CloudAPIConfig, sqlDB *sql.DB) {
+	gqlResolver, err := dep.InitGraphQLResolver(sqlDB, cloudAPIConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.GraphQLAPIV2Port)
+	server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.CoreGraphQLAPIPort)
 	if err != nil {
 		panic(err)
 	}
 
-	log.Printf("GraphQL server started at %d\n", cfg.GraphQLAPIV2Port)
+	log.Printf("GraphQL server started at %d\n", cfg.CoreGraphQLAPIPort)
 	panic(server.ListenAndServe())
+}
+
+func startAppRunner(cloudAPIConfig config.CloudAPIConfig, sqlDB *sql.DB) {
+	runnerConfig, err := appsConfig.AppRunnerConfigFromEnv()
+	if err != nil {
+		panic(err)
+	}
+
+	githubCfg, err := appsConfig.GithubAppConfigFromEnv()
+	if err != nil {
+		panic(err)
+	}
+
+	githubApp, err := appsDep.InitGithubApp(cloudAPIConfig, githubCfg, sqlDB)
+	if err != nil {
+		panic(err)
+	}
+
+	runner := apps.NewAppRunner(runnerConfig, []apps.App{
+		githubApp,
+	})
+	err = runner.Start()
+	if err != nil {
+		panic(err)
+	}
 }

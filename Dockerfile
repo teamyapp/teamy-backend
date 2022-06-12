@@ -18,7 +18,7 @@ RUN apk add --no-cache bash
 
 COPY --from=builder /workspace/bin/main main
 
-COPY --from=builder /workspace/app/dao/sqldb/migrations/ app/dao/sqldb/migrations/
+COPY --from=builder /workspace/migrations/ migrations/
 
 COPY --from=builder /workspace/.repo.env .repo.env
 
