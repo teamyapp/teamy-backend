@@ -94,7 +94,7 @@ spec:
             - name: APP_RUNNER_WEB_API_PORT
               value: "9001"
             - name: APPS_GITHUB_APP_NAME
-              value: teamy-cloud
+              value: teamy-apps
             - name: APPS_GITHUB_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
