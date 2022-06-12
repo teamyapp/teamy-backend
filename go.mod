@@ -3,10 +3,10 @@ module github.com/teamyapp/teamy-backend
 go 1.18
 
 require (
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
-	github.com/graph-gophers/graphql-go v1.3.0
+	github.com/graph-gophers/graphql-go v1.4.0
 	github.com/teamyapp/cloud v0.0.0-20220612225926-bed0a52c4cba
 )
 
@@ -18,7 +18,6 @@ require (
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/lib/pq v1.10.6 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/rubenv/sql-migrate v1.1.2 // indirect
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
 	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d // indirect
