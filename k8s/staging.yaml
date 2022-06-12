@@ -18,6 +18,20 @@ spec:
       key: kv/data/secrets/db/postgres/teamy/staging
       property: db-name
 ---
+apiVersion: kubernetes-client.io/v1
+kind: ExternalSecret
+metadata:
+  namespace: staging
+  name: apps
+spec:
+  backendType: vault
+  vaultMountPoint: kubernetes
+  vaultRole: secrets-read-role
+  data:
+    - name: github-webhook-secret
+      key: kv/data/secrets/staging/apps
+      property: github-webhook-secret
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -47,6 +61,7 @@ spec:
           image: registry.digitalocean.com/teamyapp/teamy-backend-staging:latest
           imagePullPolicy: Always
           ports:
+            - containerPort: 9000
             - containerPort: 9001
           env:
             - name: DB_HOST
@@ -68,14 +83,23 @@ spec:
                   key: db-name
             - name: IDENTITY_API_ENDPOINT
               value: http://cloud.staging.svc.cluster.local/identity
-            - name: GRAPH_QL_API_V2_PORT
-              value: "9001"
             - name: CLOUD_API_HOST
               value: cloud
             - name: CLOUD_API_PORT
               value: "81"
             - name: CLOUD_API_SHOULD_ENCRYPT
               value: "false"
+            - name: CORE_GRAPH_QL_API_PORT
+              value: "9000"
+            - name: APP_RUNNER_WEB_API_PORT
+              value: "9001"
+            - name: APPS_GITHUB_APP_NAME
+              value: teamy-apps-staging
+            - name: APPS_GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apps
+                  key: github-webhook-secret
 ---
 apiVersion: v1
 kind: Service
@@ -86,7 +110,9 @@ spec:
   selector:
     app: teamy-backend
   ports:
-    - name: gql
+    - name: core-gql
+      port: 9000
+    - name: apps-web
       port: 9001
 ---
 apiVersion: traefik.containo.us/v1alpha1
@@ -104,10 +130,10 @@ spec:
         - kind: Service
           name: teamy-backend
           namespace: staging
-          port: 9001
+          port: 9000
           passHostHeader: true
     - kind: Rule
-      match: Host(`backend-v2.staging.teamyapp.com`)
+      match: Host(`apps-backend.staging.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend
