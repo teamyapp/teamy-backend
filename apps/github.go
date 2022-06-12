@@ -140,7 +140,7 @@ func (g GithubApp) finishInstall(w http.ResponseWriter, r *http.Request) {
 
 	err = g.githubAppInstallStateDao.DeleteState(stateID)
 	if err != nil {
-		log.Printf("fail to delete state: state ID=%v, err=%v\n", stateID, err)
+		log.Printf("fail to delete state: stateID=%v, err=%v\n", stateID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
