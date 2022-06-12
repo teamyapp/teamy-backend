@@ -17,5 +17,6 @@ func AppRunnerConfigFromEnv() (AppRunnerConfig, error) {
 		log.Println(err)
 		return AppRunnerConfig{}, err
 	}
+	
 	return cfg, nil
 }
