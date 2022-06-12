@@ -6,7 +6,7 @@ steps:
   - name: Run unit tests
     image: golang:1.18
     commands:
-      - go test ./app/...
+      - go test ./...
   - name: slack
     image: plugins/slack
     settings:
