@@ -18,7 +18,6 @@ type Config struct {
 	config.RepoConfig
 	IdentityAPIEndpoint   string `envconfig:"IDENTITY_API_ENDPOINT" default:"http://localhost:9500/identity"`
 	CoreGraphQLAPIPort    int    `envconfig:"CORE_GRAPH_QL_API_PORT" default:"9000"`
-	CoreWebAPIPort        int    `envconfig:"CORE_WEB_API_PORT" default:"9001"`
 	CloudAPIHost          string `envconfig:"CLOUD_API_HOST" default:"localhost"`
 	CloudAPIPort          int    `envconfig:"CLOUD_API_PORT" default:"9501"`
 	CloudAPIShouldEncrypt bool   `envconfig:"CLOUD_API_SHOULD_ENCRYPT" default:"false"`
