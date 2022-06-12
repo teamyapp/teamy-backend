@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	cloudConfig "github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps"
 	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
@@ -33,10 +34,10 @@ func main() {
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
-	cloudAPIConfig := config.CloudAPIConfig{
-		Host:          cfg.CloudAPIHost,
-		Port:          cfg.CloudAPIPort,
-		ShouldEncrypt: cfg.CloudAPIShouldEncrypt,
+	cloudAPIClientCfg, err := cloudConfig.CloudAPIClientFromEnv()
+	if err != nil {
+		log.Println(err)
+		panic(err)
 	}
 	err = sqldb.Use(cfg.Config, func(sqlDB *sql.DB) error {
 		err = sqldb.MigrateUp(sqlDB, "migrations")
@@ -48,13 +49,13 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			startGraphQLServer(cfg, cloudAPIConfig, sqlDB)
+			startGraphQLServer(cfg, cloudAPIClientCfg, sqlDB)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			startAppRunner(cloudAPIConfig, sqlDB)
+			startAppRunner(cloudAPIClientCfg, sqlDB)
 		}()
 		wg.Wait()
 		return nil
@@ -66,7 +67,7 @@ func main() {
 	}
 }
 
-func startGraphQLServer(cfg config.Config, cloudAPIConfig config.CloudAPIConfig, sqlDB *sql.DB) {
+func startGraphQLServer(cfg config.Config, cloudAPIConfig cloudConfig.CloudAPIClient, sqlDB *sql.DB) {
 	gqlResolver, err := dep.InitGraphQLResolver(sqlDB, cloudAPIConfig)
 	if err != nil {
 		panic(err)
@@ -81,7 +82,7 @@ func startGraphQLServer(cfg config.Config, cloudAPIConfig config.CloudAPIConfig,
 	panic(server.ListenAndServe())
 }
 
-func startAppRunner(cloudAPIConfig config.CloudAPIConfig, sqlDB *sql.DB) {
+func startAppRunner(cloudAPIConfig cloudConfig.CloudAPIClient, sqlDB *sql.DB) {
 	runnerConfig, err := appsConfig.AppRunnerConfigFromEnv()
 	if err != nil {
 		panic(err)

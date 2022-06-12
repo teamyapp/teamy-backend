@@ -10,18 +10,20 @@ import (
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 )
 
-type RepoConfig struct {
+type Repo struct {
 	GitLongCommitHash string `envconfig:"GIT_LONG_COMMIT_HASH"`
 	GitRepoOwner      string `envconfig:"GIT_REPO_OWNER"`
 	GitRepoName       string `envconfig:"GIT_REPO_NAME"`
 }
 
-type Config struct {
-	RepoConfig
+type App struct {
+	Repo
 	sqldb.Config
 	AccessTokenTTL     time.Duration `envconfig:"ACCESS_TOKEN_TTL" default:""`
 	GoogleClientID     string        `envconfig:"GOOGLE_CLIENT_ID" default:""`
 	GoogleClientSecret string        `envconfig:"GOOGLE_CLIENT_SECRET" default:""`
+	GitHubClientID     string        `envconfig:"GITHUB_CLIENT_ID" default:""`
+	GitHubClientSecret string        `envconfig:"GITHUB_CLIENT_SECRET" default:""`
 	JWTSigningKey      string        `envconfig:"JWT_SIGNING_KEY" default:""`
 	GenRangeSize       int           `envconfig:"GEN_RANGE_SIZE" default:"100"`
 	WebAPIBaseURL      string        `envconfig:"WEB_API_BASE_URL" default:""`
@@ -29,12 +31,28 @@ type Config struct {
 	GRPCAPIPort        int           `envconfig:"GRPC_API_PORT" default:"9501"`
 }
 
-func AppConfigFromEnv() (Config, error) {
-	cfg := Config{}
+type CloudAPIClient struct {
+	Host          string `envconfig:"CLOUD_API_HOST" default:"localhost"`
+	Port          int    `envconfig:"CLOUD_API_PORT" default:"9501"`
+	ShouldEncrypt bool   `envconfig:"CLOUD_API_SHOULD_ENCRYPT" default:"false"`
+}
+
+func AppFromEnv() (App, error) {
+	cfg := App{}
 	err := FromEnv(&cfg)
 	if err != nil {
 		log.Println(err)
-		return Config{}, err
+		return App{}, err
+	}
+	return cfg, nil
+}
+
+func CloudAPIClientFromEnv() (CloudAPIClient, error) {
+	cfg := CloudAPIClient{}
+	err := FromEnv(&cfg)
+	if err != nil {
+		log.Println(err)
+		return CloudAPIClient{}, err
 	}
 	return cfg, nil
 }

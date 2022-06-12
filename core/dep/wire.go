@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api/rpc"
-	"github.com/teamyapp/teamy-backend/config"
+	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
@@ -32,19 +32,13 @@ var daoSet = wire.NewSet(
 
 func InitGraphQLResolver(
 	sqlDB *sql.DB,
-	cloudAPICfg config.CloudAPIConfig,
+	cloudAPIClientCfg config.CloudAPIClient,
 ) (resolver.Resolver, error) {
 	wire.Build(
 		daoSet,
-		newClientAPIClient,
+		rpc.NewCloudAPIClient,
 		resolver.NewDependencies,
 		resolver.NewResolver,
 	)
 	return resolver.Resolver{}, nil
-}
-
-func newClientAPIClient(
-	cfg config.CloudAPIConfig,
-) (*rpc.CloudAPIClient, error) {
-	return rpc.NewCloudAPIClient(cfg.Host, cfg.Port, cfg.ShouldEncrypt)
 }

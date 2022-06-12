@@ -20,6 +20,6 @@ func GithubAppConfigFromEnv() (GithubAppConfig, error) {
 		log.Println(err)
 		return GithubAppConfig{}, err
 	}
-	
+
 	return cfg, nil
 }
