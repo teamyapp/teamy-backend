@@ -7,15 +7,9 @@ import (
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 )
 
-type CloudAPIConfig struct {
-	Host          string
-	Port          int
-	ShouldEncrypt bool
-}
-
 type Config struct {
 	sqldb.Config
-	config.RepoConfig
+	config.Repo
 	IdentityAPIEndpoint   string `envconfig:"IDENTITY_API_ENDPOINT" default:"http://localhost:9500/identity"`
 	CoreGraphQLAPIPort    int    `envconfig:"CORE_GRAPH_QL_API_PORT" default:"9000"`
 	CloudAPIHost          string `envconfig:"CLOUD_API_HOST" default:"localhost"`

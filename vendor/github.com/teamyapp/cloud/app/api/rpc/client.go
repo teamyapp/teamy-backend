@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/app/api/rpc/proto"
+	"github.com/teamyapp/cloud/app/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -26,15 +27,15 @@ func (c *CloudAPIClient) Close() error {
 	return c.gRPCConn.Close()
 }
 
-func NewCloudAPIClient(host string, port int, encryptData bool) (*CloudAPIClient, error) {
+func NewCloudAPIClient(cfg config.CloudAPIClient) (*CloudAPIClient, error) {
 	var opts grpc.DialOption
-	if encryptData {
+	if cfg.ShouldEncrypt {
 		opts = grpc.WithTransportCredentials(credentials.NewTLS(nil))
 	} else {
 		opts = grpc.WithInsecure()
 	}
 
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", host, port), opts)
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), opts)
 	if err != nil {
 		return nil, err
 	}
