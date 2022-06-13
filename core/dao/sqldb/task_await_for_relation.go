@@ -74,8 +74,8 @@ func (t TaskAwaitForRelation) CreateRelation(relation entity.TaskAwaitForRelatio
 	_, err := t.db.Exec(`
 	INSERT INTO task_await_for_relation
 	(
-	    awaiting_task_id,
-	    await_for_task_id,
+	 	awaiting_task_id,
+	 	await_for_task_id,
 	 	created_at
 	)
 	VALUES ($1, $2, $3);

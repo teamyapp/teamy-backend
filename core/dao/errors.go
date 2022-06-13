@@ -1,7 +1,5 @@
 package dao
 
-var ErrNotFoundVar ErrNotFound
-
 type ErrNotFound string
 
 var _ error = (*ErrNotFound)(nil)
