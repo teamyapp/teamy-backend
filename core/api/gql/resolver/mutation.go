@@ -391,10 +391,7 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 	}
 
 	if len(awaitForTaskIds) == 0 {
-		task.Status = entity.TaskStatusUpcoming
-		now := time.Now()
-		task.UpdatedAt = &now
-		err = m.deps.taskDao.UpdateTask(task)
+		task, err = m.moveTaskToUpcoming(taskID)
 		if err != nil {
 			return Task{}, err
 		}
