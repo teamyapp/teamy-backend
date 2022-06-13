@@ -17,6 +17,10 @@ import (
 const invitationCodeLen = 20
 
 var invitationCodeAlphabet = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var awaitableTaskStatuses = map[entity.TaskStatus]bool{
+	entity.TaskStatusInProgress: true,
+	entity.TaskStatusAwaiting:   true,
+}
 
 type Mutation struct {
 	deps *Dependencies
@@ -162,7 +166,17 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.moveTaskToUpcoming(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
@@ -246,7 +260,51 @@ func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 		return Task{}, err
 	}
 
+	awaitingTaskIDs, err := m.deps.taskAwaitForRelationDao.FindAwaitingTaskIDs(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	for _, awaitingTaskID := range awaitingTaskIDs {
+		awaitForTaskIDs, err := m.deps.taskAwaitForRelationDao.FindAwaitForTaskIDs(awaitingTaskID)
+		if err != nil {
+			return Task{}, err
+		}
+
+		awaitForTasks, err := m.deps.taskDao.FindTasksByIDs(awaitForTaskIDs)
+		if err != nil {
+			return Task{}, err
+		}
+
+		awaitForTasks = collect.Filter(awaitForTasks, func(awaitForTask entity.Task) bool {
+			return awaitForTask.Status != entity.TaskStatusDelivered
+		})
+		if len(awaitForTasks) == 0 {
+			_, err = m.moveTaskToUpcoming(awaitingTaskID)
+			if err != nil {
+				return Task{}, err
+			}
+		}
+	}
+
 	return newTask(m.deps, task), nil
+}
+
+func (m Mutation) moveTaskToUpcoming(taskID uint64) (entity.Task, error) {
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	task.Status = entity.TaskStatusUpcoming
+	now := time.Now()
+	task.UpdatedAt = &now
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	return task, nil
 }
 
 func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
@@ -260,14 +318,86 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 	TaskID         graphql.ID
 	AwaitForTaskId graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	if !awaitableTaskStatuses[task.Status] {
+		return Task{}, fmt.Errorf("task must be awaitable: taskID=%d", taskID)
+	}
+
+	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
+	if err != nil {
+		return Task{}, err
+	}
+
+	now := time.Now()
+	err = m.deps.taskAwaitForRelationDao.CreateRelation(entity.TaskAwaitForRelation{
+		AWaitingTaskID: taskID,
+		AWaitForTaskID: awaitForTaskId,
+		CreatedAt:      now,
+	})
+	if err != nil {
+		return Task{}, err
+	}
+
+	task.Status = entity.TaskStatusAwaiting
+	task.UpdatedAt = &now
+	err = m.deps.taskDao.UpdateTask(task)
+	if err != nil {
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 	TaskID         graphql.ID
 	AwaitForTaskId graphql.ID
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	if task.Status != entity.TaskStatusAwaiting {
+		return Task{}, fmt.Errorf("task must be awaiting: taskID=%d", taskID)
+	}
+
+	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
+	if err != nil {
+		return Task{}, err
+	}
+
+	err = m.deps.taskAwaitForRelationDao.DeleteRelation(taskID, awaitForTaskId)
+	if err != nil {
+		return Task{}, err
+	}
+
+	awaitForTaskIds, err := m.deps.taskAwaitForRelationDao.FindAwaitForTaskIDs(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	if len(awaitForTaskIds) == 0 {
+		task, err = m.moveTaskToUpcoming(taskID)
+		if err != nil {
+			return Task{}, err
+		}
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 /* Message */

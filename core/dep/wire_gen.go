@@ -27,15 +27,16 @@ func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIClientCfg config.CloudAPIClient)
 	task := sqldb.NewTask(sqlDB)
 	thread := sqldb.NewThread(sqlDB)
 	message := sqldb.NewMessage(sqlDB)
+	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(sqlDB)
 	cloudAPIClient, err := rpc.NewCloudAPIClient(cloudAPIClientCfg)
 	if err != nil {
 		return resolver.Resolver{}, err
 	}
-	dependencies := resolver.NewDependencies(user, team, teamMember, invitation, task, thread, message, cloudAPIClient)
+	dependencies := resolver.NewDependencies(user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, cloudAPIClient)
 	resolverResolver := resolver.NewResolver(dependencies)
 	return resolverResolver, nil
 }
 
 // wire.go:
 
-var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread)
+var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskAwaitForRelation, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread)

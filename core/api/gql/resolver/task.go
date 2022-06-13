@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/core/collect"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -112,8 +113,20 @@ func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 	return availableActions[t.task.Status]
 }
 
-func (t Task) AwaitForTasks(ct context.Context) []Task {
-	return nil
+func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
+	awaitForTaskIds, err := t.deps.taskAwaitForRelationDao.FindAwaitForTaskIDs(t.task.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	tasks, err := t.deps.taskDao.FindTasksByIDs(awaitForTaskIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return collect.Map(tasks, func(task entity.Task, _ int) Task {
+		return newTask(t.deps, task)
+	}), nil
 }
 
 func newTask(deps *Dependencies, task entity.Task) Task {

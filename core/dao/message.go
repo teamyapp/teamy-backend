@@ -6,7 +6,6 @@ import (
 
 type Message interface {
 	FindMessageByID(messageID uint64) (entity.Message, error)
-	FindMessagesByIDs(messageIDs []uint64) ([]entity.Message, error)
 	FindMessagesByThreadID(threadID uint64) ([]entity.Message, error)
 	CreateMessage(message entity.Message) error
 	UpdateMessage(message entity.Message) error
