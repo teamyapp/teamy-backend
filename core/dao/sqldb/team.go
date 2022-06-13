@@ -89,6 +89,10 @@ func (t Team) FindTeamByID(teamID uint64) (entity.Team, error) {
 }
 
 func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
+	if len(teamIDs) == 0 {
+		return []entity.Team{}, nil
+	}
+
 	idsString := toIDsString(teamIDs)
 	query := fmt.Sprintf(`
 	SELECT

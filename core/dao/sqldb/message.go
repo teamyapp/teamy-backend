@@ -47,11 +47,6 @@ func (m Message) FindMessageByID(messageID uint64) (entity.Message, error) {
 	return message, err
 }
 
-func (m Message) FindMessagesByIDs(messageIDs []uint64) ([]entity.Message, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, error) {
 	statement := `
 	SELECT

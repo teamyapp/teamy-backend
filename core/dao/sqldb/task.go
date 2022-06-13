@@ -59,6 +59,64 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 	return task, err
 }
 
+func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
+	if len(taskIDs) == 0 {
+		return []entity.Task{}, nil
+	}
+
+	idsString := toIDsString(taskIDs)
+	query := fmt.Sprintf(`
+	SELECT
+		id,
+		goal,
+		context,
+		creator_user_id,
+		owner_user_id,
+		owning_team_id,
+		status,
+		effort,
+		comments_thread_id,
+		due_at,
+		created_at,
+		updated_at
+	FROM task
+	WHERE id IN (%s);`, idsString)
+	rows, err := t.db.Query(query)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+	var tasks []entity.Task
+	for rows.Next() {
+		var task entity.Task
+		err = rows.
+			Scan(
+				&task.ID,
+				&task.Goal,
+				&task.Context,
+				&task.CreatorUserID,
+				&task.OwnerUserID,
+				&task.OwningTeamID,
+				&task.Status,
+				&task.Effort,
+				&task.CommentsThreadID,
+				&task.DueAt,
+				&task.CreatedAt,
+				&task.UpdatedAt,
+			)
+		if err != nil {
+			log.Println(task.ID, err)
+			continue
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
+}
+
 func (t Task) FindAllTasks() ([]entity.Task, error) {
 	statement := `
 	SELECT

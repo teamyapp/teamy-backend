@@ -49,6 +49,10 @@ func (u User) FindUserByID(userID uint64) (entity.User, error) {
 }
 
 func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
+	if len(userIDs) == 0 {
+		return []entity.User{}, nil
+	}
+
 	idsString := toIDsString(userIDs)
 	query := fmt.Sprintf(`
 	SELECT
