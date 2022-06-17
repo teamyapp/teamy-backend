@@ -11,6 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
+	"github.com/teamyapp/teamy-backend/infras/storage"
 )
 
 var daoSet = wire.NewSet(
@@ -35,6 +36,7 @@ var daoSet = wire.NewSet(
 func InitGraphQLResolver(
 	sqlDB *sql.DB,
 	cloudAPIClientCfg config.CloudAPIClient,
+	rtCollections *storage.RealTimeCollections,
 ) (resolver.Resolver, error) {
 	wire.Build(
 		daoSet,

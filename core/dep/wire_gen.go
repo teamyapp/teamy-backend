@@ -15,11 +15,12 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
+	"github.com/teamyapp/teamy-backend/infras/storage"
 )
 
 // Injectors from wire.go:
 
-func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIClientCfg config.CloudAPIClient) (resolver.Resolver, error) {
+func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIClientCfg config.CloudAPIClient, rtCollections *storage.RealTimeCollections) (resolver.Resolver, error) {
 	user := sqldb.NewUser(sqlDB)
 	team := sqldb.NewTeam(sqlDB)
 	teamMember := sqldb.NewTeamMember(sqlDB)
@@ -32,7 +33,7 @@ func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIClientCfg config.CloudAPIClient)
 	if err != nil {
 		return resolver.Resolver{}, err
 	}
-	dependencies := resolver.NewDependencies(user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, cloudAPIClient)
+	dependencies := resolver.NewDependencies(user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, cloudAPIClient, rtCollections)
 	resolverResolver := resolver.NewResolver(dependencies)
 	return resolverResolver, nil
 }

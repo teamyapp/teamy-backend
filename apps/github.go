@@ -20,6 +20,8 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/config"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
+	"github.com/teamyapp/teamy-backend/infras/runner"
+	"github.com/teamyapp/teamy-backend/infras/web"
 )
 
 const githubAppPathPrefix = "/github"
@@ -31,23 +33,25 @@ type GithubApp struct {
 	githubAppInstallationDao dao.GithubAppInstallation
 }
 
-var _ App = (*GithubApp)(nil)
+var _ runner.Service = (*GithubApp)(nil)
 
-func (g GithubApp) init(runner *AppRunner) error {
-	runner.registerRoute(Route{
-		Path:        path.Join(githubAppPathPrefix, "install"),
-		Method:      http.MethodGet,
-		HandlerFunc: g.install,
-	})
-	runner.registerRoute(Route{
-		Path:        path.Join(githubAppPathPrefix, "install", "finish"),
-		Method:      http.MethodGet,
-		HandlerFunc: g.finishInstall,
-	})
-	runner.registerRoute(Route{
-		Path:        path.Join(githubAppPathPrefix, "webhook"),
-		Method:      http.MethodPost,
-		HandlerFunc: g.onEventNotify,
+func (g GithubApp) Start(runner *runner.ServiceRunner) error {
+	runner.RegisterWebRoutes([]web.Route{
+		{
+			Path:        path.Join(githubAppPathPrefix, "install"),
+			Method:      http.MethodGet,
+			HandlerFunc: g.install,
+		},
+		{
+			Path:        path.Join(githubAppPathPrefix, "install", "finish"),
+			Method:      http.MethodGet,
+			HandlerFunc: g.finishInstall,
+		},
+		{
+			Path:        path.Join(githubAppPathPrefix, "webhook"),
+			Method:      http.MethodPost,
+			HandlerFunc: g.onEventNotify,
+		},
 	})
 	return nil
 }

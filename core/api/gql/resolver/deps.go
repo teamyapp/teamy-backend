@@ -3,6 +3,7 @@ package resolver
 import (
 	"github.com/teamyapp/cloud/app/api/rpc"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/infras/storage"
 )
 
 type Dependencies struct {
@@ -15,6 +16,7 @@ type Dependencies struct {
 	messageDao              dao.Message
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	cloudAPIClient          *rpc.CloudAPIClient
+	realTimeCollection      *storage.RealTimeCollections
 }
 
 func NewDependencies(
@@ -27,6 +29,7 @@ func NewDependencies(
 	messageDao dao.Message,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	cloudAPIClient *rpc.CloudAPIClient,
+	realTimeCollection *storage.RealTimeCollections,
 ) *Dependencies {
 	return &Dependencies{
 		userDao:                 userDao,
@@ -38,5 +41,6 @@ func NewDependencies(
 		messageDao:              messageDao,
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
 		cloudAPIClient:          cloudAPIClient,
+		realTimeCollection:      realTimeCollection,
 	}
 }

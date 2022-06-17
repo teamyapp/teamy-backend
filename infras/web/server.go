@@ -1,4 +1,4 @@
-package apps
+package web
 
 import (
 	"fmt"
@@ -8,16 +8,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type Route struct {
-	Path        string
-	Method      string
-	HandlerFunc http.HandlerFunc
-}
-
-func startWebServer(router *mux.Router, port int) error {
+func StartWebServer(router *mux.Router, port int) error {
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", enableCORS(router.ServeHTTP))
-	log.Printf("Apps Web server started at port %d\n", port)
+	log.Printf("Service runner web server started at port %d\n", port)
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), serveMux)
 }
 
@@ -33,4 +27,10 @@ func enableCORS(handlerFunc http.HandlerFunc) http.HandlerFunc {
 
 		handlerFunc(writer, request)
 	}
+}
+
+func WriteJSON(writer http.ResponseWriter, body []byte) {
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusAccepted)
+	writer.Write(body)
 }
