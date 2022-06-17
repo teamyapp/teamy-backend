@@ -91,7 +91,7 @@ spec:
               value: "false"
             - name: CORE_GRAPH_QL_API_PORT
               value: "9000"
-            - name: APP_RUNNER_WEB_API_PORT
+            - name: SERVICE_RUNNER_WEB_SERVER_PORT
               value: "9001"
             - name: APPS_GITHUB_APP_NAME
               value: teamy-apps
@@ -112,7 +112,7 @@ spec:
   ports:
     - name: core-gql
       port: 9000
-    - name: apps-web
+    - name: services-web
       port: 9001
 ---
 apiVersion: traefik.containo.us/v1alpha1
@@ -133,7 +133,7 @@ spec:
           port: 9000
           passHostHeader: true
     - kind: Rule
-      match: Host(`apps-backend.teamyapp.com`)
+      match: Host(`services.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend

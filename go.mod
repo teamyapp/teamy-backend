@@ -6,6 +6,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/websocket v1.5.0
 	github.com/graph-gophers/graphql-go v1.4.0
 	github.com/teamyapp/cloud v0.0.0-20220612225926-bed0a52c4cba
 )

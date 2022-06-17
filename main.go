@@ -9,12 +9,14 @@ import (
 
 	cloudConfig "github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
-	"github.com/teamyapp/teamy-backend/apps"
 	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/dep"
+	"github.com/teamyapp/teamy-backend/infras/runner"
+	"github.com/teamyapp/teamy-backend/infras/service"
+	"github.com/teamyapp/teamy-backend/infras/storage"
 )
 
 func init() {
@@ -45,17 +47,22 @@ func main() {
 			panic(err)
 		}
 
+		realTimeCollections := service.NewRealTimeCollections()
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			startGraphQLServer(cfg, cloudAPIClientCfg, sqlDB)
+			startGraphQLServer(
+				cfg,
+				cloudAPIClientCfg,
+				sqlDB,
+				realTimeCollections.InMemoryRealTimeCollections())
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			startAppRunner(cloudAPIClientCfg, sqlDB)
+			startServiceRunner(cloudAPIClientCfg, sqlDB, realTimeCollections)
 		}()
 		wg.Wait()
 		return nil
@@ -67,8 +74,12 @@ func main() {
 	}
 }
 
-func startGraphQLServer(cfg config.Config, cloudAPIConfig cloudConfig.CloudAPIClient, sqlDB *sql.DB) {
-	gqlResolver, err := dep.InitGraphQLResolver(sqlDB, cloudAPIConfig)
+func startGraphQLServer(
+	cfg config.Config,
+	cloudAPIConfig cloudConfig.CloudAPIClient,
+	sqlDB *sql.DB,
+	rtCollections *storage.RealTimeCollections) {
+	gqlResolver, err := dep.InitGraphQLResolver(sqlDB, cloudAPIConfig, rtCollections)
 	if err != nil {
 		panic(err)
 	}
@@ -82,8 +93,11 @@ func startGraphQLServer(cfg config.Config, cloudAPIConfig cloudConfig.CloudAPICl
 	panic(server.ListenAndServe())
 }
 
-func startAppRunner(cloudAPIConfig cloudConfig.CloudAPIClient, sqlDB *sql.DB) {
-	runnerConfig, err := appsConfig.AppRunnerConfigFromEnv()
+func startServiceRunner(
+	cloudAPIConfig cloudConfig.CloudAPIClient,
+	sqlDB *sql.DB,
+	rtCollections service.RealTimeCollections) {
+	runnerConfig, err := runner.ServiceRunnerConfigFromEnv()
 	if err != nil {
 		panic(err)
 	}
@@ -98,10 +112,11 @@ func startAppRunner(cloudAPIConfig cloudConfig.CloudAPIClient, sqlDB *sql.DB) {
 		panic(err)
 	}
 
-	runner := apps.NewAppRunner(runnerConfig, []apps.App{
+	rn := runner.NewServiceRunner(runnerConfig, []runner.Service{
 		githubApp,
+		rtCollections,
 	})
-	err = runner.Start()
+	err = rn.Start()
 	if err != nil {
 		panic(err)
 	}
