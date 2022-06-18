@@ -17,7 +17,7 @@ func (m AttributeMatcher) validate() error {
 	return m.Matcher.Validate()
 }
 
-func (m AttributeMatcher) match(attributes map[string]string) (bool, error) {
+func (m AttributeMatcher) match(attributes map[string]*string) (bool, error) {
 	value, ok := attributes[m.AttributeName]
 	if !ok {
 		return false, nil

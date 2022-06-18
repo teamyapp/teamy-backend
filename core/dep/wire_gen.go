@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/cloud/app/api/rpc"
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
+	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/infras/storage"
@@ -29,11 +30,19 @@ func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIClientCfg config.CloudAPIClient,
 	thread := sqldb.NewThread(sqlDB)
 	message := sqldb.NewMessage(sqlDB)
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(sqlDB)
+	userSyncer := collection.NewUserSyncer(rtCollections, user)
+	teamSyncer := collection.NewTeamSyncer(rtCollections, team)
+	teamMemberSyncer := collection.NewTeamMemberSyncer(rtCollections, teamMember)
+	invitationSyncer := collection.NewInvitationSyncer(rtCollections, invitation)
+	taskSyncer := collection.NewTaskSyncer(rtCollections, task)
+	threadSyncer := collection.NewThreadSyncer(rtCollections, thread)
+	messageSyncer := collection.NewMessageSyncer(rtCollections, message)
+	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(rtCollections, taskAwaitForRelation)
 	cloudAPIClient, err := rpc.NewCloudAPIClient(cloudAPIClientCfg)
 	if err != nil {
 		return resolver.Resolver{}, err
 	}
-	dependencies := resolver.NewDependencies(user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, cloudAPIClient, rtCollections)
+	dependencies := resolver.NewDependencies(user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, taskSyncer, threadSyncer, messageSyncer, taskAwaitForRelationSyncer, cloudAPIClient)
 	resolverResolver := resolver.NewResolver(dependencies)
 	return resolverResolver, nil
 }
@@ -41,3 +50,5 @@ func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIClientCfg config.CloudAPIClient,
 // wire.go:
 
 var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskAwaitForRelation, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread)
+
+var collectionSyncerSet = wire.NewSet(rpc.NewCloudAPIClient, collection.NewInvitationSyncer, collection.NewMessageSyncer, collection.NewTaskSyncer, collection.NewTaskAwaitForRelationSyncer, collection.NewTeamSyncer, collection.NewTeamMemberSyncer, collection.NewUserSyncer, collection.NewThreadSyncer)

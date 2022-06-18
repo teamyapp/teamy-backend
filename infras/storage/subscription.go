@@ -35,7 +35,7 @@ func (s Subscription) Validate() error {
 	return nil
 }
 
-func (s Subscription) match(attributes map[string]string) (bool, error) {
+func (s Subscription) match(attributes map[string]*string) (bool, error) {
 	for _, matcher := range s.AttributeMatchers {
 		match, err := matcher.match(attributes)
 		if err != nil {

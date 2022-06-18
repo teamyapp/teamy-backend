@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -50,7 +51,7 @@ var comparisons = map[Comparison]bool{
 type Matcher struct {
 	DataType   DataType
 	Comparison Comparison
-	Pattern    string
+	Pattern    *string
 }
 
 func (m Matcher) Validate() error {
@@ -67,49 +68,97 @@ func (m Matcher) Validate() error {
 	return nil
 }
 
-func (m Matcher) match(value string) (bool, error) {
+func (m Matcher) match(value *string) (bool, error) {
 	switch m.Comparison {
 	case EqualToComparison:
 		return m.equalTo(value)
 	case MatchPatternComparison:
+		if value == nil {
+			return false, errors.New("value cannot be nil")
+		}
+
+		if m.Pattern == nil {
+			return false, errors.New("pattern cannot be nil")
+		}
+
 		if m.DataType != StringDataType {
 			return false, fmt.Errorf("match pattern only accept strings: dataType=%v", m.DataType)
 		}
 
-		return regexp.MatchString(m.Pattern, value)
+		return regexp.MatchString(*m.Pattern, *value)
 	case LessThanComparison:
-		return m.lessThan(value)
+		if value == nil {
+			return false, errors.New("value cannot be nil")
+		}
+
+		if m.Pattern == nil {
+			return false, errors.New("pattern cannot be nil")
+		}
+
+		return m.lessThan(*value)
 	case LessThanOrEqualToComparison:
-		return m.lessThanOrEqualTo(value)
+		if value == nil {
+			return false, errors.New("value cannot be nil")
+		}
+
+		if m.Pattern == nil {
+			return false, errors.New("pattern cannot be nil")
+		}
+
+		return m.lessThanOrEqualTo(*value)
 	case GreaterThanComparison:
-		return m.greaterThan(value)
+		if value == nil {
+			return false, errors.New("value cannot be nil")
+		}
+
+		if m.Pattern == nil {
+			return false, errors.New("pattern cannot be nil")
+		}
+
+		return m.greaterThan(*value)
 	case GreaterThanOrEqualToComparison:
-		return m.greaterThanOrEqualTo(value)
+		if value == nil {
+			return false, errors.New("value cannot be nil")
+		}
+
+		if m.Pattern == nil {
+			return false, errors.New("pattern cannot be nil")
+		}
+
+		return m.greaterThanOrEqualTo(*value)
 	default:
 		return false, fmt.Errorf("unknown comparision: %v", m.Comparison)
 	}
 }
 
-func (m Matcher) equalTo(value string) (bool, error) {
+func (m Matcher) equalTo(value *string) (bool, error) {
+	if value == nil && m.Pattern == nil {
+		return true, nil
+	}
+
+	if value == nil || m.Pattern == nil {
+		return false, nil
+	}
+
 	switch m.DataType {
 	case IDDataType:
-		return m.matchID(value, func(value uint64, pattern uint64) bool {
+		return m.matchID(*value, func(value uint64, pattern uint64) bool {
 			return value == pattern
 		})
 	case IntDataType:
-		return m.matchInt(value, func(value int64, pattern int64) bool {
+		return m.matchInt(*value, func(value int64, pattern int64) bool {
 			return value == pattern
 		})
 	case FloatDataType:
-		return m.matchFloat(value, func(value float64, pattern float64) bool {
+		return m.matchFloat(*value, func(value float64, pattern float64) bool {
 			return value == pattern
 		})
 	case BoolDataType:
-		return m.matchBool(value, func(value bool, pattern bool) bool {
+		return m.matchBool(*value, func(value bool, pattern bool) bool {
 			return value == pattern
 		})
 	case DateTimeDataType:
-		return m.matchTime(value, func(value time.Time, pattern time.Time) bool {
+		return m.matchTime(*value, func(value time.Time, pattern time.Time) bool {
 			return value.Equal(pattern)
 		})
 	default:
@@ -225,7 +274,7 @@ func (m Matcher) matchID(value string, compare func(value uint64, pattern uint64
 		return false, err
 	}
 
-	ptn, err := strconv.ParseUint(m.Pattern, 10, 64)
+	ptn, err := strconv.ParseUint(*m.Pattern, 10, 64)
 	if err != nil {
 		return false, err
 	}
@@ -239,7 +288,7 @@ func (m Matcher) matchInt(value string, compare func(value int64, pattern int64)
 		return false, err
 	}
 
-	ptn, err := strconv.ParseInt(m.Pattern, 10, 64)
+	ptn, err := strconv.ParseInt(*m.Pattern, 10, 64)
 	if err != nil {
 		return false, err
 	}
@@ -253,7 +302,7 @@ func (m Matcher) matchFloat(value string, compare func(value float64, pattern fl
 		return false, err
 	}
 
-	ptn, err := strconv.ParseFloat(m.Pattern, 64)
+	ptn, err := strconv.ParseFloat(*m.Pattern, 64)
 	if err != nil {
 		return false, err
 	}
@@ -267,7 +316,7 @@ func (m Matcher) matchBool(value string, compare func(value bool, pattern bool) 
 		return false, err
 	}
 
-	ptn, err := strconv.ParseBool(m.Pattern)
+	ptn, err := strconv.ParseBool(*m.Pattern)
 	if err != nil {
 		return false, err
 	}
@@ -281,7 +330,7 @@ func (m Matcher) matchTime(value string, compare func(value time.Time, pattern t
 		return false, err
 	}
 
-	ptn, err := time.Parse(time.RFC3339, m.Pattern)
+	ptn, err := time.Parse(time.RFC3339, *m.Pattern)
 	if err != nil {
 		return false, err
 	}

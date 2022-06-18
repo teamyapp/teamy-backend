@@ -82,7 +82,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		task.DueAt = &dueAt
 	}
 
-	err = m.deps.taskDao.CreateTask(task)
+	err = m.deps.taskSyncer.CreateAndSyncTask(task)
 	if err != nil {
 		return Task{}, err
 	}
@@ -129,7 +129,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 	task.DueAt = fromGraphQLTimePtr(args.Input.DueAt)
 	updatedAt := time.Now()
 	task.UpdatedAt = &updatedAt
-	err = m.deps.taskDao.UpdateTask(task)
+	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
 		return Task{}, err
 	}
@@ -150,12 +150,12 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	err = m.deps.taskDao.DeleteTask(taskID)
+	err = m.deps.taskSyncer.DeleteAndSyncTask(taskID)
 	if err != nil {
 		return Task{}, err
 	}
 
-	err = m.deps.threadDao.DeleteThread(task.CommentsThreadID)
+	err = m.deps.threadSyncer.DeleteAndSyncThread(task.CommentsThreadID)
 	if err != nil {
 		return Task{}, err
 	}
@@ -223,7 +223,7 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 		inProgressTask := inProgressTasks[0]
 		inProgressTask.Status = entity.TaskStatusPaused
 		inProgressTask.UpdatedAt = &now
-		err = m.deps.taskDao.UpdateTask(inProgressTask)
+		err = m.deps.taskSyncer.UpdateAndSyncTask(inProgressTask)
 		if err != nil {
 			return Task{}, err
 		}
@@ -231,7 +231,7 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 
 	task.Status = entity.TaskStatusInProgress
 	task.UpdatedAt = &now
-	err = m.deps.taskDao.UpdateTask(task)
+	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
 		return Task{}, err
 	}
@@ -255,7 +255,7 @@ func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 	task.Status = entity.TaskStatusDelivered
 	now := time.Now()
 	task.UpdatedAt = &now
-	err = m.deps.taskDao.UpdateTask(task)
+	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
 		return Task{}, err
 	}
@@ -299,7 +299,7 @@ func (m Mutation) moveTaskToUpcoming(taskID uint64) (entity.Task, error) {
 	task.Status = entity.TaskStatusUpcoming
 	now := time.Now()
 	task.UpdatedAt = &now
-	err = m.deps.taskDao.UpdateTask(task)
+	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
 		return entity.Task{}, err
 	}
@@ -338,7 +338,7 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 	}
 
 	now := time.Now()
-	err = m.deps.taskAwaitForRelationDao.CreateRelation(entity.TaskAwaitForRelation{
+	err = m.deps.taskAwaitForRelationSyncer.CreateAndSyncRelation(entity.TaskAwaitForRelation{
 		AWaitingTaskID: taskID,
 		AWaitForTaskID: awaitForTaskId,
 		CreatedAt:      now,
@@ -349,7 +349,7 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 
 	task.Status = entity.TaskStatusAwaiting
 	task.UpdatedAt = &now
-	err = m.deps.taskDao.UpdateTask(task)
+	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
 		return Task{}, err
 	}
@@ -380,7 +380,7 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	err = m.deps.taskAwaitForRelationDao.DeleteRelation(taskID, awaitForTaskId)
+	err = m.deps.taskAwaitForRelationSyncer.DeleteAndSyncRelation(taskID, awaitForTaskId)
 	if err != nil {
 		return Task{}, err
 	}
@@ -434,7 +434,7 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		CreatedAt:    time.Now(),
 	}
 
-	err = m.deps.messageDao.CreateMessage(message)
+	err = m.deps.messageSyncer.CreateAndSyncMessage(message)
 	if err != nil {
 		return Message{}, err
 	}
@@ -461,7 +461,7 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	message.Body = args.Input.Body
 	now := time.Now()
 	message.UpdatedAt = &now
-	err = m.deps.messageDao.UpdateMessage(message)
+	err = m.deps.messageSyncer.UpdateAndSyncMessage(message)
 	if err != nil {
 		return Message{}, err
 	}
@@ -482,7 +482,7 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 		return Message{}, err
 	}
 
-	err = m.deps.messageDao.DeleteMessage(messageID)
+	err = m.deps.messageSyncer.DeleteAndSyncMessage(messageID)
 	if err != nil {
 		return Message{}, err
 	}
@@ -517,12 +517,12 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		OwnerUserID:   userID,
 		CreatedAt:     time.Now(),
 	}
-	err = m.deps.teamDao.CreateTeam(team)
+	err = m.deps.teamSyncer.CreateAndSyncTeam(team)
 	if err != nil {
 		return Team{}, err
 	}
 
-	err = m.deps.teamMemberDao.CreateTeamMember(team.ID, userID)
+	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(team.ID, userID)
 	if err != nil {
 		return Team{}, err
 	}
@@ -558,7 +558,7 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	team.OwnerUserID = ownerUserID
 	updatedAt := time.Now()
 	team.UpdatedAt = &updatedAt
-	err = m.deps.teamDao.UpdateTeam(team)
+	err = m.deps.teamSyncer.UpdateAndSyncTeam(team)
 	if err != nil {
 		return Team{}, err
 	}
@@ -582,7 +582,7 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 		return User{}, err
 	}
 
-	err = m.deps.teamMemberDao.CreateTeamMember(teamID, memberUserID)
+	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(teamID, memberUserID)
 	if err != nil {
 		return User{}, err
 	}
@@ -609,7 +609,7 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 		return User{}, err
 	}
 
-	err = m.deps.teamMemberDao.DeleteTeamMember(teamID, memberUserID)
+	err = m.deps.teamMemberSyncer.DeleteAndSyncTeamMember(teamID, memberUserID)
 	if err != nil {
 		return User{}, err
 	}
@@ -644,7 +644,7 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		ProfileURL: args.User.ProfileURL,
 	}
 
-	err = m.deps.userDao.CreateUser(user)
+	err = m.deps.userSyncer.CreateAndSyncUser(user)
 	if err != nil {
 		return User{}, err
 	}
@@ -675,7 +675,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	user.ProfileURL = args.Input.ProfileURL
 	updatedAt := time.Now()
 	user.UpdatedAt = &updatedAt
-	err = m.deps.userDao.UpdateUser(user)
+	err = m.deps.userSyncer.UpdateAndSyncUser(user)
 	if err != nil {
 		return User{}, err
 	}
@@ -724,7 +724,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		Code:              randString(invitationCodeAlphabet, invitationCodeLen),
 		CreatedAt:         time.Now(),
 	}
-	err = m.deps.invitationDao.CreateInvitation(invitation)
+	err = m.deps.invitationSyncer.CreateAndSyncInvitation(invitation)
 	if err != nil {
 		return Invitation{}, err
 	}
@@ -755,7 +755,7 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 	invitation.ExpireAt = args.Input.ExpireAt.Time
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	err = m.deps.invitationDao.UpdateInvitation(invitation)
+	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(invitation)
 	if err != nil {
 		return Invitation{}, err
 	}
@@ -776,7 +776,7 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	err = m.deps.invitationDao.DeleteInvitation(invitationID)
+	err = m.deps.invitationSyncer.DeleteAndSyncInvitation(invitationID)
 	if err != nil {
 		return Invitation{}, err
 	}
@@ -816,7 +816,7 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	err = m.deps.invitationDao.UpdateInvitation(invitation)
+	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(invitation)
 	if err != nil {
 		return Invitation{}, err
 	}
@@ -827,7 +827,7 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	}
 
 	if !hasMember {
-		err = m.deps.teamMemberDao.CreateTeamMember(invitation.TeamID, receiverUserID)
+		err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(invitation.TeamID, receiverUserID)
 		if err != nil {
 			return Invitation{}, err
 		}
@@ -868,7 +868,7 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	err = m.deps.invitationDao.UpdateInvitation(invitation)
+	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(invitation)
 	if err != nil {
 		return Invitation{}, err
 	}
@@ -899,7 +899,7 @@ func (m Mutation) createThread(ct context.Context) (uint64, error) {
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
-	return threadID, m.deps.threadDao.CreateThread(threadID)
+	return threadID, m.deps.threadSyncer.CreateAndSyncThread(threadID)
 }
 
 func (m Mutation) GeneratorClient() proto.GeneratorClient {
