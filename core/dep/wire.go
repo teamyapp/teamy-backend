@@ -9,6 +9,7 @@ import (
 	"github.com/teamyapp/cloud/app/api/rpc"
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
+	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/infras/storage"
@@ -33,6 +34,17 @@ var daoSet = wire.NewSet(
 	sqldb.NewThread,
 )
 
+var collectionSyncerSet = wire.NewSet(
+	collection.NewInvitationSyncer,
+	collection.NewMessageSyncer,
+	collection.NewTaskSyncer,
+	collection.NewTaskAwaitForRelationSyncer,
+	collection.NewTeamSyncer,
+	collection.NewTeamMemberSyncer,
+	collection.NewUserSyncer,
+	collection.NewThreadSyncer,
+)
+
 func InitGraphQLResolver(
 	sqlDB *sql.DB,
 	cloudAPIClientCfg config.CloudAPIClient,
@@ -40,6 +52,7 @@ func InitGraphQLResolver(
 ) (resolver.Resolver, error) {
 	wire.Build(
 		daoSet,
+		collectionSyncerSet,
 		rpc.NewCloudAPIClient,
 		resolver.NewDependencies,
 		resolver.NewResolver,

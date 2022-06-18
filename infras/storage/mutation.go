@@ -22,7 +22,7 @@ var mutationTypes = map[MutationType]bool{
 type Mutation struct {
 	CollectionType string
 	MutationType   MutationType
-	Attributes     map[string]string
+	Attributes     map[string]*string
 }
 
 func (m Mutation) Validate() error {
@@ -36,4 +36,22 @@ func (m Mutation) Validate() error {
 	}
 
 	return nil
+}
+
+func (m Mutation) String() string {
+	return fmt.Sprintf("Mutation[CollectionType:%v MutationType:%v Attributes:%v]",
+		m.CollectionType, m.MutationType, replacePointers(m.Attributes))
+}
+
+func replacePointers(input map[string]*string) map[string]string {
+	output := make(map[string]string)
+	for key, value := range input {
+		if value == nil {
+			output[key] = "<nil>"
+		} else {
+			output[key] = *value
+		}
+	}
+
+	return output
 }

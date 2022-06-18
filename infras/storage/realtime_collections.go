@@ -110,6 +110,7 @@ func (r RealTimeCollections) ListSubscriptions() Subscriptions {
 }
 
 func (r RealTimeCollections) Mutate(mutation Mutation) error {
+	log.Printf("new mutation: %v\n", mutation)
 	collection, ok := r.collections[mutation.CollectionType]
 	if !ok {
 		return fmt.Errorf("collectionType not found: collectionType=%v", mutation.CollectionType)
@@ -153,6 +154,7 @@ func (r RealTimeCollections) notify(clientID uint64, mutation Mutation) error {
 	}
 
 	client.conn.SendMessage(buf)
+	log.Printf("Notified mutation to client: clientID=%v, mutation%v\n", clientID, mutation)
 	return nil
 }
 
