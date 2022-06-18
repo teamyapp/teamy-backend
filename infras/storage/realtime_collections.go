@@ -29,7 +29,7 @@ type RealTimeCollections struct {
 	nextSubscriptionID uint64
 	collections        map[string]Collection    // <collectionType, collection>
 	subscriptions      map[uint64]*Subscription // <subscriptionID, subscription>
-	clients            map[uint64]Client        // <clientID, client>
+	clients            map[uint64]*Client       // <clientID, client>
 }
 
 func (r RealTimeCollections) RegisterCollectionType(collectionType string) {
@@ -47,7 +47,7 @@ func (r RealTimeCollections) ListCollectionTypes() []string {
 
 func (r *RealTimeCollections) OnClientConnect(conn connection.Connection) uint64 {
 	clientID := r.nextClientID
-	r.clients[clientID] = Client{
+	r.clients[clientID] = &Client{
 		conn:          conn,
 		subscriptions: map[uint64]*Subscription{},
 	}
@@ -162,6 +162,6 @@ func NewRealTimeCollections() *RealTimeCollections {
 		nextSubscriptionID: 1,
 		collections:        map[string]Collection{},
 		subscriptions:      map[uint64]*Subscription{},
-		clients:            map[uint64]Client{},
+		clients:            map[uint64]*Client{},
 	}
 }
