@@ -35,7 +35,6 @@ var daoSet = wire.NewSet(
 )
 
 var collectionSyncerSet = wire.NewSet(
-	rpc.NewCloudAPIClient,
 	collection.NewInvitationSyncer,
 	collection.NewMessageSyncer,
 	collection.NewTaskSyncer,
@@ -54,6 +53,7 @@ func InitGraphQLResolver(
 	wire.Build(
 		daoSet,
 		collectionSyncerSet,
+		rpc.NewCloudAPIClient,
 		resolver.NewDependencies,
 		resolver.NewResolver,
 	)
