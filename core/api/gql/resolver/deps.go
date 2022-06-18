@@ -15,7 +15,6 @@ type Dependencies struct {
 	threadDao                  dao.Thread
 	messageDao                 dao.Message
 	taskAwaitForRelationDao    dao.TaskAwaitForRelation
-	cloudAPIClient             *rpc.CloudAPIClient
 	userSyncer                 collection.UserSyncer
 	teamSyncer                 collection.TeamSyncer
 	teamMemberSyncer           collection.TeamMemberSyncer
@@ -24,6 +23,7 @@ type Dependencies struct {
 	threadSyncer               collection.ThreadSyncer
 	messageSyncer              collection.MessageSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
+	cloudAPIClient             *rpc.CloudAPIClient
 }
 
 func NewDependencies(
