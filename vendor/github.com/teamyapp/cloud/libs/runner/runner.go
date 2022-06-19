@@ -13,8 +13,8 @@ import (
 )
 
 type ServiceRunnerConfig struct {
-	WebServerPort  int `envconfig:"SERVICE_RUNNER_WEB_SERVER_PORT" default:"9001"`
-	GRPCServerPort int `envconfig:"SERVICE_RUNNER_GRPC_SERVER_PORT" default:"9002"`
+	WebServerPort  int `envconfig:"SERVICE_RUNNER_WEB_SERVER_PORT" default:"9011"`
+	GRPCServerPort int `envconfig:"SERVICE_RUNNER_GRPC_SERVER_PORT" default:"9012"`
 }
 
 func ServiceRunnerConfigFromEnv() (ServiceRunnerConfig, error) {
@@ -35,33 +35,40 @@ type ServiceRunner struct {
 	services   []Service
 }
 
-func (s *ServiceRunner) Start() error {
+func (s *ServiceRunner) Start() {
 	for _, service := range s.services {
 		err := service.Start(s)
 		if err != nil {
-			return err
+			panic(err)
 		}
 	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() error {
+	go func() {
 		defer wg.Done()
-		return web.StartWebServer(s.webRouter, s.config.WebServerPort)
+		log.Printf("Service runner web server started at port %d\n", s.config.WebServerPort)
+		err := web.StartWebServer(s.webRouter, s.config.WebServerPort)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	wg.Add(1)
-	go func() error {
+	go func() {
 		defer wg.Done()
 		lis, err := net.Listen("tcp", fmt.Sprintf(fmt.Sprintf(":%d", s.config.GRPCServerPort)))
 		if err != nil {
-			return err
+			panic(err)
 		}
 
-		return s.gRPCServer.Serve(lis)
+		log.Printf("Service runner gRPC server started at port %d\n", s.config.GRPCServerPort)
+		err = s.gRPCServer.Serve(lis)
+		if err != nil {
+			panic(err)
+		}
 	}()
 	wg.Wait()
-	return nil
 }
 
 func (s *ServiceRunner) RegisterWebRoutes(routes []web.Route) {

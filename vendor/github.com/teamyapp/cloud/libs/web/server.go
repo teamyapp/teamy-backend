@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -11,7 +10,6 @@ import (
 func StartWebServer(router *mux.Router, port int) error {
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", enableCORS(router.ServeHTTP))
-	log.Printf("Service runner web server started at port %d\n", port)
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), serveMux)
 }
 

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/teamy-backend/core/collect"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 

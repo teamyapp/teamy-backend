@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/teamyapp/teamy-backend/infras/connection"
+	"github.com/teamyapp/cloud/libs/connection"
 )
 
 type Subscriptions map[uint64]*Subscription // <subscriptionID, subscription>

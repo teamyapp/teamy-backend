@@ -9,9 +9,9 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/web"
-	"github.com/teamyapp/teamy-backend/infras/connection"
 	"github.com/teamyapp/teamy-backend/infras/storage"
 )
 
