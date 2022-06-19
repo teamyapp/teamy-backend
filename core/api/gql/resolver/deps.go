@@ -1,7 +1,7 @@
 package resolver
 
 import (
-	"github.com/teamyapp/cloud/app/api/rpc"
+	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
@@ -23,7 +23,7 @@ type Dependencies struct {
 	threadSyncer               collection.ThreadSyncer
 	messageSyncer              collection.MessageSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
-	cloudAPIClient             *rpc.CloudAPIClient
+	cloudAPIClient             *api.CloudAPIClient
 }
 
 func NewDependencies(
@@ -43,7 +43,7 @@ func NewDependencies(
 	threadSyncer collection.ThreadSyncer,
 	messageSyncer collection.MessageSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
-	cloudAPIClient *rpc.CloudAPIClient,
+	cloudAPIClient *api.CloudAPIClient,
 ) *Dependencies {
 	return &Dependencies{
 		userDao:                    userDao,

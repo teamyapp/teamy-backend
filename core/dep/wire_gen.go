@@ -8,7 +8,7 @@ package dep
 import (
 	"database/sql"
 	"github.com/google/wire"
-	"github.com/teamyapp/cloud/app/api/rpc"
+	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/core/collection"
@@ -36,7 +36,7 @@ func InitGraphQLResolver(sqlDB *sql.DB, cloudAPIClientCfg config.CloudAPIClient,
 	threadSyncer := collection.NewThreadSyncer(rtCollections, thread)
 	messageSyncer := collection.NewMessageSyncer(rtCollections, message)
 	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(rtCollections, taskAwaitForRelation)
-	cloudAPIClient, err := rpc.NewCloudAPIClient(cloudAPIClientCfg)
+	cloudAPIClient, err := api.NewCloudAPIClient(cloudAPIClientCfg)
 	if err != nil {
 		return resolver.Resolver{}, err
 	}

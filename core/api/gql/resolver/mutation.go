@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/app/api/rpc/proto"
+	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/teamy-backend/core/collect"
 	"github.com/teamyapp/teamy-backend/core/entity"

@@ -9,12 +9,12 @@ import (
 
 	cloudConfig "github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
+	"github.com/teamyapp/cloud/libs/runner"
 	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/dep"
-	"github.com/teamyapp/teamy-backend/infras/runner"
 	"github.com/teamyapp/teamy-backend/infras/service"
 	"github.com/teamyapp/teamy-backend/infras/storage"
 )

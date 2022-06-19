@@ -10,10 +10,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/infras/connection"
-	"github.com/teamyapp/teamy-backend/infras/runner"
 	"github.com/teamyapp/teamy-backend/infras/storage"
-	"github.com/teamyapp/teamy-backend/infras/web"
 )
 
 const realTimeCollectionsPrefix = "/real-time-collections"

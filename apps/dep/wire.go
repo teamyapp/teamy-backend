@@ -6,7 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
-	"github.com/teamyapp/cloud/app/api/rpc"
+	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/apps"
 	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
@@ -25,7 +25,7 @@ func InitGithubApp(
 
 		sqldb.NewGithubAppInstallState,
 		sqldb.NewGithubAppInstallation,
-		rpc.NewCloudAPIClient,
+		api.NewCloudAPIClient,
 		apps.NewGithubApp,
 	)
 	return apps.GithubApp{}, nil

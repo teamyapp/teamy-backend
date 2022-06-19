@@ -1,25 +1,33 @@
-package rpc
+package api
 
 import (
 	"context"
 	"log"
 
-	"github.com/teamyapp/cloud/app/api/rpc/proto"
+	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/gen"
+	"github.com/teamyapp/cloud/libs/runner"
 	"google.golang.org/grpc"
 )
 
-type GeneratorService struct {
+type Generator struct {
 	proto.UnimplementedGeneratorServer
 	uniqueNumberGeneratorFactory gen.UniqueNumberFactory
 	uniqueNumberGenerators       map[string]*gen.UniqueNumber
 	uniqueStringGenerators       map[string]*gen.UniqueString
 }
 
-var _ proto.GeneratorServer = (*GeneratorService)(nil)
-var _ Service = (*GeneratorService)(nil)
+var _ proto.GeneratorServer = (*Generator)(nil)
+var _ runner.Service = (*Generator)(nil)
 
-func (g GeneratorService) GenerateUniqueNumber(
+func (g Generator) Start(runner *runner.ServiceRunner) error {
+	runner.WithGRPCServer(func(server *grpc.Server) {
+		proto.RegisterGeneratorServer(server, g)
+	})
+	return nil
+}
+
+func (g Generator) GenerateUniqueNumber(
 	ctx context.Context,
 	request *proto.GenerateUniqueNumberRequest,
 ) (*proto.GenerateUniqueNumberResponse, error) {
@@ -44,7 +52,7 @@ func (g GeneratorService) GenerateUniqueNumber(
 	return &proto.GenerateUniqueNumberResponse{UniqueNumber: uniqueNum}, nil
 }
 
-func (g GeneratorService) GenerateUniqueString(
+func (g Generator) GenerateUniqueString(
 	ctx context.Context,
 	request *proto.GenerateUniqueStringRequest,
 ) (*proto.GenerateUniqueStringResponse, error) {
@@ -68,12 +76,8 @@ func (g GeneratorService) GenerateUniqueString(
 	return &proto.GenerateUniqueStringResponse{UniqueString: uniqueStr}, nil
 }
 
-func (g GeneratorService) registerServer(server *grpc.Server) {
-	proto.RegisterGeneratorServer(server, g)
-}
-
-func NewGeneratorService(uniqueNumberGeneratorFactory gen.UniqueNumberFactory) GeneratorService {
-	return GeneratorService{
+func NewGenerator(uniqueNumberGeneratorFactory gen.UniqueNumberFactory) Generator {
+	return Generator{
 		uniqueNumberGeneratorFactory: uniqueNumberGeneratorFactory,
 		uniqueNumberGenerators:       make(map[string]*gen.UniqueNumber),
 		uniqueStringGenerators:       make(map[string]*gen.UniqueString),
