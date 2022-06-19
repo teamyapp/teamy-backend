@@ -116,8 +116,5 @@ func startServiceRunner(
 		githubApp,
 		rtCollections,
 	})
-	err = rn.Start()
-	if err != nil {
-		panic(err)
-	}
+	rn.Start()
 }
