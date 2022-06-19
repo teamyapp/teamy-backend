@@ -86,7 +86,6 @@ func (r RealTimeCollections) Start(runner *runner.ServiceRunner) error {
 }
 
 func (r RealTimeCollections) connect(writer http.ResponseWriter, request *http.Request) {
-
 	conn, err := connection.WebSocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
 		log.Println(err)
