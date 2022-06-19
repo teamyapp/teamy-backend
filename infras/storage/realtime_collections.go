@@ -139,6 +139,7 @@ func (r RealTimeCollections) Mutate(mutation Mutation) error {
 }
 
 func (r RealTimeCollections) onClientDisconnect(clientID uint64) {
+	log.Printf("Client disconnect: clientID=%v\n", clientID)
 	client := r.clients[clientID]
 	for subscriptionID := range client.subscriptions {
 		_ = r.Unsubscribe(subscriptionID)
