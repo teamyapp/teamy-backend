@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/infras/connection"
@@ -39,7 +38,6 @@ type RealTimeCollectionsConfig struct {
 }
 
 type RealTimeCollections struct {
-	webSocketUpgrader   websocket.Upgrader
 	realTimeCollections *storage.RealTimeCollections
 }
 
@@ -88,7 +86,7 @@ func (r RealTimeCollections) Start(runner *runner.ServiceRunner) error {
 }
 
 func (r RealTimeCollections) connect(writer http.ResponseWriter, request *http.Request) {
-	conn, err := r.webSocketUpgrader.Upgrade(writer, request, nil)
+	conn, err := connection.WebSocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
 		log.Println(err)
 		writer.WriteHeader(http.StatusInternalServerError)
