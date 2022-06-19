@@ -1,9 +1,9 @@
-package rpc
+package api
 
 import (
 	"fmt"
 
-	"github.com/teamyapp/cloud/app/api/rpc/proto"
+	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

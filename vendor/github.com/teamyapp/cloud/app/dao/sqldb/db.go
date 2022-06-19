@@ -14,7 +14,7 @@ import (
 
 	_ "github.com/lib/pq"
 	migrate "github.com/rubenv/sql-migrate"
-	"github.com/teamyapp/cloud/app/io"
+	"github.com/teamyapp/cloud/libs/io"
 )
 
 const dbType = "postgres"

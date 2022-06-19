@@ -9,7 +9,7 @@ package dep
 import (
 	"database/sql"
 
-	"github.com/teamyapp/cloud/app/api/rpc"
+	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/apps"
 	config2 "github.com/teamyapp/teamy-backend/apps/config"
@@ -19,7 +19,7 @@ import (
 // Injectors from wire.go:
 
 func InitGithubApp(cloudAPICfg config.CloudAPIClient, config3 config2.GithubAppConfig, sqlDB *sql.DB) (apps.GithubApp, error) {
-	cloudAPIClient, err := rpc.NewCloudAPIClient(cloudAPICfg)
+	cloudAPIClient, err := api.NewCloudAPIClient(cloudAPICfg)
 	if err != nil {
 		return apps.GithubApp{}, err
 	}

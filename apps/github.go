@@ -15,20 +15,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/rpc"
-	"github.com/teamyapp/cloud/app/api/rpc/proto"
+	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/apps/config"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
-	"github.com/teamyapp/teamy-backend/infras/runner"
-	"github.com/teamyapp/teamy-backend/infras/web"
 )
 
 const githubAppPathPrefix = "/github"
 
 type GithubApp struct {
 	config                   config.GithubAppConfig
-	cloudAPIClient           *rpc.CloudAPIClient
+	cloudAPIClient           *api.CloudAPIClient
 	githubAppInstallStateDao dao.GithubAppInstallState
 	githubAppInstallationDao dao.GithubAppInstallation
 }
@@ -223,7 +223,7 @@ func (g GithubApp) getInstallGithubAppURL(stateID uint64) (string, error) {
 
 func NewGithubApp(
 	config config.GithubAppConfig,
-	cloudAPIClient *rpc.CloudAPIClient,
+	cloudAPIClient *api.CloudAPIClient,
 	githubAppInstallStateDao dao.GithubAppInstallState,
 	githubAppInstallationDao dao.GithubAppInstallation,
 ) GithubApp {

@@ -6,7 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
-	"github.com/teamyapp/cloud/app/api/rpc"
+	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/core/collection"
@@ -53,7 +53,7 @@ func InitGraphQLResolver(
 	wire.Build(
 		daoSet,
 		collectionSyncerSet,
-		rpc.NewCloudAPIClient,
+		api.NewCloudAPIClient,
 		resolver.NewDependencies,
 		resolver.NewResolver,
 	)
