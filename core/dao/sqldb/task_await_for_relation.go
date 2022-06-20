@@ -80,8 +80,8 @@ func (t TaskAwaitForRelation) CreateRelation(relation entity.TaskAwaitForRelatio
 	)
 	VALUES ($1, $2, $3);
 `,
-		relation.AWaitingTaskID,
-		relation.AWaitForTaskID,
+		relation.AwaitingTaskID,
+		relation.AwaitForTaskID,
 		relation.CreatedAt,
 	)
 

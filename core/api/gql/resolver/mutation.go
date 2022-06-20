@@ -339,8 +339,8 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 
 	now := time.Now()
 	err = m.deps.taskAwaitForRelationSyncer.CreateAndSyncRelation(entity.TaskAwaitForRelation{
-		AWaitingTaskID: taskID,
-		AWaitForTaskID: awaitForTaskId,
+		AwaitingTaskID: taskID,
+		AwaitForTaskID: awaitForTaskId,
 		CreatedAt:      now,
 	})
 	if err != nil {

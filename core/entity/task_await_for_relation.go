@@ -5,7 +5,7 @@ import (
 )
 
 type TaskAwaitForRelation struct {
-	AWaitingTaskID uint64
-	AWaitForTaskID uint64
+	AwaitingTaskID uint64
+	AwaitForTaskID uint64
 	CreatedAt      time.Time
 }
