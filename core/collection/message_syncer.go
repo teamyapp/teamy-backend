@@ -1,18 +1,15 @@
 package collection
 
 import (
-	"strconv"
-
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
-	"github.com/teamyapp/teamy-backend/infras/storage"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-const messageCollectionType = "Message"
-
 type MessageSyncer struct {
-	realTimeCollection *storage.RealTimeCollections
-	messageDao         dao.Message
+	realTimeStateSyncer *realtime.StateSyncer
+	messageDao          dao.Message
+	taskDao             dao.Task
 }
 
 func (m MessageSyncer) CreateAndSyncMessage(message entity.Message) error {
@@ -21,11 +18,20 @@ func (m MessageSyncer) CreateAndSyncMessage(message entity.Message) error {
 		return err
 	}
 
-	return m.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: messageCollectionType,
-		MutationType:   storage.CreateMutationType,
-		Attributes:     storage.MapAttributes(message),
+	task, err := m.taskDao.FindTaskByCommentThreadID(message.ThreadID)
+	if err != nil {
+		return err
+	}
+
+	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.MessageCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
+		},
+		Payload: message,
 	})
+	return nil
 }
 
 func (m MessageSyncer) UpdateAndSyncMessage(message entity.Message) error {
@@ -34,33 +40,56 @@ func (m MessageSyncer) UpdateAndSyncMessage(message entity.Message) error {
 		return err
 	}
 
-	return m.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: messageCollectionType,
-		MutationType:   storage.UpdateMutationType,
-		Attributes:     storage.MapAttributes(message),
-	})
-}
-
-func (m MessageSyncer) DeleteAndSyncMessage(messageID uint64) error {
-	err := m.messageDao.DeleteMessage(messageID)
+	task, err := m.taskDao.FindTaskByCommentThreadID(message.ThreadID)
 	if err != nil {
 		return err
 	}
 
-	idStr := strconv.FormatUint(messageID, 10)
-	return m.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: messageCollectionType,
-		MutationType:   storage.DeleteMutationType,
-		Attributes: map[string]*string{
-			"ID": &idStr,
+	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.MessageCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
 		},
+		Payload: message,
 	})
+	return nil
 }
 
-func NewMessageSyncer(realTimeCollection *storage.RealTimeCollections, messageDao dao.Message) MessageSyncer {
-	realTimeCollection.RegisterCollectionType(messageCollectionType)
+func (m MessageSyncer) DeleteAndSyncMessage(messageID uint64) error {
+	message, err := m.messageDao.FindMessageByID(messageID)
+	if err != nil {
+		return err
+	}
+
+	task, err := m.taskDao.FindTaskByCommentThreadID(message.ThreadID)
+	if err != nil {
+		return err
+	}
+
+	err = m.messageDao.DeleteMessage(messageID)
+	if err != nil {
+		return err
+	}
+
+	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.MessageCollectionType,
+		MutationType:   realtime.DeleteMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
+		},
+		Payload: messageID,
+	})
+	return nil
+}
+
+func NewMessageSyncer(
+	realTimeStateSyncer *realtime.StateSyncer,
+	messageDao dao.Message,
+	taskDao dao.Task) MessageSyncer {
 	return MessageSyncer{
-		realTimeCollection: realTimeCollection,
-		messageDao:         messageDao,
+		realTimeStateSyncer: realTimeStateSyncer,
+		messageDao:          messageDao,
+		taskDao:             taskDao,
 	}
 }

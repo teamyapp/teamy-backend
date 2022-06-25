@@ -1,17 +1,14 @@
 package collection
 
 import (
-	"strconv"
-
 	"github.com/teamyapp/teamy-backend/core/dao"
-	"github.com/teamyapp/teamy-backend/infras/storage"
+	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-const teamMemberCollectionType = "TeamMember"
-
 type TeamMemberSyncer struct {
-	realTimeCollection *storage.RealTimeCollections
-	teamMemberDao      dao.TeamMember
+	realTimeStateSyncer *realtime.StateSyncer
+	teamMemberDao       dao.TeamMember
 }
 
 func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) error {
@@ -20,16 +17,18 @@ func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) 
 		return err
 	}
 
-	teamIDStr := strconv.FormatUint(teamID, 10)
-	userIDStr := strconv.FormatUint(userID, 10)
-	return t.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: teamMemberCollectionType,
-		MutationType:   storage.CreateMutationType,
-		Attributes: map[string]*string{
-			"TeamID": &teamIDStr,
-			"UserID": &userIDStr,
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TeamMemberCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		TeamIDs: []uint64{
+			teamID,
+		},
+		Payload: entity.TeamMember{
+			TeamID: teamID,
+			UserID: userID,
 		},
 	})
+	return nil
 }
 
 func (t TeamMemberSyncer) DeleteAndSyncTeamMember(teamID uint64, userID uint64) error {
@@ -38,22 +37,23 @@ func (t TeamMemberSyncer) DeleteAndSyncTeamMember(teamID uint64, userID uint64) 
 		return err
 	}
 
-	teamIDStr := strconv.FormatUint(teamID, 10)
-	userIDStr := strconv.FormatUint(userID, 10)
-	return t.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: teamMemberCollectionType,
-		MutationType:   storage.DeleteMutationType,
-		Attributes: map[string]*string{
-			"TeamID": &teamIDStr,
-			"UserID": &userIDStr,
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TeamMemberCollectionType,
+		MutationType:   realtime.DeleteMutationType,
+		TeamIDs: []uint64{
+			teamID,
+		},
+		Payload: entity.TeamMember{
+			TeamID: teamID,
+			UserID: userID,
 		},
 	})
+	return nil
 }
 
-func NewTeamMemberSyncer(realTimeCollection *storage.RealTimeCollections, teamMemberDao dao.TeamMember) TeamMemberSyncer {
-	realTimeCollection.RegisterCollectionType(teamMemberCollectionType)
+func NewTeamMemberSyncer(realTimeStateSyncer *realtime.StateSyncer, teamMemberDao dao.TeamMember) TeamMemberSyncer {
 	return TeamMemberSyncer{
-		realTimeCollection: realTimeCollection,
-		teamMemberDao:      teamMemberDao,
+		realTimeStateSyncer: realTimeStateSyncer,
+		teamMemberDao:       teamMemberDao,
 	}
 }

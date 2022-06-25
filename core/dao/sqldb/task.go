@@ -117,6 +117,49 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 	return tasks, nil
 }
 
+func (t Task) FindTaskByCommentThreadID(commentThreadID uint64) (entity.Task, error) {
+	task := entity.Task{}
+	err := t.db.QueryRow(`
+		SELECT
+			id,
+			goal,
+			context,
+			creator_user_id,
+			owner_user_id,
+			owning_team_id,
+			status,
+			effort,
+			comments_thread_id,
+			due_at,
+			created_at,
+			updated_at
+		FROM task
+		WHERE comments_thread_id = $1;`,
+		commentThreadID).
+		Scan(
+			&task.ID,
+			&task.Goal,
+			&task.Context,
+			&task.CreatorUserID,
+			&task.OwnerUserID,
+			&task.OwningTeamID,
+			&task.Status,
+			&task.Effort,
+			&task.CommentsThreadID,
+			&task.DueAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.Task{}, dao.ErrNotFound(fmt.Sprintf(
+			"task not found: commentThreadID=%v",
+			commentThreadID))
+	}
+
+	return task, err
+}
+
 func (t Task) FindAllTasks() ([]entity.Task, error) {
 	statement := `
 	SELECT

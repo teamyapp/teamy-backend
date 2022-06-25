@@ -1,0 +1,14 @@
+package realtime
+
+type CollectionType string
+
+const (
+	TaskCollectionType                 CollectionType = "Task"
+	InvitationCollectionType           CollectionType = "Invitation"
+	MessageCollectionType              CollectionType = "Message"
+	TeamCollectionType                 CollectionType = "Team"
+	UserCollectionType                 CollectionType = "User"
+	ThreadCollectionType               CollectionType = "Thread"
+	TeamMemberCollectionType           CollectionType = "TeamMember"
+	TaskAwaitForRelationCollectionType CollectionType = "TaskAwaitForRelation"
+)

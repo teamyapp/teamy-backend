@@ -1,18 +1,14 @@
 package collection
 
 import (
-	"strconv"
-
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
-	"github.com/teamyapp/teamy-backend/infras/storage"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-const invitationCollectionType = "Invitation"
-
 type InvitationSyncer struct {
-	realTimeCollection *storage.RealTimeCollections
-	invitationDao      dao.Invitation
+	realTimeStateSyncer *realtime.StateSyncer
+	invitationDao       dao.Invitation
 }
 
 func (i InvitationSyncer) CreateAndSyncInvitation(invitation entity.Invitation) error {
@@ -21,11 +17,15 @@ func (i InvitationSyncer) CreateAndSyncInvitation(invitation entity.Invitation) 
 		return err
 	}
 
-	return i.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: invitationCollectionType,
-		MutationType:   storage.CreateMutationType,
-		Attributes:     storage.MapAttributes(invitation),
+	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.InvitationCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		TeamIDs: []uint64{
+			invitation.TeamID,
+		},
+		Payload: invitation,
 	})
+	return nil
 }
 
 func (i InvitationSyncer) UpdateAndSyncInvitation(invitation entity.Invitation) error {
@@ -34,33 +34,42 @@ func (i InvitationSyncer) UpdateAndSyncInvitation(invitation entity.Invitation) 
 		return err
 	}
 
-	return i.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: invitationCollectionType,
-		MutationType:   storage.UpdateMutationType,
-		Attributes:     storage.MapAttributes(invitation),
+	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.InvitationCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			invitation.TeamID,
+		},
+		Payload: invitation,
 	})
+	return nil
 }
 
 func (i InvitationSyncer) DeleteAndSyncInvitation(invitationID uint64) error {
-	err := i.invitationDao.DeleteInvitation(invitationID)
+	invitation, err := i.invitationDao.FindInvitationByID(invitationID)
 	if err != nil {
 		return err
 	}
 
-	idStr := strconv.FormatUint(invitationID, 10)
-	return i.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: invitationCollectionType,
-		MutationType:   storage.DeleteMutationType,
-		Attributes: map[string]*string{
-			"ID": &idStr,
+	err = i.invitationDao.DeleteInvitation(invitationID)
+	if err != nil {
+		return err
+	}
+
+	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.InvitationCollectionType,
+		MutationType:   realtime.DeleteMutationType,
+		TeamIDs: []uint64{
+			invitation.TeamID,
 		},
+		Payload: invitationID,
 	})
+	return nil
 }
 
-func NewInvitationSyncer(realTimeCollection *storage.RealTimeCollections, invitationDao dao.Invitation) InvitationSyncer {
-	realTimeCollection.RegisterCollectionType(invitationCollectionType)
+func NewInvitationSyncer(realTimeStateSyncer *realtime.StateSyncer, invitationDao dao.Invitation) InvitationSyncer {
 	return InvitationSyncer{
-		realTimeCollection: realTimeCollection,
-		invitationDao:      invitationDao,
+		realTimeStateSyncer: realTimeStateSyncer,
+		invitationDao:       invitationDao,
 	}
 }

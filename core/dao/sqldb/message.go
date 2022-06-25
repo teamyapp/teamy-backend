@@ -41,7 +41,7 @@ func (m Message) FindMessageByID(messageID uint64) (entity.Message, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Message{}, dao.ErrNotFound(fmt.Sprintf(
 			"message not found: id=%v",
-			message))
+			messageID))
 	}
 
 	return message, err

@@ -20,7 +20,6 @@ type Dependencies struct {
 	teamMemberSyncer           collection.TeamMemberSyncer
 	invitationSyncer           collection.InvitationSyncer
 	taskSyncer                 collection.TaskSyncer
-	threadSyncer               collection.ThreadSyncer
 	messageSyncer              collection.MessageSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
 	cloudAPIClient             *api.CloudAPIClient
@@ -40,7 +39,6 @@ func NewDependencies(
 	teamMemberSyncer collection.TeamMemberSyncer,
 	invitationSyncer collection.InvitationSyncer,
 	taskSyncer collection.TaskSyncer,
-	threadSyncer collection.ThreadSyncer,
 	messageSyncer collection.MessageSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
 	cloudAPIClient *api.CloudAPIClient,
@@ -59,7 +57,6 @@ func NewDependencies(
 		teamMemberSyncer:           teamMemberSyncer,
 		invitationSyncer:           invitationSyncer,
 		taskSyncer:                 taskSyncer,
-		threadSyncer:               threadSyncer,
 		messageSyncer:              messageSyncer,
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
 		cloudAPIClient:             cloudAPIClient,
