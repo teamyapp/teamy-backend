@@ -11,7 +11,7 @@ type Query {
 }
 
 type Mutation {
-	# TaskState
+	# Task
 	createTask(teamId: ID!, task: CreateTaskInput!): Task!
 	updateTask(taskId: ID!, input: UpdateTaskInput!): Task!
 	deleteTask(taskId: ID!): Task!
@@ -22,22 +22,22 @@ type Mutation {
 	addAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 
-	# MessageState
+	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
 	updateMessage(messageId: ID!, input: UpdateMessageInput!): Message!
 	deleteMessage(messageId: ID!): Message!
 
-	# TeamState
+	# Team
 	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
 	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
 
-	# UserState
+	# User
 	createUser(user: CreateUserInput!): User!
 	updateUser(userId: ID!, input: UpdateUserInput!): User!
 
-	# InvitationState
+	# Invitation
 	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!
 	updateInvitation(invitationId: ID!, input: UpdateInvitationInput!): Invitation!
 	acceptInvitation(invitationId: ID!, invitationCode: String!): Invitation!

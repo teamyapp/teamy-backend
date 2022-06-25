@@ -21,7 +21,7 @@ INSERT INTO task (goal, owner_user_id) VALUES ('Write sample code for structural
 INSERT INTO task (goal) VALUES ('Create a Typescript client lib for identity service');
 INSERT INTO task (goal) VALUES ('Build a prototype of identity service with oauth working');
 
--- TaskState dependencies
+-- Task dependencies
 INSERT INTO task_dependency (need_before, need_after) VALUES (5, 2);
 INSERT INTO task_dependency (need_before, need_after) VALUES (4, 3);
 INSERT INTO task_dependency (need_before, need_after) VALUES (1, 5);
@@ -34,7 +34,7 @@ INSERT INTO team (name, logo_url) VALUES ('Amazon', '/teams/amazon.svg');
 INSERT INTO team (name, logo_url) VALUES ('Netflix', '/teams/netflix.svg');
 INSERT INTO team (name, logo_url) VALUES ('Microsoft', '/teams/microsoft.svg');
 
--- TeamState members
+-- Team members
 INSERT INTO team_member (team_id, user_id, need_attention_task_id) VALUES (1, 1, 5);
 INSERT INTO team_member (team_id, user_id) VALUES (1, 2);
 INSERT INTO team_member (team_id, user_id, need_attention_task_id) VALUES (1, 3, 4);
@@ -46,12 +46,12 @@ INSERT INTO team_member (team_id, user_id) VALUES (3, 2);
 INSERT INTO team_member (team_id, user_id) VALUES (3, 7);
 INSERT INTO team_member (team_id, user_id) VALUES (3, 8);
 
--- TaskState statuses
+-- Task statuses
 INSERT INTO task_status (value, name) VALUES (1, 'Upcoming');
 INSERT INTO task_status (value, name) VALUES (2, 'InProgress');
 INSERT INTO task_status (value, name) VALUES (3, 'Delivered');
 
--- TeamState tasks
+-- Team tasks
 INSERT INTO team_task (team_id, task_id, task_status) VALUES (1, 1, 1);
 INSERT INTO team_task (team_id, task_id, task_status) VALUES (1, 2, 1);
 INSERT INTO team_task (team_id, task_id, task_status) VALUES (1, 3, 1);
@@ -63,7 +63,7 @@ INSERT INTO team_task (team_id, task_id, task_status) VALUES (1, 8, 3);
 INSERT INTO team_task (team_id, task_id, task_status) VALUES (3, 9, 1);
 INSERT INTO team_task (team_id, task_id, task_status) VALUES (3, 10, 1);
 
--- UserState state
+-- User state
 INSERT INTO user_state (user_id, active_team_id) VALUES (1, 1);
 INSERT INTO user_state (user_id, active_team_id) VALUES (2, 3);
 INSERT INTO user_state (user_id) VALUES (6);
