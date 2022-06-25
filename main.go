@@ -47,7 +47,6 @@ func main() {
 		}
 
 		realTimeStateSyncer := dep.InitRealTimeStateSyncer(sqlDB)
-
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
