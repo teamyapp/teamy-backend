@@ -155,7 +155,7 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	err = m.deps.threadSyncer.DeleteAndSyncThread(task.CommentsThreadID)
+	err = m.deps.threadDao.DeleteThread(task.CommentsThreadID)
 	if err != nil {
 		return Task{}, err
 	}
@@ -644,7 +644,7 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		ProfileURL: args.User.ProfileURL,
 	}
 
-	err = m.deps.userSyncer.CreateAndSyncUser(user)
+	err = m.deps.userDao.CreateUser(user)
 	if err != nil {
 		return User{}, err
 	}
@@ -899,7 +899,7 @@ func (m Mutation) createThread(ct context.Context) (uint64, error) {
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
-	return threadID, m.deps.threadSyncer.CreateAndSyncThread(threadID)
+	return threadID, m.deps.threadDao.CreateThread(threadID)
 }
 
 func (m Mutation) GeneratorClient() proto.GeneratorClient {

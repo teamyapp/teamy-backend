@@ -15,8 +15,7 @@ import (
 	"github.com/teamyapp/teamy-backend/config"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/dep"
-	"github.com/teamyapp/teamy-backend/infras/service"
-	"github.com/teamyapp/teamy-backend/infras/storage"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 func init() {
@@ -47,7 +46,8 @@ func main() {
 			panic(err)
 		}
 
-		realTimeCollections := service.NewRealTimeCollections()
+		realTimeStateSyncer := dep.InitRealTimeStateSyncer(sqlDB)
+
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
@@ -56,13 +56,13 @@ func main() {
 				cfg,
 				cloudAPIClientCfg,
 				sqlDB,
-				realTimeCollections.InMemoryRealTimeCollections())
+				realTimeStateSyncer)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			startServiceRunner(cloudAPIClientCfg, sqlDB, realTimeCollections)
+			startServiceRunner(cloudAPIClientCfg, sqlDB, cfg.IdentityAPIEndpoint, realTimeStateSyncer)
 		}()
 		wg.Wait()
 		return nil
@@ -78,8 +78,8 @@ func startGraphQLServer(
 	cfg config.Config,
 	cloudAPIConfig cloudConfig.CloudAPIClient,
 	sqlDB *sql.DB,
-	rtCollections *storage.RealTimeCollections) {
-	gqlResolver, err := dep.InitGraphQLResolver(sqlDB, cloudAPIConfig, rtCollections)
+	realTimeStateSyncer *realtime.StateSyncer) {
+	gqlResolver, err := dep.InitGraphQLResolver(sqlDB, cloudAPIConfig, realTimeStateSyncer)
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +96,8 @@ func startGraphQLServer(
 func startServiceRunner(
 	cloudAPIConfig cloudConfig.CloudAPIClient,
 	sqlDB *sql.DB,
-	rtCollections service.RealTimeCollections) {
+	identityAPIEndpoint string,
+	realTimeStateSyncer *realtime.StateSyncer) {
 	runnerConfig, err := runner.ServiceRunnerConfigFromEnv()
 	if err != nil {
 		panic(err)
@@ -112,9 +113,10 @@ func startServiceRunner(
 		panic(err)
 	}
 
+	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(identityAPIEndpoint, realTimeStateSyncer)
 	rn := runner.NewServiceRunner(runnerConfig, []runner.Service{
 		githubApp,
-		rtCollections,
+		realTimeStateSyncAPI,
 	})
 	rn.Start()
 }

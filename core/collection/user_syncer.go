@@ -3,27 +3,13 @@ package collection
 import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
-	"github.com/teamyapp/teamy-backend/infras/storage"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-const userCollectionType = "User"
-
 type UserSyncer struct {
-	realTimeCollection *storage.RealTimeCollections
-	userDao            dao.User
-}
-
-func (u UserSyncer) CreateAndSyncUser(user entity.User) error {
-	err := u.userDao.CreateUser(user)
-	if err != nil {
-		return err
-	}
-
-	return u.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: userCollectionType,
-		MutationType:   storage.CreateMutationType,
-		Attributes:     storage.MapAttributes(user),
-	})
+	realTimeStateSyncer *realtime.StateSyncer
+	userDao             dao.User
+	teamMemberDao       dao.TeamMember
 }
 
 func (u UserSyncer) UpdateAndSyncUser(user entity.User) error {
@@ -32,17 +18,27 @@ func (u UserSyncer) UpdateAndSyncUser(user entity.User) error {
 		return err
 	}
 
-	return u.realTimeCollection.Mutate(storage.Mutation{
-		CollectionType: userCollectionType,
-		MutationType:   storage.UpdateMutationType,
-		Attributes:     storage.MapAttributes(user),
+	teamIDs, err := u.teamMemberDao.FindTeamIDsByUserID(user.ID)
+	if err != nil {
+		return err
+	}
+
+	u.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.UserCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs:        teamIDs,
+		Payload:        user,
 	})
+	return nil
 }
 
-func NewUserSyncer(realTimeCollection *storage.RealTimeCollections, userDao dao.User) UserSyncer {
-	realTimeCollection.RegisterCollectionType(userCollectionType)
+func NewUserSyncer(
+	realTimeStateSyncer *realtime.StateSyncer,
+	userDao dao.User,
+	teamMemberDao dao.TeamMember) UserSyncer {
 	return UserSyncer{
-		realTimeCollection: realTimeCollection,
-		userDao:            userDao,
+		realTimeStateSyncer: realTimeStateSyncer,
+		userDao:             userDao,
+		teamMemberDao:       teamMemberDao,
 	}
 }
