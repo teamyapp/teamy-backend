@@ -1,10 +1,13 @@
 package realtime
 
 import (
+	"log"
+
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamNotifier struct {
+	teamID                    uint64
 	teamDisconnectCh          chan bool
 	teamDisconnectSubscribers []chan bool
 	userNotifiers             map[uint64]*UserNotifier
@@ -28,6 +31,7 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 }
 
 func (t TeamNotifier) processMutation(mutation Mutation) {
+	log.Printf("TeamNotifier processing mutation: teamID=%v mutationID=%v\n", t.teamID, mutation.ID)
 	for _, userNotifier := range t.userNotifiers {
 		userNotifier.processMutation(mutation)
 	}
@@ -39,8 +43,9 @@ func (t TeamNotifier) processMutation(mutation Mutation) {
 	}
 }
 
-func newTeamNotifier() *TeamNotifier {
+func newTeamNotifier(teamID uint64) *TeamNotifier {
 	teamNotifier := &TeamNotifier{
+		teamID:                    teamID,
 		userNotifiers:             map[uint64]*UserNotifier{},
 		teamDisconnectCh:          make(chan bool),
 		teamDisconnectSubscribers: make([]chan bool, 0),

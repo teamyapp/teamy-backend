@@ -18,7 +18,7 @@ func (m MessageSyncer) CreateAndSyncMessage(message entity.Message) error {
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentThreadID(message.ThreadID)
+	task, err := m.taskDao.FindTaskByCommentsThreadID(message.ThreadID)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (m MessageSyncer) UpdateAndSyncMessage(message entity.Message) error {
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentThreadID(message.ThreadID)
+	task, err := m.taskDao.FindTaskByCommentsThreadID(message.ThreadID)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (m MessageSyncer) DeleteAndSyncMessage(messageID uint64) error {
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentThreadID(message.ThreadID)
+	task, err := m.taskDao.FindTaskByCommentsThreadID(message.ThreadID)
 	if err != nil {
 		return err
 	}

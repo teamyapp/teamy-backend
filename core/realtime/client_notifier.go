@@ -9,6 +9,12 @@ import (
 
 const clientBufferSize = 50
 
+type MutationMessage struct {
+	CollectionType CollectionType
+	MutationType   MutationType
+	Payload        interface{}
+}
+
 type ClientNotifier struct {
 	clientDisconnectSubscribers []chan bool
 	mutations                   chan Mutation
@@ -24,17 +30,22 @@ func (c ClientNotifier) processMutation(mutation Mutation) {
 	c.mutations <- mutation
 }
 
-func newClientNotifier(conn connection.Connection) *ClientNotifier {
+func newClientNotifier(conn connection.Connection, clientID uint64) *ClientNotifier {
 	mutations := make(chan Mutation, clientBufferSize)
 	go func() {
 		for mutation := range mutations {
-			jsonBuf, err := json.MarshalIndent(mutation, "", "  ")
+			message := MutationMessage{
+				CollectionType: mutation.CollectionType,
+				MutationType:   mutation.MutationType,
+				Payload:        mutation.Payload,
+			}
+			jsonBuf, err := json.MarshalIndent(message, "", "  ")
 			if err != nil {
 				log.Println(err)
 				continue
 			}
-
 			conn.SendMessage(jsonBuf)
+			log.Printf("notification sent: clientID=%v mutationID=%v\n", clientID, mutation.ID)
 		}
 	}()
 	clientNotifier := &ClientNotifier{

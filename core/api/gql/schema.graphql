@@ -133,6 +133,7 @@ type User {
 	lastName: String!
 	profileUrl: String
 	createdAt: Time!
+	updatedAt: Time
 	teams(filter: TeamFilter): [Team!]!
 }
 

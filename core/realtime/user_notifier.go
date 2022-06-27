@@ -1,6 +1,11 @@
 package realtime
 
+import (
+	"log"
+)
+
 type UserNotifier struct {
+	userID                    uint64
 	userDisconnectCh          chan bool
 	userDisconnectSubscribers []chan bool
 	clientNotifiers           map[uint64]*ClientNotifier
@@ -16,6 +21,7 @@ func (u UserNotifier) registerClientNotifier(clientID uint64, clientNotifier *Cl
 	u.clientNotifiers[clientID] = clientNotifier
 	go func() {
 		<-clientNotifier.subscribeClientDisconnect()
+		log.Printf("client disconnected: clientID=%v\n", clientID)
 		u.unregisterClientNotifier(clientID)
 	}()
 }
@@ -28,13 +34,15 @@ func (u UserNotifier) unregisterClientNotifier(clientID uint64) {
 }
 
 func (u UserNotifier) processMutation(mutation Mutation) {
+	log.Printf("UserNotifier processing mutation: userID=%v mutationID=%v\n", u.userID, mutation.ID)
 	for _, clientNotifier := range u.clientNotifiers {
 		clientNotifier.processMutation(mutation)
 	}
 }
 
-func newUserNotifier() *UserNotifier {
+func newUserNotifier(userID uint64) *UserNotifier {
 	userNotifier := &UserNotifier{
+		userID:                    userID,
 		clientNotifiers:           map[uint64]*ClientNotifier{},
 		userDisconnectSubscribers: make([]chan bool, 0),
 	}

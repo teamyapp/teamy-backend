@@ -6,7 +6,7 @@ import (
 
 type Task interface {
 	FindTaskByID(taskID uint64) (entity.Task, error)
-	FindTaskByCommentThreadID(commentThreadID uint64) (entity.Task, error)
+	FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, error)
 	FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error)
 	FindTasksByTeamID(teamID uint64) ([]entity.Task, error)
 	FindAllTasks() ([]entity.Task, error)
