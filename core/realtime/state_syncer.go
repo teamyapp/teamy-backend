@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/teamyapp/cloud/libs/connection"
@@ -29,6 +30,7 @@ import (
 const stateSyncerBufferSize = 50
 
 type Mutation struct {
+	ID             uint64
 	CollectionType CollectionType
 	MutationType   MutationType
 	TeamIDs        []uint64
@@ -36,32 +38,35 @@ type Mutation struct {
 }
 
 type StateSyncer struct {
-	teamMemberDao dao.TeamMember
-	mutations     chan Mutation
-	teamNotifiers map[uint64]*TeamNotifier
-	userNotifiers map[uint64]*UserNotifier
-	nextClientID  uint64
+	teamMemberDao  dao.TeamMember
+	mutations      chan Mutation
+	teamNotifiers  map[uint64]*TeamNotifier
+	userNotifiers  map[uint64]*UserNotifier
+	nextClientID   uint64
+	nextMutationID uint64
 }
 
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
+	log.Printf("client connected: userID=%v, clientID=%v\n", userID, s.nextClientID)
 	userNotifier, err := s.getUserNotifier(userID)
 	if err != nil {
 		return err
 	}
 
-	clientNotifier := newClientNotifier(conn)
+	clientNotifier := newClientNotifier(conn, s.nextClientID)
 	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
-	log.Printf("client connected: userID=%v, clientID=%v\n", userID, s.nextClientID)
 	s.nextClientID++
 	return nil
 }
 
 func (s *StateSyncer) NotifyMutation(mutation Mutation) {
+	mutation.ID = s.nextMutationID
+	s.nextMutationID++
 	s.mutations <- mutation
 }
 
 func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
-	userNotifier := newUserNotifier()
+	userNotifier := newUserNotifier(userID)
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
@@ -89,6 +94,7 @@ func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier
 			teamNotifier = s.newTeamNotifier(teamID)
 		}
 
+		log.Printf("subscribed to team: teamID=%v, userID=%v\n", teamID, userID)
 		teamNotifier.registerUserNotifier(userID, userNotifier)
 	}
 
@@ -98,7 +104,7 @@ func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier
 func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
-		teamNotifier = newTeamNotifier()
+		teamNotifier = newTeamNotifier(teamID)
 		go func() {
 			<-teamNotifier.subscribeTeamDisconnect()
 			delete(s.teamNotifiers, teamID)
@@ -136,14 +142,22 @@ func NewStateSyncer(
 	teamMemberDao dao.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
-		teamMemberDao: teamMemberDao,
-		mutations:     make(chan Mutation, stateSyncerBufferSize),
-		teamNotifiers: map[uint64]*TeamNotifier{},
-		userNotifiers: map[uint64]*UserNotifier{},
-		nextClientID:  1,
+		teamMemberDao:  teamMemberDao,
+		mutations:      make(chan Mutation, stateSyncerBufferSize),
+		teamNotifiers:  map[uint64]*TeamNotifier{},
+		userNotifiers:  map[uint64]*UserNotifier{},
+		nextClientID:   1,
+		nextMutationID: 1,
 	}
 	go func() {
 		for mutation := range stateSyncer.mutations {
+			buf, err := json.MarshalIndent(mutation, "", "    ")
+			if err != nil {
+				log.Println(err)
+			} else {
+				log.Printf("StateSyncer processing mutation: mutation=%v\n", string(buf))
+			}
+
 			for _, teamID := range mutation.TeamIDs {
 				if mutation.CollectionType == TeamMemberCollectionType &&
 					mutation.MutationType == CreateMutationType {

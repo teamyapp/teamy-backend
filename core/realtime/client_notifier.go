@@ -30,7 +30,7 @@ func (c ClientNotifier) processMutation(mutation Mutation) {
 	c.mutations <- mutation
 }
 
-func newClientNotifier(conn connection.Connection) *ClientNotifier {
+func newClientNotifier(conn connection.Connection, clientID uint64) *ClientNotifier {
 	mutations := make(chan Mutation, clientBufferSize)
 	go func() {
 		for mutation := range mutations {
@@ -44,8 +44,8 @@ func newClientNotifier(conn connection.Connection) *ClientNotifier {
 				log.Println(err)
 				continue
 			}
-
 			conn.SendMessage(jsonBuf)
+			log.Printf("notification sent: clientID=%v mutationID=%v\n", clientID, mutation.ID)
 		}
 	}()
 	clientNotifier := &ClientNotifier{
