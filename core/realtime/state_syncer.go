@@ -5,6 +5,7 @@ import (
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 // Task[Create, Update, Delete] -> :::: Team -> User -> Client
@@ -43,14 +44,9 @@ type StateSyncer struct {
 }
 
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
-	userNotifier, ok := s.userNotifiers[userID]
-	var err error
-	if !ok {
-		userNotifier, err = s.newUserNotifier(userID)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
+	userNotifier, err := s.getUserNotifier(userID)
+	if err != nil {
+		return err
 	}
 
 	clientNotifier := newClientNotifier(conn)
@@ -113,6 +109,20 @@ func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	return teamNotifier
 }
 
+func (s StateSyncer) getUserNotifier(userID uint64) (*UserNotifier, error) {
+	userNotifier, ok := s.userNotifiers[userID]
+	var err error
+	if !ok {
+		userNotifier, err = s.newUserNotifier(userID)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+	}
+
+	return userNotifier, nil
+}
+
 func (s StateSyncer) notifyTeam(teamID uint64, mutation Mutation) {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
@@ -135,6 +145,20 @@ func NewStateSyncer(
 	go func() {
 		for mutation := range stateSyncer.mutations {
 			for _, teamID := range mutation.TeamIDs {
+				if mutation.CollectionType == TeamMemberCollectionType &&
+					mutation.MutationType == CreateMutationType {
+					teamMember := mutation.Payload.(entity.TeamMember)
+					userNotifier, err := stateSyncer.getUserNotifier(teamMember.UserID)
+					if err != nil {
+						log.Println(err)
+					} else {
+						err = stateSyncer.subscribeToTeams(teamMember.UserID, userNotifier)
+						if err != nil {
+							log.Println(err)
+						}
+					}
+				}
+
 				stateSyncer.notifyTeam(teamID, mutation)
 			}
 		}

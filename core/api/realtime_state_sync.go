@@ -6,8 +6,8 @@ import (
 	"path"
 
 	"github.com/teamyapp/cloud/app/ctx"
-	"github.com/teamyapp/cloud/app/middleware"
 	"github.com/teamyapp/cloud/libs/connection"
+	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -27,7 +27,7 @@ func (r RealTimeStateSync) Start(runner *runner.ServiceRunner) error {
 		{
 			Path:        path.Join(realTimeStateSyncPrefix, "clients", "connect"),
 			Method:      http.MethodGet,
-			HandlerFunc: middleware.WithIdentity(r.identityAPIEndpoint, http.HandlerFunc(r.connect)).ServeHTTP,
+			HandlerFunc: middleware.WithWebSocketIdentity(r.identityAPIEndpoint, r.connect).ServeHTTP,
 		},
 	})
 	return nil

@@ -18,6 +18,8 @@ type Identity struct {
 	identityService service.Identity
 }
 
+var _ runner.Service = (*Identity)(nil)
+
 func (i Identity) Start(runner *runner.ServiceRunner) error {
 	runner.RegisterWebRoutes([]web.Route{
 		{

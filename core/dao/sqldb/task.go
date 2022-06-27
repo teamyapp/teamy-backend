@@ -117,7 +117,7 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 	return tasks, nil
 }
 
-func (t Task) FindTaskByCommentThreadID(commentThreadID uint64) (entity.Task, error) {
+func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, error) {
 	task := entity.Task{}
 	err := t.db.QueryRow(`
 		SELECT
@@ -153,7 +153,7 @@ func (t Task) FindTaskByCommentThreadID(commentThreadID uint64) (entity.Task, er
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Task{}, dao.ErrNotFound(fmt.Sprintf(
-			"task not found: commentThreadID=%v",
+			"task not found: commentsThreadID=%v",
 			commentThreadID))
 	}
 

@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
-	"github.com/teamyapp/cloud/app/middleware"
+	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
 	"github.com/teamyapp/teamy-backend/core/log"
 )
@@ -26,7 +26,7 @@ func NewServer(identityAPIEndpoint string, res resolver.Resolver, port int) (htt
 	}
 
 	relayHandler := relay.Handler{Schema: schema}
-	handler := middleware.WithIdentity(identityAPIEndpoint, logRequest(relayHandler.ServeHTTP))
+	handler := middleware.WithWebIdentity(identityAPIEndpoint, logRequest(relayHandler.ServeHTTP))
 	mux := http.ServeMux{}
 	mux.HandleFunc("/graphql", requestID(enableCORS(handler.ServeHTTP)))
 	addr := fmt.Sprintf(":%d", port)

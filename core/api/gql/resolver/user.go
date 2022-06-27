@@ -33,6 +33,10 @@ func (u User) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(u.user.CreatedAt)
 }
 
+func (u User) UpdatedAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(u.user.UpdatedAt)
+}
+
 func (u User) Teams(ct context.Context, args struct {
 	Filter *TeamFilter
 }) ([]Team, error) {
