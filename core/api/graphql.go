@@ -40,7 +40,6 @@ func (g GraphQL) Start(runner *runner.ServiceRunner) error {
 			HandlerFunc: middleware.WithWebIdentity(g.identityAPIEndpoint, relayHandler.ServeHTTP).ServeHTTP,
 		},
 	})
-
 	return nil
 }
 
