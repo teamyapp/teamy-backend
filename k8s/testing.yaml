@@ -89,9 +89,9 @@ spec:
               value: "81"
             - name: CLOUD_API_SHOULD_ENCRYPT
               value: "false"
-            - name: CORE_GRAPH_QL_API_PORT
-              value: "9000"
             - name: SERVICE_RUNNER_WEB_SERVER_PORT
+              value: "9000"
+            - name: SERVICE_RUNNER_GRPC_SERVER_PORT
               value: "9001"
             - name: APPS_GITHUB_APP_NAME
               value: teamy-apps-testing
@@ -110,9 +110,9 @@ spec:
   selector:
     app: teamy-backend
   ports:
-    - name: core-gql
+    - name: web-services
       port: 9000
-    - name: services-web
+    - name: rpc-services
       port: 9001
 ---
 apiVersion: traefik.containo.us/v1alpha1
@@ -125,7 +125,7 @@ spec:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`backend.testing.teamyapp.com`)
+      match: Host(`web-backend.testing.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend
@@ -133,13 +133,14 @@ spec:
           port: 9000
           passHostHeader: true
     - kind: Rule
-      match: Host(`services-backend.testing.teamyapp.com`)
+      match: Host(`rpc-backend.testing.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend
-          namespace: testing
+          namespace: production
           port: 9001
           passHostHeader: true
+          scheme: h2c
   tls:
     secretName: teamy-cert
 

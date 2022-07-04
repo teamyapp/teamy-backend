@@ -1,4 +1,4 @@
-package resolver
+package gql
 
 import (
 	"github.com/graph-gophers/graphql-go"
