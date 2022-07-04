@@ -1,10 +1,11 @@
-package apps
+package github
 
 import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -24,39 +25,39 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
-const githubAppPathPrefix = "/github"
+const githubAppPathPrefix = "/apps/github"
 
-type GithubApp struct {
+type App struct {
 	config                   config.GithubAppConfig
 	cloudAPIClient           *api.CloudAPIClient
 	githubAppInstallStateDao dao.GithubAppInstallState
 	githubAppInstallationDao dao.GithubAppInstallation
 }
 
-var _ runner.Service = (*GithubApp)(nil)
+var _ runner.Service = (*App)(nil)
 
-func (g GithubApp) Start(runner *runner.ServiceRunner) error {
+func (a App) Start(runner *runner.ServiceRunner) error {
 	runner.RegisterWebRoutes([]web.Route{
 		{
 			Path:        path.Join(githubAppPathPrefix, "install"),
 			Method:      http.MethodGet,
-			HandlerFunc: g.install,
+			HandlerFunc: a.install,
 		},
 		{
 			Path:        path.Join(githubAppPathPrefix, "install", "finish"),
 			Method:      http.MethodGet,
-			HandlerFunc: g.finishInstall,
+			HandlerFunc: a.finishInstall,
 		},
 		{
 			Path:        path.Join(githubAppPathPrefix, "webhook"),
 			Method:      http.MethodPost,
-			HandlerFunc: g.onEventNotify,
+			HandlerFunc: a.onEventNotify,
 		},
 	})
 	return nil
 }
 
-func (g GithubApp) install(w http.ResponseWriter, r *http.Request) {
+func (a App) install(w http.ResponseWriter, r *http.Request) {
 	// Verify request sender is team owner
 	query := r.URL.Query()
 	teamID, err := strconv.ParseUint(query.Get("team-id"), 10, 64)
@@ -74,7 +75,7 @@ func (g GithubApp) install(w http.ResponseWriter, r *http.Request) {
 	}
 
 	genStateIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "githubInstallationStateID"}
-	genStateIDRes, err := g.generatorClient().GenerateUniqueNumber(context.Background(), genStateIDReq)
+	genStateIDRes, err := a.generatorClient().GenerateUniqueNumber(context.Background(), genStateIDReq)
 	if err != nil {
 		log.Printf("fail to generate state ID: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -87,14 +88,14 @@ func (g GithubApp) install(w http.ResponseWriter, r *http.Request) {
 		RedirectURL: redirectURL,
 		CreatedAt:   time.Now().UTC(),
 	}
-	err = g.githubAppInstallStateDao.CreateState(state)
+	err = a.githubAppInstallStateDao.CreateState(state)
 	if err != nil {
 		log.Printf("fail to create state: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	installURL, err := g.getInstallGithubAppURL(state.ID)
+	installURL, err := a.getInstallGithubAppURL(state.ID)
 	if err != nil {
 		log.Printf("fail to get Github App install URL: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -104,7 +105,7 @@ func (g GithubApp) install(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, installURL, http.StatusTemporaryRedirect)
 }
 
-func (g GithubApp) finishInstall(w http.ResponseWriter, r *http.Request) {
+func (a App) finishInstall(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	stateIDParam := query.Get("state")
 	stateID, err := strconv.ParseUint(stateIDParam, 10, 64)
@@ -114,14 +115,14 @@ func (g GithubApp) finishInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state, err := g.githubAppInstallStateDao.FindStateByID(stateID)
+	state, err := a.githubAppInstallStateDao.FindStateByID(stateID)
 	if err != nil {
 		log.Printf("fail to find state ID: state ID=%v, err=%v\n", stateID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	expireAt := state.CreatedAt.Add(g.config.InstallationValidDuration)
+	expireAt := state.CreatedAt.Add(a.config.InstallationValidDuration)
 	now := time.Now().UTC()
 	if expireAt.Before(now) {
 		log.Println("install app session expired")
@@ -135,14 +136,14 @@ func (g GithubApp) finishInstall(w http.ResponseWriter, r *http.Request) {
 		TeamID:    state.TeamID,
 		CreatedAt: time.Now().UTC(),
 	}
-	err = g.githubAppInstallationDao.CreateGithubAppInstallation(installation)
+	err = a.githubAppInstallationDao.CreateGithubAppInstallation(installation)
 	if err != nil {
 		log.Printf("fail to create Github App installation: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	err = g.githubAppInstallStateDao.DeleteState(stateID)
+	err = a.githubAppInstallStateDao.DeleteState(stateID)
 	if err != nil {
 		log.Printf("fail to delete state: stateID=%v, err=%v\n", stateID, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -152,7 +153,7 @@ func (g GithubApp) finishInstall(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, state.RedirectURL, http.StatusTemporaryRedirect)
 }
 
-func (g GithubApp) onEventNotify(w http.ResponseWriter, r *http.Request) {
+func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	bodySignatureHeader := r.Header.Get("X-Hub-Signature-256")
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
@@ -181,7 +182,7 @@ func (g GithubApp) onEventNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !validateHMACSignature(buf, []byte(g.config.WebhookSecret), signature) {
+	if !validateHMACSignature(buf, []byte(a.config.WebhookSecret), signature) {
 		log.Printf("invalid request body signature: signature=%v\n", bodySignatureHeaderParts[1])
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -190,7 +191,7 @@ func (g GithubApp) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	eventType := r.Header.Get("X-GitHub-Event")
 	log.Printf("Github event received: deliveryID=%s, event=%s\n", deliveryID, eventType)
-	err = g.processEvent(eventType, buf)
+	err = a.processEvent(eventType, buf)
 	if err != nil {
 		log.Printf("fail to process Github event: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -200,17 +201,57 @@ func (g GithubApp) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (g GithubApp) generatorClient() proto.GeneratorClient {
-	return g.cloudAPIClient.GeneratorClient()
+func (a App) generatorClient() proto.GeneratorClient {
+	return a.cloudAPIClient.GeneratorClient()
 }
 
-func (g GithubApp) processEvent(eventType string, payload []byte) error {
+func (a App) processEvent(eventType string, payload []byte) error {
 	// TODO: parse & react to Github event
+	var evt event
+	err := json.Unmarshal(payload, &evt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	ins, err := a.githubAppInstallationDao.FindInstallationByID(evt.Installation.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	switch eventType {
+	case "pull_request":
+		return a.processPullRequestEvent(ins, payload)
+	default:
+		log.Printf("Unknown event: %v\n", eventType)
+	}
+
 	return nil
 }
 
-func (g GithubApp) getInstallGithubAppURL(stateID uint64) (string, error) {
-	urlStr := fmt.Sprintf("https://github.com/apps/%s/installations/new", g.config.AppName)
+func (a App) processPullRequestEvent(installation entity.GithubAppInstallation, payload []byte) error {
+	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
+	var evt pullRequestEvent
+	err := json.Unmarshal(payload, &evt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	switch evt.Action {
+	case openedPullRequestAction:
+	case assignedPullRequestAction:
+	case reviewRequestedPullRequestAction:
+	case reviewRequestRemovedPullRequestAction:
+	case convertedToDraftPullRequestAction:
+	case closedPullRequestAction:
+	}
+	return nil
+}
+
+func (a App) getInstallGithubAppURL(stateID uint64) (string, error) {
+	urlStr := fmt.Sprintf("https://github.com/apps/%s/installations/new", a.config.AppName)
 	installURL, err := url.Parse(urlStr)
 	if err != nil {
 		return "", err
@@ -221,13 +262,13 @@ func (g GithubApp) getInstallGithubAppURL(stateID uint64) (string, error) {
 	return installURL.String(), nil
 }
 
-func NewGithubApp(
+func NewApp(
 	config config.GithubAppConfig,
 	cloudAPIClient *api.CloudAPIClient,
 	githubAppInstallStateDao dao.GithubAppInstallState,
 	githubAppInstallationDao dao.GithubAppInstallation,
-) GithubApp {
-	return GithubApp{
+) App {
+	return App{
 		config:                   config,
 		cloudAPIClient:           cloudAPIClient,
 		githubAppInstallStateDao: githubAppInstallStateDao,

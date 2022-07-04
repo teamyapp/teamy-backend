@@ -8,17 +8,17 @@ import (
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/config"
-	"github.com/teamyapp/teamy-backend/apps"
 	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
+	"github.com/teamyapp/teamy-backend/apps/github"
 )
 
 func InitGithubApp(
 	cloudAPICfg config.CloudAPIClient,
 	config appsConfig.GithubAppConfig,
 	sqlDB *sql.DB,
-) (apps.GithubApp, error) {
+) (github.App, error) {
 	wire.Build(
 		wire.Bind(new(dao.GithubAppInstallState), new(sqldb.GithubAppInstallState)),
 		wire.Bind(new(dao.GithubAppInstallation), new(sqldb.GithubAppInstallation)),
@@ -26,7 +26,7 @@ func InitGithubApp(
 		sqldb.NewGithubAppInstallState,
 		sqldb.NewGithubAppInstallation,
 		api.NewCloudAPIClient,
-		apps.NewGithubApp,
+		github.NewApp,
 	)
-	return apps.GithubApp{}, nil
+	return github.App{}, nil
 }
