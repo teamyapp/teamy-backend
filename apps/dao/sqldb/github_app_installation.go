@@ -2,6 +2,8 @@ package sqldb
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 
 	"github.com/teamyapp/teamy-backend/apps/dao"
@@ -35,6 +37,31 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 	}
 
 	return err
+}
+
+func (g GithubAppInstallation) FindInstallationByID(installationID uint64) (entity.GithubAppInstallation, error) {
+	installation := entity.GithubAppInstallation{}
+	err := g.db.QueryRow(`
+	SELECT
+	    id,
+	    team_id,
+	    created_at
+	FROM apps_github_app_installation
+	WHERE id = $1;
+`,
+		installationID).
+		Scan(
+			&installation.ID,
+			&installation.TeamID,
+			&installation.CreatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.GithubAppInstallation{}, dao.ErrNotFound(fmt.Sprintf(
+			"GithubAppInstallation not found: id=%v", installation.ID))
+	}
+
+	return installation, err
 }
 
 func NewGithubAppInstallation(sqlDB *sql.DB) GithubAppInstallation {

@@ -11,20 +11,20 @@ import (
 
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/config"
-	"github.com/teamyapp/teamy-backend/apps"
 	config2 "github.com/teamyapp/teamy-backend/apps/config"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
+	"github.com/teamyapp/teamy-backend/apps/github"
 )
 
 // Injectors from wire.go:
 
-func InitGithubApp(cloudAPICfg config.CloudAPIClient, config3 config2.GithubAppConfig, sqlDB *sql.DB) (apps.GithubApp, error) {
+func InitGithubApp(cloudAPICfg config.CloudAPIClient, config3 config2.GithubAppConfig, sqlDB *sql.DB) (github.App, error) {
 	cloudAPIClient, err := api.NewCloudAPIClient(cloudAPICfg)
 	if err != nil {
-		return apps.GithubApp{}, err
+		return github.App{}, err
 	}
 	githubAppInstallState := sqldb.NewGithubAppInstallState(sqlDB)
 	githubAppInstallation := sqldb.NewGithubAppInstallation(sqlDB)
-	githubApp := apps.NewGithubApp(config3, cloudAPIClient, githubAppInstallState, githubAppInstallation)
-	return githubApp, nil
+	app := github.NewApp(config3, cloudAPIClient, githubAppInstallState, githubAppInstallation)
+	return app, nil
 }
