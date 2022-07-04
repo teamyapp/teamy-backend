@@ -137,7 +137,7 @@ spec:
       services:
         - kind: Service
           name: teamy-backend
-          namespace: production
+          namespace: testing
           port: 9001
           passHostHeader: true
           scheme: h2c

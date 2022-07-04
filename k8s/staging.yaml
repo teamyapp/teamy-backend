@@ -62,6 +62,7 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 9000
+            - containerPort: 9001
           env:
             - name: DB_HOST
               value: postgres.db.svc.cluster.local
@@ -136,7 +137,7 @@ spec:
       services:
         - kind: Service
           name: teamy-backend
-          namespace: production
+          namespace: staging
           port: 9001
           passHostHeader: true
           scheme: h2c
