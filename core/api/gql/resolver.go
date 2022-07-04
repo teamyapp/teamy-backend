@@ -1,4 +1,4 @@
-package resolver
+package gql
 
 type Resolver struct {
 	Query

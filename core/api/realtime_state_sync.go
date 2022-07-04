@@ -13,8 +13,6 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-const realTimeStateSyncPrefix = "/real-time-state-sync"
-
 type RealTimeStateSync struct {
 	identityAPIEndpoint string
 	realTimeStateSyncer *realtime.StateSyncer

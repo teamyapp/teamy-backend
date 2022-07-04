@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"math/rand"
-	"sync"
 	"time"
 
 	cloudConfig "github.com/teamyapp/cloud/app/config"
@@ -13,7 +12,6 @@ import (
 	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/config"
-	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/dep"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -47,23 +45,7 @@ func main() {
 		}
 
 		realTimeStateSyncer := dep.InitRealTimeStateSyncer(sqlDB)
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			startGraphQLServer(
-				cfg,
-				cloudAPIClientCfg,
-				sqlDB,
-				realTimeStateSyncer)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			startServiceRunner(cloudAPIClientCfg, sqlDB, cfg.IdentityAPIEndpoint, realTimeStateSyncer)
-		}()
-		wg.Wait()
+		startServiceRunner(cloudAPIClientCfg, sqlDB, cfg.IdentityAPIEndpoint, realTimeStateSyncer)
 		return nil
 	})
 
@@ -71,25 +53,6 @@ func main() {
 		log.Println(err)
 		panic(err)
 	}
-}
-
-func startGraphQLServer(
-	cfg config.Config,
-	cloudAPIConfig cloudConfig.CloudAPIClient,
-	sqlDB *sql.DB,
-	realTimeStateSyncer *realtime.StateSyncer) {
-	gqlResolver, err := dep.InitGraphQLResolver(sqlDB, cloudAPIConfig, realTimeStateSyncer)
-	if err != nil {
-		panic(err)
-	}
-
-	server, err := gql.NewServer(cfg.IdentityAPIEndpoint, gqlResolver, cfg.CoreGraphQLAPIPort)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Printf("GraphQL server started at %d\n", cfg.CoreGraphQLAPIPort)
-	panic(server.ListenAndServe())
 }
 
 func startServiceRunner(
@@ -112,10 +75,15 @@ func startServiceRunner(
 		panic(err)
 	}
 
-	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(identityAPIEndpoint, realTimeStateSyncer)
+	teamyRealTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(identityAPIEndpoint, realTimeStateSyncer)
+	teamyGraphQLAPI, err := dep.InitGraphQLAPI(identityAPIEndpoint, cloudAPIConfig, realTimeStateSyncer, sqlDB)
+	if err != nil {
+		panic(err)
+	}
 	rn := runner.NewServiceRunner(runnerConfig, []runner.Service{
 		githubApp,
-		realTimeStateSyncAPI,
+		teamyRealTimeStateSyncAPI,
+		teamyGraphQLAPI,
 	})
 	rn.Start()
 }

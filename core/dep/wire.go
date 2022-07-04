@@ -9,7 +9,7 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/core/api"
-	"github.com/teamyapp/teamy-backend/core/api/gql/resolver"
+	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
@@ -45,27 +45,29 @@ var collectionSyncerSet = wire.NewSet(
 	collection.NewUserSyncer,
 )
 
-func InitGraphQLResolver(
-	sqlDB *sql.DB,
-	cloudAPIClientCfg config.CloudAPIClient,
-	realTimeStateSyncer *realtime.StateSyncer,
-) (resolver.Resolver, error) {
-	wire.Build(
-		daoSet,
-		collectionSyncerSet,
-		cloudAPI.NewCloudAPIClient,
-		resolver.NewDependencies,
-		resolver.NewResolver,
-	)
-	return resolver.Resolver{}, nil
-}
-
 func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
 	)
 	return nil
+}
+
+func InitGraphQLAPI(
+	identityAPIEndpoint string,
+	cloudAPIClientCfg config.CloudAPIClient,
+	realTimeStateSyncer *realtime.StateSyncer,
+	sqlDB *sql.DB,
+) (api.GraphQL, error) {
+	wire.Build(
+		daoSet,
+		collectionSyncerSet,
+		cloudAPI.NewCloudAPIClient,
+		gql.NewDependencies,
+		gql.NewResolver,
+		api.NewGraphQL,
+	)
+	return api.GraphQL{}, nil
 }
 
 func InitRealTimeStateSyncAPI(
