@@ -22,11 +22,7 @@ func (p pullRequestEvent) String() string {
 		`[pullRequestEvent
 	Action:%v
 	Number:%v
-	PullRequest:%v
-	Repository:%v
-	Organization:%v
-	Sender:%v
-	Installation:%v]`,
+	PullRequest:%v]`,
 		p.Action,
 		p.Number,
 		p.PullRequest)
