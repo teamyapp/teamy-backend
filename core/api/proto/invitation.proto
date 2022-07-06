@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/core/api/proto";
+
+service Invitation {
+	rpc CreateInvitation(CreateInvitationRequest) returns (CreateInvitationResponse);
+	rpc UpdateInvitation(UpdateInvitationRequest) returns (google.protobuf.Empty);
+	rpc AcceptInvitation(AcceptInvitationRequest) returns (google.protobuf.Empty);
+	rpc DeclineInvitation(DeclineInvitationRequest) returns (google.protobuf.Empty);
+	rpc DeleteInvitation(DeleteInvitationRequest) returns (google.protobuf.Empty);
+}
+
+message CreateInvitationRequest {
+	uint64 teamId = 1;
+	string receiverFirstName = 2;
+	string receiverLastName = 3;
+	string receiverEmail = 4;
+	google.protobuf.Timestamp expireAt = 5;
+}
+
+message CreateInvitationResponse {
+	uint64 invitationId = 1;
+	string invitationCode = 2;
+}
+
+message UpdateInvitationRequest {
+	uint64 invitationId = 1;
+	string receiverFirstName = 2;
+	string receiverLastName = 3;
+	string receiverEmail = 4;
+	google.protobuf.Timestamp expireAt = 5;
+}
+
+message AcceptInvitationRequest {
+	uint64 invitationId = 1;
+	string invitationCode = 2;
+}
+
+message DeclineInvitationRequest {
+	uint64 invitationId = 1;
+	string invitationCode = 2;
+}
+
+message DeleteInvitationRequest {
+	uint64 invitationId = 1;
+}

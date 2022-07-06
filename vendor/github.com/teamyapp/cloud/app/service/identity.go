@@ -10,22 +10,27 @@ import (
 	"github.com/teamyapp/cloud/app/entity"
 	"github.com/teamyapp/cloud/app/gen"
 	"github.com/teamyapp/cloud/app/oauth"
+	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/cloud/libs/security"
 )
 
 type tokenPayload struct {
-	UserID   uint64 `json:"user_id"`
-	IssuedAt string `json:"issued_at"`
+	UserID           uint64     `json:"user_id"`
+	IssuedAt         *time.Time `json:"issued_at"`
+	IsServiceAccount bool       `json:"is_service_account"`
+	Secret           *string    `json:"secret"`
 }
 
 type Identity struct {
-	signInSessionDao dao.SignInSession
-	userLinkDao      dao.UserLink
-	userIDGenerator  *gen.UniqueNumber
-	stateIDGenerator *gen.UniqueNumber
-	jwtAuthority     security.JWTAuthority
-	oauthProviders   map[string]oauth.Provider
-	accessTokenTLL   time.Duration
+	signInSessionDao  dao.SignInSession
+	userLinkDao       dao.UserLink
+	serviceAccountDao dao.ServiceAccount
+	userIDGenerator   *gen.UniqueNumber
+	stateIDGenerator  *gen.UniqueNumber
+	jwtAuthority      security.JWTAuthority
+	oauthProviders    map[string]oauth.Provider
+	accessTokenTLL    time.Duration
 }
 
 func (i Identity) VerifyAccessToken(accessToken string) (uint64, bool) {
@@ -35,13 +40,23 @@ func (i Identity) VerifyAccessToken(accessToken string) (uint64, bool) {
 		return 0, false
 	}
 
-	tm, err := time.Parse(time.RFC3339, payload.IssuedAt)
-	if err != nil {
-		return 0, false
-	}
+	if payload.IsServiceAccount {
+		serviceAccount, err := i.serviceAccountDao.FindServiceAccountByID(payload.UserID)
+		if err != nil {
+			log.Println(err)
+			return 0, false
+		}
 
-	if tm.Add(i.accessTokenTLL).Before(time.Now()) {
-		return 0, false
+		if serviceAccount.Secret == nil || payload.Secret == nil {
+			return 0, false
+		}
+
+		return serviceAccount.ID, *serviceAccount.Secret == *payload.Secret
+	} else {
+		issuedAt := *payload.IssuedAt
+		if issuedAt.Add(i.accessTokenTLL).Before(time.Now()) {
+			return 0, false
+		}
 	}
 
 	return payload.UserID, true
@@ -101,9 +116,10 @@ func (i Identity) FinishOAuthSignIn(providerName string, authorizationCode strin
 		return "", err
 	}
 
+	now := time.Now()
 	payload := tokenPayload{
 		UserID:   userID,
-		IssuedAt: time.Now().Format(time.RFC3339),
+		IssuedAt: &now,
 	}
 
 	accessToken, err := i.jwtAuthority.GenerateToken(payload)
@@ -149,9 +165,89 @@ func (i Identity) getOrLinkInternalUserID(authProvider string, externalUserID st
 	}
 }
 
+func (i Identity) ListServiceAccounts(accountOwnerID uint64) ([]entity.ServiceAccount, error) {
+	serviceAccounts, err := i.serviceAccountDao.FindAllServiceAccounts(accountOwnerID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return collect.Map(serviceAccounts, func(serviceAccount entity.ServiceAccount, _ int) entity.ServiceAccount {
+		serviceAccount.Secret = nil
+		return serviceAccount
+	}), nil
+}
+
+func (i Identity) CreateServiceAccount(accountOwnerID uint64, serviceAccountName string) error {
+	serviceAccountID, err := i.userIDGenerator.GenerateUniqueNumber()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	account := entity.ServiceAccount{
+		ID:          serviceAccountID,
+		Name:        serviceAccountName,
+		OwnerUserID: accountOwnerID,
+		CreatedAt:   time.Now().UTC(),
+	}
+
+	return i.serviceAccountDao.CreateServiceAccount(account)
+}
+
+func (i Identity) GenerateServiceToken(accountOwnerID uint64, serviceAccountID uint64) (string, error) {
+	serviceAccounts, err := i.serviceAccountDao.FindAllServiceAccounts(accountOwnerID)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	foundServiceAccounts := collect.Filter(serviceAccounts, func(account entity.ServiceAccount) bool {
+		return account.ID == serviceAccountID
+	})
+	if len(foundServiceAccounts) < 1 {
+		return "", fmt.Errorf("service account not found: userID=%v, serviceAccountID=%v\n", accountOwnerID, serviceAccountID)
+	}
+
+	serviceAccount := serviceAccounts[0]
+	secret := randgen.String(randgen.Base62, 10)
+	serviceAccount.Secret = &secret
+	err = i.serviceAccountDao.UpdateServiceAccount(serviceAccount)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	payload := tokenPayload{
+		UserID:           serviceAccountID,
+		IsServiceAccount: true,
+		Secret:           serviceAccount.Secret,
+	}
+
+	return i.jwtAuthority.GenerateToken(payload)
+}
+
+func (i Identity) DeleteServiceAccount(accountOwnerID uint64, serviceAccountID uint64) error {
+	serviceAccounts, err := i.serviceAccountDao.FindAllServiceAccounts(accountOwnerID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	foundServiceAccounts := collect.Filter(serviceAccounts, func(account entity.ServiceAccount) bool {
+		return account.ID == serviceAccountID
+	})
+	if len(foundServiceAccounts) < 1 {
+		return fmt.Errorf("service account not found: userID=%v, serviceAccountID=%v\n", accountOwnerID, serviceAccountID)
+	}
+
+	return i.serviceAccountDao.DeleteServiceAccount(serviceAccountID)
+}
+
 func NewIdentity(
 	signInSessionDao dao.SignInSession,
 	userLinkDao dao.UserLink,
+	serviceAccountDao dao.ServiceAccount,
 	uniqueNumberFactory gen.UniqueNumberFactory,
 	jwtAuthority security.JWTAuthority,
 	oauthProviders []oauth.Provider,
@@ -173,12 +269,13 @@ func NewIdentity(
 	}
 
 	return Identity{
-		signInSessionDao: signInSessionDao,
-		userLinkDao:      userLinkDao,
-		userIDGenerator:  userIDGenerator,
-		stateIDGenerator: stateIDGenerator,
-		jwtAuthority:     jwtAuthority,
-		oauthProviders:   oauthProviderMap,
-		accessTokenTLL:   accessTokenTLL,
+		signInSessionDao:  signInSessionDao,
+		userLinkDao:       userLinkDao,
+		serviceAccountDao: serviceAccountDao,
+		userIDGenerator:   userIDGenerator,
+		stateIDGenerator:  stateIDGenerator,
+		jwtAuthority:      jwtAuthority,
+		oauthProviders:    oauthProviderMap,
+		accessTokenTLL:    accessTokenTLL,
 	}, nil
 }

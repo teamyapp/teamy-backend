@@ -6,12 +6,14 @@ import (
 	"math/rand"
 	"time"
 
-	cloudConfig "github.com/teamyapp/cloud/app/config"
+	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
+	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runner"
-	appsConfig "github.com/teamyapp/teamy-backend/apps/config"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
+	"github.com/teamyapp/teamy-backend/apps/github"
 	"github.com/teamyapp/teamy-backend/config"
+	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/dep"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -33,11 +35,6 @@ func main() {
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
-	cloudAPIClientCfg, err := cloudConfig.CloudAPIClientFromEnv()
-	if err != nil {
-		log.Println(err)
-		panic(err)
-	}
 	err = sqldb.Use(cfg.Config, func(sqlDB *sql.DB) error {
 		err = sqldb.MigrateUp(sqlDB, "migrations")
 		if err != nil {
@@ -45,7 +42,7 @@ func main() {
 		}
 
 		realTimeStateSyncer := dep.InitRealTimeStateSyncer(sqlDB)
-		startServiceRunner(cloudAPIClientCfg, sqlDB, cfg.IdentityAPIEndpoint, realTimeStateSyncer)
+		startServiceRunner(cfg, sqlDB, realTimeStateSyncer)
 		return nil
 	})
 
@@ -56,34 +53,55 @@ func main() {
 }
 
 func startServiceRunner(
-	cloudAPIConfig cloudConfig.CloudAPIClient,
+	cfg config.Config,
 	sqlDB *sql.DB,
-	identityAPIEndpoint string,
 	realTimeStateSyncer *realtime.StateSyncer) {
 	runnerConfig, err := runner.ServiceRunnerConfigFromEnv()
 	if err != nil {
 		panic(err)
 	}
 
-	githubCfg, err := appsConfig.GithubAppConfigFromEnv()
+	githubCfg, err := github.AppConfigFromEnv()
+	if err != nil {
+		panic(err)
+	}
+	cloudClientRegistry, err := cloudAPI.NewClientRegistry(rpc.ConnectionConfig{
+		Host:          cfg.CloudAPIHost,
+		Port:          cfg.CloudAPIPort,
+		ShouldEncrypt: cfg.CloudAPIShouldEncrypt,
+	})
+	if err != nil {
+		panic(err)
+	}
+	teamyClientRegistry, err := api.NewClientRegistry(rpc.ConnectionConfig{
+		Host:          cfg.TeamyAPIHost,
+		Port:          cfg.TeamyAPIPort,
+		ShouldEncrypt: cfg.TeamyAPIShouldEncrypt,
+		GetAccessToken: func() string {
+			return cfg.AppsServiceAccountAPIToken
+		},
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	githubApp, err := appsDep.InitGithubApp(cloudAPIConfig, githubCfg, sqlDB)
+	githubApp, err := appsDep.InitGithubApp(cloudClientRegistry, teamyClientRegistry, githubCfg, sqlDB)
 	if err != nil {
 		panic(err)
 	}
 
-	teamyRealTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(identityAPIEndpoint, realTimeStateSyncer)
-	teamyGraphQLAPI, err := dep.InitGraphQLAPI(identityAPIEndpoint, cloudAPIConfig, realTimeStateSyncer, sqlDB)
+	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(realTimeStateSyncer)
+	graphQLAPI, err := dep.InitGraphQLAPI(cloudClientRegistry, realTimeStateSyncer, sqlDB)
 	if err != nil {
 		panic(err)
 	}
+
+	taskRPCAPI := dep.InitTaskRPCAPI(cloudClientRegistry, realTimeStateSyncer, sqlDB)
 	rn := runner.NewServiceRunner(runnerConfig, []runner.Service{
 		githubApp,
-		teamyRealTimeStateSyncAPI,
-		teamyGraphQLAPI,
+		graphQLAPI,
+		realTimeStateSyncAPI,
+		taskRPCAPI,
 	})
 	rn.Start()
 }

@@ -4,9 +4,11 @@ import (
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Dependencies struct {
+	cloudClientRegistry        *api.ClientRegistry
 	userDao                    dao.User
 	teamDao                    dao.Team
 	teamMemberDao              dao.TeamMember
@@ -22,10 +24,11 @@ type Dependencies struct {
 	taskSyncer                 collection.TaskSyncer
 	messageSyncer              collection.MessageSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
-	cloudAPIClient             *api.CloudAPIClient
+	taskService                service.Task
 }
 
 func NewDependencies(
+	cloudClientRegistry *api.ClientRegistry,
 	userDao dao.User,
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
@@ -41,9 +44,10 @@ func NewDependencies(
 	taskSyncer collection.TaskSyncer,
 	messageSyncer collection.MessageSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
-	cloudAPIClient *api.CloudAPIClient,
+	taskService service.Task,
 ) *Dependencies {
 	return &Dependencies{
+		cloudClientRegistry:        cloudClientRegistry,
 		userDao:                    userDao,
 		teamDao:                    teamDao,
 		teamMemberDao:              teamMemberDao,
@@ -59,6 +63,6 @@ func NewDependencies(
 		taskSyncer:                 taskSyncer,
 		messageSyncer:              messageSyncer,
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
-		cloudAPIClient:             cloudAPIClient,
+		taskService:                taskService,
 	}
 }

@@ -16,28 +16,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api"
-	"github.com/teamyapp/cloud/app/api/proto"
+	cloudAPI "github.com/teamyapp/cloud/app/api"
+	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/runner"
-	"github.com/teamyapp/cloud/libs/web"
-	"github.com/teamyapp/teamy-backend/apps/config"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
+	"github.com/teamyapp/teamy-backend/core/api"
 )
 
 const githubAppPathPrefix = "/apps/github"
 
 type App struct {
-	config                   config.GithubAppConfig
-	cloudAPIClient           *api.CloudAPIClient
+	config                   AppConfig
+	cloudClientRegistry      *cloudAPI.ClientRegistry
+	teamyClientRegistry      *api.ClientRegistry
 	githubAppInstallStateDao dao.GithubAppInstallState
 	githubAppInstallationDao dao.GithubAppInstallation
 }
 
 var _ runner.Service = (*App)(nil)
 
-func (a App) Start(runner *runner.ServiceRunner) error {
-	runner.RegisterWebRoutes([]web.Route{
+func (a App) Start(rn *runner.ServiceRunner) error {
+	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
 			Path:        path.Join(githubAppPathPrefix, "install"),
 			Method:      http.MethodGet,
@@ -74,8 +74,8 @@ func (a App) install(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	genStateIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "githubInstallationStateID"}
-	genStateIDRes, err := a.generatorClient().GenerateUniqueNumber(context.Background(), genStateIDReq)
+	genStateIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubInstallationStateID"}
+	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(context.Background(), genStateIDReq)
 	if err != nil {
 		log.Printf("fail to generate state ID: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -131,12 +131,12 @@ func (a App) finishInstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	installationID := query.Get("installation_id")
-	installation := entity.GithubAppInstallation{
+	ins := entity.GithubAppInstallation{
 		ID:        installationID,
 		TeamID:    state.TeamID,
 		CreatedAt: time.Now().UTC(),
 	}
-	err = a.githubAppInstallationDao.CreateGithubAppInstallation(installation)
+	err = a.githubAppInstallationDao.CreateGithubAppInstallation(ins)
 	if err != nil {
 		log.Printf("fail to create Github App installation: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -201,10 +201,6 @@ func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a App) generatorClient() proto.GeneratorClient {
-	return a.cloudAPIClient.GeneratorClient()
-}
-
 func (a App) processEvent(eventType string, payload []byte) error {
 	// TODO: parse & react to Github event
 	var evt event
@@ -263,14 +259,16 @@ func (a App) getInstallGithubAppURL(stateID uint64) (string, error) {
 }
 
 func NewApp(
-	config config.GithubAppConfig,
-	cloudAPIClient *api.CloudAPIClient,
+	cfg AppConfig,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
+	teamyClientRegistry *api.ClientRegistry,
 	githubAppInstallStateDao dao.GithubAppInstallState,
 	githubAppInstallationDao dao.GithubAppInstallation,
 ) App {
 	return App{
-		config:                   config,
-		cloudAPIClient:           cloudAPIClient,
+		config:                   cfg,
+		cloudClientRegistry:      cloudClientRegistry,
+		teamyClientRegistry:      teamyClientRegistry,
 		githubAppInstallStateDao: githubAppInstallStateDao,
 		githubAppInstallationDao: githubAppInstallationDao,
 	}

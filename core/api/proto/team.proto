@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/core/api/proto";
+
+service Team {
+	rpc CreateTeam(CreateTeamRequest) returns (CreateTeamResponse);
+	rpc UpdateTeam(UpdateTeamRequest) returns (google.protobuf.Empty);
+	rpc AddMemberToTeam(AddMemberToTeamRequest) returns (google.protobuf.Empty);
+	rpc RemoveMemberFromTeam(RemoveMemberFromRequest) returns (google.protobuf.Empty);
+}
+
+message CreateTeamRequest {
+	string name = 1;
+}
+
+message CreateTeamResponse {
+	uint64 teamId = 1;
+}
+
+message UpdateTeamRequest {
+	uint64 teamId = 1;
+	string name = 2;
+	string iconUrl = 3;
+	uint64 ownerUserId = 4;
+}
+
+message AddMemberToTeamRequest {
+	uint64 teamId = 1;
+	uint64 memberUserId = 2;
+}
+
+message RemoveMemberFromRequest {
+	uint64 teamId = 1;
+	uint64 memberUserId = 2;
+}

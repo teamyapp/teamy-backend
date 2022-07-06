@@ -7,9 +7,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
-	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/cloud/libs/runner"
-	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 )
 
@@ -17,14 +15,13 @@ import (
 var rawSchema string
 
 type GraphQL struct {
-	identityAPIEndpoint string
-	resolver            gql.Resolver
+	gqlResolver gql.Resolver
 }
 
 var _ runner.Service = (*GraphQL)(nil)
 
-func (g GraphQL) Start(runner *runner.ServiceRunner) error {
-	schema, err := graphql.ParseSchema(rawSchema, &g.resolver,
+func (g GraphQL) Start(rn *runner.ServiceRunner) error {
+	schema, err := graphql.ParseSchema(rawSchema, &g.gqlResolver,
 		graphql.UseFieldResolvers(),
 		graphql.UseStringDescriptions())
 	if err != nil {
@@ -33,19 +30,18 @@ func (g GraphQL) Start(runner *runner.ServiceRunner) error {
 	}
 
 	relayHandler := relay.Handler{Schema: schema}
-	runner.RegisterWebRoutes([]web.Route{
+	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
 			Path:        graphQLPrefix,
 			Method:      http.MethodPost,
-			HandlerFunc: middleware.WithWebIdentity(g.identityAPIEndpoint, relayHandler.ServeHTTP).ServeHTTP,
+			HandlerFunc: relayHandler.ServeHTTP,
 		},
 	})
 	return nil
 }
 
-func NewGraphQL(identityAPIEndpoint string, resolver gql.Resolver) GraphQL {
+func NewGraphQL(gqlResolver gql.Resolver) GraphQL {
 	return GraphQL{
-		identityAPIEndpoint: identityAPIEndpoint,
-		resolver:            resolver,
+		gqlResolver: gqlResolver,
 	}
 }

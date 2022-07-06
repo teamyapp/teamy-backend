@@ -31,6 +31,9 @@ spec:
     - name: github-webhook-secret
       key: kv/data/secrets/production/apps
       property: github-webhook-secret
+    - name: service-account-api-token
+      key: kv/data/secrets/production/apps
+      property: service-account-api-token
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -81,8 +84,6 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: db-name
-            - name: IDENTITY_API_ENDPOINT
-              value: http://cloud.production.svc.cluster.local/identity
             - name: CLOUD_API_HOST
               value: cloud
             - name: CLOUD_API_PORT
@@ -93,6 +94,8 @@ spec:
               value: "9000"
             - name: SERVICE_RUNNER_GRPC_SERVER_PORT
               value: "9001"
+            - name: SERVICE_RUNNER_IDENTITY_API_ENDPOINT
+              value: http://cloud.production.svc.cluster.local/identity
             - name: APPS_GITHUB_APP_NAME
               value: teamy-apps
             - name: APPS_GITHUB_WEBHOOK_SECRET
@@ -100,6 +103,11 @@ spec:
                 secretKeyRef:
                   name: apps
                   key: github-webhook-secret
+            - name: APPS_SERVICE_ACCOUNT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: apps
+                  key: service-account-api-token
 ---
 apiVersion: v1
 kind: Service

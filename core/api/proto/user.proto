@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/core/api/proto";
+
+service User {
+	rpc CreateUser(CreateUserRequest) returns (google.protobuf.Empty);
+	rpc UpdateUser(UpdateUserRequest) returns (google.protobuf.Empty);
+}
+
+message CreateUserRequest {
+	string lastName = 1;
+	string firstName = 2;
+	string profileUrl = 3;
+}
+
+message CreateUserResponse {
+	uint64 messageId = 1;
+}
+
+message UpdateUserRequest {
+	uint64 userId = 1;
+	string lastName = 2;
+	string firstName = 3;
+	string profileUrl = 4;
+}

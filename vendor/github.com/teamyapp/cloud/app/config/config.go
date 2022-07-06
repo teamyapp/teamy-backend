@@ -29,28 +29,12 @@ type App struct {
 	WebAPIBaseURL      string        `envconfig:"WEB_API_BASE_URL" default:""`
 }
 
-type CloudAPIClient struct {
-	Host          string `envconfig:"CLOUD_API_HOST" default:"localhost"`
-	Port          int    `envconfig:"CLOUD_API_PORT" default:"9501"`
-	ShouldEncrypt bool   `envconfig:"CLOUD_API_SHOULD_ENCRYPT" default:"false"`
-}
-
 func AppFromEnv() (App, error) {
 	cfg := App{}
 	err := FromEnv(&cfg)
 	if err != nil {
 		log.Println(err)
 		return App{}, err
-	}
-	return cfg, nil
-}
-
-func CloudAPIClientFromEnv() (CloudAPIClient, error) {
-	cfg := CloudAPIClient{}
-	err := FromEnv(&cfg)
-	if err != nil {
-		log.Println(err)
-		return CloudAPIClient{}, err
 	}
 	return cfg, nil
 }

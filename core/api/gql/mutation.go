@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/app/api/proto"
-	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 const invitationCodeLen = 20
 
-var invitationCodeAlphabet = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
 	entity.TaskStatusInProgress: true,
 	entity.TaskStatusAwaiting:   true,
@@ -37,25 +37,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		DueAt       *graphql.Time
 	}
 }) (Task, error) {
-	userID, err := ctx.UserIDFromContext(ct)
-	if err != nil {
-		return Task{}, err
-	}
-
-	genClient := m.GeneratorClient()
-	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
-	genTaskIDRes, err := genClient.GenerateUniqueNumber(ct, genTaskIDReq)
-	if err != nil {
-		log.Println(err)
-		return Task{}, err
-	}
-
 	owningTeamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	threadID, err := m.createThread(ct)
 	if err != nil {
 		return Task{}, err
 	}
@@ -65,24 +47,12 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	task := entity.Task{
-		ID:               genTaskIDRes.UniqueNumber,
-		Goal:             args.Task.Goal,
-		Context:          args.Task.Context,
-		Status:           entity.TaskStatusUpcoming,
-		CreatorUserID:    userID,
-		OwningTeamID:     owningTeamID,
-		OwnerUserID:      ownerUserID,
-		CommentsThreadID: threadID,
-		CreatedAt:        time.Now(),
-	}
-
-	if args.Task.DueAt != nil {
-		dueAt := (*args.Task.DueAt).Time
-		task.DueAt = &dueAt
-	}
-
-	err = m.deps.taskSyncer.CreateAndSyncTask(task)
+	task, err := m.deps.taskService.CreateTask(ct, owningTeamID, service.CreateTaskInput{
+		Goal:        args.Task.Goal,
+		Context:     args.Task.Context,
+		OwnerUserID: ownerUserID,
+		DueAt:       fromGraphQLTimePtr(args.Task.DueAt),
+	})
 	if err != nil {
 		return Task{}, err
 	}
@@ -413,9 +383,8 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		return Message{}, err
 	}
 
-	genClient := m.GeneratorClient()
 	genMessageIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "messageID"}
-	genMessageIDRes, err := genClient.GenerateUniqueNumber(ct, genMessageIDReq)
+	genMessageIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genMessageIDReq)
 	if err != nil {
 		log.Println(err)
 		return Message{}, err
@@ -502,9 +471,8 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		return Team{}, err
 	}
 
-	genClient := m.GeneratorClient()
 	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
-	genTeamIDRes, err := genClient.GenerateUniqueNumber(ct, genTeamIDReq)
+	genTeamIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
 	if err != nil {
 		log.Println(err)
 		return Team{}, err
@@ -704,9 +672,8 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	genClient := m.GeneratorClient()
 	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
-	genInvitationIDRes, err := genClient.GenerateUniqueNumber(ct, genInvitationIDReq)
+	genInvitationIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genInvitationIDReq)
 	if err != nil {
 		log.Println(err)
 		return Invitation{}, err
@@ -721,7 +688,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		TeamID:            teamID,
 		ExpireAt:          args.Invitation.ExpireAt.Time,
 		Status:            entity.InvitationStatusPending,
-		Code:              randString(invitationCodeAlphabet, invitationCodeLen),
+		Code:              randgen.String(randgen.Base62, invitationCodeLen),
 		CreatedAt:         time.Now(),
 	}
 	err = m.deps.invitationSyncer.CreateAndSyncInvitation(invitation)
@@ -890,9 +857,8 @@ func (m Mutation) ensureInvitationPending(invitation entity.Invitation) error {
 }
 
 func (m Mutation) createThread(ct context.Context) (uint64, error) {
-	genClient := m.deps.cloudAPIClient.GeneratorClient()
 	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
-	genThreadIDRes, err := genClient.GenerateUniqueNumber(ct, genThreadIDReq)
+	genThreadIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if err != nil {
 		log.Println(err)
 		return 0, err
@@ -902,26 +868,8 @@ func (m Mutation) createThread(ct context.Context) (uint64, error) {
 	return threadID, m.deps.threadDao.CreateThread(threadID)
 }
 
-func (m Mutation) GeneratorClient() proto.GeneratorClient {
-	return m.deps.cloudAPIClient.GeneratorClient()
-}
-
 func NewMutation(deps *Dependencies) Mutation {
 	return Mutation{
 		deps: deps,
 	}
-}
-
-func randString(alphabet []rune, length int) string {
-	alphabetEndIndex := len(alphabet) - 1
-	result := make([]rune, length)
-	for i := 0; i < length; i++ {
-		randomIndex := randInt(0, alphabetEndIndex)
-		result[i] = alphabet[randomIndex]
-	}
-	return string(result)
-}
-
-func randInt(min int, max int) int {
-	return min + rand.Intn(max-min+1)
 }

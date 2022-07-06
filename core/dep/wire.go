@@ -7,13 +7,13 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
-	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 var daoSet = wire.NewSet(
@@ -45,6 +45,11 @@ var collectionSyncerSet = wire.NewSet(
 	collection.NewUserSyncer,
 )
 
+var serviceSet = wire.NewSet(
+	service.NewThread,
+	service.NewTask,
+)
+
 func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
@@ -54,15 +59,14 @@ func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 }
 
 func InitGraphQLAPI(
-	identityAPIEndpoint string,
-	cloudAPIClientCfg config.CloudAPIClient,
+	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) (api.GraphQL, error) {
 	wire.Build(
 		daoSet,
 		collectionSyncerSet,
-		cloudAPI.NewCloudAPIClient,
+		serviceSet,
 		gql.NewDependencies,
 		gql.NewResolver,
 		api.NewGraphQL,
@@ -71,11 +75,24 @@ func InitGraphQLAPI(
 }
 
 func InitRealTimeStateSyncAPI(
-	identityAPIEndpoint string,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) api.RealTimeStateSync {
 	wire.Build(
 		api.NewRealTimeStateSync,
 	)
 	return api.RealTimeStateSync{}
+}
+
+func InitTaskRPCAPI(
+	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	sqlDB *sql.DB,
+) api.TaskRPC {
+	wire.Build(
+		daoSet,
+		collectionSyncerSet,
+		serviceSet,
+		api.NewTaskRPC,
+	)
+	return api.TaskRPC{}
 }
