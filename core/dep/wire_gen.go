@@ -8,14 +8,14 @@ package dep
 import (
 	"database/sql"
 	"github.com/google/wire"
-	api2 "github.com/teamyapp/cloud/app/api"
-	"github.com/teamyapp/cloud/app/config"
-	"github.com/teamyapp/teamy-backend/core/api"
+	"github.com/teamyapp/cloud/app/api"
+	api2 "github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 // Injectors from wire.go:
@@ -26,7 +26,7 @@ func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 	return stateSyncer
 }
 
-func InitGraphQLAPI(identityAPIEndpoint string, cloudAPIClientCfg config.CloudAPIClient, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (api.GraphQL, error) {
+func InitGraphQLAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (api2.GraphQL, error) {
 	user := sqldb.NewUser(sqlDB)
 	team := sqldb.NewTeam(sqlDB)
 	teamMember := sqldb.NewTeamMember(sqlDB)
@@ -42,19 +42,27 @@ func InitGraphQLAPI(identityAPIEndpoint string, cloudAPIClientCfg config.CloudAP
 	taskSyncer := collection.NewTaskSyncer(realTimeStateSyncer, task)
 	messageSyncer := collection.NewMessageSyncer(realTimeStateSyncer, message, task)
 	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(realTimeStateSyncer, taskAwaitForRelation, task)
-	cloudAPIClient, err := api2.NewCloudAPIClient(cloudAPIClientCfg)
-	if err != nil {
-		return api.GraphQL{}, err
-	}
-	dependencies := gql.NewDependencies(user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, taskSyncer, messageSyncer, taskAwaitForRelationSyncer, cloudAPIClient)
+	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
+	serviceTask := service.NewTask(cloudAPIClientRegistry, taskSyncer, serviceThread)
+	dependencies := gql.NewDependencies(cloudAPIClientRegistry, user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, taskSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask)
 	resolver := gql.NewResolver(dependencies)
-	graphQL := api.NewGraphQL(identityAPIEndpoint, resolver)
+	graphQL := api2.NewGraphQL(resolver)
 	return graphQL, nil
 }
 
-func InitRealTimeStateSyncAPI(identityAPIEndpoint string, realTimeStateSyncer *realtime.StateSyncer) api.RealTimeStateSync {
-	realTimeStateSync := api.NewRealTimeStateSync(identityAPIEndpoint, realTimeStateSyncer)
+func InitRealTimeStateSyncAPI(realTimeStateSyncer *realtime.StateSyncer) api2.RealTimeStateSync {
+	realTimeStateSync := api2.NewRealTimeStateSync(realTimeStateSyncer)
 	return realTimeStateSync
+}
+
+func InitTaskRPCAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.TaskRPC {
+	task := sqldb.NewTask(sqlDB)
+	taskSyncer := collection.NewTaskSyncer(realTimeStateSyncer, task)
+	thread := sqldb.NewThread(sqlDB)
+	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
+	serviceTask := service.NewTask(cloudAPIClientRegistry, taskSyncer, serviceThread)
+	taskRPC := api2.NewTaskRPC(serviceTask)
+	return taskRPC
 }
 
 // wire.go:
@@ -62,3 +70,5 @@ func InitRealTimeStateSyncAPI(identityAPIEndpoint string, realTimeStateSyncer *r
 var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskAwaitForRelation, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread)
 
 var collectionSyncerSet = wire.NewSet(collection.NewInvitationSyncer, collection.NewMessageSyncer, collection.NewTaskSyncer, collection.NewTaskAwaitForRelationSyncer, collection.NewTeamSyncer, collection.NewTeamMemberSyncer, collection.NewUserSyncer)
+
+var serviceSet = wire.NewSet(service.NewThread, service.NewTask)

@@ -3,10 +3,11 @@ module github.com/teamyapp/teamy-backend
 go 1.18
 
 require (
-	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.4.0
-	github.com/teamyapp/cloud v0.0.0-20220627071734-7d8413578ddf
+	github.com/teamyapp/cloud v0.0.0-20220706074550-502105c67e49
+	google.golang.org/grpc v1.47.0
+	google.golang.org/protobuf v1.28.0
 )
 
 //replace github.com/teamyapp/cloud => ../cloud
@@ -21,10 +22,8 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/lib/pq v1.10.6 // indirect
 	github.com/rubenv/sql-migrate v1.1.2 // indirect
-	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
-	golang.org/x/sys v0.0.0-20220624220833-87e55d714810 // indirect
+	golang.org/x/net v0.0.0-20220630215102-69896b714898 // indirect
+	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f // indirect
-	google.golang.org/grpc v1.47.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	google.golang.org/genproto v0.0.0-20220630174209-ad1d48641aa7 // indirect
 )

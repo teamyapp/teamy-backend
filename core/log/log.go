@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/teamyapp/cloud/app/ctx"
+	"github.com/teamyapp/cloud/libs/ctx"
 )
 
 func Info(args ...interface{}) {

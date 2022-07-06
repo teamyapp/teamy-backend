@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package="github.com/cloud/app/api/rpc/proto";
+option go_package="github.com/cloud/app/api/proto";
 
 service Generator {
   rpc GenerateUniqueNumber(GenerateUniqueNumberRequest) returns (GenerateUniqueNumberResponse);

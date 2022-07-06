@@ -5,27 +5,24 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/teamyapp/cloud/app/ctx"
 	"github.com/teamyapp/cloud/libs/connection"
-	"github.com/teamyapp/cloud/libs/middleware"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/runner"
-	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type RealTimeStateSync struct {
-	identityAPIEndpoint string
 	realTimeStateSyncer *realtime.StateSyncer
 }
 
 var _ runner.Service = (*RealTimeStateSync)(nil)
 
-func (r RealTimeStateSync) Start(runner *runner.ServiceRunner) error {
-	runner.RegisterWebRoutes([]web.Route{
+func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) error {
+	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
 			Path:        path.Join(realTimeStateSyncPrefix, "clients", "connect"),
 			Method:      http.MethodGet,
-			HandlerFunc: middleware.WithWebSocketIdentity(r.identityAPIEndpoint, r.connect).ServeHTTP,
+			HandlerFunc: r.connect,
 		},
 	})
 	return nil
@@ -59,11 +56,9 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 }
 
 func NewRealTimeStateSync(
-	identityAPIEndpoint string,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) RealTimeStateSync {
 	return RealTimeStateSync{
-		identityAPIEndpoint: identityAPIEndpoint,
 		realTimeStateSyncer: realTimeStateSyncer,
 	}
 }

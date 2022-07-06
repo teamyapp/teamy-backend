@@ -10,10 +10,13 @@ import (
 type Config struct {
 	sqldb.Config
 	config.Repo
-	IdentityAPIEndpoint   string `envconfig:"IDENTITY_API_ENDPOINT" default:"http://localhost:9500/identity"`
-	CloudAPIHost          string `envconfig:"CLOUD_API_HOST" default:"localhost"`
-	CloudAPIPort          int    `envconfig:"CLOUD_API_PORT" default:"9501"`
-	CloudAPIShouldEncrypt bool   `envconfig:"CLOUD_API_SHOULD_ENCRYPT" default:"false"`
+	CloudAPIHost               string `envconfig:"CLOUD_API_HOST" default:"localhost"`
+	CloudAPIPort               int    `envconfig:"CLOUD_API_PORT" default:"9501"`
+	CloudAPIShouldEncrypt      bool   `envconfig:"CLOUD_API_SHOULD_ENCRYPT" default:"false"`
+	AppsServiceAccountAPIToken string `envconfig:"APPS_SERVICE_ACCOUNT_API_TOKEN" default:""`
+	TeamyAPIHost               string `envconfig:"TEAMY_API_HOST" default:"localhost"`
+	TeamyAPIPort               int    `envconfig:"TEAMY_API_PORT" default:"9001"`
+	TeamyAPIShouldEncrypt      bool   `envconfig:"TEAMY_API_SHOULD_ENCRYPT" default:"false"`
 }
 
 func FromEnv() (Config, error) {
