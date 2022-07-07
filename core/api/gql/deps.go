@@ -21,7 +21,6 @@ type Dependencies struct {
 	teamSyncer                 collection.TeamSyncer
 	teamMemberSyncer           collection.TeamMemberSyncer
 	invitationSyncer           collection.InvitationSyncer
-	taskSyncer                 collection.TaskSyncer
 	messageSyncer              collection.MessageSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
 	taskService                service.Task
@@ -41,7 +40,6 @@ func NewDependencies(
 	teamSyncer collection.TeamSyncer,
 	teamMemberSyncer collection.TeamMemberSyncer,
 	invitationSyncer collection.InvitationSyncer,
-	taskSyncer collection.TaskSyncer,
 	messageSyncer collection.MessageSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
 	taskService service.Task,
@@ -60,7 +58,6 @@ func NewDependencies(
 		teamSyncer:                 teamSyncer,
 		teamMemberSyncer:           teamMemberSyncer,
 		invitationSyncer:           invitationSyncer,
-		taskSyncer:                 taskSyncer,
 		messageSyncer:              messageSyncer,
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
 		taskService:                taskService,
