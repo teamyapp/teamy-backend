@@ -728,18 +728,6 @@ func (m Mutation) ensureInvitationPending(invitation entity.Invitation) error {
 	}
 }
 
-func (m Mutation) createThread(ct context.Context) (uint64, error) {
-	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
-	genThreadIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
-	if err != nil {
-		log.Println(err)
-		return 0, err
-	}
-
-	threadID := genThreadIDRes.UniqueNumber
-	return threadID, m.deps.threadDao.CreateThread(threadID)
-}
-
 func NewMutation(deps *Dependencies) Mutation {
 	return Mutation{
 		deps: deps,
