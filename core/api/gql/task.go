@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -114,13 +115,9 @@ func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 }
 
 func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
-	awaitForTaskIds, err := t.deps.taskAwaitForRelationDao.FindAwaitForTaskIDs(t.task.ID)
+	tasks, err := t.deps.taskService.FindAwaitForTasks(ct, t.task.ID)
 	if err != nil {
-		return nil, err
-	}
-
-	tasks, err := t.deps.taskDao.FindTasksByIDs(awaitForTaskIds)
-	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 

@@ -13,7 +13,6 @@ type Dependencies struct {
 	teamDao                    dao.Team
 	teamMemberDao              dao.TeamMember
 	invitationDao              dao.Invitation
-	taskDao                    dao.Task
 	threadDao                  dao.Thread
 	messageDao                 dao.Message
 	taskAwaitForRelationDao    dao.TaskAwaitForRelation
@@ -32,7 +31,6 @@ func NewDependencies(
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
 	invitationDao dao.Invitation,
-	taskDao dao.Task,
 	threadDao dao.Thread,
 	messageDao dao.Message,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
@@ -50,7 +48,6 @@ func NewDependencies(
 		teamDao:                    teamDao,
 		teamMemberDao:              teamMemberDao,
 		invitationDao:              invitationDao,
-		taskDao:                    taskDao,
 		threadDao:                  threadDao,
 		messageDao:                 messageDao,
 		taskAwaitForRelationDao:    taskAwaitForRelationDao,

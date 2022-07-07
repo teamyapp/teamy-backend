@@ -32,15 +32,16 @@ func (q Query) Me(ct context.Context) (User, error) {
 func (q Query) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	tasks, err := q.deps.taskDao.FindAllTasks()
+	filter, err := fromGraphQLTaskFilterPtr(args.Filter)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
-	if args.Filter != nil {
-		tasks = collect.Filter(tasks, func(task entity.Task) bool {
-			return matchTask(*args.Filter, task)
-		})
+	tasks, err := q.deps.taskService.FindAllTasks(ct, filter)
+	if err != nil {
+		log.Println(err)
+		return nil, err
 	}
 
 	return collect.Map(tasks, func(task entity.Task, _ int) Task {
