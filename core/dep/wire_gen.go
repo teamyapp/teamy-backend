@@ -43,7 +43,7 @@ func InitGraphQLAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyn
 	messageSyncer := collection.NewMessageSyncer(realTimeStateSyncer, message, task)
 	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(realTimeStateSyncer, taskAwaitForRelation, task)
 	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
-	serviceTask := service.NewTask(cloudAPIClientRegistry, taskSyncer, serviceThread)
+	serviceTask := service.NewTask(cloudAPIClientRegistry, task, thread, taskAwaitForRelation, taskSyncer, taskAwaitForRelationSyncer, serviceThread)
 	dependencies := gql.NewDependencies(cloudAPIClientRegistry, user, team, teamMember, invitation, task, thread, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, taskSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask)
 	resolver := gql.NewResolver(dependencies)
 	graphQL := api2.NewGraphQL(resolver)
@@ -57,10 +57,12 @@ func InitRealTimeStateSyncAPI(realTimeStateSyncer *realtime.StateSyncer) api2.Re
 
 func InitTaskRPCAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.TaskRPC {
 	task := sqldb.NewTask(sqlDB)
-	taskSyncer := collection.NewTaskSyncer(realTimeStateSyncer, task)
 	thread := sqldb.NewThread(sqlDB)
+	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(sqlDB)
+	taskSyncer := collection.NewTaskSyncer(realTimeStateSyncer, task)
+	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(realTimeStateSyncer, taskAwaitForRelation, task)
 	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
-	serviceTask := service.NewTask(cloudAPIClientRegistry, taskSyncer, serviceThread)
+	serviceTask := service.NewTask(cloudAPIClientRegistry, task, thread, taskAwaitForRelation, taskSyncer, taskAwaitForRelationSyncer, serviceThread)
 	taskRPC := api2.NewTaskRPC(serviceTask)
 	return taskRPC
 }
