@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -66,15 +67,16 @@ func (t Team) Members(ct context.Context) ([]User, error) {
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	tasks, err := t.deps.taskDao.FindTasksByTeamID(t.team.ID)
+	filter, err := fromGraphQLTaskFilterPtr(args.Filter)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
-	if args.Filter != nil {
-		tasks = collect.Filter(tasks, func(task entity.Task) bool {
-			return matchTask(*args.Filter, task)
-		})
+	tasks, err := t.deps.taskService.FindTasksInTeam(ct, t.team.ID, filter)
+	if err != nil {
+		log.Println(err)
+		return nil, err
 	}
 
 	return collect.Map(tasks, func(task entity.Task, _ int) Task {

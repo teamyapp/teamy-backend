@@ -1,10 +1,12 @@
 package gql
 
 import (
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 func toGraphQLID(id uint64) graphql.ID {
@@ -64,4 +66,29 @@ func int32PtrFromIntPtr(num *int) *int32 {
 
 func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
 	return strconv.ParseUint(string(graphqlID), 10, 64)
+}
+
+func fromGraphQLTaskFilterPtr(gqlTaskFilter *TaskFilter) (*service.TaskFilter, error) {
+	if gqlTaskFilter == nil {
+		return nil, nil
+	}
+
+	taskID, err := fromGraphQLIDPtr(gqlTaskFilter.TaskID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	ownerID, err := fromGraphQLIDPtr(gqlTaskFilter.OwnerID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &service.TaskFilter{
+		TaskID:       taskID,
+		OwnerID:      ownerID,
+		GoalContains: gqlTaskFilter.GoalContains,
+		Status:       gqlTaskFilter.Status,
+	}, nil
 }
