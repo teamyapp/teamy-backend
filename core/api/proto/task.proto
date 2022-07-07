@@ -32,11 +32,11 @@ message CreateTaskResponse {
 message UpdateTaskRequest {
 	uint64 taskId = 1;
 	string goal = 2;
-	string context = 3;
-	uint64 ownerUserId = 4;
+	optional string context = 3;
+	optional uint64 ownerUserId = 4;
 	uint64 owningTeamId = 5;
-	float effort = 6;
-	google.protobuf.Timestamp dueAt = 7;
+	optional int32 effort = 6;
+	optional google.protobuf.Timestamp dueAt = 7;
 }
 
 message DeleteTaskRequest {
@@ -57,6 +57,7 @@ message MoveTaskToDeliveredRequest {
 
 message MoveTaskToBlockedRequest {
 	uint64 taskId = 1;
+	string reason = 2;
 }
 
 message AddAwaitForTaskRequest {

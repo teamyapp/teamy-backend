@@ -8,7 +8,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/app/api/proto"
-	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -16,11 +15,6 @@ import (
 )
 
 const invitationCodeLen = 20
-
-var awaitableTaskStatuses = map[entity.TaskStatus]bool{
-	entity.TaskStatusInProgress: true,
-	entity.TaskStatusAwaiting:   true,
-}
 
 type Mutation struct {
 	deps *Dependencies
@@ -39,11 +33,13 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 }) (Task, error) {
 	owningTeamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
 	ownerUserID, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
@@ -54,6 +50,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		DueAt:       fromGraphQLTimePtr(args.Task.DueAt),
 	})
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
@@ -73,34 +70,32 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	task.Goal = args.Input.Goal
-	task.Context = args.Input.Context
 	ownerUserID, err := fromGraphQLIDPtr(args.Input.OwnerUserID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	task.OwnerUserID = ownerUserID
 	owningTeamID, err := fromGraphQLID(args.Input.OwningTeamID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	task.OwningTeamID = owningTeamID
-	task.Effort = intPtrFromIntPtr(args.Input.Effort)
-	task.DueAt = fromGraphQLTimePtr(args.Input.DueAt)
-	updatedAt := time.Now()
-	task.UpdatedAt = &updatedAt
-	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
+	task, err := m.deps.taskService.UpdateTask(ct, taskID, service.UpdateTaskInput{
+		Goal:         args.Input.Goal,
+		Context:      args.Input.Context,
+		OwnerUserID:  ownerUserID,
+		OwningTeamID: owningTeamID,
+		Effort:       intPtrFromIntPtr(args.Input.Effort),
+		DueAt:        fromGraphQLTimePtr(args.Input.DueAt),
+	})
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
@@ -112,21 +107,13 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	task, err := m.deps.taskService.DeleteTask(ct, taskID)
 	if err != nil {
-		return Task{}, err
-	}
-
-	err = m.deps.taskSyncer.DeleteAndSyncTask(taskID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	err = m.deps.threadDao.DeleteThread(task.CommentsThreadID)
-	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
@@ -138,11 +125,13 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	task, err := m.moveTaskToUpcoming(taskID)
+	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
@@ -152,57 +141,15 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	userID, err := ctx.UserIDFromContext(ct)
-	if err != nil {
-		return Task{}, err
-	}
-
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	task, err := m.deps.taskService.MoveTaskToInProgress(ct, taskID)
 	if err != nil {
-		return Task{}, err
-	}
-
-	tasks, err := m.deps.taskDao.FindTasksByTeamID(task.OwningTeamID)
-	if err != nil {
-
-	}
-
-	if task.OwnerUserID == nil {
-		task.OwnerUserID = &userID
-	}
-
-	inProgressTasks := collect.Filter(tasks, func(eachTask entity.Task) bool {
-		if eachTask.OwnerUserID == nil {
-			return false
-		}
-
-		if *eachTask.OwnerUserID != *task.OwnerUserID {
-			return false
-		}
-
-		return eachTask.Status == entity.TaskStatusInProgress
-	})
-
-	now := time.Now()
-	if len(inProgressTasks) > 0 {
-		inProgressTask := inProgressTasks[0]
-		inProgressTask.Status = entity.TaskStatusPaused
-		inProgressTask.UpdatedAt = &now
-		err = m.deps.taskSyncer.UpdateAndSyncTask(inProgressTask)
-		if err != nil {
-			return Task{}, err
-		}
-	}
-
-	task.Status = entity.TaskStatusInProgress
-	task.UpdatedAt = &now
-	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
-	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
@@ -214,74 +161,36 @@ func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
+	task, err := m.deps.taskService.MoveTaskToDelivered(ct, taskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
-	}
-
-	task.Status = entity.TaskStatusDelivered
-	now := time.Now()
-	task.UpdatedAt = &now
-	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
-	if err != nil {
-		return Task{}, err
-	}
-
-	awaitingTaskIDs, err := m.deps.taskAwaitForRelationDao.FindAwaitingTaskIDs(taskID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	for _, awaitingTaskID := range awaitingTaskIDs {
-		awaitForTaskIDs, err := m.deps.taskAwaitForRelationDao.FindAwaitForTaskIDs(awaitingTaskID)
-		if err != nil {
-			return Task{}, err
-		}
-
-		awaitForTasks, err := m.deps.taskDao.FindTasksByIDs(awaitForTaskIDs)
-		if err != nil {
-			return Task{}, err
-		}
-
-		awaitForTasks = collect.Filter(awaitForTasks, func(awaitForTask entity.Task) bool {
-			return awaitForTask.Status != entity.TaskStatusDelivered
-		})
-		if len(awaitForTasks) == 0 {
-			_, err = m.moveTaskToUpcoming(awaitingTaskID)
-			if err != nil {
-				return Task{}, err
-			}
-		}
 	}
 
 	return newTask(m.deps, task), nil
-}
-
-func (m Mutation) moveTaskToUpcoming(taskID uint64) (entity.Task, error) {
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
-	if err != nil {
-		return entity.Task{}, err
-	}
-
-	task.Status = entity.TaskStatusUpcoming
-	now := time.Now()
-	task.UpdatedAt = &now
-	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
-	if err != nil {
-		return entity.Task{}, err
-	}
-
-	return task, nil
 }
 
 func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 	TaskID graphql.ID
 	Reason string
 }) (Task, error) {
-	panic("implement me")
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	task, err := m.deps.taskService.MoveTaskToBlocked(ct, taskID, args.Reason)
+	if err != nil {
+		log.Println(err)
+		return Task{}, err
+	}
+
+	return newTask(m.deps, task), nil
 }
 
 func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
@@ -290,36 +199,17 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
-	}
-
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	if !awaitableTaskStatuses[task.Status] {
-		return Task{}, fmt.Errorf("task must be awaitable: taskID=%d", taskID)
 	}
 
 	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	now := time.Now()
-	err = m.deps.taskAwaitForRelationSyncer.CreateAndSyncRelation(entity.TaskAwaitForRelation{
-		AwaitingTaskID: taskID,
-		AwaitForTaskID: awaitForTaskId,
-		CreatedAt:      now,
-	})
-	if err != nil {
-		return Task{}, err
-	}
-
-	task.Status = entity.TaskStatusAwaiting
-	task.UpdatedAt = &now
-	err = m.deps.taskSyncer.UpdateAndSyncTask(task)
+	task, err := m.deps.taskService.AddAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
 		return Task{}, err
 	}
@@ -333,38 +223,20 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
-	}
-
-	task, err := m.deps.taskDao.FindTaskByID(taskID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	if task.Status != entity.TaskStatusAwaiting {
-		return Task{}, fmt.Errorf("task must be awaiting: taskID=%d", taskID)
 	}
 
 	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
 	}
 
-	err = m.deps.taskAwaitForRelationSyncer.DeleteAndSyncRelation(taskID, awaitForTaskId)
+	task, err := m.deps.taskService.RemoveAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
+		log.Println(err)
 		return Task{}, err
-	}
-
-	awaitForTaskIds, err := m.deps.taskAwaitForRelationDao.FindAwaitForTaskIDs(taskID)
-	if err != nil {
-		return Task{}, err
-	}
-
-	if len(awaitForTaskIds) == 0 {
-		task, err = m.moveTaskToUpcoming(taskID)
-		if err != nil {
-			return Task{}, err
-		}
 	}
 
 	return newTask(m.deps, task), nil

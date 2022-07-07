@@ -14,3 +14,12 @@ func fromProtoTimePtr(ts *timestamppb.Timestamp) *time.Time {
 	tm := ts.AsTime()
 	return &tm
 }
+
+func fromProtoInt32Ptr(num *int32) *int {
+	if num == nil {
+		return nil
+	}
+
+	newNum := int(*num)
+	return &newNum
+}
