@@ -58,7 +58,7 @@ func (g GithubAppInstallation) FindInstallationByID(installationID uint64) (enti
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.GithubAppInstallation{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubAppInstallation not found: id=%v", installation.ID))
+			"GithubAppInstallation not found: id=%v", installationID))
 	}
 
 	return installation, err

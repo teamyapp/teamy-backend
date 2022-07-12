@@ -15,10 +15,10 @@ type AllocatedRange struct {
 
 var _ dao.AllocatedRange = (*AllocatedRange)(nil)
 
-func (a AllocatedRange) FindByKey(key string) (entity.AllocatedRange, error) {
+func (a AllocatedRange) FindAllocatedRangeByKey(key string) (entity.AllocatedRange, error) {
 	row := a.db.QueryRow(`
 SELECT key, range_end
-FROM identity_allocated_range
+FROM allocated_range
 WHERE key = $1;
 `,
 		key)
@@ -34,9 +34,9 @@ WHERE key = $1;
 	return allocatedRange, err
 }
 
-func (a AllocatedRange) Add(allocatedRange entity.AllocatedRange) error {
+func (a AllocatedRange) CreateAllocatedRange(allocatedRange entity.AllocatedRange) error {
 	_, err := a.db.Exec(`
-INSERT INTO identity_allocated_range (key, range_end)
+INSERT INTO allocated_range (key, range_end)
 VALUES ($1, $2);
 `,
 		allocatedRange.Key,
@@ -44,9 +44,9 @@ VALUES ($1, $2);
 	return err
 }
 
-func (a AllocatedRange) Update(allocatedRange entity.AllocatedRange) error {
+func (a AllocatedRange) UpdateAllocatedRange(allocatedRange entity.AllocatedRange) error {
 	_, err := a.db.Exec(`
-UPDATE identity_allocated_range
+UPDATE allocated_range
 SET range_end = $1
 WHERE key = $2;
 `,

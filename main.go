@@ -36,7 +36,7 @@ func main() {
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
 	err = sqldb.Use(cfg.Config, func(sqlDB *sql.DB) error {
-		err = sqldb.MigrateUp(sqlDB, "migrations")
+		err = sqldb.MigrateUp(sqlDB, "migrations", 0)
 		if err != nil {
 			panic(err)
 		}

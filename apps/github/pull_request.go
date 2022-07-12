@@ -51,9 +51,12 @@ type pullRequest struct {
 	Assignees          []user           `json:"assignees"`
 	RequestedReviewers []user           `json:"requested_reviewers"`
 	Labels             []string         `json:"labels"`
-	Draft              bool             `json:"draft"`
 	Head               commit           `json:"head"`
 	Base               commit           `json:"base"`
+	Draft              bool             `json:"draft"`
+	Merged             bool             `json:"merged"`
+	Mergeable          *bool            `json:"mergeable"`
+	Rebaseable         *bool            `json:"rebaseable"`
 }
 
 func (p pullRequest) String() string {

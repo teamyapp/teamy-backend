@@ -8,7 +8,6 @@ package proto
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -24,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TaskClient interface {
+	FindTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*TaskMsg, error)
 	CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*CreateTaskResponse, error)
 	UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteTask(ctx context.Context, in *DeleteTaskRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -41,6 +41,15 @@ type taskClient struct {
 
 func NewTaskClient(cc grpc.ClientConnInterface) TaskClient {
 	return &taskClient{cc}
+}
+
+func (c *taskClient) FindTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*TaskMsg, error) {
+	out := new(TaskMsg)
+	err := c.cc.Invoke(ctx, "/Task/FindTask", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *taskClient) CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*CreateTaskResponse, error) {
@@ -128,6 +137,7 @@ func (c *taskClient) RemoveAwaitForTask(ctx context.Context, in *RemoveAwaitForT
 // All implementations must embed UnimplementedTaskServer
 // for forward compatibility
 type TaskServer interface {
+	FindTask(context.Context, *GetTaskRequest) (*TaskMsg, error)
 	CreateTask(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error)
 	UpdateTask(context.Context, *UpdateTaskRequest) (*emptypb.Empty, error)
 	DeleteTask(context.Context, *DeleteTaskRequest) (*emptypb.Empty, error)
@@ -144,6 +154,9 @@ type TaskServer interface {
 type UnimplementedTaskServer struct {
 }
 
+func (UnimplementedTaskServer) FindTask(context.Context, *GetTaskRequest) (*TaskMsg, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindTask not implemented")
+}
 func (UnimplementedTaskServer) CreateTask(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTask not implemented")
 }
@@ -182,6 +195,24 @@ type UnsafeTaskServer interface {
 
 func RegisterTaskServer(s grpc.ServiceRegistrar, srv TaskServer) {
 	s.RegisterService(&Task_ServiceDesc, srv)
+}
+
+func _Task_FindTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskServer).FindTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Task/FindTask",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskServer).FindTask(ctx, req.(*GetTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Task_CreateTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -353,6 +384,10 @@ var Task_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Task",
 	HandlerType: (*TaskServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "FindTask",
+			Handler:    _Task_FindTask_Handler,
+		},
 		{
 			MethodName: "CreateTask",
 			Handler:    _Task_CreateTask_Handler,

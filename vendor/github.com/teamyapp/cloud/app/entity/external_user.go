@@ -1,5 +1,6 @@
 package entity
 
 type ExternalUser struct {
-	ID string
+	ID    string
+	Label string
 }

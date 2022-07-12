@@ -5,7 +5,7 @@ import (
 )
 
 type AllocatedRange interface {
-	FindByKey(key string) (entity.AllocatedRange, error)
-	Add(allocatedRange entity.AllocatedRange) error
-	Update(allocatedRange entity.AllocatedRange) error
+	FindAllocatedRangeByKey(key string) (entity.AllocatedRange, error)
+	CreateAllocatedRange(allocatedRange entity.AllocatedRange) error
+	UpdateAllocatedRange(allocatedRange entity.AllocatedRange) error
 }

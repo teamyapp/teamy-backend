@@ -85,6 +85,10 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	return tasks, nil
 }
 
+func (t Task) FindTask(ct context.Context, taskID uint64) (entity.Task, error) {
+	return t.taskDao.FindTaskByID(taskID)
+}
+
 func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, error) {
 	tasks, err := t.taskDao.FindTasksByTeamID(teamID)
 	if err != nil {

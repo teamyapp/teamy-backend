@@ -5,6 +5,7 @@ import (
 )
 
 type UserLink interface {
-	FindByExternalUserID(authProvider string, externalUserID string) (entity.UserLink, error)
-	Add(userLink entity.UserLink) error
+	FindUserLinkByExternalUserID(authProvider string, externalUserID string) (entity.UserLink, error)
+	FindUserLinksByInternalUserID(internalUserID uint64) ([]entity.UserLink, error)
+	CreateUserLink(userLink entity.UserLink) error
 }

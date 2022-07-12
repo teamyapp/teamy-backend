@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	_ "embed"
+	"log"
 
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type TaskRPC struct {
@@ -24,6 +26,29 @@ func (t TaskRPC) Start(runner *runner.ServiceRunner) error {
 		proto.RegisterTaskServer(server, t)
 	})
 	return nil
+}
+
+func (t TaskRPC) FindTask(ct context.Context, req *proto.GetTaskRequest) (*proto.TaskMsg, error) {
+	task, err := t.taskService.FindTask(ct, req.TaskId)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &proto.TaskMsg{
+		TaskId:          task.ID,
+		Goal:            task.Goal,
+		Context:         task.Context,
+		Effort:          toProtoInt32Ptr(task.Effort),
+		DueAt:           toProtoTimePtr(task.DueAt),
+		Status:          protoTaskStatuses[task.Status],
+		CreatedAt:       timestamppb.New(task.CreatedAt),
+		UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
+		OwnerUserId:     task.OwnerUserID,
+		OwningTeamId:    task.OwningTeamID,
+		CreatorUserId:   task.CreatorUserID,
+		CommentThreadId: task.CommentsThreadID,
+	}, nil
 }
 
 func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*proto.CreateTaskResponse, error) {
@@ -76,7 +101,7 @@ func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *proto.MoveTaskToBloc
 }
 
 func (t TaskRPC) AddAwaitForTask(ct context.Context, req *proto.AddAwaitForTaskRequest) (*emptypb.Empty, error) {
-	_, err := t.taskService.AddAwaitForTask(ct, req.AwaitForTaskId, req.AwaitForTaskId)
+	_, err := t.taskService.AddAwaitForTask(ct, req.AwaitingTaskId, req.AwaitForTaskId)
 	return &emptypb.Empty{}, err
 }
 

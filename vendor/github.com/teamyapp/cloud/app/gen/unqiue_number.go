@@ -42,7 +42,7 @@ func (u *UniqueNumber) allocateNewRange() error {
 		RangeEnd:   newRangeEnd,
 		NextNumber: newRangeStart,
 	}
-	err := u.allocatedRangeDao.Update(newRange)
+	err := u.allocatedRangeDao.UpdateAllocatedRange(newRange)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func newUniqueNumber(
 	name string,
 	rangeSize uint64,
 ) (*UniqueNumber, error) {
-	allocatedRange, err := allocatedRangeDao.FindByKey(name)
+	allocatedRange, err := allocatedRangeDao.FindAllocatedRangeByKey(name)
 	var errNotFound dao.ErrNotFound
 	if err != nil {
 		if !errors.As(err, &errNotFound) {
@@ -78,7 +78,7 @@ func newUniqueNumber(
 			NextNumber: 0,
 		}
 
-		err = allocatedRangeDao.Add(allocatedRange)
+		err = allocatedRangeDao.CreateAllocatedRange(allocatedRange)
 		if err != nil {
 			return nil, err
 		}

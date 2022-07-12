@@ -9,6 +9,7 @@ import (
 type ClientRegistry struct {
 	conn            *grpc.ClientConn
 	generatorClient proto.GeneratorClient
+	identityClient  proto.IdentityClient
 }
 
 func (c *ClientRegistry) GeneratorClient() proto.GeneratorClient {
@@ -17,6 +18,14 @@ func (c *ClientRegistry) GeneratorClient() proto.GeneratorClient {
 	}
 
 	return c.generatorClient
+}
+
+func (c *ClientRegistry) IdentityClient() proto.IdentityClient {
+	if c.identityClient == nil {
+		c.identityClient = proto.NewIdentityClient(c.conn)
+	}
+
+	return c.identityClient
 }
 
 func NewClientRegistry(connCfg rpc.ConnectionConfig) (*ClientRegistry, error) {
