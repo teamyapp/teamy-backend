@@ -1,5 +1,9 @@
 package github
 
+import (
+	"fmt"
+)
+
 type pullRequestReviewAction string
 
 const (
@@ -11,9 +15,9 @@ const (
 type pullRequestReviewState string
 
 const (
-	commentedPullRequestReviewState        pullRequestReviewAction = "commented"
-	changesRequestedPullRequestReviewState pullRequestReviewAction = "changes_requested"
-	approvedPullRequestReviewState         pullRequestReviewAction = "approved"
+	commentedPullRequestReviewState        pullRequestReviewState = "commented"
+	changesRequestedPullRequestReviewState pullRequestReviewState = "changes_requested"
+	approvedPullRequestReviewState         pullRequestReviewState = "approved"
 )
 
 type authorAssociation string
@@ -33,4 +37,25 @@ type pullRequestReview struct {
 	SubmittedAt       githubTime             `json:"submitted_at"`
 	State             pullRequestReviewState `json:"state"`
 	AuthorAssociation authorAssociation      `json:"author_association"`
+}
+
+func (p pullRequestReview) String() string {
+	return fmt.Sprintf(
+		`[pullRequestReview
+	ID:%v
+	NodeID:%v
+	User:%v
+	Body:%v
+	CommitID:%v
+	SubmittedAt:%v
+	State:%v
+	AuthorAssociation:%v]`,
+		p.ID,
+		p.NodeID,
+		p.User,
+		p.Body,
+		p.CommitID,
+		p.SubmittedAt,
+		p.State,
+		p.AuthorAssociation)
 }

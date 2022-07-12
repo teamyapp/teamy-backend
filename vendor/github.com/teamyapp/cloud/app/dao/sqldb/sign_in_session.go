@@ -15,7 +15,7 @@ type SignInSession struct {
 
 var _ dao.SignInSession = (*SignInSession)(nil)
 
-func (s SignInSession) FindByID(sessionID uint64) (entity.SignInSession, error) {
+func (s SignInSession) FindSignInSessionByID(sessionID uint64) (entity.SignInSession, error) {
 	row := s.db.QueryRow(`
 SELECT id, redirect_url
 FROM identity_sign_in_session
@@ -34,7 +34,7 @@ WHERE id = $1;
 	return signInSession, err
 }
 
-func (s SignInSession) Add(session entity.SignInSession) error {
+func (s SignInSession) CreateSignInSession(session entity.SignInSession) error {
 	_, err := s.db.Exec(`
 INSERT INTO identity_sign_in_session (id, redirect_url)
 VALUES ($1, $2);
@@ -44,7 +44,7 @@ VALUES ($1, $2);
 	return err
 }
 
-func (s SignInSession) Update(session entity.SignInSession) error {
+func (s SignInSession) UpdateSignInSession(session entity.SignInSession) error {
 	_, err := s.db.Exec(`
 UPDATE identity_sign_in_session
 SET redirect_url = $1

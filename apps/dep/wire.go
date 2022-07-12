@@ -22,9 +22,13 @@ func InitGithubApp(
 	wire.Build(
 		wire.Bind(new(dao.GithubAppInstallState), new(sqldb.GithubAppInstallState)),
 		wire.Bind(new(dao.GithubAppInstallation), new(sqldb.GithubAppInstallation)),
+		wire.Bind(new(dao.GithubPullRequest), new(sqldb.GithubPullRequest)),
+		wire.Bind(new(dao.GithubCodeReview), new(sqldb.GithubCodeReview)),
 
 		sqldb.NewGithubAppInstallState,
 		sqldb.NewGithubAppInstallation,
+		sqldb.NewGithubPullRequest,
+		sqldb.NewGithubCodeReview,
 		github.NewApp,
 	)
 	return github.App{}, nil

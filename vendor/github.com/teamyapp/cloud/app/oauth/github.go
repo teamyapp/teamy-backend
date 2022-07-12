@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/cloud/app/entity"
 )
 
-const gitHubName = "github"
+const GitHubName = "github"
 
 // https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#web-application-flow
 var githubAuthorizationURL = "https://github.com/login/oauth/authorize"
@@ -26,7 +26,7 @@ type GitHub struct {
 }
 
 func (g GitHub) GetName() string {
-	return gitHubName
+	return GitHubName
 }
 
 func (g GitHub) GetUser(authorizationCode string) (entity.ExternalUser, error) {
@@ -38,13 +38,39 @@ func (g GitHub) GetUser(authorizationCode string) (entity.ExternalUser, error) {
 	}
 
 	// https://docs.github.com/en/rest/users/emails#list-email-addresses-for-the-authenticated-user
-	userID, err := g.getUserID(accessToken)
+	req, err := http.NewRequest("GET", githubUserURL, nil)
+	if err != nil {
+		return entity.ExternalUser{}, err
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return entity.ExternalUser{}, err
+	}
+
+	if res.StatusCode > 300 || res.StatusCode < 200 {
+		return entity.ExternalUser{}, fmt.Errorf("fail to obtain %s user ID: HTTPStatusCode=%v", g.GetName(), res.StatusCode)
+	}
+
+	buf, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return entity.ExternalUser{}, err
+	}
+
+	var body struct {
+		UserID uint64 `json:"id"`
+		Login  string `json:"login"`
+	}
+	err = json.Unmarshal(buf, &body)
 	if err != nil {
 		return entity.ExternalUser{}, err
 	}
 
 	return entity.ExternalUser{
-		ID: userID,
+		ID:    strconv.FormatUint(body.UserID, 10),
+		Label: body.Login,
 	}, err
 }
 
@@ -117,45 +143,10 @@ func (g GitHub) getAccessToken(authorizationCode string) (string, error) {
 	return body.AccessToken, err
 }
 
-type UserProfile struct {
-	UserID int `json:"id"`
-}
-
-func (g GitHub) getUserID(accessToken string) (string, error) {
-	req, err := http.NewRequest("GET", githubUserURL, nil)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-
-	if res.StatusCode > 300 || res.StatusCode < 200 {
-		return "", fmt.Errorf("fail to obtain %s user ID: HTTPStatusCode=%v", g.GetName(), res.StatusCode)
-	}
-
-	buf, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var body UserProfile
-	err = json.Unmarshal(buf, &body)
-	if err != nil {
-		return "", err
-	}
-
-	return strconv.Itoa(body.UserID), nil
-}
-
 func NewGitHub(webAPIBaseURL string, clientID string, clientSecret string) GitHub {
 	return GitHub{
 		clientID:     clientID,
 		clientSecret: clientSecret,
-		redirectURI:  fmt.Sprintf("%s/identity/sign-in/oauth/%s/finish", webAPIBaseURL, gitHubName),
+		redirectURI:  fmt.Sprintf("%s/identity/sign-in/oauth/%s/finish", webAPIBaseURL, GitHubName),
 	}
 }

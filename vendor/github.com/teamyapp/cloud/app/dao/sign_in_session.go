@@ -5,7 +5,7 @@ import (
 )
 
 type SignInSession interface {
-	FindByID(sessionID uint64) (entity.SignInSession, error)
-	Add(session entity.SignInSession) error
-	Update(session entity.SignInSession) error
+	FindSignInSessionByID(sessionID uint64) (entity.SignInSession, error)
+	CreateSignInSession(session entity.SignInSession) error
+	UpdateSignInSession(session entity.SignInSession) error
 }

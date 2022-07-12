@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -22,9 +23,12 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/core/api"
+	"github.com/teamyapp/teamy-backend/core/api/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const githubAppPathPrefix = "/apps/github"
+const codeReviewMaxWait = 24 * time.Hour
 
 type App struct {
 	config                   AppConfig
@@ -32,6 +36,8 @@ type App struct {
 	teamyClientRegistry      *api.ClientRegistry
 	githubAppInstallStateDao dao.GithubAppInstallState
 	githubAppInstallationDao dao.GithubAppInstallation
+	githubPullRequestDao     dao.GithubPullRequest
+	githubCodeReviewDao      dao.GithubCodeReview
 }
 
 var _ runner.Service = (*App)(nil)
@@ -189,9 +195,9 @@ func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	deliveryID := r.Header.Get("X-GitHub-Delivery")
-	eventType := r.Header.Get("X-GitHub-Event")
-	log.Printf("Github event received: deliveryID=%s, event=%s\n", deliveryID, eventType)
-	err = a.processEvent(eventType, buf)
+	evtType := r.Header.Get("X-GitHub-Event")
+	log.Printf("Github event received: deliveryID=%s, event=%s\n", deliveryID, evtType)
+	err = a.processEvent(r.Context(), eventType(evtType), buf)
 	if err != nil {
 		log.Printf("fail to process Github event: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -201,7 +207,7 @@ func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a App) processEvent(eventType string, payload []byte) error {
+func (a App) processEvent(ct context.Context, evtType eventType, payload []byte) error {
 	// TODO: parse & react to Github event
 	var evt event
 	err := json.Unmarshal(payload, &evt)
@@ -216,34 +222,326 @@ func (a App) processEvent(eventType string, payload []byte) error {
 		return err
 	}
 
-	switch eventType {
-	case "pull_request":
-		return a.processPullRequestEvent(ins, payload)
+	switch evtType {
+	case pullRequestEventType:
+		return a.processPullRequestEvent(ct, ins.TeamID, evt, payload)
+	case pullRequestReviewEventType:
+		return a.processPullRequestReviewEvent(ct, ins.TeamID, evt, payload)
 	default:
-		log.Printf("Unknown event: %v\n", eventType)
+		log.Printf("Unknown event: %v\n", evtType)
 	}
 
 	return nil
 }
 
-func (a App) processPullRequestEvent(installation entity.GithubAppInstallation, payload []byte) error {
+func (a App) processPullRequestEvent(ct context.Context, teamID uint64, evt event, payload []byte) error {
+	if evt.Sender.Type == organizationAccountType {
+		return fmt.Errorf("unsupported account type: %v", evt.Sender.Type)
+	}
+
 	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
-	var evt pullRequestEvent
-	err := json.Unmarshal(payload, &evt)
+	var prEvt pullRequestEvent
+	err := json.Unmarshal(payload, &prEvt)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	switch evt.Action {
-	case openedPullRequestAction:
+	switch prEvt.Action {
+	case openedPullRequestAction, reopenedPullRequestAction:
+		return a.createTaskForPullRequest(ct, teamID, evt, prEvt)
 	case assignedPullRequestAction:
 	case reviewRequestedPullRequestAction:
+		return a.createTaskForRequestedReviewers(ct, teamID, evt, prEvt)
 	case reviewRequestRemovedPullRequestAction:
 	case convertedToDraftPullRequestAction:
 	case closedPullRequestAction:
+		if prEvt.PullRequest.Merged {
+			return a.movePullRequestToDelivered(ct, prEvt)
+		}
 	}
 	return nil
+}
+
+func (a App) movePullRequestToDelivered(ct context.Context, prEvt pullRequestEvent) error {
+	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(prEvt.PullRequest.NodeID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+		TaskId: pr.InternalTaskID,
+	}
+	_, err = a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
+	return err
+}
+
+func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) error {
+	prAuthorUserID, err := a.GetInternalUserID(ct, prEvt.PullRequest.User.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	createTaskReq := &proto.CreateTaskRequest{
+		TeamId:      teamID,
+		Goal:        fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
+		Context:     &prEvt.PullRequest.Body,
+		OwnerUserId: &prAuthorUserID,
+	}
+	createTaskRes, err := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Printf("Pull request task created: repo=%v pullRequestNumber=%v taskID=%v\n", evt.Repository.Name, prEvt.Number, createTaskRes.TaskId)
+	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: createTaskRes.TaskId}
+	_, err = a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Printf("Task moved to in progress: taskID=%v\n", createTaskRes.TaskId)
+	pr := entity.GithubPullRequest{
+		NodeID:         prEvt.PullRequest.NodeID,
+		InternalTaskID: createTaskRes.TaskId,
+	}
+	err = a.githubPullRequestDao.CreatePullRequest(pr)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (a App) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt event, payload []byte) error {
+	if evt.Sender.Type == organizationAccountType {
+		return fmt.Errorf("unsupported account type: %v", evt.Sender.Type)
+	}
+
+	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
+	var prReviewEvt pullRequestReviewEvent
+	err := json.Unmarshal(payload, &prReviewEvt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(prReviewEvt.PullRequest.NodeID, prReviewEvt.Review.User.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	err = a.processGithubCodeReviewFeedback(ct, teamID, codeReview, evt, prReviewEvt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Printf("Moved review task to delivered: taskID=%v\n", codeReview.InternalCodeReviewTaskID)
+	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+		TaskId: codeReview.InternalCodeReviewTaskID,
+	}
+	_, err = a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
+	return err
+}
+
+func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, codeReview entity.GithubCodeReview, evt event, prReviewEvt pullRequestReviewEvent) error {
+	switch prReviewEvt.Action {
+	case submittedPullRequestReviewAction:
+		switch prReviewEvt.Review.State {
+		case commentedPullRequestReviewState, changesRequestedPullRequestReviewState:
+			prAuthorUserID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			prReviewerID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			createTaskReq := &proto.CreateTaskRequest{
+				TeamId: teamID,
+				Goal: fmt.Sprintf(
+					"[%v][PR #%v] Address round %v code review feedback from %v",
+					evt.Repository.Name,
+					prReviewEvt.PullRequest.Number,
+					codeReview.Round,
+					prReviewerID),
+				Context:     &prReviewEvt.Review.Body,
+				OwnerUserId: &prAuthorUserID,
+			}
+			createTaskRes, err := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			addressFeedbackTaskID := createTaskRes.TaskId
+			log.Printf(
+				"Address feedback task created: repo=%v pullRequestNumber=%v taskID=%v\n",
+				evt.Repository.Name,
+				prReviewEvt.PullRequest.Number,
+				createTaskRes.TaskId)
+			pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(prReviewEvt.PullRequest.NodeID)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
+				AwaitingTaskId: pr.InternalTaskID,
+				AwaitForTaskId: addressFeedbackTaskID,
+			}
+			_, err = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			log.Printf(
+				"Pull request is waiting for address feedback task: repo=%v pullRequestNumber=%v, addressFeedbackTaskID=%v\n",
+				evt.Repository.Name,
+				prReviewEvt.PullRequest.Number,
+				addressFeedbackTaskID)
+			codeReview.InternalAddressFeedbackTaskID = &addressFeedbackTaskID
+			return a.githubCodeReviewDao.UpdateCodeReview(codeReview)
+		case approvedPullRequestReviewState:
+			// TODO: create merge task to wait for CI pipeline
+		}
+	}
+
+	return nil
+}
+
+func (a App) GetInternalUserID(ct context.Context, githubUserID uint64) (uint64, error) {
+	githubReviewerIDStr := strconv.FormatUint(githubUserID, 10)
+	getInternalUserIdReq := &cloudProto.GetInternalUserIdRequest{AuthProvider: "github", ExternalUserId: githubReviewerIDStr}
+	getInternalUserIdRes, err := a.cloudClientRegistry.IdentityClient().GetInternalUserId(ct, getInternalUserIdReq)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+
+	return getInternalUserIdRes.InternalUserId, nil
+}
+
+func (a App) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) error {
+	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(prEvt.PullRequest.NodeID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	for _, githubReviewer := range prEvt.PullRequest.RequestedReviewers {
+		err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, pr.InternalTaskID, githubReviewer.ID, evt, prEvt)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+	}
+
+	return nil
+}
+
+func (a App) tryCreateTaskForPullRequestReviewer(
+	ct context.Context,
+	teamID uint64,
+	githubPullRequestNodeID string,
+	pullRequestTaskID uint64,
+	githubReviewerID uint64,
+	evt event,
+	prEvt pullRequestEvent,
+) error {
+	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(githubPullRequestNodeID, githubReviewerID)
+	var errNotFound dao.ErrNotFound
+	if err != nil && !errors.As(err, &errNotFound) {
+		log.Println(err)
+		return err
+	}
+
+	codeReviewExist := err == nil
+	if codeReviewExist {
+		if codeReview.InternalAddressFeedbackTaskID == nil {
+			// Discard repeated code review request
+			return nil
+		}
+
+		// TODO: ensure author resolved at least 1 thread or pushed new commit
+		// before feedback can be considered as addressed.
+		moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+			TaskId: *codeReview.InternalAddressFeedbackTaskID,
+		}
+		createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, codeReview.Round+1, evt, prEvt)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		codeReview.InternalCodeReviewTaskID = createdTaskID
+		codeReview.InternalAddressFeedbackTaskID = nil
+		codeReview.Round++
+		_, err = a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		return a.githubCodeReviewDao.UpdateCodeReview(codeReview)
+	}
+
+	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, 1, evt, prEvt)
+	codeReview = entity.GithubCodeReview{
+		GithubPullRequestNodeID:  githubPullRequestNodeID,
+		InternalCodeReviewTaskID: createdTaskID,
+		GithubReviewerID:         githubReviewerID,
+		Round:                    1,
+	}
+	return a.githubCodeReviewDao.CreateCodeReview(codeReview)
+}
+
+func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerID uint64, round int, evt event, prEvt pullRequestEvent) (uint64, error) {
+	codeReviewerInternalUserID, err := a.GetInternalUserID(ct, githubReviewerID)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+
+	dueAt := time.Now().UTC().Add(codeReviewMaxWait)
+	createTaskReq := &proto.CreateTaskRequest{
+		TeamId:      teamID,
+		Goal:        fmt.Sprintf("[%v][PR #%v] Code review round %v", evt.Repository.Name, prEvt.PullRequest.Number, round),
+		OwnerUserId: &codeReviewerInternalUserID,
+		DueAt:       timestamppb.New(dueAt),
+	}
+	createTaskRes, err := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+
+	log.Printf("Review task created: repo=%v pullRequestNumber=%v taskID=%v\n", evt.Repository.Name, prEvt.PullRequest.Number, createTaskRes.TaskId)
+	addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
+		AwaitingTaskId: pullRequestTaskID,
+		AwaitForTaskId: createTaskRes.TaskId,
+	}
+
+	_, err = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+
+	log.Printf("Pull request is waiting for review task: pullRequestTaskID=%v, githubReviewerID=%v, reviewTaskID=%v\n", pullRequestTaskID, githubReviewerID, createTaskRes.TaskId)
+	return createTaskRes.TaskId, nil
 }
 
 func (a App) getInstallGithubAppURL(stateID uint64) (string, error) {
@@ -264,6 +562,8 @@ func NewApp(
 	teamyClientRegistry *api.ClientRegistry,
 	githubAppInstallStateDao dao.GithubAppInstallState,
 	githubAppInstallationDao dao.GithubAppInstallation,
+	githubPullRequestDao dao.GithubPullRequest,
+	githubCodeReviewDao dao.GithubCodeReview,
 ) App {
 	return App{
 		config:                   cfg,
@@ -271,6 +571,8 @@ func NewApp(
 		teamyClientRegistry:      teamyClientRegistry,
 		githubAppInstallStateDao: githubAppInstallStateDao,
 		githubAppInstallationDao: githubAppInstallationDao,
+		githubPullRequestDao:     githubPullRequestDao,
+		githubCodeReviewDao:      githubCodeReviewDao,
 	}
 }
 

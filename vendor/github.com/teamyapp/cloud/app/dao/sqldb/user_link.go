@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/teamyapp/cloud/app/dao"
 	"github.com/teamyapp/cloud/app/entity"
@@ -15,17 +16,25 @@ type UserLink struct {
 
 var _ dao.UserLink = (*UserLink)(nil)
 
-func (u UserLink) FindByExternalUserID(authProvider string, externalUserID string) (entity.UserLink, error) {
+func (u UserLink) FindUserLinkByExternalUserID(authProvider string, externalUserID string) (entity.UserLink, error) {
 	row := u.db.QueryRow(`
-SELECT auth_provider, external_user_id, internal_user_id 
-FROM identity_user_link
-WHERE auth_provider = $1 AND external_user_id = $2;
+		SELECT 
+		    auth_provider, 
+		    external_user_id, 
+		    external_user_label, 
+		    internal_user_id
+		FROM identity_user_link
+		WHERE auth_provider = $1 AND external_user_id = $2;
 `,
 		authProvider,
 		externalUserID)
 
 	var userLink entity.UserLink
-	err := row.Scan(&userLink.AuthProvider, &userLink.ExternalUserID, &userLink.InternalUserID)
+	err := row.Scan(
+		&userLink.AuthProvider,
+		&userLink.ExternalUserID,
+		&userLink.ExternalUserLabel,
+		&userLink.InternalUserID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.UserLink{}, dao.ErrNotFound(fmt.Sprintf(
 			"user link not found: authProvider=%v externalUserID=%v",
@@ -36,13 +45,52 @@ WHERE auth_provider = $1 AND external_user_id = $2;
 	return userLink, err
 }
 
-func (u UserLink) Add(userLink entity.UserLink) error {
+func (u UserLink) FindUserLinksByInternalUserID(internalUserID uint64) ([]entity.UserLink, error) {
+	rows, err := u.db.Query(
+		`
+		SELECT 
+		    auth_provider, 
+		    external_user_id, 
+		    external_user_label, 
+		    internal_user_id
+		FROM identity_user_link
+		WHERE internal_user_id = $1;
+`,
+		internalUserID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	userLinks := make([]entity.UserLink, 0)
+	for rows.Next() {
+		userLink := entity.UserLink{}
+		err = rows.Scan(
+			&userLink.AuthProvider,
+			&userLink.ExternalUserID,
+			&userLink.ExternalUserLabel,
+			&userLink.InternalUserID,
+		)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		userLinks = append(userLinks, userLink)
+	}
+
+	return userLinks, err
+}
+
+func (u UserLink) CreateUserLink(userLink entity.UserLink) error {
 	_, err := u.db.Exec(`
-INSERT INTO identity_user_link (auth_provider, external_user_id, internal_user_id)
-VALUES ($1, $2, $3);
+INSERT INTO identity_user_link (auth_provider, external_user_id, external_user_label, internal_user_id)
+VALUES ($1, $2, $3, $4);
 `,
 		userLink.AuthProvider,
 		userLink.ExternalUserID,
+		userLink.ExternalUserLabel,
 		userLink.InternalUserID)
 	return err
 }

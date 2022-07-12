@@ -13,7 +13,7 @@ import (
 	"github.com/teamyapp/cloud/libs/security"
 )
 
-const googleName = "google"
+const GoogleName = "google"
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#httprest_1
 var googleAuthURLString = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -29,7 +29,7 @@ type Google struct {
 var _ Provider = (*Google)(nil)
 
 func (g Google) GetName() string {
-	return googleName
+	return GoogleName
 }
 
 func (g Google) GetUser(authorizationCode string) (entity.ExternalUser, error) {
@@ -45,11 +45,14 @@ func (g Google) GetUser(authorizationCode string) (entity.ExternalUser, error) {
 		Issuer         string `json:"iss"`
 		ExpirationTime int    `json:"exp"`
 		IssuedAt       int    `json:"iat"`
+		Email          string `json:"email"`
+		EmailVerified  bool   `json:"email_verified"`
 	}{}
 
 	err = g.jwtAuthority.DecodeUnverifiedToken(idToken, &tokenPayload)
 	return entity.ExternalUser{
-		ID: tokenPayload.UserID,
+		ID:    tokenPayload.UserID,
+		Label: tokenPayload.Email,
 	}, err
 }
 
@@ -72,7 +75,7 @@ func (g Google) GetSignInURL(stateID uint64) (string, error) {
 	query.Add("redirect_uri", g.redirectURI)
 	query.Add("response_type", "code")
 	query.Add("state", strconv.Itoa(int(stateID)))
-	query.Add("scope", "openid")
+	query.Add("scope", "openid email")
 	baseURL.RawQuery = query.Encode()
 	return baseURL.String(), nil
 }
@@ -133,6 +136,6 @@ func NewGoogle(
 		jwtAuthority: jwtAuthority,
 		clientID:     clientID,
 		clientSecret: clientSecret,
-		redirectURI:  fmt.Sprintf("%s/identity/sign-in/oauth/%s/finish", webAPIBaseURL, googleName),
+		redirectURI:  fmt.Sprintf("%s/identity/sign-in/oauth/%s/finish", webAPIBaseURL, GoogleName),
 	}
 }
