@@ -5,12 +5,12 @@ go 1.18
 require (
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.4.0
-	github.com/teamyapp/cloud v0.0.0-20220710005055-08211cee392b
+	github.com/teamyapp/cloud v0.0.0-20220712000718-ce9a578daab0
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
 )
 
-replace github.com/teamyapp/cloud => ../cloud
+//replace github.com/teamyapp/cloud => ../cloud
 
 require (
 	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
@@ -25,5 +25,5 @@ require (
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220708155623-50e5f4832e73 // indirect
+	google.golang.org/genproto v0.0.0-20220711200234-e2551ce405a2 // indirect
 )

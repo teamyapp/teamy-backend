@@ -55,7 +55,7 @@ github.com/lib/pq/scram
 ## explicit; go 1.16
 github.com/rubenv/sql-migrate
 github.com/rubenv/sql-migrate/sqlparse
-# github.com/teamyapp/cloud v0.0.0-20220710005055-08211cee392b => ../cloud
+# github.com/teamyapp/cloud v0.0.0-20220712000718-ce9a578daab0
 ## explicit; go 1.18
 github.com/teamyapp/cloud/app/api
 github.com/teamyapp/cloud/app/api/proto
@@ -94,7 +94,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/genproto v0.0.0-20220708155623-50e5f4832e73
+# google.golang.org/genproto v0.0.0-20220711200234-e2551ce405a2
 ## explicit; go 1.15
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.47.0
@@ -182,4 +182,3 @@ google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/timestamppb
-# github.com/teamyapp/cloud => ../cloud
