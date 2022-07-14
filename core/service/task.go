@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
@@ -19,13 +18,6 @@ import (
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
 	entity.TaskStatusInProgress: true,
 	entity.TaskStatusAwaiting:   true,
-}
-
-type TaskFilter struct {
-	TaskID       *uint64
-	OwnerID      *uint64
-	GoalContains *string
-	Status       *entity.TaskStatus
 }
 
 type CreateTaskInput struct {
@@ -54,16 +46,14 @@ type Task struct {
 	threadService              Thread
 }
 
-func (t Task) FindAllTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, error) {
+func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, error) {
 	tasks, err := t.taskDao.FindAllTasks()
 	if err != nil {
 		return nil, err
 	}
 
 	if filter != nil {
-		tasks = collect.Filter(tasks, func(task entity.Task) bool {
-			return matchTask(*filter, task)
-		})
+		tasks = filterTasks(tasks, *filter)
 	}
 
 	return tasks, nil
@@ -85,29 +75,10 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	return tasks, nil
 }
 
-func (t Task) FindTask(ct context.Context, taskID uint64) (entity.Task, error) {
-	return t.taskDao.FindTaskByID(taskID)
-}
-
-func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, error) {
-	tasks, err := t.taskDao.FindTasksByTeamID(teamID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	if filter != nil {
-		tasks = collect.Filter(tasks, func(task entity.Task) bool {
-			return matchTask(*filter, task)
-		})
-	}
-
-	return tasks, nil
-}
-
 func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
 	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
+		log.Println(err)
 		return entity.Task{}, err
 	}
 
@@ -120,6 +91,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 
 	threadID, err := t.threadService.createThread(ct)
 	if err != nil {
+		log.Println(err)
 		return entity.Task{}, err
 	}
 
@@ -396,27 +368,4 @@ func NewTask(
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
 		threadService:              threadService,
 	}
-}
-
-func matchTask(filter TaskFilter, task entity.Task) bool {
-	if filter.TaskID != nil && *filter.TaskID != task.ID {
-		return false
-	}
-
-	if filter.OwnerID != nil {
-		if task.OwnerUserID == nil || *filter.OwnerID != *task.OwnerUserID {
-			return false
-		}
-	}
-
-	if filter.Status != nil && *filter.Status != task.Status {
-		return false
-	}
-
-	if filter.GoalContains != nil &&
-		!strings.Contains(strings.ToLower(task.Goal), strings.ToLower(*filter.GoalContains)) {
-		return false
-	}
-
-	return true
 }

@@ -38,7 +38,7 @@ func (q Query) Tasks(ct context.Context, args struct {
 		return nil, err
 	}
 
-	tasks, err := q.deps.taskService.FindAllTasks(ct, filter)
+	tasks, err := q.deps.taskService.FindTasks(ct, filter)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -54,6 +54,7 @@ func (q Query) Teams(ct context.Context, args struct {
 }) ([]Team, error) {
 	teams, err := q.deps.teamDao.FindAllTeams()
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -73,6 +74,7 @@ func (q Query) Invitations(ct context.Context, args struct {
 }) ([]Invitation, error) {
 	invitations, err := q.deps.invitationDao.FindAllInvitations()
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -84,6 +86,26 @@ func (q Query) Invitations(ct context.Context, args struct {
 
 	return collect.Map(invitations, func(invitation entity.Invitation, _ int) Invitation {
 		return newInvitation(q.deps, invitation)
+	}), nil
+}
+
+func (q Query) Sprints(ct context.Context, args struct {
+	Filter *SprintFilter
+}) ([]Sprint, error) {
+	filter, err := fromGraphQLSprintFilterPtr(args.Filter)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	sprints, err := q.deps.sprintService.FindSprints(ct, filter)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return collect.Map(sprints, func(sprint entity.Sprint, _ int) Sprint {
+		return newSprint(q.deps, sprint)
 	}), nil
 }
 

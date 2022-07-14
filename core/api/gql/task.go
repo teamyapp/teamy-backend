@@ -90,6 +90,10 @@ func (t Task) Status(ct context.Context) entity.TaskStatus {
 	return t.task.Status
 }
 
+func (t Task) IsPlanned(ct context.Context) bool {
+	return t.task.IsPlanned
+}
+
 func (t Task) Comments(ct context.Context) Thread {
 	return newThread(t.deps, t.task.CommentsThreadID)
 }

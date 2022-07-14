@@ -27,6 +27,7 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			owner_user_id,
 			owning_team_id,
 			status,
+			is_planned,
 			effort,
 			comments_thread_id,
 			due_at,
@@ -43,6 +44,7 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsPlanned,
 			&task.Effort,
 			&task.CommentsThreadID,
 			&task.DueAt,
@@ -74,6 +76,7 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 		owner_user_id,
 		owning_team_id,
 		status,
+		is_planned,
 		effort,
 		comments_thread_id,
 		due_at,
@@ -100,6 +103,7 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 				&task.OwnerUserID,
 				&task.OwningTeamID,
 				&task.Status,
+				&task.IsPlanned,
 				&task.Effort,
 				&task.CommentsThreadID,
 				&task.DueAt,
@@ -128,6 +132,7 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			owner_user_id,
 			owning_team_id,
 			status,
+			is_planned,
 			effort,
 			comments_thread_id,
 			due_at,
@@ -144,6 +149,7 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsPlanned,
 			&task.Effort,
 			&task.CommentsThreadID,
 			&task.DueAt,
@@ -161,7 +167,7 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 }
 
 func (t Task) FindAllTasks() ([]entity.Task, error) {
-	statement := `
+	rows, err := t.db.Query(`
 	SELECT
 		id,
 		goal,
@@ -170,20 +176,20 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 		owner_user_id,
 		owning_team_id,
 		status,
+		is_planned,
 		effort,
 		comments_thread_id,
 		due_at,
 		created_at,
 		updated_at
 	FROM task;
-`
-	rows, err := t.db.Query(statement)
+`)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	defer rows.Close()
 
+	defer rows.Close()
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
 		task := entity.Task{}
@@ -195,6 +201,7 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsPlanned,
 			&task.Effort,
 			&task.CommentsThreadID,
 			&task.DueAt,
@@ -213,7 +220,8 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 }
 
 func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
-	statement := `
+	rows, err := t.db.Query(
+		`
 	SELECT
 		id,
 		goal,
@@ -222,6 +230,7 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 		owner_user_id,
 		owning_team_id,
 		status,
+		is_planned,
 		effort,
 		comments_thread_id,
 		due_at,
@@ -229,14 +238,14 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 		updated_at
 	FROM task
 	WHERE owning_team_id = $1;
-`
-	rows, err := t.db.Query(statement, teamID)
+`,
+		teamID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	defer rows.Close()
 
+	defer rows.Close()
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
 		task := entity.Task{}
@@ -248,6 +257,7 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsPlanned,
 			&task.Effort,
 			&task.CommentsThreadID,
 			&task.DueAt,
@@ -276,12 +286,13 @@ func (t Task) CreateTask(task entity.Task) error {
 			owner_user_id,
 			owning_team_id,
 			status,
+		 	is_planned,
 			effort,
 			comments_thread_id,
 			due_at,
 			created_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`,
 		task.ID,
 		task.Goal,
 		task.Context,
@@ -289,6 +300,7 @@ func (t Task) CreateTask(task entity.Task) error {
 		task.OwnerUserID,
 		task.OwningTeamID,
 		task.Status,
+		task.IsPlanned,
 		task.Effort,
 		task.CommentsThreadID,
 		task.DueAt,
@@ -306,15 +318,17 @@ func (t Task) UpdateTask(task entity.Task) error {
 			owner_user_id = $3,
 			owning_team_id = $4,
 			status = $5,
-			effort = $6,
-			due_at = $7,
-			updated_at = $8
-		WHERE id = $9;`,
+			is_planned = $6,
+			effort = $7,
+			due_at = $8,
+			updated_at = $9
+		WHERE id = $10;`,
 		task.Goal,
 		task.Context,
 		task.OwnerUserID,
 		task.OwningTeamID,
 		task.Status,
+		task.IsPlanned,
 		task.Effort,
 		task.DueAt,
 		task.UpdatedAt,

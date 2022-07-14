@@ -22,6 +22,8 @@ type Dependencies struct {
 	messageSyncer              collection.MessageSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
 	taskService                service.Task
+	teamService                service.Team
+	sprintService              service.Sprint
 }
 
 func NewDependencies(
@@ -39,6 +41,8 @@ func NewDependencies(
 	messageSyncer collection.MessageSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
 	taskService service.Task,
+	teamService service.Team,
+	sprintService service.Sprint,
 ) *Dependencies {
 	return &Dependencies{
 		cloudClientRegistry:        cloudClientRegistry,
@@ -55,5 +59,7 @@ func NewDependencies(
 		messageSyncer:              messageSyncer,
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
 		taskService:                taskService,
+		teamService:                teamService,
+		sprintService:              sprintService,
 	}
 }

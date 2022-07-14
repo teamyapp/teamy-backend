@@ -90,5 +90,25 @@ func fromGraphQLTaskFilterPtr(gqlTaskFilter *TaskFilter) (*service.TaskFilter, e
 		OwnerID:      ownerID,
 		GoalContains: gqlTaskFilter.GoalContains,
 		Status:       gqlTaskFilter.Status,
+		IsPlanned:    gqlTaskFilter.IsPlanned,
+	}, nil
+}
+
+func fromGraphQLSprintFilterPtr(gqlSprintFilter *SprintFilter) (*service.SprintFilter, error) {
+	if gqlSprintFilter == nil {
+		return nil, nil
+	}
+
+	sprintID, err := fromGraphQLIDPtr(gqlSprintFilter.SprintID)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &service.SprintFilter{
+		SprintID:        sprintID,
+		StartAtAndAfter: fromGraphQLTimePtr(gqlSprintFilter.StartAtAndAfter),
+		SortByStartAt:   gqlSprintFilter.SortByStartAt,
+		CountLimit:      intPtrFromIntPtr(gqlSprintFilter.CountLimit),
 	}, nil
 }

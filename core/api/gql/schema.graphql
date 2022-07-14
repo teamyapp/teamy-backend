@@ -8,6 +8,7 @@ type Query {
 	tasks(filter: TaskFilter): [Task!]!
 	teams(filter: TeamFilter): [Team!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
+	sprints(filter: SprintFilter): [Sprint!]!
 }
 
 type Mutation {
@@ -43,6 +44,12 @@ type Mutation {
 	acceptInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	declineInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	deleteInvitation(invitationId: ID!): Invitation!
+
+	# Sprint
+	createSprint(teamId: ID!, sprint: CreateSprintInput!): Sprint!
+	deleteSprint(sprintId: ID!): Sprint!
+	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
+	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
 }
 
 type Task {
@@ -53,6 +60,7 @@ type Task {
 	owner: User
 	owningTeam: Team!
 	status: TaskStatus!
+	isPlanned: Boolean!
 	comments: Thread!
 	createdAt: Time!
 	updatedAt: Time
@@ -76,6 +84,15 @@ type Thread {
 	messages: [Message!]!
 }
 
+type Sprint {
+	id: ID!
+	startAt: Time!
+	endAt: Time!
+	owningTeam: Team!
+	tasks(filter: TaskFilter): [Task!]!
+	createdAt: Time!
+}
+
 type Team {
 	id: ID!
 	name: String!
@@ -86,6 +103,7 @@ type Team {
 	members: [User!]!
 	tasks(filter: TaskFilter): [Task!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
+	sprints(filter: SprintFilter): [Sprint!]!
 }
 
 type Invitation {
@@ -143,6 +161,7 @@ input TaskFilter {
 	ownerId: ID
 	goalContains: String
 	status: TaskStatus
+	isPlanned: Boolean
 }
 
 input TeamFilter {
@@ -152,6 +171,13 @@ input TeamFilter {
 input InvitationFilter {
 	invitationId: ID
 	code: String
+}
+
+input SprintFilter {
+	sprintId: ID
+	startAtAndAfter: Time
+	SortByStartAt: Boolean
+	countLimit: Int
 }
 
 input CreateTaskInput {
@@ -211,6 +237,10 @@ input UpdateInvitationInput {
 	receiverFirstName: String
 	receiverLastName: String
 	expireAt: Time!
+}
+
+input CreateSprintInput {
+	startAt: Time!
 }
 
 scalar Time

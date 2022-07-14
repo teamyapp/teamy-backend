@@ -46,7 +46,11 @@ func InitGraphQLAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyn
 	taskSyncer := collection.NewTaskSyncer(realTimeStateSyncer, task)
 	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
 	serviceTask := service.NewTask(cloudAPIClientRegistry, task, thread, taskAwaitForRelation, taskSyncer, taskAwaitForRelationSyncer, serviceThread)
-	dependencies := gql.NewDependencies(cloudAPIClientRegistry, user, team, teamMember, invitation, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask)
+	sprint := sqldb.NewSprint(sqlDB)
+	serviceTeam := service.NewTeam(task, sprint, team)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(sqlDB)
+	serviceSprint := service.NewSprint(cloudAPIClientRegistry, task, sprint, sprintTaskRelation)
+	dependencies := gql.NewDependencies(cloudAPIClientRegistry, user, team, teamMember, invitation, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint)
 	resolver := gql.NewResolver(dependencies)
 	graphQL := api2.NewGraphQL(resolver)
 	return graphQL, nil
@@ -71,8 +75,8 @@ func InitTaskRPCAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyn
 
 // wire.go:
 
-var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskAwaitForRelation, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread)
+var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread, sqldb.NewSprint, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintTaskRelation)
 
 var collectionSyncerSet = wire.NewSet(collection.NewInvitationSyncer, collection.NewMessageSyncer, collection.NewTaskSyncer, collection.NewTaskAwaitForRelationSyncer, collection.NewTeamSyncer, collection.NewTeamMemberSyncer, collection.NewUserSyncer)
 
-var serviceSet = wire.NewSet(service.NewThread, service.NewTask)
+var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewTeam, service.NewSprint)

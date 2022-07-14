@@ -449,6 +449,7 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 		return User{}, err
 	}
 
+	// TODO: ensure user is inside the team
 	err = m.deps.teamMemberSyncer.DeleteAndSyncTeamMember(teamID, memberUserID)
 	if err != nil {
 		return User{}, err

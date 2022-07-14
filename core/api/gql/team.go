@@ -73,7 +73,7 @@ func (t Team) Tasks(ct context.Context, args struct {
 		return nil, err
 	}
 
-	tasks, err := t.deps.taskService.FindTasksInTeam(ct, t.team.ID, filter)
+	tasks, err := t.deps.teamService.FindTasksInTeam(ct, t.team.ID, filter)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -100,6 +100,26 @@ func (t Team) Invitations(ct context.Context, args struct {
 
 	return collect.Map(invitationEntities, func(invitationEntity entity.Invitation, _ int) Invitation {
 		return newInvitation(t.deps, invitationEntity)
+	}), nil
+}
+
+func (t Team) Sprints(ct context.Context, args struct {
+	Filter *SprintFilter
+}) ([]Sprint, error) {
+	filter, err := fromGraphQLSprintFilterPtr(args.Filter)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	sprints, err := t.deps.teamService.FindSprintsInTeam(ct, t.team.ID, filter)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return collect.Map(sprints, func(sprint entity.Sprint, index int) Sprint {
+		return newSprint(t.deps, sprint)
 	}), nil
 }
 
