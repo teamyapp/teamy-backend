@@ -20,7 +20,7 @@ func (i Invitation) FindInvitationByID(invitationID uint64) (entity.Invitation, 
 	invitation := entity.Invitation{}
 	err := i.db.QueryRow(`
 	SELECT
-	id,
+		id,
 		sender_user_id,
 		receiver_first_name,
 		receiver_last_name,
