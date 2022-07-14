@@ -12,6 +12,7 @@ type TaskFilter struct {
 	OwnerID      *graphql.ID
 	GoalContains *string
 	Status       *entity.TaskStatus
+	IsPlanned    *bool
 }
 
 type TeamFilter struct {
@@ -21,6 +22,13 @@ type TeamFilter struct {
 type InvitationFilter struct {
 	InvitationID *graphql.ID
 	Code         *string
+}
+
+type SprintFilter struct {
+	SprintID        *graphql.ID
+	StartAtAndAfter *graphql.Time
+	SortByStartAt   *bool
+	CountLimit      *int32
 }
 
 func matchTask(filter TaskFilter, task entity.Task) bool {

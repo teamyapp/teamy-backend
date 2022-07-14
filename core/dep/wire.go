@@ -20,19 +20,23 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
 	wire.Bind(new(dao.Task), new(sqldb.Task)),
-	wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)),
 	wire.Bind(new(dao.Team), new(sqldb.Team)),
 	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
 	wire.Bind(new(dao.User), new(sqldb.User)),
 	wire.Bind(new(dao.Thread), new(sqldb.Thread)),
+	wire.Bind(new(dao.Sprint), new(sqldb.Sprint)),
+	wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)),
+	wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
-	sqldb.NewTaskAwaitForRelation,
 	sqldb.NewTeam,
 	sqldb.NewTeamMember,
 	sqldb.NewUser,
 	sqldb.NewThread,
+	sqldb.NewSprint,
+	sqldb.NewTaskAwaitForRelation,
+	sqldb.NewSprintTaskRelation,
 )
 
 var collectionSyncerSet = wire.NewSet(
@@ -48,6 +52,8 @@ var collectionSyncerSet = wire.NewSet(
 var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
+	service.NewTeam,
+	service.NewSprint,
 )
 
 func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {

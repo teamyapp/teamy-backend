@@ -17,9 +17,10 @@ type Invitation struct {
 var _ dao.Invitation = (*Invitation)(nil)
 
 func (i Invitation) FindInvitationByID(invitationID uint64) (entity.Invitation, error) {
-	statement := `
+	invitation := entity.Invitation{}
+	err := i.db.QueryRow(`
 	SELECT
-		id,
+	id,
 		sender_user_id,
 		receiver_first_name,
 		receiver_last_name,
@@ -33,9 +34,8 @@ func (i Invitation) FindInvitationByID(invitationID uint64) (entity.Invitation, 
 		updated_at
 	FROM invitation
 	WHERE id = $1;
-`
-	invitation := entity.Invitation{}
-	err := i.db.QueryRow(statement, invitationID).
+`,
+		invitationID).
 		Scan(
 			&invitation.ID,
 			&invitation.SenderUserID,
@@ -60,7 +60,7 @@ func (i Invitation) FindInvitationByID(invitationID uint64) (entity.Invitation, 
 }
 
 func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation, error) {
-	statement := `
+	rows, err := i.db.Query(`
 	SELECT
 		id,
 		sender_user_id,
@@ -76,8 +76,8 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation,
 		updated_at
 	FROM invitation
 	WHERE team_id = $1;
-`
-	rows, err := i.db.Query(statement, teamID)
+`,
+		teamID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -113,7 +113,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation,
 }
 
 func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
-	statement := `
+	rows, err := i.db.Query(`
 	SELECT
 		id,
 		sender_user_id,
@@ -128,8 +128,7 @@ func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
 		created_at,
 		updated_at
 	FROM invitation;
-`
-	rows, err := i.db.Query(statement)
+`)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -165,7 +164,7 @@ func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
 }
 
 func (i Invitation) CreateInvitation(invitation entity.Invitation) error {
-	statement := `
+	_, err := i.db.Exec(`
 	INSERT INTO invitation
 	(
 	    id,
@@ -180,8 +179,7 @@ func (i Invitation) CreateInvitation(invitation entity.Invitation) error {
 		created_at
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
-`
-	_, err := i.db.Exec(statement,
+`,
 		int64(invitation.ID),
 		invitation.SenderUserID,
 		invitation.ReceiverFirstName,

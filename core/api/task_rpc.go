@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"log"
 
 	"github.com/teamyapp/cloud/libs/runner"
@@ -29,12 +30,20 @@ func (t TaskRPC) Start(runner *runner.ServiceRunner) error {
 }
 
 func (t TaskRPC) FindTask(ct context.Context, req *proto.GetTaskRequest) (*proto.TaskMsg, error) {
-	task, err := t.taskService.FindTask(ct, req.TaskId)
+	filter := &service.TaskFilter{
+		TaskID: &req.TaskId,
+	}
+	tasks, err := t.taskService.FindTasks(ct, filter)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
+	if len(tasks) < 1 {
+		return &proto.TaskMsg{}, fmt.Errorf("task not found: taskID=%v", req.TaskId)
+	}
+
+	task := tasks[0]
 	return &proto.TaskMsg{
 		TaskId:          task.ID,
 		Goal:            task.Goal,
