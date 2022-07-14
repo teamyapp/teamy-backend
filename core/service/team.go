@@ -11,6 +11,21 @@ import (
 type Team struct {
 	taskDao   dao.Task
 	sprintDao dao.Sprint
+	teamDao   dao.Team
+}
+
+func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, error) {
+	teams, err := t.teamDao.FindAllTeams()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if filter != nil {
+		teams = filterTeams(teams, *filter)
+	}
+
+	return teams, nil
 }
 
 func (t Team) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, error) {
@@ -41,6 +56,6 @@ func (t Team) FindSprintsInTeam(ct context.Context, teamID uint64, filter *Sprin
 	return sprints, nil
 }
 
-func NewTeam(taskDao dao.Task, sprintDao dao.Sprint) Team {
-	return Team{taskDao: taskDao, sprintDao: sprintDao}
+func NewTeam(taskDao dao.Task, sprintDao dao.Sprint, teamDao dao.Team) Team {
+	return Team{taskDao: taskDao, sprintDao: sprintDao, teamDao: teamDao}
 }

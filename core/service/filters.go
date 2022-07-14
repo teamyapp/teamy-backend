@@ -14,6 +14,7 @@ type TaskFilter struct {
 	OwnerID      *uint64
 	GoalContains *string
 	Status       *entity.TaskStatus
+	IsPlanned    *bool
 }
 
 type SprintFilter struct {
@@ -21,6 +22,10 @@ type SprintFilter struct {
 	StartAtAndAfter *time.Time
 	SortByStartAt   *bool
 	CountLimit      *int
+}
+
+type TeamFilter struct {
+	TeamID *uint64
 }
 
 func filterTasks(tasks []entity.Task, filter TaskFilter) []entity.Task {
@@ -36,6 +41,10 @@ func filterTasks(tasks []entity.Task, filter TaskFilter) []entity.Task {
 		}
 
 		if filter.Status != nil && *filter.Status != task.Status {
+			return false
+		}
+
+		if filter.IsPlanned != nil && *filter.IsPlanned != task.IsPlanned {
 			return false
 		}
 
@@ -72,4 +81,14 @@ func filterSprints(sprints []entity.Sprint, filter SprintFilter) []entity.Sprint
 	}
 
 	return sprints
+}
+
+func filterTeams(teams []entity.Team, filter TeamFilter) []entity.Team {
+	return collect.Filter(teams, func(team entity.Team) bool {
+		if filter.TeamID != nil && *filter.TeamID != team.ID {
+			return false
+		}
+
+		return true
+	})
 }

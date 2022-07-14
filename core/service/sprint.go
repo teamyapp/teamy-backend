@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -91,19 +93,29 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 }
 
 func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, error) {
-	relation := entity.SprintTaskRelation{
-		SprintID:  sprintID,
-		TaskID:    taskID,
-		CreatedAt: time.Now().UTC(),
-	}
-
-	err := s.sprintTaskRelationDao.CreateSprintTaskRelation(relation)
+	task, err := s.taskDao.FindTaskByID(taskID)
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
 	}
 
-	task, err := s.taskDao.FindTaskByID(taskID)
+	sprint, err := s.sprintDao.FindSprintByID(sprintID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	if sprint.OwningTeamID != task.OwningTeamID {
+		log.Println(err)
+		return entity.Task{}, fmt.Errorf("sprint and task must belong to the same team")
+	}
+
+	relation := entity.SprintTaskRelation{
+		SprintID:  sprintID,
+		TaskID:    taskID,
+		CreatedAt: time.Now().UTC(),
+	}
+	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(relation)
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
@@ -118,7 +130,20 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 }
 
 func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, error) {
-	err := s.sprintTaskRelationDao.DeleteSprintTaskRelation(sprintID, taskID)
+	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	foundSprintIDs := collect.Filter(sprintIDs, func(currSprintID uint64) bool {
+		return currSprintID == sprintID
+	})
+	if len(foundSprintIDs) < 1 {
+		return entity.Task{}, fmt.Errorf("relation not found: sprintID=%v taskID=%v", sprintID, taskID)
+	}
+
+	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(sprintID, taskID)
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
@@ -130,13 +155,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return entity.Task{}, err
 	}
 
-	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
-	if err != nil {
-		log.Println(err)
-		return entity.Task{}, err
-	}
-
-	if len(sprintIDs) > 0 {
+	if len(sprintIDs) > 1 {
 		return task, nil
 	}
 

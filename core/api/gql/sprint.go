@@ -2,11 +2,13 @@ package gql
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Sprint struct {
@@ -48,6 +50,21 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 	return collect.Map(tasks, func(task entity.Task, index int) Task {
 		return newTask(s.deps, task)
 	}), nil
+}
+
+func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
+	filter := &service.TeamFilter{TeamID: &s.sprint.OwningTeamID}
+	teams, err := s.deps.teamService.FindTeams(ct, filter)
+	if err != nil {
+		log.Println(err)
+		return Team{}, err
+	}
+
+	if len(teams) == 0 {
+		return Team{}, fmt.Errorf("team not found: teamID=%v", s.sprint.OwningTeamID)
+	}
+
+	return newTeam(s.deps, teams[0]), nil
 }
 
 func newSprint(deps *Dependencies, sprint entity.Sprint) Sprint {

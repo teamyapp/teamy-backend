@@ -47,7 +47,7 @@ func InitGraphQLAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyn
 	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
 	serviceTask := service.NewTask(cloudAPIClientRegistry, task, thread, taskAwaitForRelation, taskSyncer, taskAwaitForRelationSyncer, serviceThread)
 	sprint := sqldb.NewSprint(sqlDB)
-	serviceTeam := service.NewTeam(task, sprint)
+	serviceTeam := service.NewTeam(task, sprint, team)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(sqlDB)
 	serviceSprint := service.NewSprint(cloudAPIClientRegistry, task, sprint, sprintTaskRelation)
 	dependencies := gql.NewDependencies(cloudAPIClientRegistry, user, team, teamMember, invitation, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint)

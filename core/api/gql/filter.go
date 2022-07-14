@@ -1,8 +1,6 @@
 package gql
 
 import (
-	"strings"
-
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -29,41 +27,6 @@ type SprintFilter struct {
 	StartAtAndAfter *graphql.Time
 	SortByStartAt   *bool
 	CountLimit      *int32
-}
-
-func matchTask(filter TaskFilter, task entity.Task) bool {
-	if filter.TaskID != nil {
-		taskID, err := fromGraphQLIDPtr(filter.TaskID)
-		if err != nil {
-			return false
-		}
-
-		if *taskID != task.ID {
-			return false
-		}
-	}
-
-	if filter.OwnerID != nil {
-		ownerID, err := fromGraphQLIDPtr(filter.OwnerID)
-		if err != nil {
-			return false
-		}
-
-		if task.OwnerUserID == nil || *ownerID != *task.OwnerUserID {
-			return false
-		}
-	}
-
-	if filter.Status != nil && *filter.Status != task.Status {
-		return false
-	}
-
-	if filter.GoalContains != nil &&
-		!strings.Contains(strings.ToLower(task.Goal), strings.ToLower(*filter.GoalContains)) {
-		return false
-	}
-
-	return true
 }
 
 func matchTeam(filter TeamFilter, team entity.Team) bool {

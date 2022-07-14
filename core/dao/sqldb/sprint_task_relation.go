@@ -72,7 +72,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(taskID uint64) ([]uint64, erro
 			continue
 		}
 
-		sprintIDs = append(sprintIDs, taskID)
+		sprintIDs = append(sprintIDs, sprintID)
 	}
 
 	return sprintIDs, err
