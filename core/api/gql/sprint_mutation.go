@@ -23,7 +23,6 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 	input := service.CreateSprintInput{
 		StartAt: args.Sprint.StartAt.Time,
 	}
-
 	sprint, err := m.deps.sprintService.CreateSprint(ct, teamID, input)
 	if err != nil {
 		log.Println(err)
