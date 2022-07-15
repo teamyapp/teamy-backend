@@ -176,7 +176,7 @@ input InvitationFilter {
 input SprintFilter {
 	sprintId: ID
 	startAtAndAfter: Time
-	SortByStartAt: Boolean
+	sortByStartAt: Boolean
 	countLimit: Int
 }
 
