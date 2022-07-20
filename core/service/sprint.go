@@ -83,6 +83,20 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 }
 
 func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, error) {
+	taskIds, err := s.sprintTaskRelationDao.FindTaskIDsBySprintID(sprintID)
+	if err != nil {
+		log.Println(err)
+		return entity.Sprint{}, err
+	}
+
+	for _, taskId := range taskIds {
+		_, err = s.RemoveTaskFromSprint(ct, sprintID, taskId)
+		if err != nil {
+			log.Println(err)
+			return entity.Sprint{}, err
+		}
+	}
+
 	sprint, err := s.sprintDao.FindSprintByID(sprintID)
 	if err != nil {
 		log.Println(err)
