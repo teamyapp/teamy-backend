@@ -25,6 +25,7 @@ type CreateTaskInput struct {
 	Context     *string
 	OwnerUserID *uint64
 	DueAt       *time.Time
+	IsPlanned   *bool
 }
 
 type UpdateTaskInput struct {
@@ -95,11 +96,17 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		return entity.Task{}, err
 	}
 
+	var isPlanned bool
+	if taskInput.IsPlanned != nil {
+		isPlanned = *taskInput.IsPlanned
+	}
+
 	task := entity.Task{
 		ID:               genTaskIDRes.UniqueNumber,
 		Goal:             taskInput.Goal,
 		Context:          taskInput.Context,
 		Status:           entity.TaskStatusUpcoming,
+		IsPlanned:        isPlanned,
 		CreatorUserID:    userID,
 		OwningTeamID:     teamID,
 		OwnerUserID:      taskInput.OwnerUserID,

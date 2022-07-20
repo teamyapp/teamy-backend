@@ -185,6 +185,7 @@ input CreateTaskInput {
 	context: String
 	ownerUserId: ID
 	dueAt: Time
+	isPlanned: Boolean
 }
 
 input UpdateTaskInput {
