@@ -131,7 +131,7 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID)
+	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID, true)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err

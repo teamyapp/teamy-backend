@@ -90,7 +90,7 @@ func (t TaskRPC) DeleteTask(ct context.Context, req *proto.DeleteTaskRequest) (*
 }
 
 func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *proto.MoveTaskToUpcomingRequest) (*emptypb.Empty, error) {
-	_, err := t.taskService.MoveTaskToUpcoming(ct, req.TaskId)
+	_, err := t.taskService.MoveTaskToUpcoming(ct, req.TaskId, true)
 	return &emptypb.Empty{}, err
 }
 
