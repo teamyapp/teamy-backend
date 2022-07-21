@@ -68,6 +68,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		OwningTeamID graphql.ID
 		Effort       *int32
 		DueAt        *graphql.Time
+		Status       entity.TaskStatus
 	}
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
@@ -131,7 +132,7 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID)
+	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID, true)
 	if err != nil {
 		log.Println(err)
 		return Task{}, err

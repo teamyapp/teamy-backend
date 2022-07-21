@@ -148,15 +148,19 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
-		return entity.Task{}, err
-	}
-
-	err = t.taskSyncer.DeleteAndSyncTask(taskID)
-	if err != nil {
+		log.Println(err)
 		return entity.Task{}, err
 	}
 
 	err = t.threadDao.DeleteThread(task.CommentsThreadID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	// TODO: delete awaiting, await for and sprint task relationships
+
+	err = t.taskSyncer.DeleteAndSyncTask(taskID)
 	if err != nil {
 		return entity.Task{}, err
 	}
@@ -164,13 +168,21 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 	return task, nil
 }
 
-func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64) (entity.Task, error) {
+func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTask bool) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
 		return entity.Task{}, err
 	}
 
-	task.Status = entity.TaskStatusUpcoming
+	if autoPauseTask {
+		switch task.Status {
+		case entity.TaskStatusInProgress, entity.TaskStatusPaused:
+			task.Status = entity.TaskStatusPaused
+		}
+	} else {
+		task.Status = entity.TaskStatusUpcoming
+	}
+
 	now := time.Now()
 	task.UpdatedAt = &now
 	err = t.taskSyncer.UpdateAndSyncTask(task)
@@ -277,7 +289,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 			return awaitForTask.Status != entity.TaskStatusDelivered
 		})
 		if len(awaitForTasks) == 0 {
-			_, err = t.MoveTaskToUpcoming(ct, awaitingTaskID)
+			_, err = t.MoveTaskToUpcoming(ct, awaitingTaskID, false)
 			if err != nil {
 				return entity.Task{}, err
 			}
@@ -347,7 +359,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	}
 
 	if len(awaitForTaskIds) == 0 {
-		task, err = t.MoveTaskToUpcoming(ct, taskID)
+		task, err = t.MoveTaskToUpcoming(ct, taskID, false)
 		if err != nil {
 			log.Println(err)
 			return entity.Task{}, err
