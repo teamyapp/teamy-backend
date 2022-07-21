@@ -68,7 +68,6 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		OwningTeamID graphql.ID
 		Effort       *int32
 		DueAt        *graphql.Time
-		Status       entity.TaskStatus
 	}
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
