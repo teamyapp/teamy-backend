@@ -152,16 +152,17 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
-	err = t.threadDao.DeleteThread(task.CommentsThreadID)
+	// TODO: delete awaiting, await for and sprint task relationships
+
+	err = t.taskSyncer.DeleteAndSyncTask(taskID)
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
 	}
 
-	// TODO: delete awaiting, await for and sprint task relationships
-
-	err = t.taskSyncer.DeleteAndSyncTask(taskID)
+	err = t.threadDao.DeleteThread(task.CommentsThreadID)
 	if err != nil {
+		log.Println(err)
 		return entity.Task{}, err
 	}
 
