@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.17.3
-// source: vendor/github.com/teamyapp/cloud/app/api/proto/gen.proto
+// source: app/api/proto/gen.proto
 
 package proto
 
@@ -137,5 +137,5 @@ var Generator_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "vendor/github.com/teamyapp/cloud/app/api/proto/gen.proto",
+	Metadata: "app/api/proto/gen.proto",
 }
