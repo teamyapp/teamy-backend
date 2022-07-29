@@ -31,12 +31,16 @@ type Mutation {
 	# Team
 	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
+	createTeamIconUploadSession(teamId: ID!): ID!
+	finishTeamIconUploadSession(teamId: ID!): FileMetadata!
 	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
 	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
 
 	# User
 	createUser(user: CreateUserInput!): User!
 	updateUser(userId: ID!, input: UpdateUserInput!): User!
+	createUserProfileUploadSession(userId: ID!): ID!
+	finishUserProfileUploadSession(userId: ID!): FileMetadata!
 
 	# Invitation
 	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!
@@ -50,6 +54,12 @@ type Mutation {
 	deleteSprint(sprintId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
 	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
+
+	# File
+	createFileUploadSession(teamId: ID!): ID!
+	finishFileUploadSession(teamId: ID!): FileMetadata!
+	updateFileMetadata(fileId: ID!, input: FileMetadataInput!): FileMetadata!
+	deleteFile(fileId: ID!): FileMetadata!
 }
 
 type Task {
@@ -119,6 +129,14 @@ type Invitation {
 	updatedAt: Time
 	status: InvitationStatus!
 	code: String!
+}
+
+type FileMetadata {
+	id: ID!
+	name: String!
+	createdAt: Time!
+	lastModifiedAt: Time
+	owningTeam: Team!
 }
 
 enum InvitationStatus {
@@ -211,7 +229,6 @@ input CreateTeamInput {
 
 input UpdateTeamInput {
 	name: String!
-	iconUrl: String
 	ownerUserId: ID!
 }
 
@@ -224,7 +241,6 @@ input CreateUserInput {
 input UpdateUserInput {
 	lastName: String!
 	firstName: String!
-	profileUrl: String
 }
 
 input CreateInvitationInput {
@@ -242,6 +258,10 @@ input UpdateInvitationInput {
 
 input CreateSprintInput {
 	startAt: Time!
+}
+
+input FileMetadataInput {
+	name: String!
 }
 
 scalar Time
