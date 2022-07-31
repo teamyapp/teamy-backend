@@ -92,7 +92,7 @@ func startServiceRunner(
 
 	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(realTimeStateSyncer)
 	graphQLAPI, err := dep.InitGraphQLAPI(
-		dep.CloudWebAPIBaseURL(cfg.CloudWebAPIBaseURL),
+		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)

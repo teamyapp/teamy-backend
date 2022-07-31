@@ -16,7 +16,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
-type CloudWebAPIBaseURL string
+type CloudWebAPIExternalBaseURL string
 
 var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
@@ -70,7 +70,7 @@ func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 }
 
 func InitGraphQLAPI(
-	cloudWebAPIBaseURL CloudWebAPIBaseURL,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -110,10 +110,10 @@ func InitTaskRPCAPI(
 }
 
 func newUserService(
-	cloudWebAPIBaseURL CloudWebAPIBaseURL,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
 ) service.User {
-	return service.NewUser(string(cloudWebAPIBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
+	return service.NewUser(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
 }
