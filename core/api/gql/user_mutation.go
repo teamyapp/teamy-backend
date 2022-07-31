@@ -2,6 +2,8 @@ package gql
 
 import (
 	"context"
+	"log"
+	"strconv"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
@@ -66,16 +68,28 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	return newUser(m.deps, user), nil
 }
 
-func (m Mutation) CreateUserProfileUploadSession(ct context.Context, args struct {
-	UserID graphql.ID
-}) (graphql.ID, error) {
-	// TODO: implement me
-	panic("implement me")
+func (m Mutation) CreateUserProfileUploadSession(ct context.Context) (graphql.ID, error) {
+	uploadSessionID, err := m.deps.userService.CreateUserProfileUploadSession(ct)
+	if err != nil {
+		return "", err
+	}
+
+	return graphql.ID(strconv.FormatUint(uploadSessionID, 10)), nil
 }
 
 func (m Mutation) FinishUserProfileUploadSession(ct context.Context, args struct {
-	UserID graphql.ID
-}) (FileMetadata, error) {
-	// TODO: implement me
-	panic("implement me")
+	FileUploadSessionID graphql.ID
+}) (graphql.ID, error) {
+	fileUploadSessionID, err := fromGraphQLID(args.FileUploadSessionID)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	uploadSessionID, err := m.deps.userService.FinishUserProfileUploadSession(ct, fileUploadSessionID)
+	if err != nil {
+		return "", err
+	}
+
+	return graphql.ID(strconv.FormatUint(uploadSessionID, 10)), nil
 }

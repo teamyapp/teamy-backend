@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/cloud/app/api/proto";
+
+service File {
+  rpc FindUploadSession(FindUploadSessionRequest) returns (UploadSession);
+  rpc CreateUploadSession(google.protobuf.Empty) returns (CreateUploadSessionResponse);
+}
+
+enum UploadSessionStatus {
+  CREATED = 0;
+  INITIALIZED = 1;
+  UPLOADING_CHUNKS = 2;
+  COMPLETED = 3;
+}
+
+message UploadSession {
+  uint64 id = 1;
+  UploadSessionStatus status = 2;
+  uint64 uploadedSizeInBytes = 3;
+  uint64 fileId = 4;
+  string fileName = 5;
+  string mimeType = 6;
+  uint64 totalSizeInBytes = 7;
+  int32 totalNumOfChunks = 8;
+  repeated uint64 chunkIDs = 9;
+  int32 nextChunkIndexToUpload = 10;
+  string actualContentHash = 11;
+  string expectedContentHash = 12;
+  google.protobuf.Timestamp createdAt = 13;
+  optional google.protobuf.Timestamp updatedAt = 14;
+}
+
+message FindUploadSessionRequest {
+  uint64 uploadSessionId = 1;
+}
+
+message CreateUploadSessionResponse {
+  uint64 uploadSessionId = 1;
+}

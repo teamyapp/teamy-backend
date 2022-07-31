@@ -9,10 +9,10 @@ import (
 )
 
 type Authorization struct {
-	permissionDao        dao.Permission
-	userGroupMemberDao   dao.UserGroupMember
-	operationRelationDao dao.OperationRelation
 	resourceRelationDao  dao.ResourceRelation
+	userGroupMemberDao   dao.UserGroupMember
+	permissionDao        dao.Permission
+	operationRelationDao dao.OperationRelation
 }
 
 func (a Authorization) HasPermission(resourceType string, resourceID uint64, operation string, userID uint64) (bool, error) {
@@ -138,4 +138,18 @@ func tryAddPermissionQueryToQueue(permissionQuery entity.PermissionQuery, visite
 
 	visited[permissionQuery] = true
 	return append(queries, permissionQuery)
+}
+
+func NewAuthorization(
+	resourceRelationDao dao.ResourceRelation,
+	userGroupMemberDao dao.UserGroupMember,
+	permissionDao dao.Permission,
+	operationRelationDao dao.OperationRelation,
+) Authorization {
+	return Authorization{
+		resourceRelationDao:  resourceRelationDao,
+		userGroupMemberDao:   userGroupMemberDao,
+		permissionDao:        permissionDao,
+		operationRelationDao: operationRelationDao,
+	}
 }

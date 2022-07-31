@@ -17,10 +17,10 @@ var _ dao.AllocatedRange = (*AllocatedRange)(nil)
 
 func (a AllocatedRange) FindAllocatedRangeByKey(key string) (entity.AllocatedRange, error) {
 	row := a.db.QueryRow(`
-SELECT key, range_end
-FROM allocated_range
-WHERE key = $1;
-`,
+	SELECT key, range_end
+	FROM allocated_range
+	WHERE key = $1;
+	`,
 		key)
 
 	allocatedRange := entity.AllocatedRange{}
@@ -36,9 +36,9 @@ WHERE key = $1;
 
 func (a AllocatedRange) CreateAllocatedRange(allocatedRange entity.AllocatedRange) error {
 	_, err := a.db.Exec(`
-INSERT INTO allocated_range (key, range_end)
-VALUES ($1, $2);
-`,
+	INSERT INTO allocated_range (key, range_end)
+	VALUES ($1, $2);
+	`,
 		allocatedRange.Key,
 		allocatedRange.RangeEnd)
 	return err
@@ -46,10 +46,10 @@ VALUES ($1, $2);
 
 func (a AllocatedRange) UpdateAllocatedRange(allocatedRange entity.AllocatedRange) error {
 	_, err := a.db.Exec(`
-UPDATE allocated_range
-SET range_end = $1
-WHERE key = $2;
-`,
+	UPDATE allocated_range
+	SET range_end = $1
+	WHERE key = $2;
+	`,
 		allocatedRange.RangeEnd,
 		allocatedRange.Key)
 	return err

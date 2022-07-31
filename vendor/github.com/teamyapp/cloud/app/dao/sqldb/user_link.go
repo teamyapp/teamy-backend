@@ -18,10 +18,10 @@ var _ dao.UserLink = (*UserLink)(nil)
 
 func (u UserLink) FindUserLinkByExternalUserID(authProvider string, externalUserID string) (entity.UserLink, error) {
 	row := u.db.QueryRow(`
-		SELECT 
-		    auth_provider, 
-		    external_user_id, 
-		    external_user_label, 
+		SELECT
+		    auth_provider,
+		    external_user_id,
+		    external_user_label,
 		    internal_user_id
 		FROM identity_user_link
 		WHERE auth_provider = $1 AND external_user_id = $2;
@@ -48,10 +48,10 @@ func (u UserLink) FindUserLinkByExternalUserID(authProvider string, externalUser
 func (u UserLink) FindUserLinksByInternalUserID(internalUserID uint64) ([]entity.UserLink, error) {
 	rows, err := u.db.Query(
 		`
-		SELECT 
-		    auth_provider, 
-		    external_user_id, 
-		    external_user_label, 
+		SELECT
+		    auth_provider,
+		    external_user_id,
+		    external_user_label,
 		    internal_user_id
 		FROM identity_user_link
 		WHERE internal_user_id = $1;
@@ -85,13 +85,29 @@ func (u UserLink) FindUserLinksByInternalUserID(internalUserID uint64) ([]entity
 
 func (u UserLink) CreateUserLink(userLink entity.UserLink) error {
 	_, err := u.db.Exec(`
-INSERT INTO identity_user_link (auth_provider, external_user_id, external_user_label, internal_user_id)
-VALUES ($1, $2, $3, $4);
-`,
+		INSERT INTO identity_user_link 
+		(
+		 	auth_provider,
+		 	external_user_id,
+		 	external_user_label,
+		 	internal_user_id
+		)
+		VALUES ($1, $2, $3, $4);
+		`,
 		userLink.AuthProvider,
 		userLink.ExternalUserID,
 		userLink.ExternalUserLabel,
 		userLink.InternalUserID)
+	return err
+}
+
+func (u UserLink) DeleteUserLink(authProvider string, internalUserID uint64) error {
+	_, err := u.db.Exec(`
+		DELETE 
+		FROM identity_user_link
+		WHERE auth_provider = $1 AND internal_user_id = $2;`,
+		authProvider,
+		internalUserID)
 	return err
 }
 

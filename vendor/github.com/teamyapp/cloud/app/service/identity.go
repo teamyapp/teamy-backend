@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -62,24 +63,46 @@ func (i Identity) VerifyAccessToken(accessToken string) (uint64, bool) {
 	return payload.UserID, true
 }
 
-func (i Identity) GenerateSignInURL(providerName string, redirectURL string) (string, error) {
-	provider, err := i.GetOAuthProvider(providerName)
+func (i Identity) GenerateUnknownUserSignInURL(authProviderName string, redirectURL string) (string, error) {
+	session := entity.SignInSession{
+		Type:        entity.UnknownUserSignInSessionType,
+		RedirectURL: redirectURL,
+	}
+
+	return i.generateSignInURL(authProviderName, session)
+}
+
+func (i Identity) GenerateLinkUsersSignInURL(
+	authProviderName string,
+	internalUserID uint64,
+	redirectURL string,
+) (string, error) {
+	session := entity.SignInSession{
+		Type:           entity.LinkUsersSignInSessionType,
+		InternalUserID: &internalUserID,
+		RedirectURL:    redirectURL,
+	}
+
+	return i.generateSignInURL(authProviderName, session)
+}
+
+func (i Identity) generateSignInURL(authProviderName string, session entity.SignInSession) (string, error) {
+	provider, err := i.GetOAuthProvider(authProviderName)
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 
 	sessionID, err := i.stateIDGenerator.GenerateUniqueNumber()
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 
-	session := entity.SignInSession{
-		ID:          sessionID,
-		RedirectURL: redirectURL,
-	}
-
+	session.ID = sessionID
 	err = i.signInSessionDao.CreateSignInSession(session)
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 
@@ -91,56 +114,64 @@ func (i Identity) GenerateSignInURL(providerName string, redirectURL string) (st
 	return signInURL, err
 }
 
-func (i Identity) GetOAuthProvider(providerName string) (oauth.Provider, error) {
-	provider, ok := i.oauthProviders[providerName]
+func (i Identity) GetOAuthProvider(authProviderName string) (oauth.Provider, error) {
+	provider, ok := i.oauthProviders[authProviderName]
 	if !ok {
-		return nil, fmt.Errorf("provider not found: %s", provider)
+		return nil, fmt.Errorf("authProvider not found: %s", provider)
 	}
 
 	return provider, nil
 }
 
-func (i Identity) FinishOAuthSignIn(providerName string, authorizationCode string, sessionID uint64) (string, error) {
-	provider, err := i.GetOAuthProvider(providerName)
+func (i Identity) FinishOAuthSignIn(authProviderName string, authorizationCode string, sessionID uint64) (string, error) {
+	session, err := i.signInSessionDao.FindSignInSessionByID(sessionID)
 	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	err = i.signInSessionDao.DeleteSignInSession(sessionID)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	provider, err := i.GetOAuthProvider(authProviderName)
+	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 
 	externalUser, err := provider.GetUser(authorizationCode)
 	if err != nil {
-		return "", err
-	}
-
-	userID, err := i.getOrLinkInternalUserID(providerName, externalUser)
-	if err != nil {
-		return "", err
-	}
-
-	now := time.Now()
-	payload := tokenPayload{
-		UserID:   userID,
-		IssuedAt: &now,
-	}
-
-	accessToken, err := i.jwtAuthority.GenerateToken(payload)
-	if err != nil {
-		return "", err
-	}
-
-	session, err := i.signInSessionDao.FindSignInSessionByID(sessionID)
-	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 
 	u, err := url.Parse(session.RedirectURL)
 	if err != nil {
+		log.Println(u)
 		return "", err
 	}
 
-	query := u.Query()
-	query.Add("accessToken", accessToken)
-	u.RawQuery = query.Encode()
-	return u.String(), nil
+	switch session.Type {
+	case entity.UnknownUserSignInSessionType:
+		return i.signInUnknownUser(authProviderName, externalUser, u)
+	case entity.LinkUsersSignInSessionType:
+		if session.InternalUserID == nil {
+			return "", errors.New("internal user ID cannot nil")
+		}
+
+		err = i.linkUsers(authProviderName, externalUser, *session.InternalUserID)
+		if err != nil {
+			log.Println(u)
+			return "", err
+		}
+
+		return u.String(), nil
+	default:
+		return "", fmt.Errorf("unsupported sign in session type: %v", session.Type)
+	}
 }
 
 func (i Identity) getOrLinkInternalUserID(authProvider string, externalUser entity.ExternalUser) (uint64, error) {
@@ -149,8 +180,9 @@ func (i Identity) getOrLinkInternalUserID(authProvider string, externalUser enti
 	case nil:
 		return internalUserID, nil
 	case dao.ErrNotFound:
-		internalUserID, err := i.userIDGenerator.GenerateUniqueNumber()
+		internalUserID, err = i.userIDGenerator.GenerateUniqueNumber()
 		if err != nil {
+			log.Println(err)
 			return 0, err
 		}
 
@@ -257,6 +289,54 @@ func (i Identity) DeleteServiceAccount(accountOwnerID uint64, serviceAccountID u
 
 func (i Identity) ListUserLinks(internalUserID uint64) ([]entity.UserLink, error) {
 	return i.userLinkDao.FindUserLinksByInternalUserID(internalUserID)
+}
+
+func (i Identity) DeleteUserLink(userID uint64, authProviderName string) error {
+	return i.userLinkDao.DeleteUserLink(authProviderName, userID)
+}
+
+func (i Identity) signInUnknownUser(
+	authProviderName string,
+	externalUser entity.ExternalUser,
+	redirectURL *url.URL,
+) (string, error) {
+	userID, err := i.getOrLinkInternalUserID(authProviderName, externalUser)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	now := time.Now()
+	payload := tokenPayload{
+		UserID:   userID,
+		IssuedAt: &now,
+	}
+
+	accessToken, err := i.jwtAuthority.GenerateToken(payload)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	query := redirectURL.Query()
+	query.Add("accessToken", accessToken)
+	redirectURL.RawQuery = query.Encode()
+	return redirectURL.String(), nil
+}
+
+func (i Identity) linkUsers(
+	authProviderName string,
+	externalUser entity.ExternalUser,
+	internalUserID uint64,
+) error {
+	userLink := entity.UserLink{
+		AuthProvider:      authProviderName,
+		InternalUserID:    internalUserID,
+		ExternalUserID:    externalUser.ID,
+		ExternalUserLabel: externalUser.Label,
+	}
+
+	return i.userLinkDao.CreateUserLink(userLink)
 }
 
 func NewIdentity(

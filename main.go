@@ -66,9 +66,9 @@ func startServiceRunner(
 		panic(err)
 	}
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(rpc.ConnectionConfig{
-		Host:          cfg.CloudAPIHost,
-		Port:          cfg.CloudAPIPort,
-		ShouldEncrypt: cfg.CloudAPIShouldEncrypt,
+		Host:          cfg.CloudGRPCAPIHost,
+		Port:          cfg.CloudGRPCAPIPort,
+		ShouldEncrypt: cfg.CloudGRPCAPIShouldEncrypt,
 	})
 	if err != nil {
 		panic(err)
@@ -91,7 +91,11 @@ func startServiceRunner(
 	}
 
 	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(realTimeStateSyncer)
-	graphQLAPI, err := dep.InitGraphQLAPI(cloudClientRegistry, realTimeStateSyncer, sqlDB)
+	graphQLAPI, err := dep.InitGraphQLAPI(
+		dep.CloudWebAPIBaseURL(cfg.CloudWebAPIBaseURL),
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		sqlDB)
 	if err != nil {
 		panic(err)
 	}

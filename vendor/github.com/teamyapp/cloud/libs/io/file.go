@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func CreateFile(filePath string) error {
@@ -24,4 +25,9 @@ func CreateFileWithLog(filePath string) error {
 		fmt.Printf("File created at: %s\n", filePath)
 	}
 	return err
+}
+
+func GetFileURL(cloudWebAPIBaseURL string, fileID uint64) string {
+	fileIDParam := strconv.FormatUint(fileID, 10)
+	return fmt.Sprintf("%s/file/files/%s", cloudWebAPIBaseURL, fileIDParam)
 }

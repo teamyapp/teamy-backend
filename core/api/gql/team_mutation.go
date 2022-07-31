@@ -90,8 +90,8 @@ func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 }
 
 func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
-	TeamID graphql.ID
-}) (FileMetadata, error) {
+	TeamID uint64
+}) (graphql.ID, error) {
 	// TODO: implement me
 	panic("implement me")
 }
