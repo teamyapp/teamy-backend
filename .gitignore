@@ -3,3 +3,7 @@
 
 # Environmental variables
 .env
+.repo.env
+
+*.json
+*.log

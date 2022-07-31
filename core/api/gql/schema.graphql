@@ -1,0 +1,267 @@
+schema {
+	query: Query
+	mutation: Mutation
+}
+
+type Query {
+	me: User!
+	tasks(filter: TaskFilter): [Task!]!
+	teams(filter: TeamFilter): [Team!]!
+	invitations(filter: InvitationFilter): [Invitation!]!
+	sprints(filter: SprintFilter): [Sprint!]!
+}
+
+type Mutation {
+	# Task
+	createTask(teamId: ID!, task: CreateTaskInput!): Task!
+	updateTask(taskId: ID!, input: UpdateTaskInput!): Task!
+	deleteTask(taskId: ID!): Task!
+	moveTaskToUpcoming(taskId: ID!): Task!
+	moveTaskToInProgress(taskId: ID!): Task!
+	moveTaskToDelivered(taskId: ID!): Task!
+	moveTaskToBlocked(taskId: ID!, reason: String!): Task!
+	addAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
+	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
+
+	# Message
+	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
+	updateMessage(messageId: ID!, input: UpdateMessageInput!): Message!
+	deleteMessage(messageId: ID!): Message!
+
+	# Team
+	createTeam(team: CreateTeamInput!): Team!
+	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
+	createTeamIconUploadSession(teamId: ID!): ID!
+	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): ID!
+	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
+	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
+
+	# User
+	createUser(user: CreateUserInput!): User!
+	updateUser(userId: ID!, input: UpdateUserInput!): User!
+	createUserProfileUploadSession: ID!
+	finishUserProfileUploadSession(fileUploadSessionId: ID!): ID!
+
+	# Invitation
+	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!
+	updateInvitation(invitationId: ID!, input: UpdateInvitationInput!): Invitation!
+	acceptInvitation(invitationId: ID!, invitationCode: String!): Invitation!
+	declineInvitation(invitationId: ID!, invitationCode: String!): Invitation!
+	deleteInvitation(invitationId: ID!): Invitation!
+
+	# Sprint
+	createSprint(teamId: ID!, sprint: CreateSprintInput!): Sprint!
+	deleteSprint(sprintId: ID!): Sprint!
+	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
+	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
+
+	# File
+	createFileUploadSession(teamId: ID!): ID!
+	finishFileUploadSession(teamId: ID!): FileMetadata!
+	updateFileMetadata(fileId: ID!, input: FileMetadataInput!): FileMetadata!
+	deleteFile(fileId: ID!): FileMetadata!
+}
+
+type Task {
+	id: ID!
+	goal: String!
+	context: String
+	creator: User!
+	owner: User
+	owningTeam: Team!
+	status: TaskStatus!
+	isPlanned: Boolean!
+	comments: Thread!
+	createdAt: Time!
+	updatedAt: Time
+	dueAt: Time
+	effort: Int
+	availableActions: [TaskAction!]!
+	awaitForTasks: [Task!]!
+}
+
+type Message {
+	id: ID!
+	body: String!
+	author: User!
+	thread: Thread!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type Thread {
+	id: ID!
+	messages: [Message!]!
+}
+
+type Sprint {
+	id: ID!
+	startAt: Time!
+	endAt: Time!
+	owningTeam: Team!
+	tasks(filter: TaskFilter): [Task!]!
+	createdAt: Time!
+}
+
+type Team {
+	id: ID!
+	name: String!
+	iconUrl: String
+	createdAt: Time!
+	creator: User!
+	owner: User!
+	members: [User!]!
+	tasks(filter: TaskFilter): [Task!]!
+	invitations(filter: InvitationFilter): [Invitation!]!
+	sprints(filter: SprintFilter): [Sprint!]!
+}
+
+type Invitation {
+	id: ID!
+	sender: User!
+	receiverFirstName: String
+	receiverLastName: String
+	receiverEmail: String
+	receiver: User
+	joiningTeam: Team!
+	expireAt: Time!
+	createdAt: Time!
+	updatedAt: Time
+	status: InvitationStatus!
+	code: String!
+}
+
+type FileMetadata {
+	id: ID!
+	name: String!
+	createdAt: Time!
+	lastModifiedAt: Time
+	owningTeam: Team!
+}
+
+enum InvitationStatus {
+	PENDING
+	ACCEPTED
+	DECLINED
+	EXPIRED
+}
+
+enum TaskAction {
+	START
+	DELETE
+	ASSIGN_OWNER
+	REPORT_BLOCKED
+	MARK_COMPLETE
+}
+
+enum TaskStatus {
+	UPCOMING
+	IN_PROGRESS
+	PAUSED
+	AWAITING
+	BLOCK
+	DELIVERED
+}
+
+type User {
+	id: ID!
+	firstName: String!
+	lastName: String!
+	profileUrl: String
+	createdAt: Time!
+	updatedAt: Time
+	teams(filter: TeamFilter): [Team!]!
+}
+
+# Input
+input TaskFilter {
+	taskId: ID
+	ownerId: ID
+	goalContains: String
+	status: TaskStatus
+	isPlanned: Boolean
+}
+
+input TeamFilter {
+	teamId: ID
+}
+
+input InvitationFilter {
+	invitationId: ID
+	code: String
+}
+
+input SprintFilter {
+	sprintId: ID
+	startAtAndAfter: Time
+	sortByStartAt: Boolean
+	countLimit: Int
+}
+
+input CreateTaskInput {
+	goal: String!
+	context: String
+	ownerUserId: ID
+	dueAt: Time
+	isPlanned: Boolean
+}
+
+input UpdateTaskInput {
+	goal: String!
+	context: String
+	ownerUserId: ID
+	owningTeamId: ID!
+	effort: Int
+	dueAt: Time
+}
+
+input CreateMessageInput {
+	body: String!
+}
+
+input UpdateMessageInput {
+	body: String!
+}
+
+input CreateTeamInput {
+	name: String!
+}
+
+input UpdateTeamInput {
+	name: String!
+	ownerUserId: ID!
+}
+
+input CreateUserInput {
+	lastName: String!
+	firstName: String!
+	profileUrl: String
+}
+
+input UpdateUserInput {
+	lastName: String!
+	firstName: String!
+}
+
+input CreateInvitationInput {
+	receiverFirstName: String
+	receiverLastName: String
+	receiverEmail: String
+	expireAt: Time!
+}
+
+input UpdateInvitationInput {
+	receiverFirstName: String
+	receiverLastName: String
+	expireAt: Time!
+}
+
+input CreateSprintInput {
+	startAt: Time!
+}
+
+input FileMetadataInput {
+	name: String!
+}
+
+scalar Time

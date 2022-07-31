@@ -18,6 +18,23 @@ spec:
       key: kv/data/secrets/db/postgres/teamy/prod
       property: db-name
 ---
+apiVersion: kubernetes-client.io/v1
+kind: ExternalSecret
+metadata:
+  namespace: production
+  name: apps
+spec:
+  backendType: vault
+  vaultMountPoint: kubernetes
+  vaultRole: secrets-read-role
+  data:
+    - name: github-webhook-secret
+      key: kv/data/secrets/production/apps
+      property: github-webhook-secret
+    - name: service-account-api-token
+      key: kv/data/secrets/production/apps
+      property: service-account-api-token
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -48,6 +65,7 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 9000
+            - containerPort: 9001
           env:
             - name: DB_HOST
               value: postgres.db.svc.cluster.local
@@ -66,6 +84,34 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: db-name
+            - name: CLOUD_WEB_API_EXTERNAL_BASE_URL
+              value: https://cloud.teamyapp.com
+            - name: CLOUD_WEB_API_BASE_URL
+              value: http://cloud
+            - name: CLOUD_GRPC_API_HOST
+              value: cloud
+            - name: CLOUD_GRPC_API_PORT
+              value: "81"
+            - name: CLOUD_GRPC_API_SHOULD_ENCRYPT
+              value: "false"
+            - name: SERVICE_RUNNER_WEB_SERVER_PORT
+              value: "9000"
+            - name: SERVICE_RUNNER_GRPC_SERVER_PORT
+              value: "9001"
+            - name: SERVICE_RUNNER_IDENTITY_API_ENDPOINT
+              value: http://cloud/identity
+            - name: APPS_GITHUB_APP_NAME
+              value: teamy-apps
+            - name: APPS_GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apps
+                  key: github-webhook-secret
+            - name: APPS_SERVICE_ACCOUNT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: apps
+                  key: service-account-api-token
 ---
 apiVersion: v1
 kind: Service
@@ -76,9 +122,10 @@ spec:
   selector:
     app: teamy-backend
   ports:
-    - name: http
-      port: 80
-      targetPort: 9000
+    - name: web-services
+      port: 9000
+    - name: rpc-services
+      port: 9001
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
@@ -90,13 +137,22 @@ spec:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`backend.teamyapp.com`)
+      match: Host(`web-backend.teamyapp.com`)
       services:
         - kind: Service
           name: teamy-backend
           namespace: production
-          port: 80
+          port: 9000
           passHostHeader: true
+    - kind: Rule
+      match: Host(`rpc-backend.teamyapp.com`)
+      services:
+        - kind: Service
+          name: teamy-backend
+          namespace: production
+          port: 9001
+          passHostHeader: true
+          scheme: h2c
   tls:
     secretName: teamy-cert
 

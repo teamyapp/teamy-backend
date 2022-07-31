@@ -1,43 +1,20 @@
 kind: pipeline
 type: kubernetes
-name: testing
-
-steps:
-  - name: build image
-    image: plugins/docker
-    environment:
-      GITHUB_USERNAME:
-        from_secret: GITHUB_USERNAME
-      GITHUB_PERSONAL_ACCESS_TOKEN:
-        from_secret: GITHUB_PERSONAL_ACCESS_TOKEN
-    settings:
-      username:
-        from_secret: DOCKER_USERNAME
-      password:
-        from_secret: DOCKER_PASSWORD
-      repo: registry.digitalocean.com/teamyapp/teamy-backend-testing
-      build_args_from_env:
-        - GITHUB_USERNAME
-        - GITHUB_PERSONAL_ACCESS_TOKEN
-      registry: registry.digitalocean.com
-      target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-testing
-trigger:
-  branch:
-    - testing
-  event:
-    - push
----
-kind: pipeline
-type: kubernetes
 name: feature
 
 steps:
   - name: Run unit tests
-    image: golang:1.17
+    image: golang:1.18
     commands:
-      - go mod download
       - go test ./...
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: SLACK_WEBHOOK
+      channel: code
+    when:
+      status: [ success, failure ]
 trigger:
   branch:
     - master
@@ -47,28 +24,89 @@ trigger:
 ---
 kind: pipeline
 type: kubernetes
+name: testing
+
+steps:
+  - name: build app
+    image: golang:1.18-alpine
+    commands:
+      - apk add --no-cache git
+      - go build -o bin/main main.go
+      - sh ./scripts/prepare_env.sh
+  - name: build & publish Docker image
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: DOCKER_USERNAME
+      password:
+        from_secret: DOCKER_PASSWORD
+      repo: registry.digitalocean.com/teamyapp/teamy-backend-testing
+      registry: registry.digitalocean.com
+      target: production
+      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-testing
+  - name: notify image update
+    image: plugins/webhook
+    settings:
+      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      template: |
+        {
+          "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
+          "tag": "latest"
+        }
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: SLACK_WEBHOOK
+      channel: code
+    when:
+      status: [ success, failure ]
+trigger:
+  branch:
+    - testing
+  event:
+    - push
+---
+kind: pipeline
+type: kubernetes
 name: staging
 
 steps:
-  - name: build image
+  - name: build app
+    image: golang:1.18-alpine
+    commands:
+      - apk add --no-cache git
+      - go build -o bin/main main.go
+      - sh ./scripts/prepare_env.sh
+  - name: build & publish Docker image
     image: plugins/docker
     environment:
-      GITHUB_USERNAME:
-        from_secret: GITHUB_USERNAME
-      GITHUB_PERSONAL_ACCESS_TOKEN:
-        from_secret: GITHUB_PERSONAL_ACCESS_TOKEN
     settings:
       username:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend-staging
-      build_args_from_env:
-        - GITHUB_USERNAME
-        - GITHUB_PERSONAL_ACCESS_TOKEN
       registry: registry.digitalocean.com
       target: production
       cache_from: registry.digitalocean.com/teamyapp/teamy-backend-staging
+  - name: notify image update
+    image: plugins/webhook
+    settings:
+      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      template: |
+        {
+          "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
+          "tag": "latest"
+        }
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: SLACK_WEBHOOK
+      channel: code
+    when:
+      status: [ success, failure ]
 trigger:
   branch:
     - master
@@ -81,27 +119,43 @@ type: kubernetes
 name: production
 
 steps:
-  - name: build image
+  - name: build app
+    image: golang:1.18-alpine
+    commands:
+      - apk add --no-cache git
+      - go build -o bin/main main.go
+      - sh ./scripts/prepare_env.sh
+  - name: build & publish Docker image
     image: plugins/docker
-    environment:
-      GITHUB_USERNAME:
-        from_secret: GITHUB_USERNAME
-      GITHUB_PERSONAL_ACCESS_TOKEN:
-        from_secret: GITHUB_PERSONAL_ACCESS_TOKEN
     settings:
       username:
         from_secret: DOCKER_USERNAME
       password:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend
-      build_args_from_env:
-        - GITHUB_USERNAME
-        - GITHUB_PERSONAL_ACCESS_TOKEN
       registry: registry.digitalocean.com
       target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-staging
+      cache_from: registry.digitalocean.com/teamyapp/teamy-backend
+  - name: notify image update
+    image: plugins/webhook
+    settings:
+      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      template: |
+        {
+          "name": "registry.digitalocean.com/teamyapp/teamy-backend",
+          "tag": "latest"
+        }
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: SLACK_WEBHOOK
+      channel: code
+    when:
+      status: [ success, failure ]
 trigger:
   branch:
     - production
   event:
     - push
+

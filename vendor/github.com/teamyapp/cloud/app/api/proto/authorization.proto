@@ -1,0 +1,351 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package="github.com/cloud/app/api/proto";
+
+service Authorization {
+  rpc HasPermission(HasPermissionRequest) returns (HasPermissionResponse);
+
+  rpc ListResourceTypes(ListResourceTypesQuery) returns(ListResourceTypesResponse);
+  rpc RegisterResourceType(RegisterResourceTypeRequest) returns(google.protobuf.Empty);
+  rpc UnregisterResourceType(UnregisterResourceTypeRequest) returns (google.protobuf.Empty);
+
+  rpc ListResources(ListResourcesQuery) returns (ListResourcesResponse);
+  rpc RegisterResource(RegisterResourceRequest) returns (google.protobuf.Empty);
+  rpc UnregisterResource(UnregisterResourceRequest) returns (google.protobuf.Empty);
+
+  rpc ListResourceRelations(ListResourceRelationsQuery) returns (ListResourceRelationsResponse);
+  rpc AssignParentResource(AssignParentResourceRequest) returns (google.protobuf.Empty);
+  rpc UnassignParentResource(UnassignParentResourceRequest) returns (google.protobuf.Empty);
+
+  rpc ListOperations(ListOperationsQuery) returns (ListOperationsResponse);
+  rpc RegisterOperation(RegisterOperationRequest) returns (google.protobuf.Empty);
+  rpc UnregisterOperation(UnregisterOperationRequest) returns (google.protobuf.Empty);
+
+  rpc ListOperationRelations(ListOperationRelationsQuery) returns (ListOperationRelationsResponse);
+  rpc AssignParentOperation(AssignParentOperationRequest) returns (google.protobuf.Empty);
+  rpc UnassignParentOperation(UnassignParentOperationRequest) returns (google.protobuf.Empty);
+
+  rpc ListUserGroups(ListUserGroupsQuery) returns (ListUserGroupsResponse);
+  rpc CreateUserGroup(CreateUserGroupRequest) returns (google.protobuf.Empty);
+  rpc UpdateUserGroup(UpdateUserGroupRequest) returns (google.protobuf.Empty);
+  rpc DeleteUserGroup(DeleteUserGroupRequest) returns (google.protobuf.Empty);
+
+  rpc ListUserGroupMembers(ListUserGroupMembersQuery) returns (ListUserGroupMembersResponse);
+  rpc AddUserGroupMember(AddUserGroupMemberRequest) returns (google.protobuf.Empty);
+  rpc RemoveUserGroupMember(RemoveUserGroupMemberRequest) returns (google.protobuf.Empty);
+
+  rpc ListPermissions(ListPermissionsQuery) returns (ListPermissionsResponse);
+  rpc AddPermission(AddPermissionRequest) returns (google.protobuf.Empty);
+  rpc RemovePermission(RemovePermissionRequest) returns (google.protobuf.Empty);
+}
+
+// HasPermission
+message HasPermissionRequest {
+  string resourceType = 1;
+  uint64 resourceId = 2;
+  string operation = 3;
+  uint64 userId = 4;
+}
+
+message HasPermissionResponse {
+  bool hasPermission = 1;
+}
+
+// ListResourceTypes
+message ListResourceTypesQuery {
+  optional string resourceType = 1;
+  optional uint64 creatorUserId = 2;
+  optional google.protobuf.Timestamp startCreationTime = 3;
+  optional google.protobuf.Timestamp endCreationTime = 4;
+  optional uint64 limit = 5;
+}
+
+message ListResourceTypesResponse {
+  repeated ResourceType resourceTypes = 1;
+}
+
+message ResourceType {
+  string resourceType = 1;
+  uint64 createdAt = 2;
+  uint64 creatorUserId = 3;
+}
+
+// RegisterResourceType
+message RegisterResourceTypeRequest {
+  string resourceType = 1;
+}
+
+// UnregisterResource
+message UnregisterResourceTypeRequest {
+  string resourceType = 1;
+}
+
+// ListResources
+message ListResourcesQuery {
+  optional string resourceType = 1;
+  optional uint64 resourceId = 2;
+  optional uint64 creatorUserId = 3;
+  optional google.protobuf.Timestamp startCreationTime = 4;
+  optional google.protobuf.Timestamp endCreationTime = 5;
+  optional uint64 limit = 6;
+}
+
+message ListResourcesResponse {
+  repeated Resource resources = 1;
+}
+
+message Resource {
+  string resourceType = 1;
+  uint64 resourceId = 2;
+  uint64 createdAt = 3;
+  uint64 creatorUserId = 4;
+}
+
+// RegisterResource
+message RegisterResourceRequest {
+  string resourceType = 1;
+  uint64 resourceId = 2;
+}
+
+// UnregisterResource
+message UnregisterResourceRequest {
+  string resourceType = 1;
+  uint64 resourceId = 2;
+}
+
+// ListResourceRelations
+message ListResourceRelationsQuery {
+  optional string childResourceType = 1;
+  optional uint64 childResourceId = 2;
+  optional string parentResourceType = 3;
+  optional uint64 parentResourceId = 4;
+  optional uint64 creatorUserId = 5;
+  optional google.protobuf.Timestamp startCreationTime = 6;
+  optional google.protobuf.Timestamp endCreationTime = 7;
+  optional uint64 limit = 8;
+}
+
+message ListResourceRelationsResponse {
+  repeated ResourceRelation resourceRelations = 1;
+}
+
+message ResourceRelation {
+  string childResourceType = 1;
+  uint64 childResourceId = 2;
+  string parentResourceType = 3;
+  uint64 parentResourceId = 4;
+  uint64 createdAt = 5;
+  uint64 creatorUserId = 6;
+}
+
+// AssignParentResource
+message AssignParentResourceRequest {
+  string childResourceType = 1;
+  uint64 childResourceId = 2;
+  string parentResourceType = 3;
+  uint64 parentResourceId = 4;
+}
+
+// UnassignParentResource
+message UnassignParentResourceRequest {
+  string childResourceType = 1;
+  uint64 childResourceId = 2;
+  string parentResourceType = 3;
+  uint64 parentResourceId = 4;
+}
+
+// ListOperations
+message ListOperationsQuery {
+  optional string resourceType = 1;
+  optional string operation = 2;
+  optional uint64 creatorUserId = 3;
+  optional google.protobuf.Timestamp startCreationTime = 4;
+  optional google.protobuf.Timestamp endCreationTime = 5;
+  optional uint64 limit = 6;
+}
+
+message ListOperationsResponse {
+  repeated Operation operations = 1;
+}
+
+message Operation {
+  string resourceType = 1;
+  string operation = 2;
+  uint64 createdAt = 3;
+  uint64 creatorUserId = 4;
+}
+
+// RegisterOperation
+message RegisterOperationRequest {
+  string resourceType = 1;
+  string operation = 2;
+}
+
+// UnregisterOperation
+message UnregisterOperationRequest {
+  string resourceType = 1;
+  string operation = 2;
+}
+
+// ListOperationRelations
+message ListOperationRelationsQuery {
+  optional string childResourceType = 1;
+  optional string childOperation = 2;
+  optional string parentResourceType = 3;
+  optional string parentOperation = 4;
+  optional uint64 creatorUserId = 5;
+  optional google.protobuf.Timestamp startCreationTime = 6;
+  optional google.protobuf.Timestamp endCreationTime = 7;
+  optional uint64 limit = 8;
+}
+
+message ListOperationRelationsResponse {
+  repeated OperationRelation operationRelations = 1;
+}
+
+message OperationRelation {
+  string childResourceType = 1;
+  string childOperation = 2;
+  string parentResourceType = 3;
+  string parentOperation = 4;
+  uint64 createdAt = 5;
+  uint64 creatorUserId = 6;
+}
+
+// AssignParentOperation
+message AssignParentOperationRequest {
+  string childResourceType = 1;
+  string childOperation = 2;
+  string parentResourceType = 3;
+  string parentOperation = 4;
+}
+
+// UnassignParentOperation
+message UnassignParentOperationRequest {
+  string childResourceType = 1;
+  string childOperation = 2;
+  string parentResourceType = 3;
+  string parentOperation = 4;
+}
+
+// ListUserGroups
+message ListUserGroupsQuery {
+  optional uint64 id = 1;
+  optional string nameContains = 2;
+  optional string descriptionContains = 3;
+  optional uint64 creatorUserId = 4;
+  optional google.protobuf.Timestamp startCreationTime = 5;
+  optional google.protobuf.Timestamp endCreationTime = 6;
+  optional uint64 limit = 7;
+}
+
+message ListUserGroupsResponse {
+  repeated UserGroup userGroups = 1;
+}
+
+message UserGroup {
+  uint64 groupId = 1;
+  string name = 2;
+  string description = 3;
+  uint64 createdAt = 4;
+  uint64 creatorUserId = 5;
+  uint64 updatedAt = 6;
+}
+
+// CreateUserGroup
+message CreateUserGroupRequest {
+  string name = 1;
+  optional string description = 2;
+}
+
+// UpdateUserGroup
+message UpdateUserGroupRequest {
+  uint64 groupId = 1;
+  optional string name = 2;
+  optional string description = 3;
+}
+
+// DeleteUserGroup
+message DeleteUserGroupRequest {
+  uint64 groupId = 1;
+}
+
+// ListUserGroupMembers
+message ListUserGroupMembersQuery {
+  optional uint64 groupId = 1;
+  optional uint64 userId = 2;
+  optional uint64 creatorUserId = 3;
+  optional google.protobuf.Timestamp startCreationTime = 4;
+  optional google.protobuf.Timestamp endCreationTime = 5;
+  optional uint64 limit = 6;
+}
+
+message ListUserGroupMembersResponse {
+  repeated UserGroupMember userGroupMembers = 1;
+}
+
+message UserGroupMember {
+  uint64 groupId  = 1;
+  uint64 userId = 2;
+  uint64 createdAt = 3;
+  uint64 creatorUserId = 4;
+}
+
+// AddUserGroupMember
+message AddUserGroupMemberRequest {
+  uint64 groupId = 1;
+  uint64 userId = 2;
+}
+
+// RemoveUserGroupMember
+message RemoveUserGroupMemberRequest {
+  uint64 groupId = 1;
+  uint64 userId = 2;
+}
+
+// ListPermissions
+message ListPermissionsQuery {
+  optional string resourceType = 1;
+  optional uint64 resourceId = 2;
+  optional string operation = 3;
+  optional uint64 groupId = 4;
+  optional uint64 creatorUserId = 5;
+  optional google.protobuf.Timestamp startCreationTime = 6;
+  optional google.protobuf.Timestamp endCreationTime = 7;
+  optional uint64 limit = 8;
+}
+
+message ListPermissionsResponse {
+  repeated Permission permissions = 1;
+}
+
+message Permission {
+  string resourceType = 1;
+  uint64 resourceId = 2;
+  string operation = 3;
+  uint64 groupId = 4;
+  uint64 createdAt = 5;
+  uint64 creatorUserId = 6;
+}
+
+// AddPermission
+message AddPermissionRequest {
+  string resourceType = 1;
+  uint64 resourceId = 2;
+  string operation = 3;
+  uint64 groupId = 4;
+  uint64 creatorUserId = 5;
+}
+
+// RemovePermission
+message RemovePermissionRequest {
+  string resourceType = 1;
+  uint64 resourceId = 2;
+  string operation = 3;
+  uint64 groupId = 4;
+}
+
+

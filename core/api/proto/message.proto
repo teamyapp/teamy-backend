@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/core/api/proto";
+
+service Message {
+	rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
+	rpc UpdateMessage(UpdateMessageRequest) returns (google.protobuf.Empty);
+	rpc DeleteMessage(DeleteMessageRequest) returns (google.protobuf.Empty);
+}
+
+message CreateMessageRequest {
+	uint64 threadId = 1;
+	string body = 2;
+}
+
+message CreateMessageResponse {
+	uint64 messageId = 1;
+}
+
+message UpdateMessageRequest {
+	uint64 messageId = 1;
+	string body = 2;
+}
+
+message DeleteMessageRequest {
+	uint64 messageId = 1;
+}

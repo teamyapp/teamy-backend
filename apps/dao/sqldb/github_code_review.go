@@ -1,0 +1,144 @@
+package sqldb
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"log"
+
+	"github.com/teamyapp/teamy-backend/apps/dao"
+	"github.com/teamyapp/teamy-backend/apps/entity"
+)
+
+type GithubCodeReview struct {
+	db *sql.DB
+}
+
+var _ dao.GithubCodeReview = (*GithubCodeReview)(nil)
+
+func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(githubPullRequestNodeID string, githubReviewerID uint64) (entity.GithubCodeReview, error) {
+	codeReview := entity.GithubCodeReview{}
+	err := g.db.QueryRow(`
+	SELECT
+	    github_pull_request_node_id,
+    	github_reviewer_id,
+    	internal_code_review_task_id,
+    	internal_address_feedback_task_id,
+    	round
+	FROM apps_github_code_review
+	WHERE github_pull_request_node_id=$1 AND github_reviewer_id = $2;
+`,
+		githubPullRequestNodeID,
+		githubReviewerID).
+		Scan(
+			&codeReview.GithubPullRequestNodeID,
+			&codeReview.GithubReviewerID,
+			&codeReview.InternalCodeReviewTaskID,
+			&codeReview.InternalAddressFeedbackTaskID,
+			&codeReview.Round,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.GithubCodeReview{}, dao.ErrNotFound(fmt.Sprintf(
+			"GithubCodeReview not found: githubReviewerID=%v", githubReviewerID))
+	}
+
+	return codeReview, err
+}
+
+func (g GithubCodeReview) FindCodeReviewByInternalTaskID(internalTaskID uint64) (entity.GithubCodeReview, error) {
+	codeReview := entity.GithubCodeReview{}
+	err := g.db.QueryRow(`
+	SELECT
+	    github_pull_request_node_id,
+    	github_reviewer_id,
+    	internal_code_review_task_id,
+    	internal_address_feedback_task_id,
+    	round
+	FROM apps_github_code_review
+	WHERE internal_task_id = $1;
+`,
+		internalTaskID).
+		Scan(
+			&codeReview.GithubPullRequestNodeID,
+			&codeReview.GithubReviewerID,
+			&codeReview.InternalCodeReviewTaskID,
+			&codeReview.InternalAddressFeedbackTaskID,
+			&codeReview.Round,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.GithubCodeReview{}, dao.ErrNotFound(fmt.Sprintf(
+			"GithubCodeReview not found: internalTaskID=%v", internalTaskID))
+	}
+
+	return codeReview, err
+}
+
+func (g GithubCodeReview) CreateCodeReview(codeReview entity.GithubCodeReview) error {
+	_, err := g.db.Exec(`
+	INSERT INTO apps_github_code_review
+	(
+	    github_pull_request_node_id,
+    	github_reviewer_id,
+    	internal_code_review_task_id,
+    	internal_address_feedback_task_id,
+    	round
+	)
+	VALUES ($1, $2, $3, $4, $5);
+`,
+		codeReview.GithubPullRequestNodeID,
+		codeReview.GithubReviewerID,
+		codeReview.InternalCodeReviewTaskID,
+		codeReview.InternalAddressFeedbackTaskID,
+		codeReview.Round,
+	)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return err
+}
+
+func (g GithubCodeReview) UpdateCodeReview(codeReview entity.GithubCodeReview) error {
+	_, err := g.db.Exec(`
+		UPDATE apps_github_code_review
+		SET
+			github_pull_request_node_id = $1,
+    		github_reviewer_id = $2,
+			internal_code_review_task_id = $3,
+			internal_address_feedback_task_id = $4,
+			round = $5
+		WHERE github_pull_request_node_id=$6 AND github_reviewer_id = $7;`,
+		codeReview.GithubPullRequestNodeID,
+		codeReview.GithubReviewerID,
+		codeReview.InternalCodeReviewTaskID,
+		codeReview.InternalAddressFeedbackTaskID,
+		codeReview.Round,
+		codeReview.GithubPullRequestNodeID,
+		codeReview.GithubReviewerID,
+	)
+	return err
+}
+
+func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(internalTaskID uint64) error {
+	_, err := g.db.Exec(`
+		DELETE FROM apps_github_code_review
+		WHERE internal_task_id = $1;
+		`,
+		internalTaskID)
+	return err
+}
+
+func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(githubReviewerID uint64) error {
+	_, err := g.db.Exec(`
+		DELETE FROM apps_github_code_review
+		WHERE github_reviewer_id = $1;
+		`,
+		githubReviewerID)
+	return err
+}
+
+func NewGithubCodeReview(sqlDB *sql.DB) GithubCodeReview {
+	return GithubCodeReview{db: sqlDB}
+}

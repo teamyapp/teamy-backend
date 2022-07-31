@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/core/api/proto";
+
+service Task {
+	rpc FindTask(GetTaskRequest) returns (TaskMsg);
+	rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+	rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty);
+	rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty);
+	rpc MoveTaskToUpcoming(MoveTaskToUpcomingRequest) returns (google.protobuf.Empty);
+	rpc MoveTaskToInProgress(MoveTaskToInProgressRequest) returns (google.protobuf.Empty);
+	rpc MoveTaskToDelivered(MoveTaskToDeliveredRequest) returns (google.protobuf.Empty);
+	rpc MoveTaskToBlocked(MoveTaskToBlockedRequest) returns (google.protobuf.Empty);
+	rpc AddAwaitForTask(AddAwaitForTaskRequest) returns (google.protobuf.Empty);
+	rpc RemoveAwaitForTask(RemoveAwaitForTaskRequest) returns (google.protobuf.Empty);
+}
+
+enum TaskStatus {
+	Upcoming = 0;
+	InProgress = 1;
+	Paused = 2;
+	Awaiting = 3;
+	Blocked = 4;
+	Delivered = 5;
+}
+
+message TaskMsg {
+	uint64 taskId = 1;
+	string goal = 2;
+	optional string context = 3;
+	optional int32 effort = 4;
+	optional google.protobuf.Timestamp dueAt = 5;
+	TaskStatus status = 6;
+	google.protobuf.Timestamp createdAt = 7;
+	optional google.protobuf.Timestamp updatedAt = 8;
+	optional uint64 ownerUserId = 9;
+	uint64 owningTeamId = 10;
+	uint64 creatorUserId = 11;
+	uint64 commentThreadId = 12;
+}
+
+message GetTaskRequest {
+	uint64 taskId = 1;
+}
+
+message CreateTaskRequest {
+	uint64 teamId = 1;
+	string goal = 2;
+	optional string context = 3;
+	optional uint64 ownerUserId = 4;
+	optional google.protobuf.Timestamp dueAt = 5;
+}
+
+message CreateTaskResponse {
+	uint64 taskId = 1;
+}
+
+message UpdateTaskRequest {
+	uint64 taskId = 1;
+	string goal = 2;
+	optional string context = 3;
+	optional uint64 ownerUserId = 4;
+	uint64 owningTeamId = 5;
+	optional int32 effort = 6;
+	optional google.protobuf.Timestamp dueAt = 7;
+}
+
+message DeleteTaskRequest {
+	uint64 taskId = 1;
+}
+
+message MoveTaskToUpcomingRequest {
+	uint64 taskId = 1;
+}
+
+message MoveTaskToInProgressRequest {
+	uint64 taskId = 1;
+}
+
+message MoveTaskToDeliveredRequest {
+	uint64 taskId = 1;
+}
+
+message MoveTaskToBlockedRequest {
+	uint64 taskId = 1;
+	string reason = 2;
+}
+
+message AddAwaitForTaskRequest {
+	uint64 awaitingTaskId = 1;
+	uint64 awaitForTaskId = 2;
+}
+
+message RemoveAwaitForTaskRequest {
+	uint64 awaitingTaskId = 1;
+	uint64 awaitForTaskId = 2;
+}

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package="github.com/cloud/app/api/proto";
+
+service Identity {
+  rpc GetInternalUserId(GetInternalUserIdRequest) returns (GetInternalUserIdResponse);
+}
+
+message GetInternalUserIdRequest {
+  string authProvider = 1;
+  string externalUserId = 2;
+}
+
+message GetInternalUserIdResponse {
+  uint64 internalUserId = 1;
+}
