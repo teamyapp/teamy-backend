@@ -32,7 +32,7 @@ type Mutation {
 	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	createTeamIconUploadSession(teamId: ID!): ID!
-	finishTeamIconUploadSession(teamId: ID!): ID!
+	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): ID!
 	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
 	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
 
