@@ -10,6 +10,7 @@ import (
 type Config struct {
 	sqldb.Config
 	config.Repo
+	CloudWebAPIExternalBaseURL string `envconfig:"CLOUD_WEB_API_EXTERNAL_BASE_URL" default:"http://localhost:9011"`
 	CloudWebAPIBaseURL         string `envconfig:"CLOUD_WEB_API_BASE_URL" default:"http://localhost:9011"`
 	CloudGRPCAPIHost           string `envconfig:"CLOUD_GRPC_API_HOST" default:"localhost"`
 	CloudGRPCAPIPort           int    `envconfig:"CLOUD_GRPC_API_PORT" default:"9011"`

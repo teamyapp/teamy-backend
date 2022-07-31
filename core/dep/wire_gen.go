@@ -26,7 +26,7 @@ func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 	return stateSyncer
 }
 
-func InitGraphQLAPI(cloudWebAPIBaseURL CloudWebAPIBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (api2.GraphQL, error) {
+func InitGraphQLAPI(cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (api2.GraphQL, error) {
 	user := sqldb.NewUser(sqlDB)
 	team := sqldb.NewTeam(sqlDB)
 	teamMember := sqldb.NewTeamMember(sqlDB)
@@ -49,7 +49,7 @@ func InitGraphQLAPI(cloudWebAPIBaseURL CloudWebAPIBaseURL, cloudAPIClientRegistr
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(sqlDB)
 	serviceSprint := service.NewSprint(cloudAPIClientRegistry, task, sprint, sprintTaskRelation)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(sqlDB)
-	serviceUser := newUserService(cloudWebAPIBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
+	serviceUser := newUserService(cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
 	dependencies := gql.NewDependencies(cloudAPIClientRegistry, user, team, teamMember, invitation, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint, serviceUser)
 	resolver := gql.NewResolver(dependencies)
 	graphQL := api2.NewGraphQL(resolver)
@@ -75,7 +75,7 @@ func InitTaskRPCAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyn
 
 // wire.go:
 
-type CloudWebAPIBaseURL string
+type CloudWebAPIExternalBaseURL string
 
 var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread, sqldb.NewSprint, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintTaskRelation, sqldb.NewUserFileUploadSession)
 
@@ -84,10 +84,10 @@ var collectionSyncerSet = wire.NewSet(collection.NewInvitationSyncer, collection
 var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewTeam, service.NewSprint, newUserService)
 
 func newUserService(
-	cloudWebAPIBaseURL CloudWebAPIBaseURL,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *api.ClientRegistry,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
 ) service.User {
-	return service.NewUser(string(cloudWebAPIBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
+	return service.NewUser(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
 }

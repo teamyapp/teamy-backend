@@ -84,6 +84,8 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: db-name
+            - name: CLOUD_WEB_API_EXTERNAL_BASE_URL
+              value: https://cloud.testing.teamyapp.com
             - name: CLOUD_WEB_API_BASE_URL
               value: http://cloud
             - name: CLOUD_GRPC_API_HOST
@@ -97,7 +99,7 @@ spec:
             - name: SERVICE_RUNNER_GRPC_SERVER_PORT
               value: "9001"
             - name: SERVICE_RUNNER_IDENTITY_API_ENDPOINT
-              value: http://cloud.staging.svc.cluster.local/identity
+              value: http://cloud/identity
             - name: APPS_GITHUB_APP_NAME
               value: teamy-apps-testing
             - name: APPS_GITHUB_WEBHOOK_SECRET

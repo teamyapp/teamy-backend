@@ -16,10 +16,10 @@ import (
 )
 
 type User struct {
-	cloudWebAPIBaseURL       string
-	cloudClientRegistry      *cloudAPI.ClientRegistry
-	userDao                  dao.User
-	userFileUploadSessionDao dao.UserFileUploadSession
+	cloudWebAPIExternalBaseURL string
+	cloudClientRegistry        *cloudAPI.ClientRegistry
+	userDao                    dao.User
+	userFileUploadSessionDao   dao.UserFileUploadSession
 }
 
 func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error) {
@@ -94,7 +94,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		return 0, err
 	}
 
-	profileURL := io.GetFileURL(u.cloudWebAPIBaseURL, uploadSession.FileId)
+	profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	user.ProfileURL = &profileURL
 	user.UpdatedAt = &now
 	err = u.userDao.UpdateUser(user)
@@ -102,15 +102,15 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 }
 
 func NewUser(
-	cloudWebAPIBaseURL string,
+	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
 ) User {
 	return User{
-		cloudWebAPIBaseURL:       cloudWebAPIBaseURL,
-		cloudClientRegistry:      cloudClientRegistry,
-		userDao:                  userDao,
-		userFileUploadSessionDao: userFileUploadSessionDao,
+		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
+		cloudClientRegistry:        cloudClientRegistry,
+		userDao:                    userDao,
+		userFileUploadSessionDao:   userFileUploadSessionDao,
 	}
 }
