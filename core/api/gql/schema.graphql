@@ -32,15 +32,15 @@ type Mutation {
 	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	createTeamIconUploadSession(teamId: ID!): ID!
-	finishTeamIconUploadSession(teamId: ID!): FileMetadata!
+	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): ID!
 	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
 	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
 
 	# User
 	createUser(user: CreateUserInput!): User!
 	updateUser(userId: ID!, input: UpdateUserInput!): User!
-	createUserProfileUploadSession(userId: ID!): ID!
-	finishUserProfileUploadSession(userId: ID!): FileMetadata!
+	createUserProfileUploadSession: ID!
+	finishUserProfileUploadSession(fileUploadSessionId: ID!): ID!
 
 	# Invitation
 	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!

@@ -84,11 +84,13 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: db-name
-            - name: CLOUD_API_HOST
+            - name: CLOUD_WEB_API_BASE_URL
+              value: http://cloud
+            - name: CLOUD_GRPC_API_HOST
               value: cloud
-            - name: CLOUD_API_PORT
+            - name: CLOUD_GRPC_API_PORT
               value: "81"
-            - name: CLOUD_API_SHOULD_ENCRYPT
+            - name: CLOUD_GRPC_API_SHOULD_ENCRYPT
               value: "false"
             - name: SERVICE_RUNNER_WEB_SERVER_PORT
               value: "9000"

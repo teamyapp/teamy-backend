@@ -24,6 +24,7 @@ type Dependencies struct {
 	taskService                service.Task
 	teamService                service.Team
 	sprintService              service.Sprint
+	userService                service.User
 }
 
 func NewDependencies(
@@ -43,6 +44,7 @@ func NewDependencies(
 	taskService service.Task,
 	teamService service.Team,
 	sprintService service.Sprint,
+	userService service.User,
 ) *Dependencies {
 	return &Dependencies{
 		cloudClientRegistry:        cloudClientRegistry,
@@ -61,5 +63,6 @@ func NewDependencies(
 		taskService:                taskService,
 		teamService:                teamService,
 		sprintService:              sprintService,
+		userService:                userService,
 	}
 }

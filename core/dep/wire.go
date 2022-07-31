@@ -16,6 +16,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
+type CloudWebAPIBaseURL string
+
 var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
@@ -27,6 +29,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Sprint), new(sqldb.Sprint)),
 	wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)),
 	wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)),
+	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -37,6 +40,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewSprint,
 	sqldb.NewTaskAwaitForRelation,
 	sqldb.NewSprintTaskRelation,
+	sqldb.NewUserFileUploadSession,
 )
 
 var collectionSyncerSet = wire.NewSet(
@@ -54,6 +58,7 @@ var serviceSet = wire.NewSet(
 	service.NewTask,
 	service.NewTeam,
 	service.NewSprint,
+	newUserService,
 )
 
 func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
@@ -65,6 +70,7 @@ func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 }
 
 func InitGraphQLAPI(
+	cloudWebAPIBaseURL CloudWebAPIBaseURL,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -101,4 +107,13 @@ func InitTaskRPCAPI(
 		api.NewTaskRPC,
 	)
 	return api.TaskRPC{}
+}
+
+func newUserService(
+	cloudWebAPIBaseURL CloudWebAPIBaseURL,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
+	userDao dao.User,
+	userFileUploadSessionDao dao.UserFileUploadSession,
+) service.User {
+	return service.NewUser(string(cloudWebAPIBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
 }
