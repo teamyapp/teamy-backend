@@ -123,6 +123,10 @@ func (t Team) Sprints(ct context.Context, args struct {
 	}), nil
 }
 
+func (t Team) AppInstallations() ([]AppInstallation, error) {
+	panic("implement me")
+}
+
 func newTeam(deps *Dependencies, team entity.Team) Team {
 	return Team{
 		deps: deps,

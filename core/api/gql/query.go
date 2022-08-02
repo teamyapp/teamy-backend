@@ -109,6 +109,12 @@ func (q Query) Sprints(ct context.Context, args struct {
 	}), nil
 }
 
+func (q Query) Apps(ct context.Context, args struct {
+	Filter *AppFilter
+}) ([]App, error) {
+	panic("implement me")
+}
+
 func NewQuery(deps *Dependencies) Query {
 	return Query{
 		deps: deps,
