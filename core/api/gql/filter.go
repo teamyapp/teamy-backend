@@ -29,6 +29,10 @@ type SprintFilter struct {
 	CountLimit      *int32
 }
 
+type AppFilter struct {
+	IsPublic *bool
+}
+
 func matchTeam(filter TeamFilter, team entity.Team) bool {
 	if filter.TeamID != nil {
 		teamID, err := fromGraphQLIDPtr(filter.TeamID)

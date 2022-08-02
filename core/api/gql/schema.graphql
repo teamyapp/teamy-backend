@@ -9,6 +9,7 @@ type Query {
 	teams(filter: TeamFilter): [Team!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
+	apps(filter: AppFilter): [App!]!
 }
 
 type Mutation {
@@ -62,6 +63,8 @@ type Mutation {
 	deleteFile(fileId: ID!): FileMetadata!
 }
 
+scalar Time
+
 type Task {
 	id: ID!
 	goal: String!
@@ -114,6 +117,7 @@ type Team {
 	tasks(filter: TaskFilter): [Task!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
+	appInstallations: [AppInstallation!]!
 }
 
 type Invitation {
@@ -173,7 +177,30 @@ type User {
 	teams(filter: TeamFilter): [Team!]!
 }
 
-# Input
+type App {
+	id: ID!
+	name: String!
+	iconUrl: String!
+	creator: User!
+	includeUi: Boolean!
+	uiEntryPointUrl: String
+	installations: [AppInstallation!]!
+	installationCount: Int!
+	isPublic: Boolean!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type AppInstallation {
+	id: ID!
+	app: App!
+	secret: String!
+	installedTeam: Team!
+	installedBy: User!
+	installedAt: Time!
+}
+
+# Filters
 input TaskFilter {
 	taskId: ID
 	ownerId: ID
@@ -198,6 +225,11 @@ input SprintFilter {
 	countLimit: Int
 }
 
+input AppFilter {
+	isPublic: Boolean
+}
+
+# Inputs
 input CreateTaskInput {
 	goal: String!
 	context: String
@@ -263,5 +295,3 @@ input CreateSprintInput {
 input FileMetadataInput {
 	name: String!
 }
-
-scalar Time
