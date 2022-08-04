@@ -47,7 +47,7 @@ func InitGraphQLAPI(cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloud
 	serviceTask := service.NewTask(cloudAPIClientRegistry, task, thread, taskAwaitForRelation, taskSyncer, taskAwaitForRelationSyncer, serviceThread)
 	sprint := sqldb.NewSprint(sqlDB)
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(sqlDB)
-	serviceTeam := newTeamService(cloudWebAPIExternalBaseURL, task, sprint, team, cloudAPIClientRegistry, teamFileUploadSession)
+	serviceTeam := newTeamService(cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, task, sprint, team, teamFileUploadSession)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(sqlDB)
 	serviceSprint := service.NewSprint(cloudAPIClientRegistry, task, sprint, sprintTaskRelation)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(sqlDB)
@@ -96,11 +96,11 @@ func newUserService(
 
 func newTeamService(
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	cloudClientRegistry *api.ClientRegistry,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
-	cloudClientRegistry *api.ClientRegistry,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 ) service.Team {
-	return service.NewTeam(string(cloudWebAPIExternalBaseURL), taskDao, sprintDao, teamDao, cloudClientRegistry, teamFileUploadSessionDao)
+	return service.NewTeam(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, taskDao, sprintDao, teamDao, teamFileUploadSessionDao)
 }

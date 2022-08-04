@@ -122,11 +122,11 @@ func newUserService(
 
 func newTeamService(
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 ) service.Team {
-	return service.NewTeam(string(cloudWebAPIExternalBaseURL), taskDao, sprintDao, teamDao, cloudClientRegistry, teamFileUploadSessionDao)
+	return service.NewTeam(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, taskDao, sprintDao, teamDao, teamFileUploadSessionDao)
 }

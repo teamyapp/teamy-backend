@@ -16,10 +16,10 @@ import (
 
 type Team struct {
 	cloudWebAPIExternalBaseURL string
+	cloudClientRegistry        *cloudAPI.ClientRegistry
 	taskDao                    dao.Task
 	sprintDao                  dao.Sprint
 	teamDao                    dao.Team
-	cloudClientRegistry        *cloudAPI.ClientRegistry
 	teamFileUploadSessionDao   dao.TeamFileUploadSession
 }
 
@@ -88,14 +88,13 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		teamID,
 		entity.IconTeamFileUploadSessionType,
 		fileUploadSessionID)
-
 	if err != nil {
 		log.Println(err)
 		return 0, err
 	}
 
 	if iconUploadSession.IsCompleted {
-		err = fmt.Errorf("profile upload session is already completed: teamID=%v, fileUploadSessionID=%v",
+		err = fmt.Errorf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
 			teamID, fileUploadSessionID)
 		log.Println(err)
 		return 0, err
@@ -113,7 +112,6 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	findUploadSessionReq := proto.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
-
 	uploadSession, err := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if err != nil {
 		log.Println(err)
@@ -129,23 +127,23 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	team.IconURL = &iconUrl
 	team.UpdatedAt = &now
-	err = t.teamDao.UpdateTeam(team)
 	return fileUploadSessionID, err
 }
 
 func NewTeam(
 	cloudWebAPIExternalBaseURL string,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	teamFileUploadSessionDao dao.TeamFileUploadSession) Team {
+	teamFileUploadSessionDao dao.TeamFileUploadSession,
+) Team {
 	return Team{
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
+		cloudClientRegistry:        cloudClientRegistry,
 		taskDao:                    taskDao,
 		sprintDao:                  sprintDao,
 		teamDao:                    teamDao,
-		cloudClientRegistry:        cloudClientRegistry,
 		teamFileUploadSessionDao:   teamFileUploadSessionDao,
 	}
 }

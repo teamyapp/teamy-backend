@@ -3,7 +3,6 @@ package gql
 import (
 	"context"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
@@ -97,7 +96,7 @@ func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 		return "", err
 	}
 
-	return graphql.ID(strconv.FormatUint(uploadSessionID, 10)), nil
+	return toGraphQLID(uploadSessionID), nil
 }
 
 func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
@@ -121,7 +120,7 @@ func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 		return "", err
 	}
 
-	return graphql.ID(strconv.FormatUint(uploadSessionID, 10)), nil
+	return toGraphQLID(uploadSessionID), nil
 }
 
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
