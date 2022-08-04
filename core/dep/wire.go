@@ -30,6 +30,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)),
 	wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)),
 	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
+	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -41,6 +42,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewTaskAwaitForRelation,
 	sqldb.NewSprintTaskRelation,
 	sqldb.NewUserFileUploadSession,
+	sqldb.NewTeamFileUploadSession,
 )
 
 var collectionSyncerSet = wire.NewSet(
@@ -56,7 +58,7 @@ var collectionSyncerSet = wire.NewSet(
 var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
-	service.NewTeam,
+	newTeamService,
 	service.NewSprint,
 	newUserService,
 )
@@ -116,4 +118,15 @@ func newUserService(
 	userFileUploadSessionDao dao.UserFileUploadSession,
 ) service.User {
 	return service.NewUser(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
+}
+
+func newTeamService(
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	taskDao dao.Task,
+	sprintDao dao.Sprint,
+	teamDao dao.Team,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
+	teamFileUploadSessionDao dao.TeamFileUploadSession,
+) service.Team {
+	return service.NewTeam(string(cloudWebAPIExternalBaseURL), taskDao, sprintDao, teamDao, cloudClientRegistry, teamFileUploadSessionDao)
 }
