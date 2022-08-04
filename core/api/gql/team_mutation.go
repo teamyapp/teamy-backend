@@ -93,6 +93,7 @@ func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 
 	uploadSessionID, err := m.deps.teamService.CreateTeamIconUploadSession(ct, teamID)
 	if err != nil {
+	    log.Println(err)
 		return "", err
 	}
 
