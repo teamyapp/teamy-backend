@@ -118,6 +118,7 @@ func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 
 	uploadSessionID, err := m.deps.teamService.FinishTeamIconUploadSession(ct, teamID, fileUploadSessionID)
 	if err != nil {
+        log.Println(err)
 		return "", err
 	}
 
