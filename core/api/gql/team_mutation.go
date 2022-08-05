@@ -85,16 +85,44 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 	TeamID graphql.ID
 }) (graphql.ID, error) {
-	// TODO: implement me
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	uploadSessionID, err := m.deps.teamService.CreateTeamIconUploadSession(ct, teamID)
+	if err != nil {
+	    log.Println(err)
+		return "", err
+	}
+
+	return toGraphQLID(uploadSessionID), nil
 }
 
 func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 	TeamID              graphql.ID
 	FileUploadSessionID graphql.ID
 }) (graphql.ID, error) {
-	// TODO: implement me
-	panic("implement me")
+	fileUploadSessionID, err := fromGraphQLID(args.FileUploadSessionID)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	uploadSessionID, err := m.deps.teamService.FinishTeamIconUploadSession(ct, teamID, fileUploadSessionID)
+	if err != nil {
+        log.Println(err)
+		return "", err
+	}
+
+	return toGraphQLID(uploadSessionID), nil
 }
 
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
