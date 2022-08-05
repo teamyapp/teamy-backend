@@ -127,7 +127,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	team.IconURL = &iconUrl
 	team.UpdatedAt = &now
-	return fileUploadSessionID, err
+	return fileUploadSessionID, t.teamDao.UpdateTeam(team)
 }
 
 func NewTeam(
