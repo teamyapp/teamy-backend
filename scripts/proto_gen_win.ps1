@@ -1,5 +1,4 @@
 $paths = @('core','apps')
-
 foreach ($path in $paths)
 {
   $protoFiles = Get-ChildItem -Path $path -Filter *.proto -File -Recurse -Name
