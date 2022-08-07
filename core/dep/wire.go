@@ -111,6 +111,18 @@ func InitTaskRPCAPI(
 	return api.TaskRPC{}
 }
 
+func InitSprintRPCAPI(
+	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	sqlDB *sql.DB,
+) api.SprintRPC {
+	wire.Build(
+		daoSet,
+		serviceSet,
+		api.NewSprintRPC,
+	)
+	return api.SprintRPC{}
+}
+
 func newUserService(
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,

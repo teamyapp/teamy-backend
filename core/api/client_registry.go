@@ -7,8 +7,9 @@ import (
 )
 
 type ClientRegistry struct {
-	conn       *grpc.ClientConn
-	taskClient proto.TaskClient
+	conn         *grpc.ClientConn
+	taskClient   proto.TaskClient
+	sprintClient proto.SprintClient
 }
 
 func (c *ClientRegistry) TaskClient() proto.TaskClient {
@@ -17,6 +18,14 @@ func (c *ClientRegistry) TaskClient() proto.TaskClient {
 	}
 
 	return c.taskClient
+}
+
+func (c *ClientRegistry) SprintClient() proto.SprintClient {
+	if c.sprintClient == nil {
+		c.sprintClient = proto.NewSprintClient(c.conn)
+	}
+
+	return c.sprintClient
 }
 
 func NewClientRegistry(connCfg rpc.ConnectionConfig) (*ClientRegistry, error) {

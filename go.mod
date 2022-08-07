@@ -6,8 +6,8 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.4.0
 	github.com/teamyapp/cloud v0.0.0-20220731050509-c82c3a21bd01
-	google.golang.org/grpc v1.47.0
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/grpc v1.48.0
+	google.golang.org/protobuf v1.28.1
 )
 
 //replace github.com/teamyapp/cloud => ../cloud
@@ -26,8 +26,8 @@ require (
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
 	github.com/rubenv/sql-migrate v1.1.2 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a // indirect
-	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
-	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
+	golang.org/x/net v0.0.0-20220805013720-a33c5aa5df48 // indirect
+	golang.org/x/sys v0.0.0-20220804214406-8e32c043e418 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220711200234-e2551ce405a2 // indirect
+	google.golang.org/genproto v0.0.0-20220805133916-01dd62135a58 // indirect
 )
