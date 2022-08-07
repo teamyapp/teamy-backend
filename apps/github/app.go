@@ -26,7 +26,6 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
-
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
