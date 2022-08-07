@@ -79,17 +79,17 @@ func (m Mutation) CreateUserProfileUploadSession(ct context.Context) (graphql.ID
 
 func (m Mutation) FinishUserProfileUploadSession(ct context.Context, args struct {
 	FileUploadSessionID graphql.ID
-}) (graphql.ID, error) {
+}) (User, error) {
 	fileUploadSessionID, err := fromGraphQLID(args.FileUploadSessionID)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return User{}, err
 	}
 
-	uploadSessionID, err := m.deps.userService.FinishUserProfileUploadSession(ct, fileUploadSessionID)
+	user, err := m.deps.userService.FinishUserProfileUploadSession(ct, fileUploadSessionID)
 	if err != nil {
-		return "", err
+		return User{}, err
 	}
 
-	return graphql.ID(strconv.FormatUint(uploadSessionID, 10)), nil
+	return newUser(m.deps, user), nil
 }

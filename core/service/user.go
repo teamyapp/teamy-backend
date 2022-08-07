@@ -46,11 +46,11 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error)
 	return res.UploadSessionId, err
 }
 
-func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (uint64, error) {
+func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (entity.User, error) {
 	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.User{}, err
 	}
 
 	profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserID(
@@ -59,14 +59,14 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		fileUploadSessionID)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.User{}, err
 	}
 
 	if profileUploadSession.IsCompleted {
 		err = fmt.Errorf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
 			userID, fileUploadSessionID)
 		log.Println(err)
-		return 0, err
+		return entity.User{}, err
 	}
 
 	now := time.Now()
@@ -75,7 +75,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(profileUploadSession)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.User{}, err
 	}
 
 	findUploadSessionReq := proto.FindUploadSessionRequest{
@@ -85,20 +85,20 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	uploadSession, err := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.User{}, err
 	}
 
 	user, err := u.userDao.FindUserByID(userID)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.User{}, err
 	}
 
 	profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	user.ProfileURL = &profileURL
 	user.UpdatedAt = &now
 	err = u.userDao.UpdateUser(user)
-	return fileUploadSessionID, err
+	return user, err
 }
 
 func NewUser(
