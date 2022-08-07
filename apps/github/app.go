@@ -515,7 +515,6 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 	}
 
 	err = a.githubCodeReviewDao.CreateCodeReview(codeReview)
-
 	if err != nil {
 		log.Println(err)
 		return err
