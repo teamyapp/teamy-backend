@@ -98,7 +98,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	user.ProfileURL = &profileURL
 	user.UpdatedAt = &now
 	err = u.userDao.UpdateUser(user)
-	return user, err
+	return user, u.userDao.UpdateUser(user)
 }
 
 func NewUser(
