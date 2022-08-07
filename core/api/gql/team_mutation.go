@@ -93,7 +93,7 @@ func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 
 	uploadSessionID, err := m.deps.teamService.CreateTeamIconUploadSession(ct, teamID)
 	if err != nil {
-	    log.Println(err)
+		log.Println(err)
 		return "", err
 	}
 
@@ -103,26 +103,26 @@ func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 	TeamID              graphql.ID
 	FileUploadSessionID graphql.ID
-}) (graphql.ID, error) {
+}) (Team, error) {
 	fileUploadSessionID, err := fromGraphQLID(args.FileUploadSessionID)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return Team{}, err
 	}
 
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return Team{}, err
 	}
 
-	uploadSessionID, err := m.deps.teamService.FinishTeamIconUploadSession(ct, teamID, fileUploadSessionID)
+	team, err := m.deps.teamService.FinishTeamIconUploadSession(ct, teamID, fileUploadSessionID)
 	if err != nil {
-        log.Println(err)
-		return "", err
+		log.Println(err)
+		return Team{}, err
 	}
 
-	return toGraphQLID(uploadSessionID), nil
+	return newTeam(m.deps, team), nil
 }
 
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {

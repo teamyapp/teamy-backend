@@ -83,21 +83,21 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 	return res.UploadSessionId, err
 }
 
-func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fileUploadSessionID uint64) (uint64, error) {
+func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fileUploadSessionID uint64) (entity.Team, error) {
 	iconUploadSession, err := t.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamID(
 		teamID,
 		entity.IconTeamFileUploadSessionType,
 		fileUploadSessionID)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.Team{}, err
 	}
 
 	if iconUploadSession.IsCompleted {
 		err = fmt.Errorf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
 			teamID, fileUploadSessionID)
 		log.Println(err)
-		return 0, err
+		return entity.Team{}, err
 	}
 
 	now := time.Now()
@@ -106,7 +106,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	err = t.teamFileUploadSessionDao.UpdateTeamFileUploadSession(iconUploadSession)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.Team{}, err
 	}
 
 	findUploadSessionReq := proto.FindUploadSessionRequest{
@@ -115,19 +115,19 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	uploadSession, err := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.Team{}, err
 	}
 
 	team, err := t.teamDao.FindTeamByID(teamID)
 	if err != nil {
 		log.Println(err)
-		return 0, err
+		return entity.Team{}, err
 	}
 
 	iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	team.IconURL = &iconUrl
 	team.UpdatedAt = &now
-	return fileUploadSessionID, t.teamDao.UpdateTeam(team)
+	return team, t.teamDao.UpdateTeam(team)
 }
 
 func NewTeam(
