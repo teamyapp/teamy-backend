@@ -67,7 +67,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 		return true
 	})
 	if len(sprints) < 1 {
-		err := ErrNotFound("no current sprint found: teamID=%v, currentTime=%v", now.UTC())
+		err := ErrNotFound(fmt.Sprintf("no current sprint found: teamID=%d, currentTime=%v", teamID, now.UTC()))
 		log.Println(err)
 		return entity.Sprint{}, err
 	}

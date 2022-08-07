@@ -17,8 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/runner"
@@ -26,6 +24,8 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -199,7 +199,7 @@ func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	evtType := r.Header.Get("X-GitHub-Event")
 	log.Printf("Github event received: deliveryID=%s, event=%s\n", deliveryID, evtType)
-	ct, _ := context.WithTimeout(context.Background(), time.Minute*60) // TODO
+	ct, _ := context.WithTimeout(context.Background(), a.config.RequestTimeout)
 	err = a.processEvent(ct, eventType(evtType), buf)
 	if err != nil {
 		log.Printf("fail to process Github event: %v\n", err)
