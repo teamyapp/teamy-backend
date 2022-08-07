@@ -579,12 +579,7 @@ func (a App) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, taskID
 
 	_, err = a.teamyClientRegistry.SprintClient().AddTaskToSprint(ct, addTaskToSprintReq)
 
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (a App) getInstallGithubAppURL(stateID uint64) (string, error) {
