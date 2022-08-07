@@ -17,6 +17,9 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/runner"
@@ -24,6 +27,7 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -197,7 +201,8 @@ func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	evtType := r.Header.Get("X-GitHub-Event")
 	log.Printf("Github event received: deliveryID=%s, event=%s\n", deliveryID, evtType)
-	err = a.processEvent(r.Context(), eventType(evtType), buf)
+	ct, _ := context.WithTimeout(context.Background(), time.Minute*60) // TODO
+	err = a.processEvent(ct, eventType(evtType), buf)
 	if err != nil {
 		log.Printf("fail to process Github event: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -315,7 +320,7 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 		return err
 	}
 
-	return nil
+	return a.tryAddTaskToCurrentSprint(ct, teamID, createTaskRes.TaskId)
 }
 
 func (a App) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt event, payload []byte) error {
@@ -499,13 +504,26 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 	}
 
 	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, 1, evt, prEvt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	codeReview = entity.GithubCodeReview{
 		GithubPullRequestNodeID:  githubPullRequestNodeID,
 		InternalCodeReviewTaskID: createdTaskID,
 		GithubReviewerID:         githubReviewerID,
 		Round:                    1,
 	}
-	return a.githubCodeReviewDao.CreateCodeReview(codeReview)
+
+	err = a.githubCodeReviewDao.CreateCodeReview(codeReview)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return a.tryAddTaskToCurrentSprint(ct, teamID, createdTaskID)
 }
 
 func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerID uint64, round int, evt event, prEvt pullRequestEvent) (uint64, error) {
@@ -542,6 +560,34 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 
 	log.Printf("Pull request is waiting for review task: pullRequestTaskID=%v, githubReviewerID=%v, reviewTaskID=%v\n", pullRequestTaskID, githubReviewerID, createTaskRes.TaskId)
 	return createTaskRes.TaskId, nil
+}
+
+func (a App) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, taskID uint64) error {
+	getCurrentSprintReq := &proto.GetCurrentSprintRequest{TeamId: teamID}
+
+	getCurrentSprintRes, err := a.teamyClientRegistry.SprintClient().GetCurrentSprint(ct, getCurrentSprintReq)
+
+	if err != nil {
+		st := status.Convert(err)
+
+		if st.Code() == codes.NotFound {
+			return nil
+		}
+
+		log.Println(err)
+		return err
+	}
+
+	addTaskToSprintReq := &proto.AddTaskToSprintRequest{TaskId: taskID, SprintId: getCurrentSprintRes.Id}
+
+	_, err = a.teamyClientRegistry.SprintClient().AddTaskToSprint(ct, addTaskToSprintReq)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }
 
 func (a App) getInstallGithubAppURL(stateID uint64) (string, error) {

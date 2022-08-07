@@ -75,6 +75,15 @@ func InitTaskRPCAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyn
 	return taskRPC
 }
 
+func InitSprintRPCAPI(cloudAPIClientRegistry *api.ClientRegistry, sqlDB *sql.DB) api2.SprintRPC {
+	task := sqldb.NewTask(sqlDB)
+	sprint := sqldb.NewSprint(sqlDB)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(sqlDB)
+	serviceSprint := service.NewSprint(cloudAPIClientRegistry, task, sprint, sprintTaskRelation)
+	sprintRPC := api2.NewSprintRPC(serviceSprint)
+	return sprintRPC
+}
+
 // wire.go:
 
 type CloudWebAPIExternalBaseURL string
