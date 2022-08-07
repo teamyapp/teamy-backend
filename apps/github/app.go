@@ -561,12 +561,9 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 
 func (a App) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, taskID uint64) error {
 	getCurrentSprintReq := &proto.GetCurrentSprintRequest{TeamId: teamID}
-
 	getCurrentSprintRes, err := a.teamyClientRegistry.SprintClient().GetCurrentSprint(ct, getCurrentSprintReq)
-
 	if err != nil {
 		st := status.Convert(err)
-
 		if st.Code() == codes.NotFound {
 			return nil
 		}
@@ -576,9 +573,7 @@ func (a App) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, taskID
 	}
 
 	addTaskToSprintReq := &proto.AddTaskToSprintRequest{TaskId: taskID, SprintId: getCurrentSprintRes.Id}
-
 	_, err = a.teamyClientRegistry.SprintClient().AddTaskToSprint(ct, addTaskToSprintReq)
-
 	return err
 }
 

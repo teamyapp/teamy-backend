@@ -51,7 +51,7 @@ func (s Sprint) FindTasksInSprint(
 }
 
 func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Sprint, error) {
-	sprints, err := s.sprintDao.FindAllSprints()
+	sprints, err := s.sprintDao.FindSprintsByTeamID(teamID)
 	if err != nil {
 		log.Println(err)
 		return entity.Sprint{}, err
@@ -60,19 +60,14 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 	now := time.Now()
 
 	sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
-		if teamID != sprint.OwningTeamID {
-			return false
-		}
-
 		if now.Before(sprint.StartAt) || now.After(sprint.EndAt) {
 			return false
 		}
 
 		return true
 	})
-
 	if len(sprints) < 1 {
-		err := ErrNotFound("no active sprint found")
+		err := ErrNotFound("no current sprint found: teamID=%v, currentTime=%v", now.UTC())
 		log.Println(err)
 		return entity.Sprint{}, err
 	}
