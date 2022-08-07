@@ -97,7 +97,6 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	user.ProfileURL = &profileURL
 	user.UpdatedAt = &now
-	err = u.userDao.UpdateUser(user)
 	return user, u.userDao.UpdateUser(user)
 }
 
