@@ -179,22 +179,30 @@ type User {
 
 type App {
 	id: ID!
-	name: String!
-	iconUrl: String!
-	creator: User!
-	includeUi: Boolean!
-	uiEntryPointUrl: String
+	apiSecret: String!
+	activeVersion: AppVersion
+	versions: [AppVersion!]!
 	installations: [AppInstallation!]!
 	installationCount: Int!
 	isPublic: Boolean!
+	creator: User!
 	createdAt: Time!
 	updatedAt: Time
+}
+
+type AppVersion {
+	app: App!
+	versionNumber: Int!
+	name: String!
+	iconUrl: String!
+	hasUiExtension: Boolean!
+	uiExtensionEntryPointPath: String
+	createdAt: Time!
 }
 
 type AppInstallation {
 	id: ID!
 	app: App!
-	secret: String!
 	installedTeam: Team!
 	installedBy: User!
 	installedAt: Time!

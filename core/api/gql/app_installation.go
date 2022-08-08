@@ -16,10 +16,6 @@ func (a AppInstallation) App() (App, error) {
 	panic("implement me")
 }
 
-func (a AppInstallation) Secret() string {
-	panic("implement me")
-}
-
 func (a AppInstallation) InstalledTeam() (Team, error) {
 	panic("implement me")
 }
