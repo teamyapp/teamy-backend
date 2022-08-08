@@ -242,7 +242,8 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 		return
 	}
 
-	requiredUserActions, err := a.githubRequiredUserActionDao.FindRequiredUserActionsByUserID(teamID, userID)
+	requiredUserActions, err := a.githubRequiredUserActionDao.
+		FindRequiredUserActionsByActionUserID(teamID, userID)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)

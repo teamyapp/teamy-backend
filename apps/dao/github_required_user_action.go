@@ -5,9 +5,9 @@ import (
 )
 
 type GithubRequiredUserAction interface {
-	FindRequiredUserActionsByUserID(
+	FindRequiredUserActionsByActionUserID(
 		teamID uint64,
-		userID uint64,
+		actionUserID uint64,
 	) ([]entity.GithubRequiredUserAction, error)
 	CreateRequiredUserAction(requiredUserAction entity.GithubRequiredUserAction) error
 	UpdateRequiredUserAction(requiredUserAction entity.GithubRequiredUserAction) error
