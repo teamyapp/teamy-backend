@@ -12,27 +12,31 @@ func (a App) ID() graphql.ID {
 	panic("implement me")
 }
 
-func (a App) Name() string {
+func (a App) APISecret() string {
 	panic("implement me")
 }
 
-func (a App) IconURL() string {
+func (a App) ActiveVersion() (*AppVersion, error) {
 	panic("implement me")
 }
 
-func (a App) Creator() (User, error) {
+func (a App) Versions() ([]AppVersion, error) {
 	panic("implement me")
 }
 
-func (a App) IncludeUI() bool {
+func (a App) Installations() ([]AppInstallation, error) {
 	panic("implement me")
 }
 
-func (a App) UIEntryPointURL() *string {
+func (a App) InstallationCount() int32 {
 	panic("implement me")
 }
 
 func (a App) IsPublic() bool {
+	panic("implement me")
+}
+
+func (a App) Creator() (User, error) {
 	panic("implement me")
 }
 
@@ -41,14 +45,6 @@ func (a App) CreatedAt() graphql.Time {
 }
 
 func (a App) UpdatedAt() *graphql.Time {
-	panic("implement me")
-}
-
-func (a App) Installations() ([]AppInstallation, error) {
-	panic("implement me")
-}
-
-func (a App) InstallationCount() (int32, error) {
 	panic("implement me")
 }
 
