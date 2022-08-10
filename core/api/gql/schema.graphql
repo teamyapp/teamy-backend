@@ -54,6 +54,7 @@ type Mutation {
 	createSprint(teamId: ID!, sprint: CreateSprintInput!): Sprint!
 	deleteSprint(sprintId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
+	moveTasksToSprint(fromSprintId: ID!, toSprintId: ID!, taskIds: [ID!]!): [Task!]!
 	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
 
 	# File

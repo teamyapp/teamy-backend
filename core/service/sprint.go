@@ -172,6 +172,45 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	return task, s.taskDao.UpdateTask(task)
 }
 
+func (s Sprint) MoveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {
+	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+	foundSprintIDs := collect.Filter(sprintIDs, func(currSprintID uint64) bool {
+		return currSprintID == fromSprintID
+	})
+	if len(foundSprintIDs) < 1 {
+		return entity.Task{}, fmt.Errorf("relation not found: sprintID=%v taskID=%v", fromSprintID, taskID)
+	}
+
+	relation := entity.SprintTaskRelation{
+		SprintID:  toSprintID,
+		TaskID:    taskID,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	err = s.sprintTaskRelationDao.MoveTaskToSprint(ct, fromSprintID, relation, taskID)
+
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+	task, err := s.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	if len(sprintIDs) > 1 {
+		return task, nil
+	}
+
+	task.IsPlanned = false
+	return task, s.taskDao.UpdateTask(task)
+}
+
 func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, error) {
 	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
 	if err != nil {
