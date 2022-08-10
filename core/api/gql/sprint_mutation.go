@@ -117,7 +117,7 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 		return []Task{}, err
 	}
 
-	res := []Task{}
+	taskIDs := []uint64{}
 
 	for _, TaskID := range args.TaskIDs {
 		taskID, err := fromGraphQLID(TaskID)
@@ -127,7 +127,19 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 			continue
 		}
 
-		task, err := m.deps.sprintService.MoveTaskToSprint(ct, fromSprintID, toSprintID, taskID)
+		taskIDs = append(taskIDs, taskID)
+	}
+
+	tasks, err := m.deps.sprintService.MoveTasksToSprint(ct, fromSprintID, toSprintID, taskIDs)
+
+	if err != nil {
+		log.Println(err)
+		return []Task{}, err
+	}
+
+	res := []Task{}
+
+	for _, task := range tasks {
 		res = append(res, newTask(m.deps, task))
 	}
 

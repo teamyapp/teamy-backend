@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -24,6 +25,7 @@ type Sprint struct {
 	taskDao               dao.Task
 	sprintDao             dao.Sprint
 	sprintTaskRelationDao dao.SprintTaskRelation
+	db                    *sql.DB
 }
 
 func (s Sprint) FindTasksInSprint(
@@ -172,7 +174,26 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	return task, s.taskDao.UpdateTask(task)
 }
 
-func (s Sprint) MoveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {
+func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
+
+	res := []entity.Task{}
+
+	for _, taskID := range taskIDs {
+		task, err := s.moveTaskToSprint(ct, fromSprintID, toSprintID, taskID)
+
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		res = append(res, task)
+	}
+
+	return res, nil
+
+}
+
+func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {
 	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
 	if err != nil {
 		log.Println(err)
@@ -185,13 +206,28 @@ func (s Sprint) MoveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		return entity.Task{}, fmt.Errorf("relation not found: sprintID=%v taskID=%v", fromSprintID, taskID)
 	}
 
+	tx, err := s.db.BeginTx(ct, nil)
+
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	defer tx.Rollback()
+
+	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(fromSprintID, taskID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
 	relation := entity.SprintTaskRelation{
 		SprintID:  toSprintID,
 		TaskID:    taskID,
 		CreatedAt: time.Now().UTC(),
 	}
 
-	err = s.sprintTaskRelationDao.MoveTaskToSprint(ct, fromSprintID, relation, taskID)
+	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(relation)
 
 	if err != nil {
 		log.Println(err)
@@ -203,12 +239,12 @@ func (s Sprint) MoveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		return entity.Task{}, err
 	}
 
-	if len(sprintIDs) > 1 {
-		return task, nil
+	if err = tx.Commit(); err != nil {
+		log.Println(err)
+		return entity.Task{}, err
 	}
 
-	task.IsPlanned = false
-	return task, s.taskDao.UpdateTask(task)
+	return task, nil
 }
 
 func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, error) {
@@ -250,11 +286,13 @@ func NewSprint(
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintTaskRelationDao dao.SprintTaskRelation,
+	db *sql.DB,
 ) Sprint {
 	return Sprint{
 		cloudClientRegistry:   cloudClientRegistry,
 		taskDao:               taskDao,
 		sprintDao:             sprintDao,
 		sprintTaskRelationDao: sprintTaskRelationDao,
+		db:                    db,
 	}
 }

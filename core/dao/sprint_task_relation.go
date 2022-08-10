@@ -1,8 +1,6 @@
 package dao
 
 import (
-	"context"
-
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -11,5 +9,4 @@ type SprintTaskRelation interface {
 	FindSprintIDsByTaskID(taskID uint64) ([]uint64, error)
 	CreateSprintTaskRelation(relation entity.SprintTaskRelation) error
 	DeleteSprintTaskRelation(sprintID uint64, taskID uint64) error
-	MoveTaskToSprint(ct context.Context, fromSprintID uint64, relation entity.SprintTaskRelation, taskID uint64) error
 }

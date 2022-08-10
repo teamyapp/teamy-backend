@@ -1,7 +1,6 @@
 package sqldb
 
 import (
-	"context"
 	"database/sql"
 	"log"
 
@@ -103,37 +102,6 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(sprintID uint64, taskID uin
 		sprintID,
 		taskID)
 	return err
-}
-
-func (s SprintTaskRelation) MoveTaskToSprint(ct context.Context, fromSprintID uint64, relation entity.SprintTaskRelation, taskID uint64) error {
-	// Get a Tx for making transaction requests.
-	tx, err := s.db.BeginTx(ct, nil)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	// Defer a rollback in case anything fails.
-	defer tx.Rollback()
-	err = s.DeleteSprintTaskRelation(fromSprintID, taskID)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	s.CreateSprintTaskRelation(relation)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	if err = tx.Commit(); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
 }
 
 func NewSprintTaskRelation(db *sql.DB) SprintTaskRelation {
