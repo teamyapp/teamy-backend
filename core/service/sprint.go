@@ -189,7 +189,6 @@ func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSpr
 	}
 
 	return res, nil
-
 }
 
 func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {
@@ -198,6 +197,7 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		log.Println(err)
 		return entity.Task{}, err
 	}
+
 	foundSprintIDs := collect.Filter(sprintIDs, func(currSprintID uint64) bool {
 		return currSprintID == fromSprintID
 	})
@@ -223,11 +223,11 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 	}
 
 	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(relation)
-
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
 	}
+
 	task, err := s.taskDao.FindTaskByID(taskID)
 	if err != nil {
 		log.Println(err)
