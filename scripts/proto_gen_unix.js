@@ -28,5 +28,3 @@ function findFilesRec(dir, outputFile) {
 		}
 	});
 }
-
-
