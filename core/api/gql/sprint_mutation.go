@@ -99,3 +99,49 @@ func (m Mutation) RemoveTaskFromSprint(ct context.Context, args struct {
 
 	return newTask(m.deps, task), nil
 }
+
+func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
+	FromSprintID graphql.ID
+	ToSprintID   graphql.ID
+	TaskIDs      []graphql.ID
+}) ([]Task, error) {
+	fromSprintID, err := fromGraphQLID(args.FromSprintID)
+	if err != nil {
+		log.Println(err)
+		return []Task{}, err
+	}
+
+	toSprintID, err := fromGraphQLID(args.ToSprintID)
+	if err != nil {
+		log.Println(err)
+		return []Task{}, err
+	}
+
+	taskIDs := []uint64{}
+
+	for _, TaskID := range args.TaskIDs {
+		taskID, err := fromGraphQLID(TaskID)
+
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		taskIDs = append(taskIDs, taskID)
+	}
+
+	tasks, err := m.deps.sprintService.MoveTasksToSprint(ct, fromSprintID, toSprintID, taskIDs)
+
+	if err != nil {
+		log.Println(err)
+		return []Task{}, err
+	}
+
+	res := []Task{}
+
+	for _, task := range tasks {
+		res = append(res, newTask(m.deps, task))
+	}
+
+	return res, err
+}

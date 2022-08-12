@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -172,6 +173,70 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	return task, s.taskDao.UpdateTask(task)
 }
 
+func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
+
+	res := []entity.Task{}
+
+	for _, taskID := range taskIDs {
+		task, err := s.moveTaskToSprint(ct, fromSprintID, toSprintID, taskID)
+
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		res = append(res, task)
+	}
+
+	return res, nil
+}
+
+func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {
+	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	foundSprintIDs := collect.Filter(sprintIDs, func(currSprintID uint64) bool {
+		return currSprintID == fromSprintID
+	})
+	if len(foundSprintIDs) < 1 {
+		return entity.Task{}, fmt.Errorf("relation not found: sprintID=%v taskID=%v", fromSprintID, taskID)
+	}
+
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(fromSprintID, taskID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	relation := entity.SprintTaskRelation{
+		SprintID:  toSprintID,
+		TaskID:    taskID,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(relation)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	task, err := s.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		log.Println(err)
+		return entity.Task{}, err
+	}
+
+	return task, nil
+}
+
 func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, error) {
 	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
 	if err != nil {
@@ -211,6 +276,7 @@ func NewSprint(
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintTaskRelationDao dao.SprintTaskRelation,
+	db *sql.DB,
 ) Sprint {
 	return Sprint{
 		cloudClientRegistry:   cloudClientRegistry,
