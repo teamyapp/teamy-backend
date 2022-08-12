@@ -331,7 +331,6 @@ func (a App) refreshRequiredActionsStatus(
 }
 
 func (a App) processEvent(ct context.Context, evtType eventType, payload []byte) error {
-	// TODO: parse & react to Github event
 	var evt event
 	err := json.Unmarshal(payload, &evt)
 	if err != nil {
