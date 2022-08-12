@@ -25,7 +25,6 @@ type Sprint struct {
 	taskDao               dao.Task
 	sprintDao             dao.Sprint
 	sprintTaskRelationDao dao.SprintTaskRelation
-	db                    *sql.DB
 }
 
 func (s Sprint) FindTasksInSprint(
@@ -206,14 +205,10 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		return entity.Task{}, fmt.Errorf("relation not found: sprintID=%v taskID=%v", fromSprintID, taskID)
 	}
 
-	tx, err := s.db.BeginTx(ct, nil)
-
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
 	}
-
-	defer tx.Rollback()
 
 	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(fromSprintID, taskID)
 	if err != nil {
@@ -235,11 +230,6 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 	}
 	task, err := s.taskDao.FindTaskByID(taskID)
 	if err != nil {
-		log.Println(err)
-		return entity.Task{}, err
-	}
-
-	if err = tx.Commit(); err != nil {
 		log.Println(err)
 		return entity.Task{}, err
 	}
@@ -293,6 +283,5 @@ func NewSprint(
 		taskDao:               taskDao,
 		sprintDao:             sprintDao,
 		sprintTaskRelationDao: sprintTaskRelationDao,
-		db:                    db,
 	}
 }
