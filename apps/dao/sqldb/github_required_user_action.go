@@ -43,6 +43,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 		err = rows.Scan(
 			&requiredAction.ID,
 			&requiredAction.TeamID,
+			&requiredAction.ActionUserID,
 			&requiredAction.UserActionType,
 			&requiredAction.IsCompleted,
 			&requiredAction.RequestedAt,
@@ -75,6 +76,7 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(requiredUserAction en
 `,
 		requiredUserAction.ID,
 		requiredUserAction.TeamID,
+		requiredUserAction.ActionUserID,
 		requiredUserAction.UserActionType,
 		requiredUserAction.IsCompleted,
 		requiredUserAction.RequestedAt,

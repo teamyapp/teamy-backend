@@ -5,11 +5,11 @@ import (
 )
 
 type GithubRequiredUserAction struct {
-	ID                uint64
-	TeamID            uint64
-	ActionUserID      uint64
-	UserActionType    GithubUserActionType
-	IsCompleted       bool
-	RequestedAt       time.Time
-	RequestedByUserID uint64
+	ID                uint64               `json:"id"`
+	TeamID            uint64               `json:"teamID"`
+	ActionUserID      uint64               `json:"actionUserID"`
+	UserActionType    GithubUserActionType `json:"userActionType"`
+	IsCompleted       bool                 `json:"isCompleted"`
+	RequestedAt       time.Time            `json:"requestedAt"`
+	RequestedByUserID uint64               `json:"requestedByUserID"`
 }
