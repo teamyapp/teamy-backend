@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/google/wire v0.5.0
+	github.com/gorilla/mux v1.8.0
 	github.com/graph-gophers/graphql-go v1.4.0
 	github.com/teamyapp/cloud v0.0.0-20220731050509-c82c3a21bd01
 	google.golang.org/grpc v1.48.0
@@ -17,7 +18,6 @@ require (
 	github.com/go-ini/ini v1.66.6 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect

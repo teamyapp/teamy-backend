@@ -22,6 +22,7 @@ func InitGithubApp(cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientReg
 	githubAppInstallation := sqldb.NewGithubAppInstallation(sqlDB)
 	githubPullRequest := sqldb.NewGithubPullRequest(sqlDB)
 	githubCodeReview := sqldb.NewGithubCodeReview(sqlDB)
-	app := github.NewApp(config, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview)
+	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(sqlDB)
+	app := github.NewApp(config, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction)
 	return app, nil
 }

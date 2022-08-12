@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -17,9 +18,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/core/api"
@@ -33,13 +38,14 @@ const githubAppPathPrefix = "/apps/github"
 const codeReviewMaxWait = 24 * time.Hour
 
 type App struct {
-	config                   AppConfig
-	cloudClientRegistry      *cloudAPI.ClientRegistry
-	teamyClientRegistry      *api.ClientRegistry
-	githubAppInstallStateDao dao.GithubAppInstallState
-	githubAppInstallationDao dao.GithubAppInstallation
-	githubPullRequestDao     dao.GithubPullRequest
-	githubCodeReviewDao      dao.GithubCodeReview
+	config                      AppConfig
+	cloudClientRegistry         *cloudAPI.ClientRegistry
+	teamyClientRegistry         *api.ClientRegistry
+	githubAppInstallStateDao    dao.GithubAppInstallState
+	githubAppInstallationDao    dao.GithubAppInstallation
+	githubPullRequestDao        dao.GithubPullRequest
+	githubCodeReviewDao         dao.GithubCodeReview
+	githubRequiredUserActionDao dao.GithubRequiredUserAction
 }
 
 var _ runner.Service = (*App)(nil)
@@ -47,37 +53,48 @@ var _ runner.Service = (*App)(nil)
 func (a App) Start(rn *runner.ServiceRunner) error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
-			Path:        path.Join(githubAppPathPrefix, "install"),
+			Path:        path.Join(githubAppPathPrefix, "teams", "{teamId}", "install"),
 			Method:      http.MethodGet,
-			HandlerFunc: a.install,
+			HandlerFunc: a.webInstall,
 		},
 		{
 			Path:        path.Join(githubAppPathPrefix, "install", "finish"),
 			Method:      http.MethodGet,
-			HandlerFunc: a.finishInstall,
+			HandlerFunc: a.webFinishInstall,
 		},
 		{
 			Path:        path.Join(githubAppPathPrefix, "webhook"),
 			Method:      http.MethodPost,
-			HandlerFunc: a.onEventNotify,
+			HandlerFunc: a.webOnEventNotify,
+		},
+		{
+			Path:        path.Join(githubAppPathPrefix, "teams", "{teamId}", "required-actions", "current-user"),
+			Method:      http.MethodGet,
+			HandlerFunc: a.webListRequiredActionsForCurrentUser,
+		},
+		{
+			Path:        path.Join(githubAppPathPrefix, "teams", "{teamId}", "required-actions", "create"),
+			Method:      http.MethodPost,
+			HandlerFunc: a.webCreateRequiredAction,
 		},
 	})
 	return nil
 }
 
-func (a App) install(w http.ResponseWriter, r *http.Request) {
+func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	// Verify request sender is team owner
-	query := r.URL.Query()
-	teamID, err := strconv.ParseUint(query.Get("team-id"), 10, 64)
+	teamIDParam := mux.Vars(r)["teamId"]
+	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
 	if err != nil {
-		log.Println("must provide team-id")
+		log.Println("must provide teamId")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	redirectURL := query.Get("redirect-url")
+	query := r.URL.Query()
+	redirectURL := query.Get("redirectUrl")
 	if len(redirectURL) == 0 {
-		log.Println("must provide redirect-url")
+		log.Println("must provide redirectUrl")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -113,7 +130,7 @@ func (a App) install(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, installURL, http.StatusTemporaryRedirect)
 }
 
-func (a App) finishInstall(w http.ResponseWriter, r *http.Request) {
+func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	stateIDParam := query.Get("state")
 	stateID, err := strconv.ParseUint(stateIDParam, 10, 64)
@@ -161,7 +178,7 @@ func (a App) finishInstall(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, state.RedirectURL, http.StatusTemporaryRedirect)
 }
 
-func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
+func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	bodySignatureHeader := r.Header.Get("X-Hub-Signature-256")
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
@@ -210,8 +227,110 @@ func (a App) onEventNotify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := ctx.UserIDFromContext(r.Context())
+	if err != nil {
+		log.Println("must provide userId")
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+
+	teamIDParam := mux.Vars(r)["teamId"]
+	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
+	if err != nil {
+		log.Println("must provide teamId")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	requiredUserActions, err := a.githubRequiredUserActionDao.
+		FindRequiredUserActionsByActionUserID(teamID, userID)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: receive notification from cloud and update required action status
+	requiredUserActions, err = a.refreshRequiredActionsStatus(requiredUserActions)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	requiredUserActions = collect.Filter(requiredUserActions, func(action entity.GithubRequiredUserAction) bool {
+		return action.IsCompleted == false
+	})
+	web.WriteJSON(w, requiredUserActions)
+}
+
+func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
+	requestSenderID, err := ctx.UserIDFromContext(r.Context())
+	if err != nil {
+		log.Println("must provide request sender ID")
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+
+	teamIDParam := mux.Vars(r)["teamId"]
+	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
+	if err != nil {
+		log.Println("must provide teamId")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	body := struct {
+		UserActionType entity.GithubUserActionType `json:"userActionType"`
+		ActionUserID   uint64                      `json:"actionUserId"`
+	}{}
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = json.Unmarshal(buf, &body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	genActionIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubRequiredActionID"}
+	genActionIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(context.Background(), genActionIDReq)
+	if err != nil {
+		log.Printf("fail to generate required action ID: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	action := entity.GithubRequiredUserAction{
+		ID:                genActionIDRes.UniqueNumber,
+		TeamID:            teamID,
+		ActionUserID:      body.ActionUserID,
+		UserActionType:    body.UserActionType,
+		IsCompleted:       false,
+		RequestedAt:       time.Now().UTC(),
+		RequestedByUserID: requestSenderID,
+	}
+
+	err = a.githubRequiredUserActionDao.CreateRequiredUserAction(action)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a App) refreshRequiredActionsStatus(
+	requiredActions []entity.GithubRequiredUserAction,
+) ([]entity.GithubRequiredUserAction, error) {
+	// TODO: refresh required action status
+	return requiredActions, nil
+}
+
 func (a App) processEvent(ct context.Context, evtType eventType, payload []byte) error {
-	// TODO: parse & react to Github event
 	var evt event
 	err := json.Unmarshal(payload, &evt)
 	if err != nil {
@@ -597,15 +716,17 @@ func NewApp(
 	githubAppInstallationDao dao.GithubAppInstallation,
 	githubPullRequestDao dao.GithubPullRequest,
 	githubCodeReviewDao dao.GithubCodeReview,
+	githubRequiredUserActionDao dao.GithubRequiredUserAction,
 ) App {
 	return App{
-		config:                   cfg,
-		cloudClientRegistry:      cloudClientRegistry,
-		teamyClientRegistry:      teamyClientRegistry,
-		githubAppInstallStateDao: githubAppInstallStateDao,
-		githubAppInstallationDao: githubAppInstallationDao,
-		githubPullRequestDao:     githubPullRequestDao,
-		githubCodeReviewDao:      githubCodeReviewDao,
+		config:                      cfg,
+		cloudClientRegistry:         cloudClientRegistry,
+		teamyClientRegistry:         teamyClientRegistry,
+		githubAppInstallStateDao:    githubAppInstallStateDao,
+		githubAppInstallationDao:    githubAppInstallationDao,
+		githubPullRequestDao:        githubPullRequestDao,
+		githubCodeReviewDao:         githubCodeReviewDao,
+		githubRequiredUserActionDao: githubRequiredUserActionDao,
 	}
 }
 
