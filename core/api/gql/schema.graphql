@@ -299,6 +299,7 @@ input UpdateInvitationInput {
 
 input CreateSprintInput {
 	startAt: Time!
+	endAt: Time!
 }
 
 input FileMetadataInput {

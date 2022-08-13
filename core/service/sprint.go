@@ -14,10 +14,9 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
-const sprintLength = 7 * 24 * time.Hour
-
 type CreateSprintInput struct {
 	StartAt time.Time
+	EndAt   time.Time
 }
 
 type Sprint struct {
@@ -105,7 +104,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 	sp := entity.Sprint{
 		ID:           genSprintIDRes.UniqueNumber,
 		StartAt:      sprint.StartAt.UTC(),
-		EndAt:        sprint.StartAt.UTC().Add(sprintLength),
+		EndAt:        sprint.EndAt.UTC(),
 		CreatedAt:    time.Now().UTC(),
 		OwningTeamID: teamID,
 	}
