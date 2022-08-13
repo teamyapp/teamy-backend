@@ -12,6 +12,7 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 	TeamID graphql.ID
 	Sprint struct {
 		StartAt graphql.Time
+		EndAt   graphql.Time
 	}
 }) (Sprint, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
@@ -22,6 +23,7 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 
 	input := service.CreateSprintInput{
 		StartAt: args.Sprint.StartAt.Time,
+		EndAt:   args.Sprint.EndAt.Time,
 	}
 	sprint, err := m.deps.sprintService.CreateSprint(ct, teamID, input)
 	if err != nil {
