@@ -6,10 +6,6 @@ import (
 	"log"
 )
 
-type key int
-
-const userIDKey key = 0
-
 func UserIDFromContext(ctx context.Context) (uint64, error) {
 	userID, ok := ctx.Value(userIDKey).(uint64)
 	if !ok {
