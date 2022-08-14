@@ -36,6 +36,7 @@ import (
 
 const githubAppPathPrefix = "/apps/github"
 const codeReviewMaxWait = 24 * time.Hour
+const authProvider = "github"
 
 type App struct {
 	config                      AppConfig
@@ -250,8 +251,9 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 		return
 	}
 
+	ct := r.Context()
 	// TODO: receive notification from cloud and update required action status
-	requiredUserActions, err = a.refreshRequiredActionsStatus(requiredUserActions)
+	requiredUserActions, err = a.refreshRequiredActionsStatus(ct, userID, requiredUserActions)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -324,10 +326,56 @@ func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a App) refreshRequiredActionsStatus(
+	ct context.Context,
+	userID uint64,
 	requiredActions []entity.GithubRequiredUserAction,
 ) ([]entity.GithubRequiredUserAction, error) {
-	// TODO: refresh required action status
-	return requiredActions, nil
+	refreshedRequiredActions := make([]entity.GithubRequiredUserAction, 0)
+	for _, requiredAction := range requiredActions {
+		if requiredAction.IsCompleted {
+			refreshedRequiredActions = append(refreshedRequiredActions, requiredAction)
+			continue
+		}
+
+		refreshedRequiredAction, err := a.refreshRequiredActionStatus(ct, userID, requiredAction)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		refreshedRequiredActions = append(refreshedRequiredActions, refreshedRequiredAction)
+	}
+
+	return refreshedRequiredActions, nil
+}
+
+func (a App) refreshRequiredActionStatus(
+	ct context.Context,
+	userID uint64,
+	requiredAction entity.GithubRequiredUserAction,
+) (entity.GithubRequiredUserAction, error) {
+	switch requiredAction.UserActionType {
+	case entity.LinkGithubAccountGithubUserActionType:
+		listUserLinksReq := &cloudProto.ListUserLinksRequest{InternalUserId: userID}
+		listUserLinksRes, err := a.cloudClientRegistry.IdentityClient().ListUserLinks(ct, listUserLinksReq)
+		if err != nil {
+			log.Println(err)
+			return entity.GithubRequiredUserAction{}, err
+		}
+
+		userLinks := collect.Filter(listUserLinksRes.UserLinks, func(userLink *cloudProto.UserLink) bool {
+			return userLink.AuthProvider == authProvider
+		})
+		if len(userLinks) == 0 {
+			return requiredAction, nil
+		}
+
+		requiredAction.IsCompleted = true
+		err = a.githubRequiredUserActionDao.UpdateRequiredUserAction(requiredAction)
+		return requiredAction, err
+	default:
+		return requiredAction, nil
+	}
 }
 
 func (a App) processEvent(ct context.Context, evtType eventType, payload []byte) error {

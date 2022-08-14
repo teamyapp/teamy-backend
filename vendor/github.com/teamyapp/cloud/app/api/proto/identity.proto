@@ -4,6 +4,14 @@ option go_package="github.com/cloud/app/api/proto";
 
 service Identity {
   rpc GetInternalUserId(GetInternalUserIdRequest) returns (GetInternalUserIdResponse);
+  rpc ListUserLinks(ListUserLinksRequest) returns (ListUserLinksResponse);
+}
+
+message UserLink {
+  string authProvider = 1;
+  uint64 internalUserId = 2;
+  string externalUserId = 3;
+  string externalUserLabel = 4;
 }
 
 message GetInternalUserIdRequest {
@@ -13,4 +21,12 @@ message GetInternalUserIdRequest {
 
 message GetInternalUserIdResponse {
   uint64 internalUserId = 1;
+}
+
+message ListUserLinksRequest {
+  uint64 internalUserId = 1;
+}
+
+message ListUserLinksResponse {
+  repeated UserLink userLinks = 1;
 }
