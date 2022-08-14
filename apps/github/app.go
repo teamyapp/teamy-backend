@@ -230,7 +230,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http.Request) {
-	ct, _ := context.WithTimeout(context.Background(), a.config.RequestTimeout)
+	ct, _ := context.WithTimeout(r.Context(), a.config.RequestTimeout)
 	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println("must provide userId")
