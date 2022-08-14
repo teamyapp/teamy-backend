@@ -217,6 +217,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	evtType := r.Header.Get("X-GitHub-Event")
 	log.Printf("Github event received: deliveryID=%s, event=%s\n", deliveryID, evtType)
+
 	ct, _ := context.WithTimeout(context.Background(), a.config.RequestTimeout)
 	err = a.processEvent(ct, eventType(evtType), buf)
 	if err != nil {
@@ -229,7 +230,8 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http.Request) {
-	userID, err := ctx.UserIDFromContext(r.Context())
+	ct, _ := context.WithTimeout(context.Background(), a.config.RequestTimeout)
+	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println("must provide userId")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -251,7 +253,6 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 		return
 	}
 
-	ct := r.Context()
 	// TODO: receive notification from cloud and update required action status
 	requiredUserActions, err = a.refreshRequiredActionsStatus(ct, userID, requiredUserActions)
 	if err != nil {
