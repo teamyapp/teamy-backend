@@ -11,7 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/entity"
 	"github.com/teamyapp/cloud/app/service"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/web"
@@ -323,6 +325,23 @@ func (i Identity) GetInternalUserId(ct context.Context, req *proto.GetInternalUs
 	}
 
 	return &proto.GetInternalUserIdResponse{InternalUserId: internalUserID}, nil
+}
+
+func (i Identity) ListUserLinks(ct context.Context, req *proto.ListUserLinksRequest) (*proto.ListUserLinksResponse, error) {
+	userLinks, err := i.identityService.ListUserLinks(req.InternalUserId)
+	if err != nil {
+		return nil, err
+	}
+
+	protoUserLinks := collect.Map(userLinks, func(userLink entity.UserLink, index int) *proto.UserLink {
+		return &proto.UserLink{
+			AuthProvider:      userLink.AuthProvider,
+			InternalUserId:    userLink.InternalUserID,
+			ExternalUserId:    userLink.ExternalUserID,
+			ExternalUserLabel: userLink.ExternalUserLabel,
+		}
+	})
+	return &proto.ListUserLinksResponse{UserLinks: protoUserLinks}, nil
 }
 
 func NewIdentity(identityService service.Identity) Identity {

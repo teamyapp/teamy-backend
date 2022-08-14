@@ -99,13 +99,14 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(requiredUserAction en
 		    is_completed = $4,
 		    requested_at = $5,
 		    requested_by_user_id = $6
-		WHERE id = $8;`,
+		WHERE id = $7;`,
 		requiredUserAction.TeamID,
 		requiredUserAction.ActionUserID,
 		requiredUserAction.UserActionType,
 		requiredUserAction.IsCompleted,
 		requiredUserAction.RequestedAt,
 		requiredUserAction.RequestedByUserID,
+		requiredUserAction.ID,
 	)
 	return err
 }
