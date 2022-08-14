@@ -70,10 +70,11 @@ func (s *ServiceRunner) startWebServer() {
 	log.Printf("Service runner Web server started at port %d\n", s.config.WebServerPort)
 	serveMux := http.NewServeMux()
 	handlerFunc := middleware.EnableCORS(
-		middleware.ServerWithWebIdentity(
-			s.config.IdentityAPIEndpoint,
-			middleware.ServerWithWebSocketIdentity(s.config.IdentityAPIEndpoint,
-				s.webRouter.ServeHTTP)))
+		middleware.LogWebRequest(
+			middleware.ServerWithWebIdentity(
+				s.config.IdentityAPIEndpoint,
+				middleware.ServerWithWebSocketIdentity(s.config.IdentityAPIEndpoint,
+					s.webRouter.ServeHTTP))))
 	serveMux.HandleFunc("/", handlerFunc)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", s.config.WebServerPort), serveMux); err != nil {
 		panic(err)
@@ -108,8 +109,10 @@ func NewServiceRunner(config ServiceRunnerConfig, services []Service) ServiceRun
 		config:    config,
 		webRouter: mux.NewRouter(),
 		gRPCServer: grpc.NewServer(
-			grpc.UnaryInterceptor(
-				middleware.ServerWithGRPCIdentity(config.IdentityAPIEndpoint))),
+			grpc.ChainUnaryInterceptor(
+				middleware.LogGRPCRequest,
+				middleware.ServerWithGRPCIdentity(config.IdentityAPIEndpoint),
+			)),
 		services: services,
 	}
 }
