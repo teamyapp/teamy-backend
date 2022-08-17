@@ -3,10 +3,50 @@ type: kubernetes
 name: feature
 
 steps:
-  - name: Run unit tests
+  - name: restore cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      restore: true
+      remote_root: cache
+      local_root: /
+      cache_key: go
+      mount:
+        - /go/pkg/mod
+  - name: run unit tests
     image: golang:1.18
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
     commands:
       - go test ./...
+  - name: rebuild cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      rebuild: true
+      override: true
+      remote_root: cache
+      cache_key: go
+      mount:
+        - /go/pkg/mod
   - name: slack
     image: plugins/slack
     settings:
@@ -15,6 +55,9 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: cache
+    temp: {}
 trigger:
   branch:
     - master
@@ -27,6 +70,23 @@ type: kubernetes
 name: testing
 
 steps:
+  - name: restore cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      restore: true
+      remote_root: cache
+      local-root: /go/pkg
+      cache_key: go
+      mount:
+        - mod
   - name: build app
     image: golang:1.18-alpine
     commands:
@@ -35,6 +95,9 @@ steps:
       - sh ./scripts/prepare_env.sh
   - name: build & publish Docker image
     image: plugins/docker
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
     settings:
       username:
         from_secret: DOCKER_USERNAME
@@ -53,6 +116,27 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
           "tag": "latest"
         }
+  - name: rebuild cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      rebuild: true
+      override: false
+      remote_root: cache
+      local-root: /go/pkg
+      cache_key: go
+      mount:
+        - mod
   - name: slack
     image: plugins/slack
     settings:
@@ -61,6 +145,9 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: cache
+    temp: {}
 trigger:
   branch:
     - testing
@@ -72,6 +159,23 @@ type: kubernetes
 name: staging
 
 steps:
+  - name: restore cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      restore: true
+      remote_root: cache
+      local-root: /go/pkg
+      cache_key: go
+      mount:
+        - mod
   - name: build app
     image: golang:1.18-alpine
     commands:
@@ -99,6 +203,23 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
           "tag": "latest"
         }
+  - name: rebuild cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      rebuild: true
+      override: false
+      remote_root: cache
+      cache_key: go
+      mount:
+        - mod
   - name: slack
     image: plugins/slack
     settings:
@@ -119,6 +240,23 @@ type: kubernetes
 name: production
 
 steps:
+  - name: restore cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      restore: true
+      remote_root: cache
+      local-root: /go/pkg
+      cache_key: go
+      mount:
+        - mod
   - name: build app
     image: golang:1.18-alpine
     commands:
@@ -145,6 +283,24 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend",
           "tag": "latest"
         }
+  - name: rebuild cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: SPACE_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: SPACE_SECRET
+    settings:
+      endpoint: https://sfo3.digitaloceanspaces.com
+      bucket: teamyapp
+      region: sfo3
+      rebuild: true
+      override: true
+      remote_root: cache
+      local-root: /go/pkg
+      cache_key: go
+      mount:
+        - mod
   - name: slack
     image: plugins/slack
     settings:

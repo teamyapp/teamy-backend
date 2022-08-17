@@ -4,6 +4,12 @@ RUN apk add --no-cache git
 
 WORKDIR /workspace
 
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+RUN go mod verify
+
 COPY . .
 
 RUN go build -o bin/main main.go
