@@ -10,7 +10,7 @@ import (
 )
 
 var availableActions = map[entity.TaskStatus][]entity.TaskAction{
-	entity.TaskStatusUpcoming: {
+	entity.TaskStatusTodo: {
 		entity.TaskActionStart,
 		entity.TaskActionDelete,
 		entity.TaskActionAssignOwner,

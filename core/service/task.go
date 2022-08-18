@@ -105,7 +105,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		ID:               genTaskIDRes.UniqueNumber,
 		Goal:             taskInput.Goal,
 		Context:          taskInput.Context,
-		Status:           entity.TaskStatusUpcoming,
+		Status:           entity.TaskStatusTodo,
 		IsPlanned:        isPlanned,
 		CreatorUserID:    userID,
 		OwningTeamID:     teamID,
@@ -181,7 +181,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 			task.Status = entity.TaskStatusPaused
 		}
 	} else {
-		task.Status = entity.TaskStatusUpcoming
+		task.Status = entity.TaskStatusTodo
 	}
 
 	now := time.Now()

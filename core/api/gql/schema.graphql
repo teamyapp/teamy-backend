@@ -160,7 +160,7 @@ enum TaskAction {
 }
 
 enum TaskStatus {
-	UPCOMING
+	TODO
 	IN_PROGRESS
 	PAUSED
 	AWAITING

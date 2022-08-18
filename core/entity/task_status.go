@@ -3,7 +3,7 @@ package entity
 type TaskStatus string
 
 const (
-	TaskStatusUpcoming TaskStatus = "UPCOMING"
+	TaskStatusTodo TaskStatus = "TODO"
 	// TaskStatusInProgress requires each person has only 1 task in progress
 	TaskStatusInProgress TaskStatus = "IN_PROGRESS"
 	TaskStatusPaused     TaskStatus = "PAUSED"
