@@ -1,5 +1,4 @@
 -- +migrate Up
-
 UPDATE task
 SET status = 'TODO'
 WHERE status = 'UPCOMING';
