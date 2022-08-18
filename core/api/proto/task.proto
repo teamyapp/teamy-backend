@@ -19,7 +19,7 @@ service Task {
 }
 
 enum TaskStatus {
-	Upcoming = 0;
+	Todo = 0;
 	InProgress = 1;
 	Paused = 2;
 	Awaiting = 3;

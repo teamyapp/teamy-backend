@@ -9,7 +9,7 @@ import (
 )
 
 var protoTaskStatuses = map[entity.TaskStatus]proto.TaskStatus{
-	entity.TaskStatusUpcoming:   proto.TaskStatus_Upcoming,
+	entity.TaskStatusTodo:       proto.TaskStatus_Todo,
 	entity.TaskStatusInProgress: proto.TaskStatus_InProgress,
 	entity.TaskStatusPaused:     proto.TaskStatus_Paused,
 	entity.TaskStatusAwaiting:   proto.TaskStatus_Awaiting,
