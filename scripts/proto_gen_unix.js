@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
-const {join} = require('path');
 const {execSync} = require("child_process");
 const paths = ['core', 'apps'];
 
@@ -21,7 +20,7 @@ for (let path of paths) {
 function findFilesRec(dir, outputFile) {
 	const files = fs.readdirSync(dir);
 	files.forEach(file => {
-		const path = join(dir, file);
+		const path = `${dir}/${file}`;
 		if (fs.statSync(path).isDirectory()) {
 			findFilesRec(path, outputFile);
 		} else {
