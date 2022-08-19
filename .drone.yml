@@ -3,10 +3,45 @@ type: kubernetes
 name: feature
 
 steps:
-  - name: Run unit tests
+  - name: restore cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      restore: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+  - name: run unit tests
     image: golang:1.18
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
     commands:
       - go test ./...
+  - name: refresh cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      refresh: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
   - name: slack
     image: plugins/slack
     settings:
@@ -15,6 +50,9 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: cache
+    temp: {}
 trigger:
   branch:
     - master
@@ -27,12 +65,29 @@ type: kubernetes
 name: testing
 
 steps:
+  - name: restore cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      restore: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
   - name: build app
     image: golang:1.18-alpine
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
     commands:
-      - apk add --no-cache git
-      - go build -o bin/main main.go
-      - sh ./scripts/prepare_env.sh
+      - sh ./scripts/build.sh
   - name: build & publish Docker image
     image: plugins/docker
     settings:
@@ -42,8 +97,6 @@ steps:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend-testing
       registry: registry.digitalocean.com
-      target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-testing
   - name: notify image update
     image: plugins/webhook
     settings:
@@ -53,6 +106,22 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
           "tag": "latest"
         }
+  - name: refresh cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      refresh: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
   - name: slack
     image: plugins/slack
     settings:
@@ -61,6 +130,9 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: cache
+    temp: {}
 trigger:
   branch:
     - testing
@@ -72,12 +144,29 @@ type: kubernetes
 name: staging
 
 steps:
+  - name: restore cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      restore: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
   - name: build app
     image: golang:1.18-alpine
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
     commands:
-      - apk add --no-cache git
-      - go build -o bin/main main.go
-      - sh ./scripts/prepare_env.sh
+      - sh ./scripts/build.sh
   - name: build & publish Docker image
     image: plugins/docker
     environment:
@@ -88,8 +177,6 @@ steps:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend-staging
       registry: registry.digitalocean.com
-      target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-staging
   - name: notify image update
     image: plugins/webhook
     settings:
@@ -99,6 +186,22 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
           "tag": "latest"
         }
+  - name: refresh cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      refresh: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
   - name: slack
     image: plugins/slack
     settings:
@@ -107,6 +210,9 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: cache
+    temp: {}
 trigger:
   branch:
     - master
@@ -119,12 +225,29 @@ type: kubernetes
 name: production
 
 steps:
+  - name: restore cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      restore: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
   - name: build app
     image: golang:1.18-alpine
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
     commands:
-      - apk add --no-cache git
-      - go build -o bin/main main.go
-      - sh ./scripts/prepare_env.sh
+      - sh ./scripts/build.sh
   - name: build & publish Docker image
     image: plugins/docker
     settings:
@@ -134,8 +257,6 @@ steps:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend
       registry: registry.digitalocean.com
-      target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend
   - name: notify image update
     image: plugins/webhook
     settings:
@@ -145,6 +266,22 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend",
           "tag": "latest"
         }
+  - name: refresh cache
+    image: ghcr.io/teamyapp/drone-cache:0.0.3
+    volumes:
+      - name: cache
+        path: /go/pkg/mod
+    settings:
+      s3_endpoint: sfo3.digitaloceanspaces.com
+      s3_access_key_id:
+        from_secret: SPACE_ACCESS_KEY
+      s3_secret:
+        from_secret: SPACE_SECRET
+      s3_bucket: teamyapp
+      remote_root_dir: cache/go
+      refresh: true
+      cacheable_absolute_paths:
+        - /go/pkg/mod
   - name: slack
     image: plugins/slack
     settings:
@@ -153,6 +290,9 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: cache
+    temp: {}
 trigger:
   branch:
     - production
