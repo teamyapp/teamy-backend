@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -31,6 +32,14 @@ func fromGraphQLTimePtr(tm *graphql.Time) *time.Time {
 	}
 
 	return &tm.Time
+}
+
+func toGraphQLDurationPtr(du *time.Duration) *scalar.Duration {
+	if du == nil {
+		return nil
+	}
+
+	return &scalar.Duration{Duration: *du}
 }
 
 func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
@@ -111,4 +120,12 @@ func fromGraphQLSprintFilterPtr(gqlSprintFilter *SprintFilter) (*service.SprintF
 		SortByStartAt:   gqlSprintFilter.SortByStartAt,
 		CountLimit:      intPtrFromIntPtr(gqlSprintFilter.CountLimit),
 	}, nil
+}
+
+func fromGraphQLDurationPtr(duration *scalar.Duration) *time.Duration {
+	if duration == nil {
+		return nil
+	}
+
+	return &duration.Duration
 }

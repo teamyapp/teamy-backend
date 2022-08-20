@@ -64,6 +64,8 @@ type Mutation {
 	deleteFile(fileId: ID!): FileMetadata!
 }
 
+scalar Duration
+
 scalar Time
 
 type Task {
@@ -79,7 +81,7 @@ type Task {
 	createdAt: Time!
 	updatedAt: Time
 	dueAt: Time
-	effort: Int
+	effort: Duration
 	availableActions: [TaskAction!]!
 	awaitForTasks: [Task!]!
 }
@@ -252,7 +254,7 @@ input UpdateTaskInput {
 	context: String
 	ownerUserId: ID
 	owningTeamId: ID!
-	effort: Int
+	effort: Duration
 	dueAt: Time
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -50,4 +51,21 @@ func toProtoInt32Ptr(num *int) *int32 {
 
 	newNum := int32(*num)
 	return &newNum
+}
+
+func fromProtoDurationPtr(protoDuration *durationpb.Duration) *time.Duration {
+	if protoDuration == nil {
+		return nil
+	}
+
+	dur := protoDuration.AsDuration()
+	return &dur
+}
+
+func toProtoDurationPtr(duration *time.Duration) *durationpb.Duration {
+	if duration == nil {
+		return nil
+	}
+
+	return durationpb.New(*duration)
 }
