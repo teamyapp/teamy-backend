@@ -171,7 +171,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	}
 
 	task.IsPlanned = true
-	return task, s.taskSyncer.CreateAndSyncTask(task)
+	return task, s.taskSyncer.UpdateAndSyncTask(task)
 }
 
 func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
