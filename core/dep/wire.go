@@ -50,6 +50,7 @@ var collectionSyncerSet = wire.NewSet(
 	collection.NewMessageSyncer,
 	collection.NewTaskSyncer,
 	collection.NewTaskAwaitForRelationSyncer,
+	collection.NewSprintTaskRelationSyncer,
 	collection.NewTeamSyncer,
 	collection.NewTeamMemberSyncer,
 	collection.NewUserSyncer,
@@ -113,10 +114,12 @@ func InitTaskRPCAPI(
 
 func InitSprintRPCAPI(
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.SprintRPC {
 	wire.Build(
 		daoSet,
+		collectionSyncerSet,
 		serviceSet,
 		api.NewSprintRPC,
 	)

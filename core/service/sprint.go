@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -10,6 +9,7 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -20,10 +20,12 @@ type CreateSprintInput struct {
 }
 
 type Sprint struct {
-	cloudClientRegistry   *cloudAPI.ClientRegistry
-	taskDao               dao.Task
-	sprintDao             dao.Sprint
-	sprintTaskRelationDao dao.SprintTaskRelation
+	cloudClientRegistry      *cloudAPI.ClientRegistry
+	taskDao                  dao.Task
+	sprintDao                dao.Sprint
+	sprintTaskRelationDao    dao.SprintTaskRelation
+	taskSyncer               collection.TaskSyncer
+	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer
 }
 
 func (s Sprint) FindTasksInSprint(
@@ -158,7 +160,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		TaskID:    taskID,
 		CreatedAt: time.Now().UTC(),
 	}
-	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(relation)
+	err = s.sprintTaskRelationSyncer.CreateAndSyncSprintTaskRelation(relation, task.OwningTeamID)
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
@@ -169,7 +171,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	}
 
 	task.IsPlanned = true
-	return task, s.taskDao.UpdateTask(task)
+	return task, s.taskSyncer.CreateAndSyncTask(task)
 }
 
 func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
@@ -275,12 +277,15 @@ func NewSprint(
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintTaskRelationDao dao.SprintTaskRelation,
-	db *sql.DB,
+	taskSyncer collection.TaskSyncer,
+	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer,
 ) Sprint {
 	return Sprint{
-		cloudClientRegistry:   cloudClientRegistry,
-		taskDao:               taskDao,
-		sprintDao:             sprintDao,
-		sprintTaskRelationDao: sprintTaskRelationDao,
+		cloudClientRegistry:      cloudClientRegistry,
+		taskDao:                  taskDao,
+		sprintDao:                sprintDao,
+		sprintTaskRelationDao:    sprintTaskRelationDao,
+		taskSyncer:               taskSyncer,
+		sprintTaskRelationSyncer: sprintTaskRelationSyncer,
 	}
 }
