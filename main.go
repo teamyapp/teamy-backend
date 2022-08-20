@@ -101,7 +101,7 @@ func startServiceRunner(
 	}
 
 	taskRPCAPI := dep.InitTaskRPCAPI(cloudClientRegistry, realTimeStateSyncer, sqlDB)
-	sprintRPCAPI := dep.InitSprintRPCAPI(cloudClientRegistry, sqlDB)
+	sprintRPCAPI := dep.InitSprintRPCAPI(cloudClientRegistry, realTimeStateSyncer, sqlDB)
 	rn := runner.NewServiceRunner(runnerConfig, []runner.Service{
 		githubApp,
 		graphQLAPI,
