@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const {join} = require('path');
 const {execSync} = require("child_process");
 const paths = ['core', 'apps'];
 
@@ -10,9 +11,9 @@ for (let path of paths) {
 			return;
 		}
 
-		execSync(`
-		protoc --go_out=. --go_opt=paths=source_relative \\
-		--go-grpc_out=. --go-grpc_opt=paths=source_relative ${file}`,
+		console.log(`Found ${file}`);
+		execSync(
+			`protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative ${file}`,
 			{stdio: 'inherit'});
 	});
 }
@@ -20,7 +21,7 @@ for (let path of paths) {
 function findFilesRec(dir, outputFile) {
 	const files = fs.readdirSync(dir);
 	files.forEach(file => {
-		const path = `${dir}/${file}`;
+		const path = join(dir, file);
 		if (fs.statSync(path).isDirectory()) {
 			findFilesRec(path, outputFile);
 		} else {
