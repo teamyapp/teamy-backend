@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/randgen"
+	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -66,7 +67,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		Context      *string
 		OwnerUserID  *graphql.ID
 		OwningTeamID graphql.ID
-		Effort       *int32
+		Effort       *scalar.Duration
 		DueAt        *graphql.Time
 	}
 }) (Task, error) {
@@ -93,7 +94,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		Context:      args.Input.Context,
 		OwnerUserID:  ownerUserID,
 		OwningTeamID: owningTeamID,
-		Effort:       intPtrFromIntPtr(args.Input.Effort),
+		Effort:       fromGraphQLDurationPtr(args.Input.Effort),
 		DueAt:        fromGraphQLTimePtr(args.Input.DueAt),
 	})
 	if err != nil {

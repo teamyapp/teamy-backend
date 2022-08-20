@@ -48,7 +48,7 @@ func (t TaskRPC) FindTask(ct context.Context, req *proto.GetTaskRequest) (*proto
 		TaskId:          task.ID,
 		Goal:            task.Goal,
 		Context:         task.Context,
-		Effort:          toProtoInt32Ptr(task.Effort),
+		Effort:          toProtoDurationPtr(task.Effort),
 		DueAt:           toProtoTimePtr(task.DueAt),
 		Status:          protoTaskStatuses[task.Status],
 		CreatedAt:       timestamppb.New(task.CreatedAt),
@@ -77,7 +77,7 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 		Context:      req.Context,
 		OwnerUserID:  req.OwnerUserId,
 		OwningTeamID: req.OwningTeamId,
-		Effort:       fromProtoInt32Ptr(req.Effort),
+		Effort:       fromProtoDurationPtr(req.Effort),
 		DueAt:        nil,
 	}
 	_, err := t.taskService.UpdateTask(ct, req.TaskId, input)

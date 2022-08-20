@@ -6,6 +6,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -110,8 +111,8 @@ func (t Task) DueAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.DueAt)
 }
 
-func (t Task) Effort(ct context.Context) *int32 {
-	return int32PtrFromIntPtr(t.task.Effort)
+func (t Task) Effort(ct context.Context) *scalar.Duration {
+	return toGraphQLDurationPtr(t.task.Effort)
 }
 
 func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {

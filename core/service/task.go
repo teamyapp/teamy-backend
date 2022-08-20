@@ -33,7 +33,7 @@ type UpdateTaskInput struct {
 	Context      *string
 	OwnerUserID  *uint64
 	OwningTeamID uint64
-	Effort       *int
+	Effort       *time.Duration
 	DueAt        *time.Time
 }
 

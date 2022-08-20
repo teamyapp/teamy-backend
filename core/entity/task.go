@@ -14,7 +14,7 @@ type Task struct {
 	OwningTeamID     uint64
 	Status           TaskStatus
 	IsPlanned        bool
-	Effort           *int
+	Effort           *time.Duration
 	CommentsThreadID uint64
 	CreatedAt        time.Time
 	UpdatedAt        *time.Time
