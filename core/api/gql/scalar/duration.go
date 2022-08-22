@@ -3,9 +3,12 @@ package scalar
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"reflect"
 	"time"
 
 	"github.com/graph-gophers/graphql-go/decode"
+	"github.com/teamyapp/cloud/libs/duration"
 )
 
 type Duration struct {
@@ -22,19 +25,20 @@ func (d Duration) ImplementsGraphQLType(name string) bool {
 func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 	switch input.(type) {
 	case string:
-		du, err := time.ParseDuration(input.(string))
+		var err error
+		d.Duration, err = duration.Parse(input.(string))
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 
-		d.Duration = du
 	default:
-		return fmt.Errorf("unsupported duration format: %v", input)
+		return fmt.Errorf("unsupported duration dataType: type=%v", reflect.TypeOf(input))
 	}
 
 	return nil
 }
 
 func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.Duration.String())
+	return json.Marshal(duration.Format(d.Duration))
 }
