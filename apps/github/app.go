@@ -101,7 +101,7 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	genStateIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubInstallationStateID"}
-	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(context.Background(), genStateIDReq)
+	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(r.Context(), genStateIDReq)
 	if err != nil {
 		log.Printf("fail to generate state ID: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -218,8 +218,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	evtType := r.Header.Get("X-GitHub-Event")
 	log.Printf("Github event received: deliveryID=%s, event=%s\n", deliveryID, evtType)
 
-	ct, _ := context.WithTimeout(context.Background(), a.config.RequestTimeout)
-	err = a.processEvent(ct, eventType(evtType), buf)
+	err = a.processEvent(r.Context(), eventType(evtType), buf)
 	if err != nil {
 		log.Printf("fail to process Github event: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -230,7 +229,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http.Request) {
-	ct, _ := context.WithTimeout(r.Context(), a.config.RequestTimeout)
+	ct := r.Context()
 	userID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println("must provide userId")
@@ -268,7 +267,8 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 }
 
 func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
-	requestSenderID, err := ctx.UserIDFromContext(r.Context())
+	ct := r.Context()
+	requestSenderID, err := ctx.UserIDFromContext(ct)
 	if err != nil {
 		log.Println("must provide request sender ID")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -299,7 +299,7 @@ func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	genActionIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubRequiredActionID"}
-	genActionIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(context.Background(), genActionIDReq)
+	genActionIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActionIDReq)
 	if err != nil {
 		log.Printf("fail to generate required action ID: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
