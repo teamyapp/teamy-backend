@@ -1,0 +1,112 @@
+resourceOperations:
+  - resourceType: Task
+    operations:
+      - Read
+      - Update
+      - Delete
+  - resourceType: Team
+    operations:
+      # Team
+      - Read
+      - Update
+      - Delete
+      # Task under backlog
+      - ReadTask
+      - CreateTask
+      - UpdateTask
+      - DeleteTask
+      # User
+      - AddUserTo
+      - RemoveUserFrom
+      # Sprint
+      - ReadSprint
+      - CreateSprint
+      - UpdateSprint
+      - DeleteSprint
+  - resourceType: Sprint
+    operations:
+      - Read
+      - Update
+      - Delete
+  - resourceType: Invitation
+    operations:
+      - Read
+      - Create
+      - Delete
+operationRelations:
+  - resourceType: Task
+    operation: Read
+    parents:
+      - resourceType: Task
+        operation: Update
+      - resourceType: Task
+        operation: Delete
+      - resourceType: Sprint
+        operation: Read
+      - resourceType: Team
+        operation: ReadTask
+  - resourceType: Task
+    operation: Update
+    parents:
+      - resourceType: Sprint
+        operation: Update
+      - resourceType: Team
+        operation: UpdateTask
+  - resourceType: Task
+    operation: Delete
+    parents:
+      - resourceType: Sprint
+        operation: Delete
+      - resourceType: Team
+        operation: DeleteTask
+  - resourceType: Sprint
+    operation: Read
+    parents:
+      - resourceType: Sprint
+        operation: Update
+      - resourceType: Sprint
+        operation: Delete
+      - resourceType: Team
+        operation: ReadSprint
+  - resourceType: Sprint
+    operation: Update
+    parents:
+      - resourceType: Team
+        operation: UpdateSprint
+  - resourceType: Sprint
+    operation: Delete
+    parents:
+      - resourceType: Team
+        operation: DeleteSprint
+  - resourceType: Team
+    operation: ReadSprint
+    parents:
+      - resourceType: Team
+        operation: UpdateSprint
+      - resourceType: Team
+        operation: DeleteSprint
+      - resourceType: Team
+        operation: CreateSprint
+  - resourceType: Team
+    operation: ReadTask
+    parents:
+      - resourceType: Team
+        operation: UpdateTask
+      - resourceType: Team
+        operation: DeleteTask
+      - resourceType: Team
+        operation: CreateTask
+  - resourceType: Team
+    operation: Read
+    parents:
+      - resourceType: Team
+        operation: Update
+      - resourceType: Team
+        operation: Delete
+  - resourceType: Invitation
+    operation: Read
+    parents:
+      - resourceType: Invitation
+        operation: Update
+      - resourceType: Invitation
+        operation: Delete
