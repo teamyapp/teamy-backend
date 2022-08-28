@@ -66,9 +66,10 @@ func startServiceRunner(
 		panic(err)
 	}
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(rpc.ConnectionConfig{
-		Host:          cfg.CloudGRPCAPIHost,
-		Port:          cfg.CloudGRPCAPIPort,
-		ShouldEncrypt: cfg.CloudGRPCAPIShouldEncrypt,
+		Host:           cfg.CloudGRPCAPIHost,
+		Port:           cfg.CloudGRPCAPIPort,
+		ShouldEncrypt:  cfg.CloudGRPCAPIShouldEncrypt,
+		RequestTimeout: cfg.RequestTimeout,
 	})
 	if err != nil {
 		panic(err)
@@ -80,6 +81,7 @@ func startServiceRunner(
 		GetAccessToken: func() string {
 			return cfg.AppsServiceAccountAPIToken
 		},
+		RequestTimeout: cfg.RequestTimeout,
 	})
 	if err != nil {
 		panic(err)
