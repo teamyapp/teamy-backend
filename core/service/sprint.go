@@ -59,7 +59,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 		return entity.Sprint{}, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
 		if now.Before(sprint.StartAt) || now.After(sprint.EndAt) {
