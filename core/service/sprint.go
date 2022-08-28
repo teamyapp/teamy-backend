@@ -252,13 +252,13 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return entity.Task{}, fmt.Errorf("relation not found: sprintID=%v taskID=%v", sprintID, taskID)
 	}
 
-	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(sprintID, taskID)
+	task, err := s.taskDao.FindTaskByID(taskID)
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
 	}
 
-	task, err := s.taskDao.FindTaskByID(taskID)
+	err = s.sprintTaskRelationSyncer.DeleteAndSyncSprintTaskRelation(sprintID, taskID, task.OwningTeamID)
 	if err != nil {
 		log.Println(err)
 		return entity.Task{}, err
@@ -269,7 +269,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	}
 
 	task.IsPlanned = false
-	return task, s.taskDao.UpdateTask(task)
+	return task, s.taskSyncer.UpdateAndSyncTask(task)
 }
 
 func NewSprint(
