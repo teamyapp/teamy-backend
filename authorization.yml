@@ -23,6 +23,11 @@ resourceOperations:
       - CreateSprint
       - UpdateSprint
       - DeleteSprint
+      # Invitation
+      - ReadInvitation
+      - CreateInvitation
+      - UpdateInvitation
+      - DeleteInvitation
   - resourceType: Sprint
     operations:
       - Read
@@ -60,8 +65,6 @@ operationRelations:
         operation: UpdateTask
       - resourceType: Team
         operation: DeleteTask
-      - resourceType: Team
-        operation: CreateTask
   - resourceType: Sprint
     operation: Read
     parents:
@@ -88,8 +91,6 @@ operationRelations:
         operation: UpdateSprint
       - resourceType: Team
         operation: DeleteSprint
-      - resourceType: Team
-        operation: CreateSprint
   - resourceType: Invitation
     operation: Read
     parents:
@@ -116,8 +117,6 @@ operationRelations:
         operation: UpdateInvitation
       - resourceType: Team
         operation: DeleteInvitation
-      - resourceType: Team
-        operation: CreateInvitation
   - resourceType: Team
     operation: Read
     parents:
