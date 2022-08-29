@@ -10,7 +10,6 @@ resourceOperations:
       - Read
       - Update # Update team settings
       - Delete
-      # Task under backlog
       - ReadTask
       - CreateTask
       - UpdateTask
