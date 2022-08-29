@@ -8,16 +8,16 @@ resourceOperations:
     operations:
       # Team
       - Read
-      - Update
+      - Update # Update team settings
       - Delete
       # Task under backlog
       - ReadTask
       - CreateTask
       - UpdateTask
       - DeleteTask
-      # User
-      - AddUserTo
-      - RemoveUserFrom
+      # Member
+      - AddMemberTo
+      - RemoveMemberFrom
       # Sprint
       - ReadSprint
       - CreateSprint
@@ -41,24 +41,27 @@ operationRelations:
         operation: Update
       - resourceType: Task
         operation: Delete
-      - resourceType: Sprint
-        operation: Read
       - resourceType: Team
         operation: ReadTask
   - resourceType: Task
     operation: Update
     parents:
-      - resourceType: Sprint
-        operation: Update
       - resourceType: Team
         operation: UpdateTask
   - resourceType: Task
     operation: Delete
     parents:
-      - resourceType: Sprint
-        operation: Delete
       - resourceType: Team
         operation: DeleteTask
+  - resourceType: Team
+    operation: ReadTask
+    parents:
+      - resourceType: Team
+        operation: UpdateTask
+      - resourceType: Team
+        operation: DeleteTask
+      - resourceType: Team
+        operation: CreateTask
   - resourceType: Sprint
     operation: Read
     parents:
@@ -87,26 +90,38 @@ operationRelations:
         operation: DeleteSprint
       - resourceType: Team
         operation: CreateSprint
-  - resourceType: Team
-    operation: ReadTask
-    parents:
-      - resourceType: Team
-        operation: UpdateTask
-      - resourceType: Team
-        operation: DeleteTask
-      - resourceType: Team
-        operation: CreateTask
-  - resourceType: Team
-    operation: Read
-    parents:
-      - resourceType: Team
-        operation: Update
-      - resourceType: Team
-        operation: Delete
   - resourceType: Invitation
     operation: Read
     parents:
       - resourceType: Invitation
         operation: Update
       - resourceType: Invitation
+        operation: Delete
+      - resourceType: Team
+        operation: ReadInvitation
+  - resourceType: Invitation
+    operation: Update
+    parents:
+      - resourceType: Team
+        operation: UpdateInvitation
+  - resourceType: Invitation
+    operation: Delete
+    parents:
+      - resourceType: Team
+        operation: DeleteInvitation
+  - resourceType: Team
+    operation: ReadInvitation
+    parents:
+      - resourceType: Team
+        operation: UpdateInvitation
+      - resourceType: Team
+        operation: DeleteInvitation
+      - resourceType: Team
+        operation: CreateInvitation
+  - resourceType: Team
+    operation: Read
+    parents:
+      - resourceType: Team
+        operation: Update
+      - resourceType: Team
         operation: Delete
