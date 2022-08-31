@@ -2,14 +2,15 @@ package sqldb
 
 import (
 	"database/sql"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubRequiredUserAction struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.GithubRequiredUserAction = (*GithubRequiredUserAction)(nil)
@@ -32,9 +33,10 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 `,
 		teamID, actionUserID)
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	requiredActions := make([]entity.GithubRequiredUserAction, 0)
@@ -50,14 +52,14 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 			&requiredAction.RequestedByUserID,
 		)
 		if err != nil {
-			log.Println(err)
+			g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		requiredActions = append(requiredActions, requiredAction)
 	}
 
-	return requiredActions, err
+	return requiredActions, nil
 }
 
 func (g GithubRequiredUserAction) CreateRequiredUserAction(requiredUserAction entity.GithubRequiredUserAction) error {
@@ -82,8 +84,9 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(requiredUserAction en
 		requiredUserAction.RequestedAt,
 		requiredUserAction.RequestedByUserID,
 	)
+
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
@@ -108,9 +111,14 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(requiredUserAction en
 		requiredUserAction.RequestedByUserID,
 		requiredUserAction.ID,
 	)
+
+	if err != nil {
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewGithubRequiredUserAction(sqlDB *sql.DB) GithubRequiredUserAction {
-	return GithubRequiredUserAction{db: sqlDB}
+func NewGithubRequiredUserAction(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubRequiredUserAction {
+	return GithubRequiredUserAction{dataCollector: dataCollector, db: sqlDB}
 }

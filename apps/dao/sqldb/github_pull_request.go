@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubPullRequest struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.GithubPullRequest = (*GithubPullRequest)(nil)
@@ -34,6 +35,10 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(internalTaskID uint64
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.GithubPullRequest{}, dao.ErrNotFound(fmt.Sprintf(
 			"GithubPullRequest not found: internalTaskID=%v", internalTaskID))
+	}
+
+	if err != nil {
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return pullRequest, err
@@ -59,6 +64,10 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(githubNodeID string) (e
 			"GithubPullRequest not found: githubNodeID=%v", githubNodeID))
 	}
 
+	if err != nil {
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return pullRequest, err
 }
 
@@ -74,8 +83,9 @@ func (g GithubPullRequest) CreatePullRequest(pullRequest entity.GithubPullReques
 		pullRequest.InternalTaskID,
 		pullRequest.NodeID,
 	)
+
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
@@ -87,6 +97,11 @@ func (g GithubPullRequest) DeletePullRequestByInternalTaskID(internalTaskID uint
 		WHERE internal_task_id = $1;
 		`,
 		internalTaskID)
+
+	if err != nil {
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -96,9 +111,14 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(githubNodeID string) 
 		WHERE github_pull_request_node_id = $1;
 		`,
 		githubNodeID)
+
+	if err != nil {
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewGithubPullRequest(sqlDB *sql.DB) GithubPullRequest {
-	return GithubPullRequest{db: sqlDB}
+func NewGithubPullRequest(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubPullRequest {
+	return GithubPullRequest{dataCollector: dataCollector, db: sqlDB}
 }

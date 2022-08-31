@@ -1,34 +1,37 @@
 package github
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/apps/inject"
 )
 
 type githubTime struct {
 	time.Time
 }
 
-func (c *githubTime) UnmarshalJSON(buf []byte) (err error) {
+func (g *githubTime) UnmarshalJSON(buf []byte) (err error) {
+	dataCollector := inject.Injector.Get(new(obs.DataCollector)).(obs.DataCollector)
 	str := strings.Trim(string(buf), `"`)
 	unixTimestamp, err := strconv.ParseInt(str, 10, 64)
 	if err == nil {
-		c.Time = time.Unix(unixTimestamp, 0)
+		g.Time = time.Unix(unixTimestamp, 0)
 		return nil
 	}
 
 	tm, err := time.Parse("2006-01-02T15:04:05Z", str)
 	if err != nil {
-		log.Println(err)
+		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	c.Time = tm
+	g.Time = tm
 	return nil
 }
 
-func (c githubTime) String() string {
-	return c.Time.String()
+func (g githubTime) String() string {
+	return g.Time.String()
 }

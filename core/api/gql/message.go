@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -23,14 +24,15 @@ func (m Message) Body(ct context.Context) string {
 func (m Message) Author(ct context.Context) (User, error) {
 	user, err := m.deps.userDao.FindUserByID(m.message.AuthorUserID)
 	if err != nil {
-		return User{}, nil
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return User{}, err
 	}
 
 	return newUser(m.deps, user), nil
 }
 
-func (m Message) Thread(ct context.Context) (Thread, error) {
-	return newThread(m.deps, m.message.ThreadID), nil
+func (m Message) Thread(ct context.Context) Thread {
+	return newThread(m.deps, m.message.ThreadID)
 }
 
 func (m Message) CreatedAt(ct context.Context) graphql.Time {

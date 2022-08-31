@@ -1,12 +1,14 @@
 package collection
 
 import (
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type TaskAwaitForRelationSyncer struct {
+	dataCollector           obs.DataCollector
 	realTimeStateSyncer     *realtime.StateSyncer
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	taskDao                 dao.Task
@@ -15,11 +17,13 @@ type TaskAwaitForRelationSyncer struct {
 func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(relation entity.TaskAwaitForRelation) error {
 	err := t.taskAwaitForRelationDao.CreateRelation(relation)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	task, err := t.taskDao.FindTaskByID(relation.AwaitingTaskID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -37,11 +41,13 @@ func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(relation entity.TaskAw
 func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(awaitingTaskID uint64, awaitForTaskID uint64) error {
 	err := t.taskAwaitForRelationDao.DeleteRelation(awaitingTaskID, awaitForTaskID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	task, err := t.taskDao.FindTaskByID(awaitingTaskID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -60,11 +66,13 @@ func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(awaitingTaskID uint64,
 }
 
 func NewTaskAwaitForRelationSyncer(
+	dataCollector obs.DataCollector,
 	realTimeStateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskDao dao.Task,
 ) TaskAwaitForRelationSyncer {
 	return TaskAwaitForRelationSyncer{
+		dataCollector:           dataCollector,
 		realTimeStateSyncer:     realTimeStateSyncer,
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
 		taskDao:                 taskDao,

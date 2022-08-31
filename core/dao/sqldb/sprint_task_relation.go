@@ -2,14 +2,15 @@ package sqldb
 
 import (
 	"database/sql"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type SprintTaskRelation struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.SprintTaskRelation = (*SprintTaskRelation)(nil)
@@ -24,7 +25,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(sprintID uint64) ([]uint64, er
 `,
 		sprintID)
 	if err != nil {
-		log.Println(err)
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -36,14 +37,14 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(sprintID uint64) ([]uint64, er
 			&taskID,
 		)
 		if err != nil {
-			log.Println(err)
+			s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		taskIDs = append(taskIDs, taskID)
 	}
 
-	return taskIDs, err
+	return taskIDs, nil
 }
 
 func (s SprintTaskRelation) FindSprintIDsByTaskID(taskID uint64) ([]uint64, error) {
@@ -56,7 +57,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(taskID uint64) ([]uint64, erro
 `,
 		taskID)
 	if err != nil {
-		log.Println(err)
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -68,14 +69,14 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(taskID uint64) ([]uint64, erro
 			&sprintID,
 		)
 		if err != nil {
-			log.Println(err)
+			s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		sprintIDs = append(sprintIDs, sprintID)
 	}
 
-	return sprintIDs, err
+	return sprintIDs, nil
 }
 
 func (s SprintTaskRelation) CreateSprintTaskRelation(relation entity.SprintTaskRelation) error {
@@ -91,6 +92,11 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(relation entity.SprintTaskR
 		relation.TaskID,
 		relation.CreatedAt,
 	)
+
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -101,9 +107,14 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(sprintID uint64, taskID uin
 		`,
 		sprintID,
 		taskID)
+
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewSprintTaskRelation(db *sql.DB) SprintTaskRelation {
-	return SprintTaskRelation{db: db}
+func NewSprintTaskRelation(dataCollector obs.DataCollector, db *sql.DB) SprintTaskRelation {
+	return SprintTaskRelation{dataCollector: dataCollector, db: db}
 }

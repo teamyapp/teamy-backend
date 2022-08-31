@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/collection"
@@ -64,7 +65,16 @@ var serviceSet = wire.NewSet(
 	newUserService,
 )
 
-func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
+func InitDataCollector(severity obs.Severity) obs.DataCollector {
+	wire.Build(
+		wire.Bind(new(obs.Logger), new(obs.RawLogger)),
+		obs.NewRawLogger,
+		obs.NewDataCollector,
+	)
+	return obs.DataCollector{}
+}
+
+func InitRealTimeStateSyncer(sdataCollector obs.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
@@ -73,6 +83,7 @@ func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 }
 
 func InitGraphQLAPI(
+	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
@@ -90,6 +101,7 @@ func InitGraphQLAPI(
 }
 
 func InitRealTimeStateSyncAPI(
+	dataCollector obs.DataCollector,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) api.RealTimeStateSync {
 	wire.Build(
@@ -99,6 +111,7 @@ func InitRealTimeStateSyncAPI(
 }
 
 func InitTaskRPCAPI(
+	dataCollector obs.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -113,6 +126,7 @@ func InitTaskRPCAPI(
 }
 
 func InitSprintRPCAPI(
+	dataCollector obs.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -127,15 +141,22 @@ func InitSprintRPCAPI(
 }
 
 func newUserService(
+	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
 ) service.User {
-	return service.NewUser(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
+	return service.NewUser(
+		dataCollector,
+		string(cloudWebAPIExternalBaseURL),
+		cloudClientRegistry,
+		userDao,
+		userFileUploadSessionDao)
 }
 
 func newTeamService(
+	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	taskDao dao.Task,
@@ -143,5 +164,12 @@ func newTeamService(
 	teamDao dao.Team,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 ) service.Team {
-	return service.NewTeam(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, taskDao, sprintDao, teamDao, teamFileUploadSessionDao)
+	return service.NewTeam(
+		dataCollector,
+		string(cloudWebAPIExternalBaseURL),
+		cloudClientRegistry,
+		taskDao,
+		sprintDao,
+		teamDao,
+		teamFileUploadSessionDao)
 }

@@ -3,6 +3,7 @@ package gql
 import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -18,6 +19,7 @@ func (t Thread) ID() graphql.ID {
 func (t Thread) Messages() ([]Message, error) {
 	messages, err := t.deps.messageDao.FindMessagesByThreadID(t.threadID)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 

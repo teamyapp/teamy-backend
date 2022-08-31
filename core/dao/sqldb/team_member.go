@@ -2,14 +2,15 @@ package sqldb
 
 import (
 	"database/sql"
-	"log"
 	"time"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 type TeamMember struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.TeamMember = (*TeamMember)(nil)
@@ -23,7 +24,7 @@ func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
 `
 	rows, err := t.db.Query(statement, int64(userID))
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -35,14 +36,14 @@ func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
 			&teamID,
 		)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		teamIDs = append(teamIDs, teamID)
 	}
 
-	return teamIDs, err
+	return teamIDs, nil
 }
 
 func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
@@ -54,7 +55,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 `
 	rows, err := t.db.Query(statement, int64(teamID))
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -66,7 +67,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 			&teamMemberID,
 		)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -85,6 +86,7 @@ func (t TeamMember) HasTeamMember(teamID uint64, userID uint64) (bool, error) {
 `
 	rows, err := t.db.Query(statement, int64(teamID), int64(userID))
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return false, err
 	}
 
@@ -104,6 +106,11 @@ func (t TeamMember) CreateTeamMember(teamID uint64, userID uint64) error {
 		userID,
 		time.Now(),
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -113,9 +120,14 @@ func (t TeamMember) DeleteTeamMember(teamID uint64, userID uint64) error {
 		WHERE team_id = $1 AND user_id = $2;
 		`,
 		teamID, userID)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewTeamMember(sqlDB *sql.DB) TeamMember {
-	return TeamMember{db: sqlDB}
+func NewTeamMember(dataCollector obs.DataCollector, sqlDB *sql.DB) TeamMember {
+	return TeamMember{dataCollector: dataCollector, db: sqlDB}
 }

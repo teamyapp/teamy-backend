@@ -2,11 +2,11 @@ package api
 
 import (
 	_ "embed"
-	"log"
 	"net/http"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 )
@@ -15,7 +15,8 @@ import (
 var rawSchema string
 
 type GraphQL struct {
-	gqlResolver gql.Resolver
+	dataCollector obs.DataCollector
+	gqlResolver   gql.Resolver
 }
 
 var _ runner.Service = (*GraphQL)(nil)
@@ -25,7 +26,7 @@ func (g GraphQL) Start(rn *runner.ServiceRunner) error {
 		graphql.UseFieldResolvers(),
 		graphql.UseStringDescriptions())
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -40,8 +41,9 @@ func (g GraphQL) Start(rn *runner.ServiceRunner) error {
 	return nil
 }
 
-func NewGraphQL(gqlResolver gql.Resolver) GraphQL {
+func NewGraphQL(dataCollector obs.DataCollector, gqlResolver gql.Resolver) GraphQL {
 	return GraphQL{
-		gqlResolver: gqlResolver,
+		dataCollector: dataCollector,
+		gqlResolver:   gqlResolver,
 	}
 }

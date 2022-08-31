@@ -1,11 +1,11 @@
 package config
 
 import (
-	"log"
 	"time"
 
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
+	"github.com/teamyapp/cloud/libs/obs"
 )
 
 type Config struct {
@@ -23,11 +23,11 @@ type Config struct {
 	RequestTimeout             time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10s"`
 }
 
-func FromEnv() (Config, error) {
+func FromEnv(dataCollector obs.DataCollector) (Config, error) {
 	cfg := Config{}
-	err := config.FromEnv(&cfg)
+	err := config.FromEnv(dataCollector, &cfg)
 	if err != nil {
-		log.Println(err)
+		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Config{}, err
 	}
 	return cfg, nil

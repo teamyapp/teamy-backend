@@ -2,13 +2,14 @@ package scalar
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	"errors"
 	"reflect"
 	"time"
 
 	"github.com/graph-gophers/graphql-go/decode"
 	"github.com/teamyapp/cloud/libs/duration"
+	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/inject"
 )
 
 type Duration struct {
@@ -23,17 +24,25 @@ func (d Duration) ImplementsGraphQLType(name string) bool {
 }
 
 func (d *Duration) UnmarshalGraphQL(input interface{}) error {
+	dataCollector := inject.Injector.Get(new(obs.DataCollector)).(obs.DataCollector)
 	switch input.(type) {
 	case string:
 		var err error
-		d.Duration, err = duration.Parse(input.(string))
+		d.Duration, err = duration.Parse(dataCollector, input.(string))
 		if err != nil {
-			log.Println(err)
+			dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
 
 	default:
-		return fmt.Errorf("unsupported duration dataType: type=%v", reflect.TypeOf(input))
+		err := errors.New("unsupported duration dataType")
+		dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"dataType": reflect.TypeOf(input),
+			},
+		})
+		return err
 	}
 
 	return nil

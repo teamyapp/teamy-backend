@@ -1,12 +1,14 @@
 package collection
 
 import (
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type TeamMemberSyncer struct {
+	dataCollector       obs.DataCollector
 	realTimeStateSyncer *realtime.StateSyncer
 	teamMemberDao       dao.TeamMember
 }
@@ -14,6 +16,7 @@ type TeamMemberSyncer struct {
 func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) error {
 	err := t.teamMemberDao.CreateTeamMember(teamID, userID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -34,6 +37,7 @@ func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) 
 func (t TeamMemberSyncer) DeleteAndSyncTeamMember(teamID uint64, userID uint64) error {
 	err := t.teamMemberDao.DeleteTeamMember(teamID, userID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -51,8 +55,13 @@ func (t TeamMemberSyncer) DeleteAndSyncTeamMember(teamID uint64, userID uint64) 
 	return nil
 }
 
-func NewTeamMemberSyncer(realTimeStateSyncer *realtime.StateSyncer, teamMemberDao dao.TeamMember) TeamMemberSyncer {
+func NewTeamMemberSyncer(
+	dataCollector obs.DataCollector,
+	realTimeStateSyncer *realtime.StateSyncer,
+	teamMemberDao dao.TeamMember,
+) TeamMemberSyncer {
 	return TeamMemberSyncer{
+		dataCollector:       dataCollector,
 		realTimeStateSyncer: realTimeStateSyncer,
 		teamMemberDao:       teamMemberDao,
 	}

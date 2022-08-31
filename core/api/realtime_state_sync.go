@@ -1,17 +1,18 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"path"
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type RealTimeStateSync struct {
+	dataCollector       obs.DataCollector
 	realTimeStateSyncer *realtime.StateSyncer
 }
 
@@ -29,7 +30,7 @@ func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) error {
 }
 
 func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Request) {
-	userID, err := ctx.UserIDFromContext(request.Context())
+	userID, err := ctx.UserIDFromContext(r.dataCollector, request.Context())
 	if err != nil {
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
@@ -37,18 +38,16 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 
 	conn, err := connection.WebSocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
-		log.Println(err)
+		r.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		writer.WriteHeader(http.StatusInternalServerError)
-		writer.Write([]byte(err.Error()))
 		return
 	}
 
-	webSocketConn := connection.NewWebSocket(conn)
+	webSocketConn := connection.NewWebSocket(r.dataCollector, conn)
 	err = r.realTimeStateSyncer.OnClientConnect(userID, webSocketConn)
 	if err != nil {
-		log.Println(err)
+		r.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		writer.WriteHeader(http.StatusInternalServerError)
-		writer.Write([]byte(err.Error()))
 		return
 	}
 
@@ -56,9 +55,11 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 }
 
 func NewRealTimeStateSync(
+	dataCollector obs.DataCollector,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) RealTimeStateSync {
 	return RealTimeStateSync{
+		dataCollector:       dataCollector,
 		realTimeStateSyncer: realTimeStateSyncer,
 	}
 }

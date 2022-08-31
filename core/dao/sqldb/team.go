@@ -3,14 +3,15 @@ package sqldb
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Team struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.Team = (*Team)(nil)
@@ -29,7 +30,7 @@ func (t Team) FindAllTeams() ([]entity.Team, error) {
 `
 	rows, err := t.db.Query(statement)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 	defer rows.Close()
@@ -47,14 +48,14 @@ func (t Team) FindAllTeams() ([]entity.Team, error) {
 			&team.UpdatedAt,
 		)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		teams = append(teams, team)
 	}
 
-	return teams, err
+	return teams, nil
 }
 
 func (t Team) FindTeamByID(teamID uint64) (entity.Team, error) {
@@ -82,7 +83,7 @@ func (t Team) FindTeamByID(teamID uint64) (entity.Team, error) {
 			&team.UpdatedAt,
 		)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return team, err
@@ -107,7 +108,7 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
 	WHERE id IN (%s);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -126,7 +127,7 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
 				&team.UpdatedAt,
 			)
 		if err != nil {
-			log.Println(team.ID, err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -153,6 +154,11 @@ func (t Team) CreateTeam(team entity.Team) error {
 		team.OwnerUserID,
 		team.CreatedAt,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -171,9 +177,14 @@ func (t Team) UpdateTeam(team entity.Team) error {
 		team.UpdatedAt,
 		team.ID,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewTeam(sqlDB *sql.DB) Team {
-	return Team{db: sqlDB}
+func NewTeam(dataCollector obs.DataCollector, sqlDB *sql.DB) Team {
+	return Team{dataCollector: dataCollector, db: sqlDB}
 }

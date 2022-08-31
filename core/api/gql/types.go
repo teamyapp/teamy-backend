@@ -1,11 +1,11 @@
 package gql
 
 import (
-	"log"
 	"strconv"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -42,13 +42,14 @@ func toGraphQLDurationPtr(du *time.Duration) *scalar.Duration {
 	return &scalar.Duration{Duration: *du}
 }
 
-func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
+func fromGraphQLIDPtr(dataCollector obs.DataCollector, graphqlID *graphql.ID) (*uint64, error) {
 	if graphqlID == nil {
 		return nil, nil
 	}
 
 	id, err := fromGraphQLID(*graphqlID)
 	if err != nil {
+		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -77,20 +78,20 @@ func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
 	return strconv.ParseUint(string(graphqlID), 10, 64)
 }
 
-func fromGraphQLTaskFilterPtr(gqlTaskFilter *TaskFilter) (*service.TaskFilter, error) {
+func fromGraphQLTaskFilterPtr(dataCollector obs.DataCollector, gqlTaskFilter *TaskFilter) (*service.TaskFilter, error) {
 	if gqlTaskFilter == nil {
 		return nil, nil
 	}
 
-	taskID, err := fromGraphQLIDPtr(gqlTaskFilter.TaskID)
+	taskID, err := fromGraphQLIDPtr(dataCollector, gqlTaskFilter.TaskID)
 	if err != nil {
-		log.Println(err)
+		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	ownerID, err := fromGraphQLIDPtr(gqlTaskFilter.OwnerID)
+	ownerID, err := fromGraphQLIDPtr(dataCollector, gqlTaskFilter.OwnerID)
 	if err != nil {
-		log.Println(err)
+		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -103,14 +104,14 @@ func fromGraphQLTaskFilterPtr(gqlTaskFilter *TaskFilter) (*service.TaskFilter, e
 	}, nil
 }
 
-func fromGraphQLSprintFilterPtr(gqlSprintFilter *SprintFilter) (*service.SprintFilter, error) {
+func fromGraphQLSprintFilterPtr(dataCollector obs.DataCollector, gqlSprintFilter *SprintFilter) (*service.SprintFilter, error) {
 	if gqlSprintFilter == nil {
 		return nil, nil
 	}
 
-	sprintID, err := fromGraphQLIDPtr(gqlSprintFilter.SprintID)
+	sprintID, err := fromGraphQLIDPtr(dataCollector, gqlSprintFilter.SprintID)
 	if err != nil {
-		log.Println(err)
+		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 

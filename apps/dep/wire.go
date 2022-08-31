@@ -7,13 +7,24 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	"github.com/teamyapp/teamy-backend/core/api"
 )
 
+func InitDataCollector(severity obs.Severity) obs.DataCollector {
+	wire.Build(
+		wire.Bind(new(obs.Logger), new(obs.RawLogger)),
+		obs.NewRawLogger,
+		obs.NewDataCollector,
+	)
+	return obs.DataCollector{}
+}
+
 func InitGithubApp(
+	dataCollector obs.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	teamyAPIClientRegistry *api.ClientRegistry,
 	config github.AppConfig,

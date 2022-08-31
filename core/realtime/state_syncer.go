@@ -2,9 +2,9 @@ package realtime
 
 import (
 	"encoding/json"
-	"log"
 
 	"github.com/teamyapp/cloud/libs/connection"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -38,6 +38,7 @@ type Mutation struct {
 }
 
 type StateSyncer struct {
+	dataCollector  obs.DataCollector
 	teamMemberDao  dao.TeamMember
 	mutations      chan Mutation
 	teamNotifiers  map[uint64]*TeamNotifier
@@ -47,13 +48,20 @@ type StateSyncer struct {
 }
 
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
-	log.Printf("client connected: userID=%v, clientID=%v\n", userID, s.nextClientID)
+	s.dataCollector.Logger.Log(obs.Info, obs.Props{
+		obs.MessageProp: obs.Props{
+			"summary":  "client connected",
+			"userID":   userID,
+			"clientID": s.nextClientID,
+		},
+	})
 	userNotifier, err := s.getUserNotifier(userID)
 	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	clientNotifier := newClientNotifier(conn, s.nextClientID)
+	clientNotifier := newClientNotifier(s.dataCollector, conn, s.nextClientID)
 	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
 	s.nextClientID++
 	return nil
@@ -66,7 +74,7 @@ func (s *StateSyncer) NotifyMutation(mutation Mutation) {
 }
 
 func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
-	userNotifier := newUserNotifier(userID)
+	userNotifier := newUserNotifier(s.dataCollector, userID)
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
@@ -74,7 +82,7 @@ func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
 	s.userNotifiers[userID] = userNotifier
 	err := s.subscribeToTeams(userID, userNotifier)
 	if err != nil {
-		log.Println(err)
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -84,7 +92,7 @@ func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
 func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier) error {
 	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(userID)
 	if err != nil {
-		log.Println(err)
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -94,7 +102,13 @@ func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier
 			teamNotifier = s.newTeamNotifier(teamID)
 		}
 
-		log.Printf("subscribed to team: teamID=%v, userID=%v\n", teamID, userID)
+		s.dataCollector.Logger.Log(obs.Info, obs.Props{
+			obs.MessageProp: obs.Props{
+				"summary": "subscribed to team",
+				"teamID":  teamID,
+				"userID":  userID,
+			},
+		})
 		teamNotifier.registerUserNotifier(userID, userNotifier)
 	}
 
@@ -104,7 +118,7 @@ func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier
 func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
-		teamNotifier = newTeamNotifier(teamID)
+		teamNotifier = newTeamNotifier(s.dataCollector, teamID)
 		go func() {
 			<-teamNotifier.subscribeTeamDisconnect()
 			delete(s.teamNotifiers, teamID)
@@ -121,7 +135,7 @@ func (s StateSyncer) getUserNotifier(userID uint64) (*UserNotifier, error) {
 	if !ok {
 		userNotifier, err = s.newUserNotifier(userID)
 		if err != nil {
-			log.Println(err)
+			s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return nil, err
 		}
 	}
@@ -139,9 +153,11 @@ func (s StateSyncer) notifyTeam(teamID uint64, mutation Mutation) {
 }
 
 func NewStateSyncer(
+	dataCollector obs.DataCollector,
 	teamMemberDao dao.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
+		dataCollector:  dataCollector,
 		teamMemberDao:  teamMemberDao,
 		mutations:      make(chan Mutation, stateSyncerBufferSize),
 		teamNotifiers:  map[uint64]*TeamNotifier{},
@@ -151,11 +167,16 @@ func NewStateSyncer(
 	}
 	go func() {
 		for mutation := range stateSyncer.mutations {
-			buf, err := json.MarshalIndent(mutation, "", "    ")
+			buf, err := json.Marshal(mutation)
 			if err != nil {
-				log.Println(err)
+				dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			} else {
-				log.Printf("StateSyncer processing mutation: mutation=%v\n", string(buf))
+				dataCollector.Logger.Log(obs.Info, obs.Props{
+					obs.MessageProp: obs.Props{
+						"summary":  "client disconnected",
+						"mutation": string(buf),
+					},
+				})
 			}
 
 			for _, teamID := range mutation.TeamIDs {
@@ -164,11 +185,11 @@ func NewStateSyncer(
 					teamMember := mutation.Payload.(entity.TeamMember)
 					userNotifier, err := stateSyncer.getUserNotifier(teamMember.UserID)
 					if err != nil {
-						log.Println(err)
+						dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 					} else {
 						err = stateSyncer.subscribeToTeams(teamMember.UserID, userNotifier)
 						if err != nil {
-							log.Println(err)
+							dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 						}
 					}
 				}

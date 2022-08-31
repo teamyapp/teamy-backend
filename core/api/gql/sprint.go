@@ -2,11 +2,11 @@ package gql
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -35,15 +35,15 @@ func (s Sprint) CreatedAt(ct context.Context) graphql.Time {
 func (s Sprint) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(args.Filter)
+	filter, err := fromGraphQLTaskFilterPtr(s.deps.dataCollector, args.Filter)
 	if err != nil {
-		log.Println(err)
+		s.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	tasks, err := s.deps.sprintService.FindTasksInSprint(ct, s.sprint.ID, filter)
 	if err != nil {
-		log.Println(err)
+		s.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -56,12 +56,19 @@ func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 	filter := &service.TeamFilter{TeamID: &s.sprint.OwningTeamID}
 	teams, err := s.deps.teamService.FindTeams(ct, filter)
 	if err != nil {
-		log.Println(err)
+		s.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
 
 	if len(teams) == 0 {
-		return Team{}, fmt.Errorf("team not found: teamID=%v", s.sprint.OwningTeamID)
+		err = errors.New("team not found")
+		s.deps.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"teamID": s.sprint.OwningTeamID,
+			},
+		})
+		return Team{}, err
 	}
 
 	return newTeam(s.deps, teams[0]), nil

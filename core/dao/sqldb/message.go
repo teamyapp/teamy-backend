@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Message struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.Message = (*Message)(nil)
@@ -44,6 +45,10 @@ func (m Message) FindMessageByID(messageID uint64) (entity.Message, error) {
 			messageID))
 	}
 
+	if err != nil {
+		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return message, err
 }
 
@@ -61,9 +66,10 @@ func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, erro
 `
 	rows, err := m.db.Query(statement, threadID)
 	if err != nil {
-		log.Println(err)
+		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	messages := make([]entity.Message, 0)
@@ -78,14 +84,14 @@ func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, erro
 			&message.UpdatedAt,
 		)
 		if err != nil {
-			log.Println(err)
+			m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		messages = append(messages, message)
 	}
 
-	return messages, err
+	return messages, nil
 }
 
 func (m Message) CreateMessage(message entity.Message) error {
@@ -105,6 +111,11 @@ func (m Message) CreateMessage(message entity.Message) error {
 		message.AuthorUserID,
 		message.CreatedAt,
 	)
+
+	if err != nil {
+		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -119,6 +130,11 @@ func (m Message) UpdateMessage(message entity.Message) error {
 		message.UpdatedAt,
 		message.ID,
 	)
+
+	if err != nil {
+		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -128,9 +144,14 @@ func (m Message) DeleteMessage(messageID uint64) error {
 		WHERE id = $1;
 		`,
 		messageID)
+
+	if err != nil {
+		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewMessage(sqlDB *sql.DB) Message {
-	return Message{db: sqlDB}
+func NewMessage(dataCollector obs.DataCollector, sqlDB *sql.DB) Message {
+	return Message{dataCollector: dataCollector, db: sqlDB}
 }

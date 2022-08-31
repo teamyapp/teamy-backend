@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Task struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.Task = (*Task)(nil)
@@ -58,6 +59,10 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			taskID))
 	}
 
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return task, err
 }
 
@@ -86,7 +91,7 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 	WHERE id IN (%s);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -111,7 +116,7 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 				&task.UpdatedAt,
 			)
 		if err != nil {
-			log.Println(task.ID, err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -163,6 +168,10 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			commentThreadID))
 	}
 
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return task, err
 }
 
@@ -185,7 +194,7 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 	FROM task;
 `)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -209,14 +218,14 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 			&task.UpdatedAt,
 		)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	return tasks, err
+	return tasks, nil
 }
 
 func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
@@ -241,7 +250,7 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 `,
 		teamID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -265,14 +274,14 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 			&task.UpdatedAt,
 		)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	return tasks, err
+	return tasks, nil
 }
 
 func (t Task) CreateTask(task entity.Task) error {
@@ -306,6 +315,11 @@ func (t Task) CreateTask(task entity.Task) error {
 		task.DueAt,
 		task.CreatedAt,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -334,6 +348,11 @@ func (t Task) UpdateTask(task entity.Task) error {
 		task.UpdatedAt,
 		task.ID,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -343,9 +362,14 @@ func (t Task) DeleteTask(taskID uint64) error {
 		WHERE id = $1;
 		`,
 		taskID)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewTask(sqlDB *sql.DB) Task {
-	return Task{db: sqlDB}
+func NewTask(dataCollector obs.DataCollector, sqlDB *sql.DB) Task {
+	return Task{dataCollector: dataCollector, db: sqlDB}
 }
