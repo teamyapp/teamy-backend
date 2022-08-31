@@ -2,9 +2,9 @@ package realtime
 
 import (
 	"encoding/json"
-	"log"
 
 	"github.com/teamyapp/cloud/libs/connection"
+	"github.com/teamyapp/cloud/libs/obs"
 )
 
 const clientBufferSize = 50
@@ -16,6 +16,7 @@ type MutationMessage struct {
 }
 
 type ClientNotifier struct {
+	dataCollector               obs.DataCollector
 	clientDisconnectSubscribers []chan bool
 	mutations                   chan Mutation
 }
@@ -30,7 +31,7 @@ func (c ClientNotifier) processMutation(mutation Mutation) {
 	c.mutations <- mutation
 }
 
-func newClientNotifier(conn connection.Connection, clientID uint64) *ClientNotifier {
+func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
 	mutations := make(chan Mutation, clientBufferSize)
 	go func() {
 		for mutation := range mutations {
@@ -41,11 +42,17 @@ func newClientNotifier(conn connection.Connection, clientID uint64) *ClientNotif
 			}
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
 			if err != nil {
-				log.Println(err)
+				dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 				continue
 			}
 			conn.SendMessage(jsonBuf)
-			log.Printf("notification sent: clientID=%v mutationID=%v\n", clientID, mutation.ID)
+			dataCollector.Logger.Log(obs.Info, obs.Props{
+				obs.MessageProp: obs.Props{
+					"summary":    "notification sent",
+					"clientID":   clientID,
+					"mutationID": mutation.ID,
+				},
+			})
 		}
 	}()
 	clientNotifier := &ClientNotifier{

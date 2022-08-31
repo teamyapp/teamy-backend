@@ -2,14 +2,14 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -38,6 +38,7 @@ type UpdateTaskInput struct {
 }
 
 type Task struct {
+	dataCollector              obs.DataCollector
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	taskDao                    dao.Task
 	threadDao                  dao.Thread
@@ -63,13 +64,13 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, error) {
 	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(awaitingTaskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	tasks, err := t.taskDao.FindTasksByIDs(awaitForTaskIds)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -77,22 +78,22 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 }
 
 func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
-	userID, err := ctx.UserIDFromContext(ct)
+	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	threadID, err := t.threadService.createThread(ct)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -117,6 +118,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 
 	err = t.taskSyncer.CreateAndSyncTask(task)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -126,6 +128,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -139,6 +142,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	task.UpdatedAt = &updatedAt
 	err = t.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -148,7 +152,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -156,13 +160,13 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 
 	err = t.taskSyncer.DeleteAndSyncTask(taskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	err = t.threadDao.DeleteThread(task.CommentsThreadID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -172,6 +176,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTask bool) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -188,6 +193,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 	task.UpdatedAt = &now
 	err = t.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -195,21 +201,21 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 }
 
 func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Task, error) {
-	userID, err := ctx.UserIDFromContext(ct)
+	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	tasks, err := t.taskDao.FindTasksByTeamID(task.OwningTeamID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -236,7 +242,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		inProgressTask.UpdatedAt = &now
 		err = t.taskSyncer.UpdateAndSyncTask(inProgressTask)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 	}
@@ -245,6 +251,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 	task.UpdatedAt = &now
 	err = t.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -254,7 +261,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -263,26 +270,26 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 	task.UpdatedAt = &now
 	err = t.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(taskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	for _, awaitingTaskID := range awaitingTaskIDs {
 		awaitForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(awaitingTaskID)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 
 		awaitForTasks, err := t.taskDao.FindTasksByIDs(awaitForTaskIDs)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 
@@ -292,6 +299,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		if len(awaitForTasks) == 0 {
 			_, err = t.MoveTaskToUpcoming(ct, awaitingTaskID, false)
 			if err != nil {
+				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 				return entity.Task{}, err
 			}
 		}
@@ -307,12 +315,19 @@ func (t Task) MoveTaskToBlocked(ct context.Context, taskID uint64, reason string
 func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitForTaskId uint64) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(awaitingTaskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	if !awaitableTaskStatuses[task.Status] {
-		return entity.Task{}, fmt.Errorf("task must be awaitable: taskID=%d", awaitingTaskID)
+		err = errors.New("task must be awaitable")
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"taskID": awaitingTaskID,
+			},
+		})
+		return entity.Task{}, err
 	}
 
 	now := time.Now()
@@ -322,7 +337,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		CreatedAt:      now,
 	})
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -330,6 +345,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	task.UpdatedAt = &now
 	err = t.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -339,30 +355,37 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTaskId uint64) (entity.Task, error) {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	if task.Status != entity.TaskStatusAwaiting {
-		return entity.Task{}, fmt.Errorf("task must be awaiting: taskID=%d", taskID)
+		err = errors.New("task must be awaitable")
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"taskID": taskID,
+			},
+		})
+		return entity.Task{}, err
 	}
 
 	err = t.taskAwaitForRelationSyncer.DeleteAndSyncRelation(taskID, awaitForTaskId)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(taskID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	if len(awaitForTaskIds) == 0 {
 		task, err = t.MoveTaskToUpcoming(ct, taskID, false)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 	}
@@ -371,6 +394,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 }
 
 func NewTask(
+	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	taskDao dao.Task,
 	threadDao dao.Thread,
@@ -380,6 +404,7 @@ func NewTask(
 	threadService Thread,
 ) Task {
 	return Task{
+		dataCollector:              dataCollector,
 		cloudClientRegistry:        cloudClientRegistry,
 		taskDao:                    taskDao,
 		threadDao:                  threadDao,

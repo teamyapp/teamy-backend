@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -19,6 +20,7 @@ func (i Invitation) ID(ct context.Context) graphql.ID {
 func (i Invitation) Sender(ct context.Context) (User, error) {
 	sender, err := i.deps.userDao.FindUserByID(i.invitation.SenderUserID)
 	if err != nil {
+		i.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -44,6 +46,7 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 
 	receiver, err := i.deps.userDao.FindUserByID(*i.invitation.ReceiverUserID)
 	if err != nil {
+		i.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return &User{}, err
 	}
 
@@ -54,6 +57,7 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
 	team, err := i.deps.teamDao.FindTeamByID(i.invitation.TeamID)
 	if err != nil {
+		i.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
 

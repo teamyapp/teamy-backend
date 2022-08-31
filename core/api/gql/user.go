@@ -5,6 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -42,6 +43,7 @@ func (u User) Teams(ct context.Context, args struct {
 }) ([]Team, error) {
 	ids, err := u.deps.teamMemberDao.FindTeamIDsByUserID(u.user.ID)
 	if err != nil {
+		u.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -51,12 +53,13 @@ func (u User) Teams(ct context.Context, args struct {
 
 	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ids)
 	if err != nil {
+		u.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	if args.Filter != nil {
 		teamEntities = collect.Filter(teamEntities, func(team entity.Team) bool {
-			return matchTeam(*args.Filter, team)
+			return matchTeam(u.deps.dataCollector, *args.Filter, team)
 		})
 	}
 

@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamFileUploadSession struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
@@ -48,6 +50,10 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
 			teamFileUploadSessionType))
 	}
 
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return teamFileUploadSession, err
 }
 
@@ -70,6 +76,11 @@ func (t TeamFileUploadSession) CreateTeamFileUploadSession(teamFileUploadSession
 		teamFileUploadSession.CreatedAt,
 		teamFileUploadSession.UpdatedAt,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -94,11 +105,14 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(teamFileUploadSession
 		teamFileUploadSession.Type,
 		teamFileUploadSession.FileUploadSessionID,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewTeamFileUploadSession(sqlDB *sql.DB) TeamFileUploadSession {
-	return TeamFileUploadSession{
-		db: sqlDB,
-	}
+func NewTeamFileUploadSession(dataCollector obs.DataCollector, sqlDB *sql.DB) TeamFileUploadSession {
+	return TeamFileUploadSession{dataCollector: dataCollector, db: sqlDB}
 }

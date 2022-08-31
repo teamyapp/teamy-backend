@@ -1,12 +1,14 @@
 package collection
 
 import (
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type TaskSyncer struct {
+	dataCollector       obs.DataCollector
 	realTimeStateSyncer *realtime.StateSyncer
 	taskDao             dao.Task
 }
@@ -14,6 +16,7 @@ type TaskSyncer struct {
 func (t TaskSyncer) CreateAndSyncTask(task entity.Task) error {
 	err := t.taskDao.CreateTask(task)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -31,6 +34,7 @@ func (t TaskSyncer) CreateAndSyncTask(task entity.Task) error {
 func (t TaskSyncer) UpdateAndSyncTask(task entity.Task) error {
 	err := t.taskDao.UpdateTask(task)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -48,11 +52,13 @@ func (t TaskSyncer) UpdateAndSyncTask(task entity.Task) error {
 func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	err = t.taskDao.DeleteTask(taskID)
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -67,8 +73,12 @@ func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
 	return nil
 }
 
-func NewTaskSyncer(realTimeStateSyncer *realtime.StateSyncer, taskDao dao.Task) TaskSyncer {
+func NewTaskSyncer(
+	dataCollector obs.DataCollector,
+	realTimeStateSyncer *realtime.StateSyncer,
+	taskDao dao.Task) TaskSyncer {
 	return TaskSyncer{
+		dataCollector:       dataCollector,
 		realTimeStateSyncer: realTimeStateSyncer,
 		taskDao:             taskDao,
 	}

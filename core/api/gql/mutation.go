@@ -2,13 +2,13 @@ package gql
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -35,13 +35,13 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 }) (Task, error) {
 	owningTeamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
-	ownerUserID, err := fromGraphQLIDPtr(args.Task.OwnerUserID)
+	ownerUserID, err := fromGraphQLIDPtr(m.deps.dataCollector, args.Task.OwnerUserID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -53,7 +53,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		IsPlanned:   args.Task.IsPlanned,
 	})
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -73,19 +73,19 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
-	ownerUserID, err := fromGraphQLIDPtr(args.Input.OwnerUserID)
+	ownerUserID, err := fromGraphQLIDPtr(m.deps.dataCollector, args.Input.OwnerUserID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	owningTeamID, err := fromGraphQLID(args.Input.OwningTeamID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -98,7 +98,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		DueAt:        fromGraphQLTimePtr(args.Input.DueAt),
 	})
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -110,13 +110,13 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.DeleteTask(ct, taskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -128,13 +128,13 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID, true)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -146,13 +146,13 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToInProgress(ct, taskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -164,13 +164,13 @@ func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToDelivered(ct, taskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -183,13 +183,13 @@ func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToBlocked(ct, taskID, args.Reason)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -202,18 +202,19 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.AddAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -226,19 +227,19 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.RemoveAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -253,20 +254,22 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		Body string
 	}
 }) (Message, error) {
-	userID, err := ctx.UserIDFromContext(ct)
+	userID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	genMessageIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "messageID"}
 	genMessageIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genMessageIDReq)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	threadID, err := fromGraphQLID(args.ThreadID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -280,6 +283,7 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 
 	err = m.deps.messageSyncer.CreateAndSyncMessage(message)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -294,11 +298,13 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, err := fromGraphQLID(args.MessageID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	message, err := m.deps.messageDao.FindMessageByID(messageID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -307,6 +313,7 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	message.UpdatedAt = &now
 	err = m.deps.messageSyncer.UpdateAndSyncMessage(message)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -318,16 +325,19 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, err := fromGraphQLID(args.MessageID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	message, err := m.deps.messageDao.FindMessageByID(messageID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	err = m.deps.messageSyncer.DeleteAndSyncMessage(messageID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -345,20 +355,22 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		ExpireAt          graphql.Time
 	}
 }) (Invitation, error) {
-	senderID, err := ctx.UserIDFromContext(ct)
+	senderID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
 	genInvitationIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genInvitationIDReq)
 	if err != nil {
-		log.Println(err)
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -376,6 +388,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	}
 	err = m.deps.invitationSyncer.CreateAndSyncInvitation(invitation)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -392,11 +405,13 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 }) (Invitation, error) {
 	invitationID, err := fromGraphQLID(args.InvitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -407,6 +422,7 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 	invitation.UpdatedAt = &now
 	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(invitation)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -418,16 +434,19 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 }) (Invitation, error) {
 	invitationID, err := fromGraphQLID(args.InvitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	err = m.deps.invitationSyncer.DeleteAndSyncInvitation(invitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -438,27 +457,39 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	InvitationID   graphql.ID
 	InvitationCode string
 }) (Invitation, error) {
-	receiverUserID, err := ctx.UserIDFromContext(ct)
+	receiverUserID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	invitationID, err := fromGraphQLID(args.InvitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	if invitation.Code != args.InvitationCode {
-		return Invitation{}, fmt.Errorf("invalid invitation code: id=%v, code=%s\n", args.InvitationID, args.InvitationCode)
+		err = errors.New("invalid invitation code")
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"invitationID":   args.InvitationID,
+				"invitationCode": args.InvitationCode,
+			},
+		})
+		return Invitation{}, err
 	}
 
 	err = m.ensureInvitationPending(invitation)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -468,17 +499,20 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	invitation.UpdatedAt = &now
 	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(invitation)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	hasMember, err := m.deps.teamMemberDao.HasTeamMember(invitation.TeamID, receiverUserID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	if !hasMember {
 		err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(invitation.TeamID, receiverUserID)
 		if err != nil {
+			m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return Invitation{}, err
 		}
 	}
@@ -490,27 +524,39 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	InvitationID   graphql.ID
 	InvitationCode string
 }) (Invitation, error) {
-	receiverUserID, err := ctx.UserIDFromContext(ct)
+	receiverUserID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	invitationID, err := fromGraphQLID(args.InvitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	invitation, err := m.deps.invitationDao.FindInvitationByID(invitationID)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
 	if invitation.Code != args.InvitationCode {
-		return Invitation{}, fmt.Errorf("invalid invitation code: id=%v, code=%s\n", args.InvitationID, args.InvitationCode)
+		err = errors.New("invalid invitation code")
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID":   args.InvitationID,
+				"InvitationCode": args.InvitationCode,
+			},
+		})
+		return Invitation{}, err
 	}
 
 	err = m.ensureInvitationPending(invitation)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -520,6 +566,7 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	invitation.UpdatedAt = &now
 	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(invitation)
 	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
@@ -529,11 +576,32 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 func (m Mutation) ensureInvitationPending(invitation entity.Invitation) error {
 	switch invitation.Status {
 	case entity.InvitationStatusExpired:
-		return fmt.Errorf("invitation is expired: id=%v", invitation.ID)
+		err := errors.New("invitation is expired")
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID": invitation.ID,
+			},
+		})
+		return err
 	case entity.InvitationStatusInvoked:
-		return fmt.Errorf("invitation is revoked: id=%v", invitation.ID)
+		err := errors.New("invitation is revoked")
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID": invitation.ID,
+			},
+		})
+		return err
 	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
-		return fmt.Errorf("invitation is already responded: id=%v", invitation.ID)
+		err := errors.New("invitation is already responded")
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID": invitation.ID,
+			},
+		})
+		return err
 	default:
 		return nil
 	}

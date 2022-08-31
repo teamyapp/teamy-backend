@@ -1,12 +1,12 @@
 package realtime
 
 import (
-	"log"
-
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamNotifier struct {
+	dataCollector             obs.DataCollector
 	teamID                    uint64
 	teamDisconnectCh          chan bool
 	teamDisconnectSubscribers []chan bool
@@ -31,7 +31,13 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 }
 
 func (t TeamNotifier) processMutation(mutation Mutation) {
-	log.Printf("TeamNotifier processing mutation: teamID=%v mutationID=%v\n", t.teamID, mutation.ID)
+	t.dataCollector.Logger.Log(obs.Info, obs.Props{
+		obs.MessageProp: obs.Props{
+			"summary":    "client disconnected",
+			"teamID":     t.teamID,
+			"mutationID": mutation.ID,
+		},
+	})
 	for _, userNotifier := range t.userNotifiers {
 		userNotifier.processMutation(mutation)
 	}
@@ -43,8 +49,9 @@ func (t TeamNotifier) processMutation(mutation Mutation) {
 	}
 }
 
-func newTeamNotifier(teamID uint64) *TeamNotifier {
+func newTeamNotifier(dataCollector obs.DataCollector, teamID uint64) *TeamNotifier {
 	teamNotifier := &TeamNotifier{
+		dataCollector:             dataCollector,
 		teamID:                    teamID,
 		userNotifiers:             map[uint64]*UserNotifier{},
 		teamDisconnectCh:          make(chan bool),

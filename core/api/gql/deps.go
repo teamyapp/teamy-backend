@@ -2,12 +2,14 @@ package gql
 
 import (
 	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Dependencies struct {
+	dataCollector              obs.DataCollector
 	cloudClientRegistry        *api.ClientRegistry
 	userDao                    dao.User
 	teamDao                    dao.Team
@@ -28,6 +30,7 @@ type Dependencies struct {
 }
 
 func NewDependencies(
+	dataCollector obs.DataCollector,
 	cloudClientRegistry *api.ClientRegistry,
 	userDao dao.User,
 	teamDao dao.Team,
@@ -47,6 +50,7 @@ func NewDependencies(
 	userService service.User,
 ) *Dependencies {
 	return &Dependencies{
+		dataCollector:              dataCollector,
 		cloudClientRegistry:        cloudClientRegistry,
 		userDao:                    userDao,
 		teamDao:                    teamDao,

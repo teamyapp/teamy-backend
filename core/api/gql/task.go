@@ -2,10 +2,10 @@ package gql
 
 import (
 	"context"
-	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -57,6 +57,7 @@ func (t Task) Context(ct context.Context) *string {
 func (t Task) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userDao.FindUserByID(t.task.CreatorUserID)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -70,6 +71,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 
 	owner, err := t.deps.userDao.FindUserByID(*t.task.OwnerUserID)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -80,6 +82,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 func (t Task) OwningTeam(ct context.Context) (*Team, error) {
 	team, err := t.deps.teamDao.FindTeamByID(t.task.OwningTeamID)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -122,7 +125,7 @@ func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 	tasks, err := t.deps.taskService.FindAwaitForTasks(ct, t.task.ID)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 

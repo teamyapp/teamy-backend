@@ -2,10 +2,10 @@ package gql
 
 import (
 	"context"
-	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -33,7 +33,8 @@ func (t Team) CreatedAt(ct context.Context) graphql.Time {
 func (t Team) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userDao.FindUserByID(t.team.CreatorUserID)
 	if err != nil {
-		return User{}, nil
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return User{}, err
 	}
 
 	return newUser(t.deps, user), nil
@@ -42,6 +43,7 @@ func (t Team) Creator(ct context.Context) (User, error) {
 func (t Team) Owner(ct context.Context) (User, error) {
 	user, err := t.deps.userDao.FindUserByID(t.team.OwnerUserID)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, nil
 	}
 
@@ -51,11 +53,13 @@ func (t Team) Owner(ct context.Context) (User, error) {
 func (t Team) Members(ct context.Context) ([]User, error) {
 	teamMemberIDs, err := t.deps.teamMemberDao.FindTeamMemberIDsByTeamID(t.team.ID)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	userEntities, err := t.deps.userDao.FindUsersByIDs(teamMemberIDs)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -67,15 +71,15 @@ func (t Team) Members(ct context.Context) ([]User, error) {
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(args.Filter)
+	filter, err := fromGraphQLTaskFilterPtr(t.deps.dataCollector, args.Filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	tasks, err := t.deps.teamService.FindTasksInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -89,12 +93,13 @@ func (t Team) Invitations(ct context.Context, args struct {
 }) ([]Invitation, error) {
 	invitationEntities, err := t.deps.invitationDao.FindInvitationsByTeamID(t.team.ID)
 	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	if args.Filter != nil {
 		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entity.Invitation) bool {
-			return matchInvitation(*args.Filter, invitationEntity)
+			return matchInvitation(t.deps.dataCollector, *args.Filter, invitationEntity)
 		})
 	}
 
@@ -106,15 +111,15 @@ func (t Team) Invitations(ct context.Context, args struct {
 func (t Team) Sprints(ct context.Context, args struct {
 	Filter *SprintFilter
 }) ([]Sprint, error) {
-	filter, err := fromGraphQLSprintFilterPtr(args.Filter)
+	filter, err := fromGraphQLSprintFilterPtr(t.deps.dataCollector, args.Filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	sprints, err := t.deps.teamService.FindSprintsInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 

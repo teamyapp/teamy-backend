@@ -2,14 +2,15 @@ package service
 
 import (
 	"context"
-	"log"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 type Thread struct {
+	dataCollector       obs.DataCollector
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	threadDao           dao.Thread
 }
@@ -18,16 +19,26 @@ func (t Thread) createThread(ct context.Context) (uint64, error) {
 	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
 	genThreadIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
-	return threadID, t.threadDao.CreateThread(threadID)
+	err = t.threadDao.CreateThread(threadID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
+	return threadID, err
 }
 
-func NewThread(cloudClientRegistry *cloudAPI.ClientRegistry, threadDao dao.Thread) Thread {
+func NewThread(
+	dataCollector obs.DataCollector,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
+	threadDao dao.Thread,
+) Thread {
 	return Thread{
+		dataCollector:       dataCollector,
 		cloudClientRegistry: cloudClientRegistry,
 		threadDao:           threadDao,
 	}

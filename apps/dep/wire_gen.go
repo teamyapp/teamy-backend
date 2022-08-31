@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	api2 "github.com/teamyapp/teamy-backend/core/api"
@@ -17,12 +18,18 @@ import (
 
 // Injectors from wire.go:
 
-func InitGithubApp(cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, config github.AppConfig, sqlDB *sql.DB) (github.App, error) {
-	githubAppInstallState := sqldb.NewGithubAppInstallState(sqlDB)
-	githubAppInstallation := sqldb.NewGithubAppInstallation(sqlDB)
-	githubPullRequest := sqldb.NewGithubPullRequest(sqlDB)
-	githubCodeReview := sqldb.NewGithubCodeReview(sqlDB)
-	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(sqlDB)
-	app := github.NewApp(config, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction)
+func InitDataCollector(severity obs.Severity) obs.DataCollector {
+	rawLogger := obs.NewRawLogger(severity)
+	dataCollector := obs.NewDataCollector(rawLogger)
+	return dataCollector
+}
+
+func InitGithubApp(dataCollector obs.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, config github.AppConfig, sqlDB *sql.DB) (github.App, error) {
+	githubAppInstallState := sqldb.NewGithubAppInstallState(dataCollector, sqlDB)
+	githubAppInstallation := sqldb.NewGithubAppInstallation(dataCollector, sqlDB)
+	githubPullRequest := sqldb.NewGithubPullRequest(dataCollector, sqlDB)
+	githubCodeReview := sqldb.NewGithubCodeReview(dataCollector, sqlDB)
+	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
+	app := github.NewApp(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction)
 	return app, nil
 }

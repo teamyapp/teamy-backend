@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type User struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.User = (*User)(nil)
@@ -45,6 +46,10 @@ func (u User) FindUserByID(userID uint64) (entity.User, error) {
 			userID))
 	}
 
+	if err != nil {
+		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return user, err
 }
 
@@ -66,7 +71,7 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
 	WHERE id IN (%s)`, idsString)
 	rows, err := u.db.Query(query)
 	if err != nil {
-		log.Println(err)
+		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 	defer rows.Close()
@@ -84,7 +89,7 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
 				&user.UpdatedAt,
 			)
 		if err != nil {
-			log.Println(user.ID, err)
+			u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -111,6 +116,11 @@ func (u User) CreateUser(user entity.User) error {
 		user.ProfileURL,
 		user.CreatedAt,
 	)
+
+	if err != nil {
+		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
@@ -129,9 +139,14 @@ func (u User) UpdateUser(user entity.User) error {
 		user.UpdatedAt,
 		user.ID,
 	)
+
+	if err != nil {
+		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewUser(sqlDB *sql.DB) User {
-	return User{db: sqlDB}
+func NewUser(dataCollector obs.DataCollector, sqlDB *sql.DB) User {
+	return User{dataCollector: dataCollector, db: sqlDB}
 }

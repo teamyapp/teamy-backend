@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubAppInstallState struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.GithubAppInstallState = (*GithubAppInstallState)(nil)
@@ -40,6 +41,10 @@ func (g GithubAppInstallState) FindStateByID(stateID uint64) (entity.GithubAppIn
 			"GithubAppInstallState not found: id=%v", stateID))
 	}
 
+	if err != nil {
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return state, err
 }
 
@@ -59,8 +64,9 @@ func (g GithubAppInstallState) CreateState(state entity.GithubAppInstallState) e
 		state.RedirectURL,
 		state.CreatedAt,
 	)
+
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
@@ -72,11 +78,17 @@ func (g GithubAppInstallState) DeleteState(stateID uint64) error {
 		WHERE id = $1;
 		`,
 		stateID)
+
+	if err != nil {
+		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewGithubAppInstallState(sqlDB *sql.DB) GithubAppInstallState {
+func NewGithubAppInstallState(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubAppInstallState {
 	return GithubAppInstallState{
-		db: sqlDB,
+		dataCollector: dataCollector,
+		db:            sqlDB,
 	}
 }
