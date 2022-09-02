@@ -110,6 +110,10 @@ func (t Task) UpdatedAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.UpdatedAt)
 }
 
+func (t Task) DeliveredAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(t.task.DeliveredAt)
+}
+
 func (t Task) DueAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.DueAt)
 }

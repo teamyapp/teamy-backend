@@ -268,6 +268,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 	task.Status = entity.TaskStatusDelivered
 	now := time.Now()
 	task.UpdatedAt = &now
+	task.DeliveredAt = &now
 	err = t.taskSyncer.UpdateAndSyncTask(task)
 	if err != nil {
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
