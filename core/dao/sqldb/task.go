@@ -33,7 +33,8 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			comments_thread_id,
 			due_at,
 			created_at,
-			updated_at
+			updated_at,
+			delivered_at
 		FROM task
 		WHERE id = $1;`,
 		taskID).
@@ -51,6 +52,7 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -86,7 +88,8 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 		comments_thread_id,
 		due_at,
 		created_at,
-		updated_at
+		updated_at,
+		delivered_at
 	FROM task
 	WHERE id IN (%s);`, idsString)
 	rows, err := t.db.Query(query)
@@ -114,6 +117,7 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 				&task.DueAt,
 				&task.CreatedAt,
 				&task.UpdatedAt,
+				&task.DeliveredAt,
 			)
 		if err != nil {
 			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
@@ -142,7 +146,8 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			comments_thread_id,
 			due_at,
 			created_at,
-			updated_at
+			updated_at,
+			delivered_at
 		FROM task
 		WHERE comments_thread_id = $1;`,
 		commentThreadID).
@@ -160,6 +165,7 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -190,7 +196,8 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 		comments_thread_id,
 		due_at,
 		created_at,
-		updated_at
+		updated_at,
+		delivered_at
 	FROM task;
 `)
 	if err != nil {
@@ -216,6 +223,7 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 		if err != nil {
 			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
@@ -244,7 +252,8 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 		comments_thread_id,
 		due_at,
 		created_at,
-		updated_at
+		updated_at,
+		delivered_at
 	FROM task
 	WHERE owning_team_id = $1;
 `,
@@ -272,6 +281,7 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 		if err != nil {
 			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
@@ -335,8 +345,9 @@ func (t Task) UpdateTask(task entity.Task) error {
 			is_planned = $6,
 			effort = $7,
 			due_at = $8,
-			updated_at = $9
-		WHERE id = $10;`,
+			updated_at = $9,
+			delivered_at = $10
+		WHERE id = $11;`,
 		task.Goal,
 		task.Context,
 		task.OwnerUserID,
@@ -346,6 +357,7 @@ func (t Task) UpdateTask(task entity.Task) error {
 		task.Effort,
 		task.DueAt,
 		task.UpdatedAt,
+		task.DeliveredAt,
 		task.ID,
 	)
 

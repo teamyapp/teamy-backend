@@ -18,4 +18,5 @@ type Task struct {
 	CommentsThreadID uint64
 	CreatedAt        time.Time
 	UpdatedAt        *time.Time
+	DeliveredAt      *time.Time
 }

@@ -80,6 +80,7 @@ type Task {
 	comments: Thread!
 	createdAt: Time!
 	updatedAt: Time
+	deliveredAt: Time
 	dueAt: Time
 	effort: Duration
 	availableActions: [TaskAction!]!
