@@ -40,6 +40,7 @@ type Mutation struct {
 type StateSyncer struct {
 	dataCollector  obs.DataCollector
 	teamMemberDao  dao.TeamMember
+	userDao        dao.User
 	mutations      chan Mutation
 	teamNotifiers  map[uint64]*TeamNotifier
 	userNotifiers  map[uint64]*UserNotifier
@@ -67,6 +68,51 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 	return nil
 }
 
+func (s *StateSyncer) notifyDisconnectionToTeams(userID uint64) error {
+	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(userID)
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	for _, teamID := range teamIDs {
+		s.dataCollector.Logger.Log(obs.Info, obs.Props{
+			obs.MessageProp: obs.Props{
+				"summary": "disconnected",
+				"teamID":  teamID,
+				"userID":  userID,
+			},
+		})
+		s.notifyConnection(userID, teamID, false)
+	}
+
+	return nil
+}
+
+func (s *StateSyncer) notifyConnection(userID uint64, teamID uint64, isConnected bool) error {
+	user, err := s.userDao.FindUserByID(userID)
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	mutationType := UpdateMutationType
+	if !isConnected {
+		mutationType = DeleteMutationType
+	}
+
+	s.NotifyMutation(Mutation{
+		CollectionType: MessageCollectionType,
+		MutationType:   mutationType,
+		TeamIDs: []uint64{
+			teamID,
+		},
+		Payload: user,
+	})
+
+	return nil
+}
+
 func (s *StateSyncer) NotifyMutation(mutation Mutation) {
 	mutation.ID = s.nextMutationID
 	s.nextMutationID++
@@ -78,6 +124,7 @@ func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
+		s.notifyDisconnectionToTeams(userID)
 	}()
 	s.userNotifiers[userID] = userNotifier
 	err := s.subscribeToTeams(userID, userNotifier)
@@ -110,6 +157,7 @@ func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier
 			},
 		})
 		teamNotifier.registerUserNotifier(userID, userNotifier)
+		s.notifyConnection(userID, teamID, true)
 	}
 
 	return nil
@@ -155,10 +203,12 @@ func (s StateSyncer) notifyTeam(teamID uint64, mutation Mutation) {
 func NewStateSyncer(
 	dataCollector obs.DataCollector,
 	teamMemberDao dao.TeamMember,
+	userDao dao.User,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
 		dataCollector:  dataCollector,
 		teamMemberDao:  teamMemberDao,
+		userDao:        userDao,
 		mutations:      make(chan Mutation, stateSyncerBufferSize),
 		teamNotifiers:  map[uint64]*TeamNotifier{},
 		userNotifiers:  map[uint64]*UserNotifier{},
