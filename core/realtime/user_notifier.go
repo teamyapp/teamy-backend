@@ -58,6 +58,7 @@ func newUserNotifier(dataCollector obs.DataCollector, userID uint64) *UserNotifi
 		userID:                    userID,
 		clientNotifiers:           map[uint64]*ClientNotifier{},
 		userDisconnectSubscribers: make([]chan bool, 0),
+		userDisconnectCh:          make(chan bool),
 	}
 	go func() {
 		<-userNotifier.userDisconnectCh
