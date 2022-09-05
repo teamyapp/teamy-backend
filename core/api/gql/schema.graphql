@@ -108,6 +108,16 @@ type Sprint {
 	owningTeam: Team!
 	tasks(filter: TaskFilter): [Task!]!
 	createdAt: Time!
+	participants: [SprintParticipant!]!
+}
+
+type SprintParticipant {
+	sprint: Sprint!
+	user: User!
+	totalBandwidth: Duration!
+	unusedBandwidth: Duration!
+	createdAt: Time!
+	updatedAt: Time
 }
 
 type Team {

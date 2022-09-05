@@ -74,6 +74,18 @@ func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 	return newTeam(s.deps, teams[0]), nil
 }
 
+func (s Sprint) Participants(ct context.Context) ([]SprintParticipant, error) {
+	participants, err := s.deps.sprintService.FindParticipantsInSprint(ct, s.sprint.ID)
+	if err != nil {
+		s.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	return collect.Map(participants, func(participant entity.SprintParticipant, index int) SprintParticipant {
+		return newSprintParticipant(s.deps, participant)
+	}), nil
+}
+
 func newSprint(deps *Dependencies, sprint entity.Sprint) Sprint {
 	return Sprint{
 		deps:   deps,

@@ -23,6 +23,10 @@ type User struct {
 	userFileUploadSessionDao   dao.UserFileUploadSession
 }
 
+func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
+	return u.userDao.FindUserByID(userID)
+}
+
 func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error) {
 	userID, err := ctx.UserIDFromContext(u.dataCollector, ct)
 	if err != nil {

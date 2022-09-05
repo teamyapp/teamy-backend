@@ -32,6 +32,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)),
 	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
 	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
+	wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -44,6 +45,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewSprintTaskRelation,
 	sqldb.NewUserFileUploadSession,
 	sqldb.NewTeamFileUploadSession,
+	sqldb.NewSprintParticipant,
 )
 
 var collectionSyncerSet = wire.NewSet(
