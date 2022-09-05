@@ -25,6 +25,7 @@ type Sprint struct {
 	taskDao                  dao.Task
 	sprintDao                dao.Sprint
 	sprintTaskRelationDao    dao.SprintTaskRelation
+	sprintParticipantDao     dao.SprintParticipant
 	taskSyncer               collection.TaskSyncer
 	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer
 }
@@ -51,6 +52,16 @@ func (s Sprint) FindTasksInSprint(
 	}
 
 	return tasks, nil
+}
+
+func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, error) {
+	participants, err := s.sprintParticipantDao.FindParticipantsBySprintID(sprintID)
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	return participants, nil
 }
 
 func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Sprint, error) {
@@ -105,6 +116,10 @@ func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.
 	}
 
 	return sprints, nil
+}
+
+func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, error) {
+	return s.sprintDao.FindSprintByID(sprintID)
 }
 
 func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSprintInput) (entity.Sprint, error) {
@@ -305,6 +320,7 @@ func NewSprint(
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintTaskRelationDao dao.SprintTaskRelation,
+	sprintParticipantDao dao.SprintParticipant,
 	taskSyncer collection.TaskSyncer,
 	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer,
 ) Sprint {
@@ -314,6 +330,7 @@ func NewSprint(
 		taskDao:                  taskDao,
 		sprintDao:                sprintDao,
 		sprintTaskRelationDao:    sprintTaskRelationDao,
+		sprintParticipantDao:     sprintParticipantDao,
 		taskSyncer:               taskSyncer,
 		sprintTaskRelationSyncer: sprintTaskRelationSyncer,
 	}
