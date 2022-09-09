@@ -43,6 +43,8 @@ type Task struct {
 	taskDao                    dao.Task
 	threadDao                  dao.Thread
 	taskAwaitForRelationDao    dao.TaskAwaitForRelation
+	sprintParticipantDao       dao.SprintParticipant
+	sprintTaskRelationDao      dao.SprintTaskRelation
 	taskSyncer                 collection.TaskSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
 	threadService              Thread
@@ -51,6 +53,7 @@ type Task struct {
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, error) {
 	tasks, err := t.taskDao.FindAllTasks()
 	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -132,6 +135,8 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		return entity.Task{}, err
 	}
 
+	oldEffort := task.Effort
+	oldOwnerID := task.OwnerUserID
 	task.Goal = input.Goal
 	task.Context = input.Context
 	task.OwnerUserID = input.OwnerUserID
@@ -146,7 +151,82 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		return entity.Task{}, err
 	}
 
+	err = t.updateUnusedBandWidth(taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
 	return task, nil
+}
+
+func (t Task) updateUnusedBandWidth(
+	taskID uint64,
+	oldEffort *time.Duration,
+	newEffort *time.Duration,
+	oldOwnerID *uint64,
+	newOwnerID *uint64,
+) error {
+	if oldOwnerID != nil && oldEffort != nil {
+		participants, err := t.findTaskOwnerInSprints(taskID, *oldOwnerID)
+		if err != nil {
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
+
+		for _, participant := range participants {
+			participant.UnusedBandwidth += *oldEffort
+			err = t.sprintParticipantDao.UpdateSprintParticipant(participant)
+			if err != nil {
+				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				return err
+			}
+		}
+	}
+
+	if newOwnerID != nil && newEffort != nil {
+		participants, err := t.findTaskOwnerInSprints(taskID, *newOwnerID)
+		if err != nil {
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
+
+		for _, participant := range participants {
+			participant.UnusedBandwidth -= *newEffort
+			err = t.sprintParticipantDao.UpdateSprintParticipant(participant)
+			if err != nil {
+				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (t Task) findTaskOwnerInSprints(taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, error) {
+	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	participants := make([]entity.SprintParticipant, 0)
+	for _, sprintID := range sprintIDs {
+		participant, err := t.sprintParticipantDao.FindParticipant(sprintID, taskOwnerUserID)
+		if err != nil {
+			if !errors.As(err, &dao.ErrorNotFound) {
+				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				return nil, err
+			}
+
+			continue
+		}
+
+		participants = append(participants, participant)
+	}
+
+	return participants, nil
 }
 
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error) {
@@ -400,6 +480,8 @@ func NewTask(
 	taskDao dao.Task,
 	threadDao dao.Thread,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
+	sprintParticipantDao dao.SprintParticipant,
+	sprintTaskRelationDao dao.SprintTaskRelation,
 	taskSyncer collection.TaskSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
 	threadService Thread,
@@ -410,6 +492,8 @@ func NewTask(
 		taskDao:                    taskDao,
 		threadDao:                  threadDao,
 		taskAwaitForRelationDao:    taskAwaitForRelationDao,
+		sprintParticipantDao:       sprintParticipantDao,
+		sprintTaskRelationDao:      sprintTaskRelationDao,
 		taskSyncer:                 taskSyncer,
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
 		threadService:              threadService,
