@@ -131,16 +131,15 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 	}
 
 	tasks, err := m.deps.sprintService.MoveTasksToSprint(ct, fromSprintID, toSprintID, taskIDs)
-
 	if err != nil {
 		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return []Task{}, err
 	}
 
-	res := make([]Task, 0)
+	gqlTasks := make([]Task, 0)
 	for _, task := range tasks {
-		res = append(res, newTask(m.deps, task))
+		gqlTasks = append(gqlTasks, newTask(m.deps, task))
 	}
 
-	return res, nil
+	return gqlTasks, nil
 }
