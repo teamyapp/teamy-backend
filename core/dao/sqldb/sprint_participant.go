@@ -2,6 +2,8 @@ package sqldb
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -55,6 +57,42 @@ func (s SprintParticipant) FindParticipantsBySprintID(sprintID uint64) ([]entity
 	}
 
 	return sprintParticipants, nil
+}
+
+func (s SprintParticipant) FindParticipant(sprintID uint64, participantUserID uint64) (entity.SprintParticipant, error) {
+	participant := entity.SprintParticipant{}
+	err := s.db.QueryRow(`
+	SELECT
+		sprint_id,
+		user_id,
+		total_bandwidth,
+		unused_bandwidth,
+		created_at,
+		updated_at
+	FROM sprint_participant
+	WHERE sprint_id = $1 AND user_id=$2;
+`,
+		sprintID,
+		participantUserID).
+		Scan(
+			&participant.SprintID,
+			&participant.UserID,
+			&participant.TotalBandwidth,
+			&participant.UnusedBandwidth,
+			&participant.CreatedAt,
+			&participant.UpdatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.SprintParticipant{}, dao.ErrNotFound(fmt.Sprintf(
+			"participant not found: sprintID=%v", sprintID))
+	}
+
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
+	return participant, err
 }
 
 func (s SprintParticipant) CreateSprintParticipant(participant entity.SprintParticipant) error {
