@@ -167,21 +167,10 @@ func (t Task) updateUnusedBandWidth(
 	oldOwnerID *uint64,
 	newOwnerID *uint64,
 ) error {
-	if oldOwnerID != nil && oldEffort != nil {
-		participants, err := t.findTaskOwnerInSprints(taskID, *oldOwnerID)
-		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-			return err
-		}
-
-		for _, participant := range participants {
-			participant.UnusedBandwidth += *oldEffort
-			err = t.sprintParticipantDao.UpdateSprintParticipant(participant)
-			if err != nil {
-				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-				return err
-			}
-		}
+	err := t.tryIncreaseBandwidth(taskID, oldOwnerID, oldEffort)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
 	}
 
 	if newOwnerID != nil && newEffort != nil {
@@ -193,6 +182,27 @@ func (t Task) updateUnusedBandWidth(
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth -= *newEffort
+			err = t.sprintParticipantDao.UpdateSprintParticipant(participant)
+			if err != nil {
+				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (t Task) tryIncreaseBandwidth(taskID uint64, oldOwnerID *uint64, oldEffort *time.Duration) error {
+	if oldOwnerID != nil && oldEffort != nil {
+		participants, err := t.findTaskOwnerInSprints(taskID, *oldOwnerID)
+		if err != nil {
+			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
+
+		for _, participant := range participants {
+			participant.UnusedBandwidth += *oldEffort
 			err = t.sprintParticipantDao.UpdateSprintParticipant(participant)
 			if err != nil {
 				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
@@ -236,8 +246,13 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
-	// TODO: delete awaiting, await for and sprint task relationships
+	err = t.tryIncreaseBandwidth(taskID, task.OwnerUserID, task.Effort)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
+	// TODO: delete awaiting, await for and sprint task relationships
 	err = t.taskSyncer.DeleteAndSyncTask(taskID)
 	if err != nil {
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
