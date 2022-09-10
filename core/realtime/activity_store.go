@@ -88,37 +88,6 @@ func (a *ActivityStore) newUserActivity(userID uint64) *UserActivity {
 	return userActivity
 }
 
-// func (a *ActivityStore) getUserActivitiesByUserIDsAndTeamIDs(userIDs []uint64, teamIDs []uint64) map[uint64]*UserActivity {
-// 	userActivities := map[uint64]*UserActivity{}
-
-// 	for _, userID := range userIDs {
-// 		originalUserActivity, ok := a.userActivities[userID]
-
-// 		if !ok {
-// 			continue
-// 		}
-
-// 		for _, teamID := range teamIDs {
-
-// 			teamActivity, ok := originalUserActivity.teamActivities[teamID]
-
-// 			if !ok {
-// 				continue
-// 			}
-
-// 			_, ok = userActivities[userID]
-
-// 			if !ok {
-// 				userActivities[userID] = newUserActivity(userID)
-// 			}
-
-// 			userActivities[userID].teamActivities[teamID] = teamActivity
-// 		}
-// 	}
-
-// 	return userActivities
-// }
-
 func NewActivityStore(dataCollector obs.DataCollector) *ActivityStore {
 	return &ActivityStore{
 		dataCollector:   dataCollector,
