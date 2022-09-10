@@ -47,6 +47,7 @@ func (u UserNotifier) processMutation(mutation Mutation) {
 			"mutationID": mutation.ID,
 		},
 	})
+
 	for _, clientNotifier := range u.clientNotifiers {
 		clientNotifier.processMutation(mutation)
 	}

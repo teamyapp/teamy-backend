@@ -502,11 +502,8 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
-	err = t.activityStore.StartDraggingTask(userID, clientID, taskID, task.OwningTeamID)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
+
+	t.activityStore.StartDraggingTask(userID, clientID, taskID, task.OwningTeamID)
 
 	return t.taskSyncer.StartDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
 }
@@ -522,11 +519,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
-	err = t.activityStore.StopDraggingTask(userID, clientID, taskID, task.OwningTeamID)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
+	t.activityStore.StopDraggingTask(userID, clientID, taskID, task.OwningTeamID)
 
 	return t.taskSyncer.StopDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
 }

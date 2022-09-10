@@ -34,6 +34,7 @@ type Mutation struct {
 	CollectionType CollectionType
 	MutationType   MutationType
 	UserID         *uint64
+	ClientID       *uint64
 	TeamIDs        []uint64
 	Payload        interface{}
 }
@@ -76,6 +77,7 @@ func (s *StateSyncer) sendClientIdToUser(clientID uint64, userID uint64) {
 		CollectionType: ClientCollectionType,
 		MutationType:   CreateMutationType,
 		UserID:         &userID,
+		ClientID:       &clientID,
 		Payload:        clientID,
 	})
 }
@@ -165,13 +167,20 @@ func (s StateSyncer) notifyTeam(teamID uint64, mutation Mutation) {
 	teamNotifier.processMutation(mutation)
 }
 
-func (s StateSyncer) notifyUser(userID uint64, mutation Mutation) {
+func (s StateSyncer) notifyClient(userID uint64, clientID uint64, mutation Mutation) {
 	userNotifier, err := s.getUserNotifier(userID)
 	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return
 	}
 
-	userNotifier.processMutation(mutation)
+	clientNotifier, ok := userNotifier.clientNotifiers[clientID]
+
+	if !ok {
+		return
+	}
+
+	clientNotifier.processMutation(mutation)
 }
 
 func NewStateSyncer(
@@ -203,8 +212,8 @@ func NewStateSyncer(
 				})
 			}
 
-			if mutation.UserID != nil {
-				stateSyncer.notifyUser(*mutation.UserID, mutation)
+			if mutation.UserID != nil && mutation.ClientID != nil {
+				stateSyncer.notifyClient(*mutation.UserID, *mutation.ClientID, mutation)
 				continue
 			}
 

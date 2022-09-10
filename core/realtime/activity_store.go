@@ -42,44 +42,32 @@ func (a *ActivityStore) unregisterClientNotifier(userID uint64, clientID uint64)
 	}
 }
 
-func (a *ActivityStore) getUserActivity(userID uint64) (*UserActivity, error) {
+func (a *ActivityStore) getUserActivity(userID uint64) *UserActivity {
 	userActivity, ok := a.userActivities[userID]
 	if !ok {
 		userActivity = a.newUserActivity(userID)
 	}
 
 	userActivity.state = entity.UserStatusConnected
-	return userActivity, nil
+	return userActivity
 }
 
-func (a *ActivityStore) StartDraggingTask(userID uint64, clientID uint64, taskID uint64, teamID uint64) error {
-	userActivity, err := a.getUserActivity(userID)
-
-	if err != nil {
-		a.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
+func (a *ActivityStore) StartDraggingTask(userID uint64, clientID uint64, taskID uint64, teamID uint64) {
+	userActivity := a.getUserActivity(userID)
 
 	teamActivity := userActivity.getTeamActivity(teamID)
 	clientActivity := teamActivity.getClientActivity(clientID)
 	clientActivity.taskAction.taskID = taskID
 	clientActivity.taskAction.dragging = true
-	return nil
 }
 
-func (a *ActivityStore) StopDraggingTask(userID uint64, clientID uint64, taskID uint64, teamID uint64) error {
-	userActivity, err := a.getUserActivity(userID)
-
-	if err != nil {
-		a.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
+func (a *ActivityStore) StopDraggingTask(userID uint64, clientID uint64, taskID uint64, teamID uint64) {
+	userActivity := a.getUserActivity(userID)
 
 	teamActivity := userActivity.getTeamActivity(teamID)
 	clientActivity := teamActivity.getClientActivity(clientID)
 	clientActivity.taskAction.taskID = taskID
 	clientActivity.taskAction.dragging = false
-	return nil
 }
 
 func (a *ActivityStore) newUserActivity(userID uint64) *UserActivity {
