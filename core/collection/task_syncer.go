@@ -49,6 +49,44 @@ func (t TaskSyncer) UpdateAndSyncTask(task entity.Task) error {
 	return nil
 }
 
+func (t TaskSyncer) StartDraggingSyncTask(taskID uint64, userID uint64, clientID uint64, owningTeamID uint64) error {
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.UserActivityCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			owningTeamID,
+		},
+		Payload: realtime.UserDraggingTaskPayload{
+			UserID:   userID,
+			TaskID:   taskID,
+			ClientID: clientID,
+			TeamID:   owningTeamID,
+			Dragging: true,
+		},
+	})
+
+	return nil
+}
+
+func (t TaskSyncer) StopDraggingSyncTask(taskID uint64, userID uint64, clientID uint64, owningTeamID uint64) error {
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.UserActivityCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			owningTeamID,
+		},
+		Payload: realtime.UserDraggingTaskPayload{
+			UserID:   userID,
+			TaskID:   taskID,
+			ClientID: clientID,
+			TeamID:   owningTeamID,
+			Dragging: false,
+		},
+	})
+
+	return nil
+}
+
 func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {

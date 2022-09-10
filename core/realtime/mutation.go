@@ -17,3 +17,11 @@ type DeleteSprintTaskRelationPayload struct {
 	SprintID uint64
 	TaskID   uint64
 }
+
+type UserDraggingTaskPayload struct {
+	UserID   uint64
+	ClientID uint64
+	TaskID   uint64
+	TeamID   uint64
+	Dragging bool
+}

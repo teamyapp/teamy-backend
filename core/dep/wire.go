@@ -76,7 +76,14 @@ func InitDataCollector(severity obs.Severity) obs.DataCollector {
 	return obs.DataCollector{}
 }
 
-func InitRealTimeStateSyncer(sdataCollector obs.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
+func InitActivityStore(sdataCollector obs.DataCollector) *realtime.ActivityStore {
+	wire.Build(
+		realtime.NewActivityStore,
+	)
+	return nil
+}
+
+func InitRealTimeStateSyncer(sdataCollector obs.DataCollector, activityStore *realtime.ActivityStore, qlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
@@ -87,6 +94,7 @@ func InitRealTimeStateSyncer(sdataCollector obs.DataCollector, qlDB *sql.DB) *re
 func InitGraphQLAPI(
 	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	activityStore *realtime.ActivityStore,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -115,6 +123,7 @@ func InitRealTimeStateSyncAPI(
 func InitTaskRPCAPI(
 	dataCollector obs.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	activityStore *realtime.ActivityStore,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.TaskRPC {

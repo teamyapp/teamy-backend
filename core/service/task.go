@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
@@ -48,6 +49,7 @@ type Task struct {
 	taskSyncer                 collection.TaskSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
 	threadService              Thread
+	activityStore              *realtime.ActivityStore
 }
 
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, error) {
@@ -489,6 +491,46 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	return task, nil
 }
 
+func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
+	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+	task, err := t.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+	err = t.activityStore.StartDraggingTask(userID, clientID, taskID, task.OwningTeamID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	return t.taskSyncer.StartDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
+}
+
+func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
+	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+	task, err := t.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+	err = t.activityStore.StopDraggingTask(userID, clientID, taskID, task.OwningTeamID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	return t.taskSyncer.StopDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
+}
+
 func NewTask(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
@@ -500,6 +542,7 @@ func NewTask(
 	taskSyncer collection.TaskSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
 	threadService Thread,
+	activityStore *realtime.ActivityStore,
 ) Task {
 	return Task{
 		dataCollector:              dataCollector,
@@ -512,5 +555,6 @@ func NewTask(
 		taskSyncer:                 taskSyncer,
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
 		threadService:              threadService,
+		activityStore:              activityStore,
 	}
 }

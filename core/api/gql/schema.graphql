@@ -23,6 +23,8 @@ type Mutation {
 	moveTaskToBlocked(taskId: ID!, reason: String!): Task!
 	addAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
+	startDraggingTask(taskId: ID!, clientId: ID!): ID!
+	stopDraggingTask(taskId: ID!, clientId: ID!): ID!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!

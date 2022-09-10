@@ -33,6 +33,7 @@ type Mutation struct {
 	ID             uint64
 	CollectionType CollectionType
 	MutationType   MutationType
+	UserID         *uint64
 	TeamIDs        []uint64
 	Payload        interface{}
 }
@@ -43,6 +44,7 @@ type StateSyncer struct {
 	mutations      chan Mutation
 	teamNotifiers  map[uint64]*TeamNotifier
 	userNotifiers  map[uint64]*UserNotifier
+	activityStore  *ActivityStore
 	nextClientID   uint64
 	nextMutationID uint64
 }
@@ -63,8 +65,19 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 
 	clientNotifier := newClientNotifier(s.dataCollector, conn, s.nextClientID)
 	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
+	s.activityStore.registerClientNotifier(userID, s.nextClientID, clientNotifier)
+	s.sendClientIdToUser(s.nextClientID, userID)
 	s.nextClientID++
 	return nil
+}
+
+func (s *StateSyncer) sendClientIdToUser(clientID uint64, userID uint64) {
+	s.NotifyMutation(Mutation{
+		CollectionType: ClientCollectionType,
+		MutationType:   CreateMutationType,
+		UserID:         &userID,
+		Payload:        clientID,
+	})
 }
 
 func (s *StateSyncer) NotifyMutation(mutation Mutation) {
@@ -152,13 +165,24 @@ func (s StateSyncer) notifyTeam(teamID uint64, mutation Mutation) {
 	teamNotifier.processMutation(mutation)
 }
 
+func (s StateSyncer) notifyUser(userID uint64, mutation Mutation) {
+	userNotifier, err := s.getUserNotifier(userID)
+	if err != nil {
+		return
+	}
+
+	userNotifier.processMutation(mutation)
+}
+
 func NewStateSyncer(
 	dataCollector obs.DataCollector,
 	teamMemberDao dao.TeamMember,
+	activityStore *ActivityStore,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
 		dataCollector:  dataCollector,
 		teamMemberDao:  teamMemberDao,
+		activityStore:  activityStore,
 		mutations:      make(chan Mutation, stateSyncerBufferSize),
 		teamNotifiers:  map[uint64]*TeamNotifier{},
 		userNotifiers:  map[uint64]*UserNotifier{},
@@ -179,7 +203,13 @@ func NewStateSyncer(
 				})
 			}
 
+			if mutation.UserID != nil {
+				stateSyncer.notifyUser(*mutation.UserID, mutation)
+				continue
+			}
+
 			for _, teamID := range mutation.TeamIDs {
+				stateSyncer.notifyTeam(teamID, mutation)
 				if mutation.CollectionType == TeamMemberCollectionType &&
 					mutation.MutationType == CreateMutationType {
 					teamMember := mutation.Payload.(entity.TeamMember)
@@ -193,8 +223,6 @@ func NewStateSyncer(
 						}
 					}
 				}
-
-				stateSyncer.notifyTeam(teamID, mutation)
 			}
 		}
 	}()

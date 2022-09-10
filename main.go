@@ -57,9 +57,9 @@ func main() {
 			dataCollector.Logger.Log(obs.Fatal, obs.Props{obs.CauseProp: err})
 			panic(err)
 		}
-
-		realTimeStateSyncer := dep.InitRealTimeStateSyncer(dataCollector, sqlDB)
-		return startServiceRunner(dataCollector, cfg, sqlDB, realTimeStateSyncer)
+		activityStore := dep.InitActivityStore(dataCollector)
+		realTimeStateSyncer := dep.InitRealTimeStateSyncer(dataCollector, activityStore, sqlDB)
+		return startServiceRunner(dataCollector, cfg, sqlDB, realTimeStateSyncer, activityStore)
 	})
 
 	if err != nil {
@@ -73,6 +73,7 @@ func startServiceRunner(
 	cfg config.Config,
 	sqlDB *sql.DB,
 	realTimeStateSyncer *realtime.StateSyncer,
+	activityStore *realtime.ActivityStore,
 ) error {
 	runnerConfig, err := runner.ServiceRunnerConfigFromEnv(dataCollector)
 	if err != nil {
@@ -132,6 +133,7 @@ func startServiceRunner(
 	graphQLAPI, err := dep.InitGraphQLAPI(
 		dataCollector,
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
+		activityStore,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
@@ -143,6 +145,7 @@ func startServiceRunner(
 	taskRPCAPI := dep.InitTaskRPCAPI(
 		dataCollector,
 		cloudClientRegistry,
+		activityStore,
 		realTimeStateSyncer,
 		sqlDB)
 	sprintRPCAPI := dep.InitSprintRPCAPI(
