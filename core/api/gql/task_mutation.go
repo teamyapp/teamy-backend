@@ -2,6 +2,11 @@ package gql
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/feature"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -57,10 +62,31 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		DueAt        *graphql.Time
 	}
 }) (Task, error) {
+	userID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
+	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return Task{}, err
+	}
+
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
 		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewUpdateTaskQuery(userID, taskID)
+		hasPermission, err := m.hasPermission(ct, query)
+		if err != nil {
+			return Task{}, err
+		}
+
+		if !hasPermission {
+			return Task{}, ResolverError{
+				Code:    unauthorizedErrorCode,
+				Message: fmt.Sprintf("Unauthorize: %v", query),
+			}
+		}
 	}
 
 	ownerUserID, err := fromGraphQLIDPtr(m.deps.dataCollector, args.Input.OwnerUserID)
