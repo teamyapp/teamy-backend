@@ -20,13 +20,16 @@ func (s SprintTaskRelationSyncer) CreateAndSyncSprintTaskRelation(sprintTaskRela
 		return err
 	}
 
-	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.SprintTaskRelationCollectionType,
-		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			OwningTeamID,
+	s.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.SprintTaskRelationCollectionType,
+			MutationType:   entity.CreateMutationType,
+			TeamIDs: []uint64{
+				OwningTeamID,
+			},
+			Payload: sprintTaskRelaltion,
 		},
-		Payload: sprintTaskRelaltion,
 	})
 	return nil
 }
@@ -38,13 +41,16 @@ func (s SprintTaskRelationSyncer) DeleteAndSyncSprintTaskRelation(sprintID uint6
 		return err
 	}
 
-	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.SprintTaskRelationCollectionType,
-		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			OwningTeamID,
+	s.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.SprintTaskRelationCollectionType,
+			MutationType:   entity.DeleteMutationType,
+			TeamIDs: []uint64{
+				OwningTeamID,
+			},
+			Payload: realtime.DeleteSprintTaskRelationPayload{SprintID: sprintID, TaskID: taskID},
 		},
-		Payload: realtime.DeleteSprintTaskRelationPayload{SprintID: sprintID, TaskID: taskID},
 	})
 	return nil
 

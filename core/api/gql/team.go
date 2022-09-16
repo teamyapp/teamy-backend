@@ -68,6 +68,28 @@ func (t Team) Members(ct context.Context) ([]User, error) {
 	}), nil
 }
 
+func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
+	taskActivities, err := t.deps.activityCache.FindAllTaskActivitiesByTeamID(t.team.ID)
+	if err != nil {
+		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return []TaskActivity{}, err
+	}
+
+	taskActivityList := make([]TaskActivity, 0)
+	for taskID, taskActivity := range taskActivities {
+		taskActivityItem := newTaskActivity(t.deps, entity.TeamTaskDraggingActivity{
+			TaskID:           taskID,
+			TeamID:           t.team.ID,
+			IsDragging:       taskActivity.IsDragging,
+			DragByUserID:     taskActivity.DragByUserID,
+			DraggingClientID: taskActivity.DraggingClientID})
+
+		taskActivityList = append(taskActivityList, taskActivityItem)
+	}
+
+	return taskActivityList, nil
+}
+
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {

@@ -27,13 +27,15 @@ func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(relation entity.TaskAw
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.TaskAwaitForRelationCollectionType,
-		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: relation,
+	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.TaskAwaitForRelationCollectionType,
+			MutationType:   entity.CreateMutationType,
+			TeamIDs: []uint64{
+				task.OwningTeamID,
+			},
+			Payload: relation},
 	})
 	return nil
 }
@@ -51,15 +53,18 @@ func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(awaitingTaskID uint64,
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.TaskAwaitForRelationCollectionType,
-		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: realtime.DeleteTaskAwaitForRelationPayload{
-			AwaitingTaskID: awaitingTaskID,
-			AwaitForTaskID: awaitForTaskID,
+	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.TaskAwaitForRelationCollectionType,
+			MutationType:   entity.DeleteMutationType,
+			TeamIDs: []uint64{
+				task.OwningTeamID,
+			},
+			Payload: realtime.DeleteTaskAwaitForRelationPayload{
+				AwaitingTaskID: awaitingTaskID,
+				AwaitForTaskID: awaitForTaskID,
+			},
 		},
 	})
 	return nil

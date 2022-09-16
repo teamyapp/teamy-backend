@@ -20,13 +20,15 @@ func (i InvitationSyncer) CreateAndSyncInvitation(invitation entity.Invitation) 
 		return err
 	}
 
-	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.InvitationCollectionType,
-		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			invitation.TeamID,
-		},
-		Payload: invitation,
+	i.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.InvitationCollectionType,
+			MutationType:   entity.CreateMutationType,
+			TeamIDs: []uint64{
+				invitation.TeamID,
+			},
+			Payload: invitation},
 	})
 	return nil
 }
@@ -38,13 +40,16 @@ func (i InvitationSyncer) UpdateAndSyncInvitation(invitation entity.Invitation) 
 		return err
 	}
 
-	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.InvitationCollectionType,
-		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			invitation.TeamID,
+	i.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.InvitationCollectionType,
+			MutationType:   entity.UpdateMutationType,
+			TeamIDs: []uint64{
+				invitation.TeamID,
+			},
+			Payload: invitation,
 		},
-		Payload: invitation,
 	})
 	return nil
 }
@@ -62,13 +67,16 @@ func (i InvitationSyncer) DeleteAndSyncInvitation(invitationID uint64) error {
 		return err
 	}
 
-	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.InvitationCollectionType,
-		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			invitation.TeamID,
+	i.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.InvitationCollectionType,
+			MutationType:   entity.DeleteMutationType,
+			TeamIDs: []uint64{
+				invitation.TeamID,
+			},
+			Payload: invitationID,
 		},
-		Payload: invitationID,
 	})
 	return nil
 }

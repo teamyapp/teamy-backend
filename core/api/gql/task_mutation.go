@@ -257,3 +257,53 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 
 	return newTask(m.deps, task), nil
 }
+
+func (m Mutation) StartDraggingTask(ct context.Context, args struct {
+	TaskID   graphql.ID
+	ClientID graphql.ID
+}) (graphql.ID, error) {
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	clientID, err := fromGraphQLID(args.ClientID)
+	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	err = m.deps.taskService.StartDraggingTask(ct, taskID, clientID)
+	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	return args.TaskID, nil
+}
+
+func (m Mutation) StopDraggingTask(ct context.Context, args struct {
+	TaskID   graphql.ID
+	ClientID graphql.ID
+}) (graphql.ID, error) {
+	taskID, err := fromGraphQLID(args.TaskID)
+	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	clientID, err := fromGraphQLID(args.ClientID)
+	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	err = m.deps.taskService.StopDraggingTask(ct, taskID, clientID)
+	if err != nil {
+		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	return args.TaskID, nil
+}

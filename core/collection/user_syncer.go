@@ -27,11 +27,14 @@ func (u UserSyncer) UpdateAndSyncUser(user entity.User) error {
 		return err
 	}
 
-	u.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.UserCollectionType,
-		MutationType:   realtime.UpdateMutationType,
-		TeamIDs:        teamIDs,
-		Payload:        user,
+	u.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
+		Type: entity.MutationMessageType,
+		Payload: entity.MutationPayload{
+			CollectionType: entity.UserCollectionType,
+			MutationType:   entity.UpdateMutationType,
+			TeamIDs:        teamIDs,
+			Payload:        user,
+		},
 	})
 	return nil
 }

@@ -1,4 +1,4 @@
-package realtime
+package entity
 
 type CollectionType string
 
@@ -12,4 +12,6 @@ const (
 	TeamMemberCollectionType           CollectionType = "TeamMember"
 	TaskAwaitForRelationCollectionType CollectionType = "TaskAwaitForRelation"
 	SprintTaskRelationCollectionType   CollectionType = "SprintTaskRelation"
+	ClientCollectionType               CollectionType = "Client"
+	TaskActivityCollectionType         CollectionType = "TaskActivity"
 )

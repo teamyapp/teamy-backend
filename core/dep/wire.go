@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
@@ -95,6 +96,7 @@ func InitGraphQLAPI(
 		daoSet,
 		collectionSyncerSet,
 		serviceSet,
+		cache.NewActivity,
 		gql.NewDependencies,
 		gql.NewResolver,
 		api.NewGraphQL,
@@ -121,6 +123,7 @@ func InitTaskRPCAPI(
 	wire.Build(
 		daoSet,
 		collectionSyncerSet,
+		cache.NewActivity,
 		serviceSet,
 		api.NewTaskRPC,
 	)

@@ -30,20 +30,22 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 	return subscriber
 }
 
-func (t TeamNotifier) processMutation(mutation Mutation) {
+func (t TeamNotifier) processMutation(message entity.MessageEvent) {
+
 	t.dataCollector.Logger.Log(obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
 			"summary":    "client disconnected",
 			"teamID":     t.teamID,
-			"mutationID": mutation.ID,
+			"mutationID": message.ID,
 		},
 	})
 	for _, userNotifier := range t.userNotifiers {
-		userNotifier.processMutation(mutation)
+		userNotifier.processMutation(message)
 	}
 
-	if mutation.CollectionType == TeamMemberCollectionType &&
-		mutation.MutationType == DeleteMutationType {
+	mutation := message.Payload.(entity.MutationPayload)
+	if mutation.CollectionType == entity.TeamMemberCollectionType &&
+		mutation.MutationType == entity.DeleteMutationType {
 		teamMember := mutation.Payload.(entity.TeamMember)
 		t.unregisterUserNotifier(teamMember.UserID)
 	}
