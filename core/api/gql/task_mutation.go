@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/feature"
-
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
+	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -78,6 +77,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		query := authorization.NewUpdateTaskQuery(userID, taskID)
 		hasPermission, err := m.hasPermission(ct, query)
 		if err != nil {
+			m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return Task{}, err
 		}
 

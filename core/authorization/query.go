@@ -5,7 +5,7 @@ import "fmt"
 type Query struct {
 	ResourceType resourceType
 	ResourceID   uint64
-	Operation    operation
+	Operation    string
 	UserID       uint64
 }
 
@@ -13,7 +13,7 @@ func NewUpdateTeamSettingsQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: teamResourceType,
 		ResourceID:   teamID,
-		Operation:    updateSettingsOperation,
+		Operation:    "UpdateSettings",
 		UserID:       userID,
 	}
 }
@@ -22,7 +22,7 @@ func NewUpdateTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: taskResourceType,
 		ResourceID:   teamID,
-		Operation:    updateOperation,
+		Operation:    "Update",
 		UserID:       userID,
 	}
 }
