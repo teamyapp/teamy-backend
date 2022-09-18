@@ -78,10 +78,10 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 	gqlTaskActivitys := make([]TaskActivity, 0)
 	for _, taskActivity := range taskActivities {
 		taskActivityItem := newTaskActivity(*taskActivity)
-		taskActivityList = append(taskActivityList, taskActivityItem)
+		gqlTaskActivitys = append(gqlTaskActivitys, taskActivityItem)
 	}
 
-	return taskActivityList, nil
+	return gqlTaskActivitys, nil
 }
 
 func (t Team) Tasks(ct context.Context, args struct {
