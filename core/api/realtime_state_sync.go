@@ -49,7 +49,6 @@ func (r RealTimeStateSync) ready(writer http.ResponseWriter, request *http.Reque
 	decoder := json.NewDecoder(request.Body)
 	readyParams := ReadyParams{}
 	err = decoder.Decode(&readyParams)
-	clientID := readyParams.ClientID
 	if err != nil {
 		r.dataCollector.Logger.Log(obs.Error, obs.Props{
 			obs.CauseProp:   err,
@@ -59,6 +58,7 @@ func (r RealTimeStateSync) ready(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
+	clientID := readyParams.ClientID
 	err = r.realTimeStateSyncer.SetClientIsReady(userID, clientID)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
