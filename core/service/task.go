@@ -504,7 +504,13 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 	}
 
 	teamActivity := t.activityCache.GetOrAddTeamActivity(task.OwningTeamID)
-	t.activityCache.UpdateTaskActivity(taskID, teamActivity, &entity.TaskActivity{DragByUserID: userID, IsDragging: true, DraggingClientID: clientID})
+	t.activityCache.UpdateTaskActivity(taskID, teamActivity, &entity.TaskActivity{
+		TaskID: taskID,
+		DragTaskActivity: entity.DragTaskActivity{
+			DragByUserID:     userID,
+			IsDragging:       true,
+			DraggingClientID: clientID,
+		}})
 	return t.taskSyncer.StartDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
 }
 
@@ -520,7 +526,13 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		return err
 	}
 	teamActivity := t.activityCache.GetOrAddTeamActivity(task.OwningTeamID)
-	t.activityCache.UpdateTaskActivity(taskID, teamActivity, &entity.TaskActivity{DragByUserID: userID, IsDragging: false, DraggingClientID: clientID})
+	t.activityCache.UpdateTaskActivity(taskID, teamActivity, &entity.TaskActivity{
+		TaskID: taskID,
+		DragTaskActivity: entity.DragTaskActivity{
+			DragByUserID:     userID,
+			IsDragging:       false,
+			DraggingClientID: clientID,
+		}})
 	return t.taskSyncer.StopDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
 }
 

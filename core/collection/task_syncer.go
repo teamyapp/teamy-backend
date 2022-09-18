@@ -20,16 +20,14 @@ func (t TaskSyncer) CreateAndSyncTask(task entity.Task) error {
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TaskCollectionType,
-			MutationType:   entity.CreateMutationType,
-			TeamIDs: []uint64{
-				task.OwningTeamID,
-			},
-			Payload: task,
-		}},
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TaskCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
+		},
+		Payload: task,
+	},
 	)
 	return nil
 }
@@ -41,16 +39,14 @@ func (t TaskSyncer) UpdateAndSyncTask(task entity.Task) error {
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TaskCollectionType,
-			MutationType:   entity.UpdateMutationType,
-			TeamIDs: []uint64{
-				task.OwningTeamID,
-			},
-			Payload: task},
-	})
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TaskCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
+		},
+		Payload: task},
+	)
 	return nil
 }
 
@@ -67,58 +63,54 @@ func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TaskCollectionType,
-			MutationType:   entity.DeleteMutationType,
-			TeamIDs: []uint64{
-				task.OwningTeamID,
-			},
-			Payload: taskID,
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TaskCollectionType,
+		MutationType:   realtime.DeleteMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
 		},
-	})
+		Payload: taskID,
+	},
+	)
 	return nil
 }
 
 func (t TaskSyncer) StartDraggingSyncTask(taskID uint64, userID uint64, clientID uint64, owningTeamID uint64) error {
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TaskActivityCollectionType,
-			MutationType:   entity.UpdateMutationType,
-			TeamIDs: []uint64{
-				owningTeamID,
-			},
-			Payload: entity.TeamTaskDraggingActivity{
-				TaskID:           taskID,
-				TeamID:           owningTeamID,
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TaskActivityCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			owningTeamID,
+		},
+		Payload: entity.TaskActivity{
+			TaskID: taskID,
+			DragTaskActivity: entity.DragTaskActivity{
 				IsDragging:       true,
 				DragByUserID:     userID,
 				DraggingClientID: clientID,
-			}},
-	})
+			},
+		}},
+	)
 
 	return nil
 }
 
 func (t TaskSyncer) StopDraggingSyncTask(taskID uint64, userID uint64, clientID uint64, owningTeamID uint64) error {
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TaskActivityCollectionType,
-			MutationType:   entity.UpdateMutationType,
-			TeamIDs: []uint64{
-				owningTeamID,
-			},
-			Payload: entity.TeamTaskDraggingActivity{
-				TaskID:           taskID,
-				TeamID:           owningTeamID,
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TaskActivityCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			owningTeamID,
+		},
+		Payload: entity.TaskActivity{
+			TaskID: taskID,
+			DragTaskActivity: entity.DragTaskActivity{
 				IsDragging:       false,
 				DragByUserID:     userID,
 				DraggingClientID: clientID,
-			}},
-	})
+			},
+		}},
+	)
 
 	return nil
 }

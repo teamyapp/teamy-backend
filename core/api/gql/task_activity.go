@@ -8,33 +8,19 @@ import (
 )
 
 type TaskActivity struct {
-	deps         *Dependencies
-	taskActivity entity.TeamTaskDraggingActivity
+	taskActivity entity.TaskActivity
 }
 
 func (t TaskActivity) TaskID(ct context.Context) graphql.ID {
 	return toGraphQLID(t.taskActivity.TaskID)
 }
 
-func (t TaskActivity) TeamID(ct context.Context) graphql.ID {
-	return toGraphQLID(t.taskActivity.TeamID)
+func (t TaskActivity) DragTaskActivity(ct context.Context) DragTaskActivity {
+	return newDragTaskActivity(t.taskActivity.DragTaskActivity)
 }
 
-func (t TaskActivity) IsDragging(ct context.Context) bool {
-	return t.taskActivity.IsDragging
-}
-
-func (t TaskActivity) DragByUserID(ct context.Context) graphql.ID {
-	return toGraphQLID(t.taskActivity.DragByUserID)
-}
-
-func (t TaskActivity) DraggingClientID(ct context.Context) graphql.ID {
-	return toGraphQLID(t.taskActivity.DraggingClientID)
-}
-
-func newTaskActivity(deps *Dependencies, taskActivity entity.TeamTaskDraggingActivity) TaskActivity {
+func newTaskActivity(taskActivity entity.TaskActivity) TaskActivity {
 	return TaskActivity{
-		deps:         deps,
 		taskActivity: taskActivity,
 	}
 }

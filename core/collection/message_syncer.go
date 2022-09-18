@@ -27,16 +27,14 @@ func (m MessageSyncer) CreateAndSyncMessage(message entity.Message) error {
 		return err
 	}
 
-	m.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.MessageCollectionType,
-			MutationType:   entity.CreateMutationType,
-			TeamIDs: []uint64{
-				task.OwningTeamID,
-			},
-			Payload: message},
-	})
+	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.MessageCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
+		},
+		Payload: message},
+	)
 	return nil
 }
 
@@ -53,17 +51,15 @@ func (m MessageSyncer) UpdateAndSyncMessage(message entity.Message) error {
 		return err
 	}
 
-	m.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.MessageCollectionType,
-			MutationType:   entity.UpdateMutationType,
-			TeamIDs: []uint64{
-				task.OwningTeamID,
-			},
-			Payload: message,
+	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.MessageCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
 		},
-	})
+		Payload: message,
+	},
+	)
 	return nil
 }
 
@@ -86,16 +82,14 @@ func (m MessageSyncer) DeleteAndSyncMessage(messageID uint64) error {
 		return err
 	}
 
-	m.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.MessageCollectionType,
-			MutationType:   entity.DeleteMutationType,
-			TeamIDs: []uint64{
-				task.OwningTeamID,
-			},
-			Payload: messageID},
-	})
+	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.MessageCollectionType,
+		MutationType:   realtime.DeleteMutationType,
+		TeamIDs: []uint64{
+			task.OwningTeamID,
+		},
+		Payload: messageID},
+	)
 	return nil
 }
 

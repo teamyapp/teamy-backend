@@ -32,7 +32,7 @@ const stateSyncerBufferSize = 50
 type StateSyncer struct {
 	dataCollector  obs.DataCollector
 	teamMemberDao  dao.TeamMember
-	messages       chan entity.MessageEvent
+	mutations      chan Mutation
 	teamNotifiers  map[uint64]*TeamNotifier
 	userNotifiers  map[uint64]*UserNotifier
 	nextClientID   uint64
@@ -55,25 +55,15 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 
 	clientNotifier := newClientNotifier(s.dataCollector, conn, s.nextClientID)
 	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
-	s.sendClientIdToUser(s.nextClientID, userID)
+	clientNotifier.sendClientID(s.nextClientID)
 	s.nextClientID++
 	return nil
 }
 
-func (s *StateSyncer) sendClientIdToUser(clientID uint64, userID uint64) {
-	s.NotifyMutation(entity.MessageEvent{
-		Type: entity.MetadataMessageType,
-		Payload: entity.MetadataPayload{
-			UserID:   userID,
-			ClientID: clientID,
-		},
-	})
-}
-
-func (s *StateSyncer) NotifyMutation(message entity.MessageEvent) {
-	message.ID = s.nextMutationID
+func (s *StateSyncer) NotifyMutation(mutation Mutation) {
+	mutation.ID = s.nextMutationID
 	s.nextMutationID++
-	s.messages <- message
+	s.mutations <- mutation
 }
 
 func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
@@ -146,29 +136,13 @@ func (s StateSyncer) getUserNotifier(userID uint64) (*UserNotifier, error) {
 	return userNotifier, nil
 }
 
-func (s StateSyncer) notifyTeam(teamID uint64, message entity.MessageEvent) {
+func (s StateSyncer) notifyTeam(teamID uint64, mutation Mutation) {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
 		return
 	}
 
-	teamNotifier.processMutation(message)
-}
-
-func (s StateSyncer) notifyClient(userID uint64, clientID uint64, message entity.MessageEvent) {
-	userNotifier, err := s.getUserNotifier(userID)
-	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return
-	}
-
-	clientNotifier, ok := userNotifier.clientNotifiers[clientID]
-
-	if !ok {
-		return
-	}
-
-	clientNotifier.processMutation(message)
+	teamNotifier.processMutation(mutation)
 }
 
 func NewStateSyncer(
@@ -178,36 +152,29 @@ func NewStateSyncer(
 	stateSyncer := &StateSyncer{
 		dataCollector:  dataCollector,
 		teamMemberDao:  teamMemberDao,
-		messages:       make(chan entity.MessageEvent, stateSyncerBufferSize),
+		mutations:      make(chan Mutation, stateSyncerBufferSize),
 		teamNotifiers:  map[uint64]*TeamNotifier{},
 		userNotifiers:  map[uint64]*UserNotifier{},
 		nextClientID:   1,
 		nextMutationID: 1,
 	}
 	go func() {
-		for message := range stateSyncer.messages {
-			buf, err := json.Marshal(message)
+		for mutation := range stateSyncer.mutations {
+			buf, err := json.Marshal(mutation)
 			if err != nil {
 				dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			} else {
 				dataCollector.Logger.Log(obs.Info, obs.Props{
 					obs.MessageProp: obs.Props{
-						"summary": "client disconnected",
-						"message": string(buf),
+						"summary":  "client disconnected",
+						"mutation": string(buf),
 					},
 				})
 			}
 
-			if message.Type == entity.MetadataMessageType {
-				metadata := message.Payload.(entity.MetadataPayload)
-				stateSyncer.notifyClient(metadata.UserID, metadata.ClientID, message)
-				continue
-			}
-
-			mutation := message.Payload.(entity.MutationPayload)
 			for _, teamID := range mutation.TeamIDs {
-				if mutation.CollectionType == entity.TeamMemberCollectionType &&
-					mutation.MutationType == entity.CreateMutationType {
+				if mutation.CollectionType == TeamMemberCollectionType &&
+					mutation.MutationType == CreateMutationType {
 					teamMember := mutation.Payload.(entity.TeamMember)
 					userNotifier, err := stateSyncer.getUserNotifier(teamMember.UserID)
 					if err != nil {
@@ -220,7 +187,7 @@ func NewStateSyncer(
 					}
 				}
 
-				stateSyncer.notifyTeam(teamID, message)
+				stateSyncer.notifyTeam(teamID, mutation)
 			}
 		}
 	}()

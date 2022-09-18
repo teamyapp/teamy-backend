@@ -20,20 +20,18 @@ func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) 
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TeamMemberCollectionType,
-			MutationType:   entity.CreateMutationType,
-			TeamIDs: []uint64{
-				teamID,
-			},
-			Payload: entity.TeamMember{
-				TeamID: teamID,
-				UserID: userID,
-			},
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TeamMemberCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		TeamIDs: []uint64{
+			teamID,
 		},
-	})
+		Payload: entity.TeamMember{
+			TeamID: teamID,
+			UserID: userID,
+		},
+	},
+	)
 	return nil
 }
 
@@ -44,20 +42,18 @@ func (t TeamMemberSyncer) DeleteAndSyncTeamMember(teamID uint64, userID uint64) 
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TeamMemberCollectionType,
-			MutationType:   entity.DeleteMutationType,
-			TeamIDs: []uint64{
-				teamID,
-			},
-			Payload: entity.TeamMember{
-				TeamID: teamID,
-				UserID: userID,
-			},
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TeamMemberCollectionType,
+		MutationType:   realtime.DeleteMutationType,
+		TeamIDs: []uint64{
+			teamID,
 		},
-	})
+		Payload: entity.TeamMember{
+			TeamID: teamID,
+			UserID: userID,
+		},
+	},
+	)
 	return nil
 }
 

@@ -139,7 +139,10 @@ type Team {
 
 type TaskActivity {
 	taskId: ID!
-    teamId: ID!
+	dragTaskActivity: DragTaskActivity!
+}
+
+type DragTaskActivity {
 	dragByUserId: ID!
 	draggingClientId: ID!
 	isDragging: Boolean!

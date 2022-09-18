@@ -5,7 +5,6 @@ import (
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/obs"
-	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 const clientBufferSize = 50
@@ -13,7 +12,7 @@ const clientBufferSize = 50
 type ClientNotifier struct {
 	dataCollector               obs.DataCollector
 	clientDisconnectSubscribers []chan bool
-	messages                    chan entity.MessageEvent
+	messages                    chan MessageEvent
 }
 
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
@@ -22,37 +21,35 @@ func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 	return subscriber
 }
 
-func (c ClientNotifier) processMutation(message entity.MessageEvent) {
+func (c ClientNotifier) processMutation(mutation Mutation) {
+	message := MessageEvent{
+		Type: MutationMessageType,
+		Payload: MutationMessage{
+			CollectionType: mutation.CollectionType,
+			MutationType:   mutation.MutationType,
+			Payload:        mutation.Payload,
+		},
+	}
+
+	c.messages <- message
+}
+
+func (c ClientNotifier) sendClientID(clientID uint64) {
+	message := MessageEvent{
+		Type: MetadataMessageType,
+		Payload: MetadataMessage{
+			ClientID: clientID,
+		},
+	}
+
 	c.messages <- message
 }
 
 func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
-	messages := make(chan entity.MessageEvent, clientBufferSize)
+	messages := make(chan MessageEvent, clientBufferSize)
 	go func() {
 		for message := range messages {
-			var messagePayload entity.MessageEvent
-
-			if message.Type == entity.MutationMessageType {
-				mutation := message.Payload.(entity.MutationPayload)
-				messagePayload = entity.MessageEvent{
-					Type: message.Type,
-					Payload: Mutation{
-						CollectionType: mutation.CollectionType,
-						MutationType:   mutation.MutationType,
-						Payload:        mutation.Payload,
-					},
-				}
-			} else {
-				metadata := message.Payload.(entity.MetadataPayload)
-				messagePayload = entity.MessageEvent{
-					Type: message.Type,
-					Payload: Metadata{
-						ClientID: metadata.ClientID,
-					},
-				}
-			}
-
-			jsonBuf, err := json.MarshalIndent(messagePayload, "", "  ")
+			jsonBuf, err := json.MarshalIndent(message, "", "  ")
 			if err != nil {
 				dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 				continue
@@ -60,9 +57,8 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 			conn.SendMessage(jsonBuf)
 			dataCollector.Logger.Log(obs.Info, obs.Props{
 				obs.MessageProp: obs.Props{
-					"summary":    "notification sent",
-					"clientID":   clientID,
-					"mutationID": message.ID,
+					"summary":  "notification sent",
+					"clientID": clientID,
 				},
 			})
 		}

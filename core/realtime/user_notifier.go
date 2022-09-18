@@ -2,7 +2,6 @@ package realtime
 
 import (
 	"github.com/teamyapp/cloud/libs/obs"
-	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type UserNotifier struct {
@@ -40,16 +39,16 @@ func (u UserNotifier) unregisterClientNotifier(clientID uint64) {
 	}
 }
 
-func (u UserNotifier) processMutation(message entity.MessageEvent) {
+func (u UserNotifier) processMutation(mutation Mutation) {
 	u.dataCollector.Logger.Log(obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
 			"summary":    "client disconnected",
 			"userID":     u.userID,
-			"mutationID": message.ID,
+			"mutationID": mutation.ID,
 		},
 	})
 	for _, clientNotifier := range u.clientNotifiers {
-		clientNotifier.processMutation(message)
+		clientNotifier.processMutation(mutation)
 	}
 }
 

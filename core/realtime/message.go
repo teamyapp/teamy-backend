@@ -1,7 +1,5 @@
 package realtime
 
-import "github.com/teamyapp/teamy-backend/core/entity"
-
 type DeleteTaskAwaitForRelationPayload struct {
 	AwaitingTaskID uint64
 	AwaitForTaskID uint64
@@ -12,12 +10,40 @@ type DeleteSprintTaskRelationPayload struct {
 	TaskID   uint64
 }
 
+type MutationType string
+
+const (
+	CreateMutationType MutationType = "Create"
+	UpdateMutationType MutationType = "Update"
+	DeleteMutationType MutationType = "Delete"
+)
+
+type MessageType string
+
+const (
+	MutationMessageType MessageType = "Mutation"
+	MetadataMessageType MessageType = "Metadata"
+)
+
+type MessageEvent struct {
+	Type    MessageType
+	Payload interface{}
+}
+
 type Mutation struct {
-	CollectionType entity.CollectionType
-	MutationType   entity.MutationType
+	ID             uint64
+	CollectionType CollectionType
+	MutationType   MutationType
+	Payload        interface{}
+	TeamIDs        []uint64
+}
+
+type MutationMessage struct {
+	CollectionType CollectionType
+	MutationType   MutationType
 	Payload        interface{}
 }
 
-type Metadata struct {
+type MetadataMessage struct {
 	ClientID uint64
 }

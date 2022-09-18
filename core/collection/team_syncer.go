@@ -20,17 +20,15 @@ func (t TeamSyncer) CreateAndSyncTeam(team entity.Team) error {
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TeamCollectionType,
-			MutationType:   entity.CreateMutationType,
-			TeamIDs: []uint64{
-				team.ID,
-			},
-			Payload: team,
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TeamCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		TeamIDs: []uint64{
+			team.ID,
 		},
-	})
+		Payload: team,
+	},
+	)
 	return nil
 }
 
@@ -41,17 +39,15 @@ func (t TeamSyncer) UpdateAndSyncTeam(team entity.Team) error {
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(entity.MessageEvent{
-		Type: entity.MutationMessageType,
-		Payload: entity.MutationPayload{
-			CollectionType: entity.TeamCollectionType,
-			MutationType:   entity.UpdateMutationType,
-			TeamIDs: []uint64{
-				team.ID,
-			},
-			Payload: team,
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TeamCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			team.ID,
 		},
-	})
+		Payload: team,
+	},
+	)
 	return nil
 }
 

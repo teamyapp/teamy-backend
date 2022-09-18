@@ -1,14 +1,11 @@
 package entity
 
 type TaskActivity struct {
-	IsDragging       bool
-	DragByUserID     uint64
-	DraggingClientID uint64
+	TaskID           uint64
+	DragTaskActivity DragTaskActivity
 }
 
-type TeamTaskDraggingActivity struct {
-	TaskID           uint64
-	TeamID           uint64
+type DragTaskActivity struct {
 	IsDragging       bool
 	DragByUserID     uint64
 	DraggingClientID uint64

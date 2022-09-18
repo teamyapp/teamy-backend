@@ -76,13 +76,8 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 	}
 
 	taskActivityList := make([]TaskActivity, 0)
-	for taskID, taskActivity := range taskActivities {
-		taskActivityItem := newTaskActivity(t.deps, entity.TeamTaskDraggingActivity{
-			TaskID:           taskID,
-			TeamID:           t.team.ID,
-			IsDragging:       taskActivity.IsDragging,
-			DragByUserID:     taskActivity.DragByUserID,
-			DraggingClientID: taskActivity.DraggingClientID})
+	for _, taskActivity := range taskActivities {
+		taskActivityItem := newTaskActivity(*taskActivity)
 
 		taskActivityList = append(taskActivityList, taskActivityItem)
 	}

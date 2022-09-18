@@ -1,4 +1,4 @@
-package entity
+package realtime
 
 type CollectionType string
 
