@@ -37,9 +37,8 @@ func (a Activity) GetOrAddTeamActivity(teamID uint64) *entity.TeamActivity {
 	return teamActivity
 }
 
-func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) (map[uint64]*entity.TaskActivity, error) {
+func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) ([]entity.TaskActivity, error) {
 	teamActivity := a.GetOrAddTeamActivity(teamID)
-
 	return teamActivity.TaskActivities, nil
 }
 
