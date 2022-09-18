@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type t struct {
+type ReadyParams struct {
 	ClientID uint64
 }
 
@@ -47,9 +47,9 @@ func (r RealTimeStateSync) ready(writer http.ResponseWriter, request *http.Reque
 	}
 
 	decoder := json.NewDecoder(request.Body)
-	test := t{}
-	err = decoder.Decode(&test)
-	clientID := test.ClientID
+	readyParams := ReadyParams{}
+	err = decoder.Decode(&readyParams)
+	clientID := readyParams.ClientID
 	if err != nil {
 		r.dataCollector.Logger.Log(obs.Error, obs.Props{
 			obs.CauseProp:   err,
