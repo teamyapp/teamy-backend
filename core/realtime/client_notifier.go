@@ -13,6 +13,7 @@ type ClientNotifier struct {
 	dataCollector               obs.DataCollector
 	clientDisconnectSubscribers []chan bool
 	messages                    chan MessageEvent
+	isReady                     bool
 }
 
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
@@ -21,7 +22,15 @@ func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 	return subscriber
 }
 
-func (c ClientNotifier) processMutation(mutation Mutation) {
+func (c *ClientNotifier) setClientIsReady(isReady bool) {
+	c.isReady = isReady
+}
+
+func (c *ClientNotifier) processMutation(mutation Mutation) {
+	if !c.isReady {
+		return
+	}
+
 	message := MessageEvent{
 		Type: MutationMessageType,
 		Payload: MutationMessage{
@@ -34,7 +43,7 @@ func (c ClientNotifier) processMutation(mutation Mutation) {
 	c.messages <- message
 }
 
-func (c ClientNotifier) sendClientID(clientID uint64) {
+func (c *ClientNotifier) sendClientID(clientID uint64) {
 	message := MessageEvent{
 		Type: MetadataMessageType,
 		Payload: MetadataMessage{
@@ -66,6 +75,7 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 	clientNotifier := &ClientNotifier{
 		clientDisconnectSubscribers: make([]chan bool, 0),
 		messages:                    messages,
+		isReady:                     false,
 	}
 	go func() {
 		<-conn.OnClientDisconnect()

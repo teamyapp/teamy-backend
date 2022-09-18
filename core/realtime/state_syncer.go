@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -64,6 +65,33 @@ func (s *StateSyncer) NotifyMutation(mutation Mutation) {
 	mutation.ID = s.nextMutationID
 	s.nextMutationID++
 	s.mutations <- mutation
+}
+
+func (s *StateSyncer) SetClientIsReady(userID uint64, clientID uint64) error {
+	userNotifier, ok := s.userNotifiers[userID]
+	if !ok {
+		err := errors.New("userNotifier not found")
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"userID": userID,
+			},
+		})
+	}
+
+	clilentNotifier, ok := userNotifier.clientNotifiers[clientID]
+	if !ok {
+		err := errors.New("clientNotifier not found")
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"clientID": clientID,
+			},
+		})
+	}
+
+	clilentNotifier.setClientIsReady(true)
+	return nil
 }
 
 func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
