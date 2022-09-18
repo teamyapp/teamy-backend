@@ -75,7 +75,7 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 		return []TaskActivity{}, err
 	}
 
-	taskActivityList := make([]TaskActivity, 0)
+	gqlTaskActivitys := make([]TaskActivity, 0)
 	for _, taskActivity := range taskActivities {
 		taskActivityItem := newTaskActivity(*taskActivity)
 		taskActivityList = append(taskActivityList, taskActivityItem)
