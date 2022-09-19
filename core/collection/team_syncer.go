@@ -27,8 +27,7 @@ func (t TeamSyncer) CreateAndSyncTeam(team entity.Team) error {
 			team.ID,
 		},
 		Payload: team,
-	},
-	)
+	})
 	return nil
 }
 
@@ -46,8 +45,7 @@ func (t TeamSyncer) UpdateAndSyncTeam(team entity.Team) error {
 			team.ID,
 		},
 		Payload: team,
-	},
-	)
+	})
 	return nil
 }
 

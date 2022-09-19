@@ -12,9 +12,6 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type ReadyParams struct {
-	ClientID uint64
-}
 
 type RealTimeStateSync struct {
 	dataCollector       obs.DataCollector
@@ -31,9 +28,9 @@ func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) error {
 			HandlerFunc: r.connect,
 		},
 		{
-			Path:        path.Join(realTimeStateSyncPrefix, "clients", "ready"),
-			Method:      http.MethodPost,
-			HandlerFunc: r.ready,
+			Path:        path.Join(realTimeStateSyncPrefix, "clients", "{clientID}","initial-state-ready"),
+			Method:      http.MethodPut,
+			HandlerFunc: r.clientInitialStateReady,
 		},
 	})
 	return nil
@@ -59,7 +56,7 @@ func (r RealTimeStateSync) ready(writer http.ResponseWriter, request *http.Reque
 	}
 
 	clientID := readyParams.ClientID
-	err = r.realTimeStateSyncer.SetClientIsReady(userID, clientID)
+	err = r.realTimeStateSyncer.OnInitialStateReady(userID, clientID)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return

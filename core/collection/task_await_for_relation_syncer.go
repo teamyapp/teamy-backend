@@ -33,8 +33,8 @@ func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(relation entity.TaskAw
 		TeamIDs: []uint64{
 			task.OwningTeamID,
 		},
-		Payload: relation},
-	)
+		Payload: relation,
+		})
 	return nil
 }
 
@@ -61,8 +61,7 @@ func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(awaitingTaskID uint64,
 			AwaitingTaskID: awaitingTaskID,
 			AwaitForTaskID: awaitForTaskID,
 		},
-	},
-	)
+	})
 	return nil
 }
 

@@ -27,8 +27,7 @@ func (t TaskSyncer) CreateAndSyncTask(task entity.Task) error {
 			task.OwningTeamID,
 		},
 		Payload: task,
-	},
-	)
+	})
 	return nil
 }
 
@@ -45,8 +44,8 @@ func (t TaskSyncer) UpdateAndSyncTask(task entity.Task) error {
 		TeamIDs: []uint64{
 			task.OwningTeamID,
 		},
-		Payload: task},
-	)
+		Payload: task,
+	})
 	return nil
 }
 
@@ -70,12 +69,11 @@ func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
 			task.OwningTeamID,
 		},
 		Payload: taskID,
-	},
-	)
+	})
 	return nil
 }
 
-func (t TaskSyncer) StartDraggingSyncTask(taskID uint64, userID uint64, clientID uint64, owningTeamID uint64) error {
+func (t TaskSyncer) UpdateTaskActivity(taskID uint64) error {
 	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
 		CollectionType: realtime.TaskActivityCollectionType,
 		MutationType:   realtime.UpdateMutationType,
@@ -91,7 +89,6 @@ func (t TaskSyncer) StartDraggingSyncTask(taskID uint64, userID uint64, clientID
 			},
 		}},
 	)
-
 	return nil
 }
 
@@ -111,7 +108,6 @@ func (t TaskSyncer) StopDraggingSyncTask(taskID uint64, userID uint64, clientID 
 			},
 		}},
 	)
-
 	return nil
 }
 

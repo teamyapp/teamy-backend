@@ -31,7 +31,6 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 }
 
 func (t TeamNotifier) processMutation(mutation Mutation) {
-
 	t.dataCollector.Logger.Log(obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
 			"summary":    "client disconnected",

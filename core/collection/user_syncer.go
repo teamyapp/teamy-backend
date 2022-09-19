@@ -32,8 +32,7 @@ func (u UserSyncer) UpdateAndSyncUser(user entity.User) error {
 		MutationType:   realtime.UpdateMutationType,
 		TeamIDs:        teamIDs,
 		Payload:        user,
-	},
-	)
+	})
 	return nil
 }
 

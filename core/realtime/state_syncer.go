@@ -67,7 +67,7 @@ func (s *StateSyncer) NotifyMutation(mutation Mutation) {
 	s.mutations <- mutation
 }
 
-func (s *StateSyncer) SetClientIsReady(userID uint64, clientID uint64) error {
+func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error {
 	userNotifier, ok := s.userNotifiers[userID]
 	if !ok {
 		err := errors.New("userNotifier not found")
@@ -77,6 +77,7 @@ func (s *StateSyncer) SetClientIsReady(userID uint64, clientID uint64) error {
 				"userID": userID,
 			},
 		})
+		return err
 	}
 
 	clilentNotifier, ok := userNotifier.clientNotifiers[clientID]
@@ -88,9 +89,10 @@ func (s *StateSyncer) SetClientIsReady(userID uint64, clientID uint64) error {
 				"clientID": clientID,
 			},
 		})
+		return err
 	}
 
-	clilentNotifier.setClientIsReady(true)
+	clilentNotifier. OnInitialStateReady()
 	return nil
 }
 

@@ -19,19 +19,18 @@ func (a Activity) GetTeamActivity(teamID uint64) *entity.TeamActivity {
 	return teamActivity
 }
 
-func (a Activity) AddTeamActivity(teamID uint64) *entity.TeamActivity {
+func (a Activity) InitTeamActivity(teamID uint64) *entity.TeamActivity {
 	teamActivity := &entity.TeamActivity{}
 	teamActivity.TaskActivities = map[uint64]*entity.TaskActivity{}
 	a.teamActivities[teamID] = teamActivity
-
 	return teamActivity
 }
 
-func (a Activity) GetOrAddTeamActivity(teamID uint64) *entity.TeamActivity {
+func (a Activity) GetOrInitTeamActivity(teamID uint64) *entity.TeamActivity {
 	teamActivity := a.GetTeamActivity(teamID)
 
 	if teamActivity == nil {
-		return a.AddTeamActivity(teamID)
+		return a.InitTeamActivity(teamID)
 	}
 
 	return teamActivity
@@ -42,11 +41,14 @@ func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) (map[uint64]*enti
 	return teamActivity.TaskActivities, nil
 }
 
-func (a Activity) UpdateTaskActivity(taskID uint64, teamActivity *entity.TeamActivity, taskActivity *entity.TaskActivity) *entity.TaskActivity {
+func (a Activity) UpdateTaskActivity(teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) *entity.TaskActivity {
 	teamActivity.TaskActivities[taskID] = taskActivity
 	return taskActivity
 }
 
 func NewActivity(dataCollector obs.DataCollector) Activity {
-	return Activity{dataCollector: dataCollector, teamActivities: map[uint64]*entity.TeamActivity{}}
+	return Activity{
+	    dataCollector: dataCollector, 
+	    teamActivities: map[uint64]*entity.TeamActivity{},
+	}
 }

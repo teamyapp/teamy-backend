@@ -27,8 +27,7 @@ func (s SprintTaskRelationSyncer) CreateAndSyncSprintTaskRelation(sprintTaskRela
 			OwningTeamID,
 		},
 		Payload: sprintTaskRelaltion,
-	},
-	)
+	})
 	return nil
 }
 
@@ -46,8 +45,7 @@ func (s SprintTaskRelationSyncer) DeleteAndSyncSprintTaskRelation(sprintID uint6
 			OwningTeamID,
 		},
 		Payload: realtime.DeleteSprintTaskRelationPayload{SprintID: sprintID, TaskID: taskID},
-	},
-	)
+	})
 	return nil
 
 }

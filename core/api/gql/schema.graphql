@@ -143,9 +143,9 @@ type TaskActivity {
 }
 
 type DragTaskActivity {
+	isDragging: Boolean!
 	dragByUserId: ID!
 	draggingClientId: ID!
-	isDragging: Boolean!
 }
 
 type Invitation {

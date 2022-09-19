@@ -26,7 +26,8 @@ func (i InvitationSyncer) CreateAndSyncInvitation(invitation entity.Invitation) 
 		TeamIDs: []uint64{
 			invitation.TeamID,
 		},
-		Payload: invitation},
+		Payload: invitation,
+		},
 	)
 	return nil
 }

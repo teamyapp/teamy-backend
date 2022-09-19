@@ -10,14 +10,6 @@ type DeleteSprintTaskRelationPayload struct {
 	TaskID   uint64
 }
 
-type MutationType string
-
-const (
-	CreateMutationType MutationType = "Create"
-	UpdateMutationType MutationType = "Update"
-	DeleteMutationType MutationType = "Delete"
-)
-
 type MessageType string
 
 const (
@@ -25,10 +17,18 @@ const (
 	MetadataMessageType MessageType = "Metadata"
 )
 
-type MessageEvent struct {
+type Message struct {
 	Type    MessageType
 	Payload interface{}
 }
+
+type MutationType string
+
+const (
+	CreateMutationType MutationType = "Create"
+	UpdateMutationType MutationType = "Update"
+	DeleteMutationType MutationType = "Delete"
+)
 
 type Mutation struct {
 	ID             uint64

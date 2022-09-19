@@ -497,18 +497,18 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
+	
 	task, err := t.taskDao.FindTaskByID(taskID)
 	if err != nil {
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	teamActivity := t.activityCache.GetOrAddTeamActivity(task.OwningTeamID)
-	t.activityCache.UpdateTaskActivity(taskID, teamActivity, &entity.TaskActivity{
+	t.activityCache.UpdateTaskActivity(task.OwningTeamID, taskID, &entity.TaskActivity{
 		TaskID: taskID,
 		DragTaskActivity: entity.DragTaskActivity{
-			DragByUserID:     userID,
 			IsDragging:       true,
+			DragByUserID:     userID,
 			DraggingClientID: clientID,
 		}})
 	return t.taskSyncer.StartDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)

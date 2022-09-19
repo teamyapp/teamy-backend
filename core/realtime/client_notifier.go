@@ -12,8 +12,9 @@ const clientBufferSize = 50
 type ClientNotifier struct {
 	dataCollector               obs.DataCollector
 	clientDisconnectSubscribers []chan bool
+        clientID uint64
 	messages                    chan MessageEvent
-	isReady                     bool
+	acceptMutation                     bool
 }
 
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
@@ -22,8 +23,8 @@ func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 	return subscriber
 }
 
-func (c *ClientNotifier) setClientIsReady(isReady bool) {
-	c.isReady = isReady
+func (c *ClientNotifier) onInitialStateReady(isReady bool) {
+	c.acceptMutation = true
 }
 
 func (c *ClientNotifier) processMutation(mutation Mutation) {
@@ -39,18 +40,16 @@ func (c *ClientNotifier) processMutation(mutation Mutation) {
 			Payload:        mutation.Payload,
 		},
 	}
-
 	c.messages <- message
 }
 
-func (c *ClientNotifier) sendClientID(clientID uint64) {
+func (c *ClientNotifier) sentMetadata(clientID uint64) {
 	message := MessageEvent{
 		Type: MetadataMessageType,
 		Payload: MetadataMessage{
-			ClientID: clientID,
+			ClientID: c.clientID,
 		},
 	}
-
 	c.messages <- message
 }
 
@@ -74,6 +73,7 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 	}()
 	clientNotifier := &ClientNotifier{
 		clientDisconnectSubscribers: make([]chan bool, 0),
+                 clientID: clientID,
 		messages:                    messages,
 		isReady:                     false,
 	}

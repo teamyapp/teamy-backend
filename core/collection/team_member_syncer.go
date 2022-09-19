@@ -30,8 +30,7 @@ func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) 
 			TeamID: teamID,
 			UserID: userID,
 		},
-	},
-	)
+	})
 	return nil
 }
 
@@ -52,8 +51,7 @@ func (t TeamMemberSyncer) DeleteAndSyncTeamMember(teamID uint64, userID uint64) 
 			TeamID: teamID,
 			UserID: userID,
 		},
-	},
-	)
+	})
 	return nil
 }
 

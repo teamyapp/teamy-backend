@@ -33,8 +33,8 @@ func (m MessageSyncer) CreateAndSyncMessage(message entity.Message) error {
 		TeamIDs: []uint64{
 			task.OwningTeamID,
 		},
-		Payload: message},
-	)
+		Payload: message,
+		})
 	return nil
 }
 
@@ -58,8 +58,7 @@ func (m MessageSyncer) UpdateAndSyncMessage(message entity.Message) error {
 			task.OwningTeamID,
 		},
 		Payload: message,
-	},
-	)
+	})
 	return nil
 }
 
@@ -88,8 +87,8 @@ func (m MessageSyncer) DeleteAndSyncMessage(messageID uint64) error {
 		TeamIDs: []uint64{
 			task.OwningTeamID,
 		},
-		Payload: messageID},
-	)
+		Payload: messageID,
+		})
 	return nil
 }
 
