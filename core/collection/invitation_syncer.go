@@ -27,7 +27,7 @@ func (i InvitationSyncer) CreateAndSyncInvitation(invitation entity.Invitation) 
 			invitation.TeamID,
 		},
 		Payload: invitation,
-		},
+	},
 	)
 	return nil
 }

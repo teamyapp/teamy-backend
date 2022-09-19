@@ -140,6 +140,7 @@ func InitSprintRPCAPI(
 		daoSet,
 		collectionSyncerSet,
 		serviceSet,
+		cache.NewActivity,
 		api.NewSprintRPC,
 	)
 	return api.SprintRPC{}

@@ -56,7 +56,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 
 	clientNotifier := newClientNotifier(s.dataCollector, conn, s.nextClientID)
 	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
-	clientNotifier.sendClientID(s.nextClientID)
+	clientNotifier.sentMetadata(s.nextClientID)
 	s.nextClientID++
 	return nil
 }
@@ -92,7 +92,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 		return err
 	}
 
-	clilentNotifier. OnInitialStateReady()
+	clilentNotifier.onInitialStateReady()
 	return nil
 }
 

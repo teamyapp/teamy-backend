@@ -12,9 +12,9 @@ const clientBufferSize = 50
 type ClientNotifier struct {
 	dataCollector               obs.DataCollector
 	clientDisconnectSubscribers []chan bool
-        clientID uint64
-	messages                    chan MessageEvent
-	acceptMutation                     bool
+	clientID                    uint64
+	messages                    chan Message
+	acceptMutation              bool
 }
 
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
@@ -23,16 +23,16 @@ func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 	return subscriber
 }
 
-func (c *ClientNotifier) onInitialStateReady(isReady bool) {
+func (c *ClientNotifier) onInitialStateReady() {
 	c.acceptMutation = true
 }
 
 func (c *ClientNotifier) processMutation(mutation Mutation) {
-	if !c.isReady {
+	if !c.acceptMutation {
 		return
 	}
 
-	message := MessageEvent{
+	message := Message{
 		Type: MutationMessageType,
 		Payload: MutationMessage{
 			CollectionType: mutation.CollectionType,
@@ -44,7 +44,7 @@ func (c *ClientNotifier) processMutation(mutation Mutation) {
 }
 
 func (c *ClientNotifier) sentMetadata(clientID uint64) {
-	message := MessageEvent{
+	message := Message{
 		Type: MetadataMessageType,
 		Payload: MetadataMessage{
 			ClientID: c.clientID,
@@ -54,7 +54,7 @@ func (c *ClientNotifier) sentMetadata(clientID uint64) {
 }
 
 func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
-	messages := make(chan MessageEvent, clientBufferSize)
+	messages := make(chan Message, clientBufferSize)
 	go func() {
 		for message := range messages {
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
@@ -73,9 +73,9 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 	}()
 	clientNotifier := &ClientNotifier{
 		clientDisconnectSubscribers: make([]chan bool, 0),
-                 clientID: clientID,
+		clientID:                    clientID,
 		messages:                    messages,
-		isReady:                     false,
+		acceptMutation:              false,
 	}
 	go func() {
 		<-conn.OnClientDisconnect()

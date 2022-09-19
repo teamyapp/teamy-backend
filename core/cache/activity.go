@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"errors"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -37,18 +39,31 @@ func (a Activity) GetOrInitTeamActivity(teamID uint64) *entity.TeamActivity {
 }
 
 func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) (map[uint64]*entity.TaskActivity, error) {
-	teamActivity := a.GetOrAddTeamActivity(teamID)
+	teamActivity := a.GetOrInitTeamActivity(teamID)
 	return teamActivity.TaskActivities, nil
 }
 
-func (a Activity) UpdateTaskActivity(teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) *entity.TaskActivity {
+func (a Activity) UpdateTaskActivity(teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) (*entity.TaskActivity, error) {
+	teamActivity, ok := a.teamActivities[teamID]
+
+	if !ok {
+		err := errors.New("teamActivity not found")
+		a.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"teamID": teamID,
+			},
+		})
+		return nil, err
+	}
+
 	teamActivity.TaskActivities[taskID] = taskActivity
-	return taskActivity
+	return taskActivity, nil
 }
 
 func NewActivity(dataCollector obs.DataCollector) Activity {
 	return Activity{
-	    dataCollector: dataCollector, 
-	    teamActivities: map[uint64]*entity.TeamActivity{},
+		dataCollector:  dataCollector,
+		teamActivities: map[uint64]*entity.TeamActivity{},
 	}
 }

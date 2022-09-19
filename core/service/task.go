@@ -497,21 +497,17 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
-	
-	task, err := t.taskDao.FindTaskByID(taskID)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
 
-	t.activityCache.UpdateTaskActivity(task.OwningTeamID, taskID, &entity.TaskActivity{
-		TaskID: taskID,
-		DragTaskActivity: entity.DragTaskActivity{
-			IsDragging:       true,
-			DragByUserID:     userID,
-			DraggingClientID: clientID,
-		}})
-	return t.taskSyncer.StartDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
+	return t.taskSyncer.UpdateAndSyncTaskActivity(
+		taskID,
+		clientID,
+		entity.TaskActivity{
+			TaskID: taskID,
+			DragTaskActivity: entity.DragTaskActivity{
+				IsDragging:       true,
+				DragByUserID:     userID,
+				DraggingClientID: clientID,
+			}})
 }
 
 func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
@@ -520,20 +516,17 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
-	task, err := t.taskDao.FindTaskByID(taskID)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-	teamActivity := t.activityCache.GetOrAddTeamActivity(task.OwningTeamID)
-	t.activityCache.UpdateTaskActivity(taskID, teamActivity, &entity.TaskActivity{
-		TaskID: taskID,
-		DragTaskActivity: entity.DragTaskActivity{
-			DragByUserID:     userID,
-			IsDragging:       false,
-			DraggingClientID: clientID,
-		}})
-	return t.taskSyncer.StopDraggingSyncTask(taskID, userID, clientID, task.OwningTeamID)
+
+	return t.taskSyncer.UpdateAndSyncTaskActivity(
+		taskID,
+		clientID,
+		entity.TaskActivity{
+			TaskID: taskID,
+			DragTaskActivity: entity.DragTaskActivity{
+				IsDragging:       false,
+				DragByUserID:     userID,
+				DraggingClientID: clientID,
+			}})
 }
 
 func NewTask(

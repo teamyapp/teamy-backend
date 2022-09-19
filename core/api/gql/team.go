@@ -75,9 +75,12 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 		return []TaskActivity{}, err
 	}
 
-	return collect.Map(taskActivities, func (taskActivity entity.TaskActivity, index int) TaskActivity {
-	    return newTaskActivity(*taskActivity)
-	}), nil
+	taskActivityItems := make([]TaskActivity, 0)
+	for _, taskActivity := range taskActivities {
+		taskActivityItems = append(taskActivityItems, newTaskActivity(*taskActivity))
+	}
+
+	return taskActivityItems, nil
 }
 
 func (t Team) Tasks(ct context.Context, args struct {

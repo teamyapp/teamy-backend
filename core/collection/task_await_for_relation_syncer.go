@@ -34,7 +34,7 @@ func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(relation entity.TaskAw
 			task.OwningTeamID,
 		},
 		Payload: relation,
-		})
+	})
 	return nil
 }
 

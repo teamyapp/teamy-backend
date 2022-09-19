@@ -2,6 +2,7 @@ package collection
 
 import (
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -11,6 +12,7 @@ type TaskSyncer struct {
 	dataCollector       obs.DataCollector
 	realTimeStateSyncer *realtime.StateSyncer
 	taskDao             dao.Task
+	activityCache       cache.Activity
 }
 
 func (t TaskSyncer) CreateAndSyncTask(task entity.Task) error {
@@ -73,40 +75,26 @@ func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
 	return nil
 }
 
-func (t TaskSyncer) UpdateTaskActivity(taskID uint64) error {
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.TaskActivityCollectionType,
-		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			owningTeamID,
-		},
-		Payload: entity.TaskActivity{
-			TaskID: taskID,
-			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging:       true,
-				DragByUserID:     userID,
-				DraggingClientID: clientID,
-			},
-		}},
-	)
-	return nil
-}
+func (t TaskSyncer) UpdateAndSyncTaskActivity(taskID uint64, clientID uint64, taskActivity entity.TaskActivity) error {
+	task, err := t.taskDao.FindTaskByID(taskID)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
 
-func (t TaskSyncer) StopDraggingSyncTask(taskID uint64, userID uint64, clientID uint64, owningTeamID uint64) error {
+	_, err = t.activityCache.UpdateTaskActivity(task.OwningTeamID, taskID, &taskActivity)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
 	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
 		CollectionType: realtime.TaskActivityCollectionType,
 		MutationType:   realtime.UpdateMutationType,
 		TeamIDs: []uint64{
-			owningTeamID,
+			task.OwningTeamID,
 		},
-		Payload: entity.TaskActivity{
-			TaskID: taskID,
-			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging:       false,
-				DragByUserID:     userID,
-				DraggingClientID: clientID,
-			},
-		}},
+		Payload: taskActivity},
 	)
 	return nil
 }
@@ -114,10 +102,12 @@ func (t TaskSyncer) StopDraggingSyncTask(taskID uint64, userID uint64, clientID 
 func NewTaskSyncer(
 	dataCollector obs.DataCollector,
 	realTimeStateSyncer *realtime.StateSyncer,
-	taskDao dao.Task) TaskSyncer {
+	taskDao dao.Task,
+	activityCache cache.Activity) TaskSyncer {
 	return TaskSyncer{
 		dataCollector:       dataCollector,
 		realTimeStateSyncer: realTimeStateSyncer,
 		taskDao:             taskDao,
+		activityCache:       activityCache,
 	}
 }

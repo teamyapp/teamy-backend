@@ -1,17 +1,17 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"path"
+	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
-
 
 type RealTimeStateSync struct {
 	dataCollector       obs.DataCollector
@@ -28,7 +28,7 @@ func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) error {
 			HandlerFunc: r.connect,
 		},
 		{
-			Path:        path.Join(realTimeStateSyncPrefix, "clients", "{clientID}","initial-state-ready"),
+			Path:        path.Join(realTimeStateSyncPrefix, "clients", "{clientID}", "initial-state-ready"),
 			Method:      http.MethodPut,
 			HandlerFunc: r.clientInitialStateReady,
 		},
@@ -36,26 +36,25 @@ func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) error {
 	return nil
 }
 
-func (r RealTimeStateSync) ready(writer http.ResponseWriter, request *http.Request) {
+func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, request *http.Request) {
 	userID, err := ctx.UserIDFromContext(r.dataCollector, request.Context())
 	if err != nil {
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	decoder := json.NewDecoder(request.Body)
-	readyParams := ReadyParams{}
-	err = decoder.Decode(&readyParams)
+	clientIDParam := mux.Vars(request)["clientID"]
+
+	clientID, err := strconv.ParseUint(clientIDParam, 10, 64)
 	if err != nil {
 		r.dataCollector.Logger.Log(obs.Error, obs.Props{
 			obs.CauseProp:   err,
-			obs.MessageProp: "must provide clientId",
+			obs.MessageProp: "must provide teamId",
 		})
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	clientID := readyParams.ClientID
 	err = r.realTimeStateSyncer.OnInitialStateReady(userID, clientID)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
