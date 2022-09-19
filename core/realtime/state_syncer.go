@@ -80,7 +80,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 		return err
 	}
 
-	clilentNotifier, ok := userNotifier.clientNotifiers[clientID]
+	clientNotifier, ok := userNotifier.clientNotifiers[clientID]
 	if !ok {
 		err := errors.New("clientNotifier not found")
 		s.dataCollector.Logger.Log(obs.Error, obs.Props{
@@ -92,7 +92,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 		return err
 	}
 
-	clilentNotifier.onInitialStateReady()
+	clientNotifier.onInitialStateReady()
 	return nil
 }
 

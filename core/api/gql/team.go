@@ -69,12 +69,7 @@ func (t Team) Members(ct context.Context) ([]User, error) {
 }
 
 func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
-	taskActivities, err := t.deps.activityCache.FindAllTaskActivitiesByTeamID(t.team.ID)
-	if err != nil {
-		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return []TaskActivity{}, err
-	}
-
+	taskActivities := t.deps.activityCache.FindAllTaskActivitiesByTeamID(t.team.ID)
 	taskActivityItems := make([]TaskActivity, 0)
 	for _, taskActivity := range taskActivities {
 		taskActivityItems = append(taskActivityItems, newTaskActivity(*taskActivity))
