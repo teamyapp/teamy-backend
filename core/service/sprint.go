@@ -14,6 +14,9 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const workTimePerWeek = 40 * time.Hour
+const timePerWeek = 7 * 24 * time.Hour
+
 type CreateSprintInput struct {
 	StartAt time.Time
 	EndAt   time.Time
@@ -26,6 +29,7 @@ type Sprint struct {
 	sprintDao                dao.Sprint
 	sprintTaskRelationDao    dao.SprintTaskRelation
 	sprintParticipantDao     dao.SprintParticipant
+	teamMemberDao            dao.TeamMember
 	taskSyncer               collection.TaskSyncer
 	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer
 }
@@ -137,7 +141,38 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		CreatedAt:    time.Now().UTC(),
 		OwningTeamID: teamID,
 	}
-	return sp, s.sprintDao.CreateSprint(sp)
+	err = s.sprintDao.CreateSprint(sp)
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Sprint{}, err
+	}
+
+	teamMemberIDs, err := s.teamMemberDao.FindTeamMemberIDsByTeamID(teamID)
+	if err != nil {
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Sprint{}, err
+	}
+
+	sprintLength := sprint.EndAt.UTC().Sub(sprint.StartAt.UTC())
+	workWeeks := sprintLength / timePerWeek
+	// TODO: fetch from team settings
+	bandwidth := workWeeks * workTimePerWeek
+	for _, teamMemberID := range teamMemberIDs {
+		participant := entity.SprintParticipant{
+			SprintID:        sp.ID,
+			UserID:          teamMemberID,
+			TotalBandwidth:  bandwidth,
+			UnusedBandwidth: bandwidth,
+			CreatedAt:       time.Now(),
+		}
+		err = s.sprintParticipantDao.CreateSprintParticipant(participant)
+		if err != nil {
+			s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Sprint{}, err
+		}
+	}
+
+	return sp, nil
 }
 
 func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, error) {
@@ -383,6 +418,7 @@ func NewSprint(
 	sprintDao dao.Sprint,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintParticipantDao dao.SprintParticipant,
+	teamMemberDao dao.TeamMember,
 	taskSyncer collection.TaskSyncer,
 	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer,
 ) Sprint {
@@ -393,6 +429,7 @@ func NewSprint(
 		sprintDao:                sprintDao,
 		sprintTaskRelationDao:    sprintTaskRelationDao,
 		sprintParticipantDao:     sprintParticipantDao,
+		teamMemberDao:            teamMemberDao,
 		taskSyncer:               taskSyncer,
 		sprintTaskRelationSyncer: sprintTaskRelationSyncer,
 	}

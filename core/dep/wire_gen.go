@@ -59,7 +59,7 @@ func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL 
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(dataCollector, sqlDB)
 	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, task, sprint, team, teamFileUploadSession)
 	sprintTaskRelationSyncer := collection.NewSprintTaskRelationSyncer(dataCollector, realTimeStateSyncer, sprintTaskRelation)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, task, sprint, sprintTaskRelation, sprintParticipant, taskSyncer, sprintTaskRelationSyncer)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, taskSyncer, sprintTaskRelationSyncer)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
 	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
 	dependencies := gql.NewDependencies(dataCollector, cloudAPIClientRegistry, user, team, teamMember, invitation, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint, serviceUser)
@@ -92,9 +92,10 @@ func InitSprintRPCAPI(dataCollector obs.DataCollector, cloudAPIClientRegistry *a
 	sprint := sqldb.NewSprint(dataCollector, sqlDB)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
 	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
+	teamMember := sqldb.NewTeamMember(dataCollector, sqlDB)
 	taskSyncer := collection.NewTaskSyncer(dataCollector, realTimeStateSyncer, task)
 	sprintTaskRelationSyncer := collection.NewSprintTaskRelationSyncer(dataCollector, realTimeStateSyncer, sprintTaskRelation)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, task, sprint, sprintTaskRelation, sprintParticipant, taskSyncer, sprintTaskRelationSyncer)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, taskSyncer, sprintTaskRelationSyncer)
 	sprintRPC := api2.NewSprintRPC(dataCollector, serviceSprint)
 	return sprintRPC
 }
