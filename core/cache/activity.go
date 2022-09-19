@@ -30,7 +30,6 @@ func (a Activity) InitTeamActivity(teamID uint64) *entity.TeamActivity {
 
 func (a Activity) GetOrInitTeamActivity(teamID uint64) *entity.TeamActivity {
 	teamActivity := a.GetTeamActivity(teamID)
-
 	if teamActivity == nil {
 		return a.InitTeamActivity(teamID)
 	}
@@ -38,14 +37,13 @@ func (a Activity) GetOrInitTeamActivity(teamID uint64) *entity.TeamActivity {
 	return teamActivity
 }
 
-func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) (map[uint64]*entity.TaskActivity, error) {
+func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) map[uint64]*entity.TaskActivity {
 	teamActivity := a.GetOrInitTeamActivity(teamID)
-	return teamActivity.TaskActivities, nil
+	return teamActivity.TaskActivities
 }
 
 func (a Activity) UpdateTaskActivity(teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) (*entity.TaskActivity, error) {
 	teamActivity, ok := a.teamActivities[teamID]
-
 	if !ok {
 		err := errors.New("teamActivity not found")
 		a.dataCollector.Logger.Log(obs.Error, obs.Props{

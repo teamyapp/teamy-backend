@@ -44,7 +44,6 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 	}
 
 	clientIDParam := mux.Vars(request)["clientID"]
-
 	clientID, err := strconv.ParseUint(clientIDParam, 10, 64)
 	if err != nil {
 		r.dataCollector.Logger.Log(obs.Error, obs.Props{

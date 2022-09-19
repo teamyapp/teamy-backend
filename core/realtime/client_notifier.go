@@ -43,7 +43,7 @@ func (c *ClientNotifier) processMutation(mutation Mutation) {
 	c.messages <- message
 }
 
-func (c *ClientNotifier) sentMetadata(clientID uint64) {
+func (c *ClientNotifier) sentMetadata() {
 	message := Message{
 		Type: MetadataMessageType,
 		Payload: MetadataMessage{

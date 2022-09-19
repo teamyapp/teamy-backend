@@ -56,7 +56,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 
 	clientNotifier := newClientNotifier(s.dataCollector, conn, s.nextClientID)
 	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
-	clientNotifier.sentMetadata(s.nextClientID)
+	clientNotifier.sentMetadata()
 	s.nextClientID++
 	return nil
 }
