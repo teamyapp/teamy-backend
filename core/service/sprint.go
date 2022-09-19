@@ -172,7 +172,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		}
 	}
 
-	return entity.Sprint{}, nil
+	return sp, nil
 }
 
 func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, error) {
