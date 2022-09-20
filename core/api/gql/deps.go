@@ -3,6 +3,7 @@ package gql
 import (
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/service"
@@ -16,6 +17,7 @@ type Dependencies struct {
 	teamMemberDao              dao.TeamMember
 	invitationDao              dao.Invitation
 	messageDao                 dao.Message
+	activityCache              cache.Activity
 	taskAwaitForRelationDao    dao.TaskAwaitForRelation
 	userSyncer                 collection.UserSyncer
 	teamSyncer                 collection.TeamSyncer
@@ -37,6 +39,7 @@ func NewDependencies(
 	teamMemberDao dao.TeamMember,
 	invitationDao dao.Invitation,
 	messageDao dao.Message,
+	activityCache cache.Activity,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	userSyncer collection.UserSyncer,
 	teamSyncer collection.TeamSyncer,
@@ -57,6 +60,7 @@ func NewDependencies(
 		teamMemberDao:              teamMemberDao,
 		invitationDao:              invitationDao,
 		messageDao:                 messageDao,
+		activityCache:              activityCache,
 		taskAwaitForRelationDao:    taskAwaitForRelationDao,
 		userSyncer:                 userSyncer,
 		teamSyncer:                 teamSyncer,

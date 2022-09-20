@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -40,6 +41,7 @@ type UpdateTaskInput struct {
 type Task struct {
 	dataCollector              obs.DataCollector
 	cloudClientRegistry        *cloudAPI.ClientRegistry
+	activityCache              cache.Activity
 	taskDao                    dao.Task
 	threadDao                  dao.Thread
 	taskAwaitForRelationDao    dao.TaskAwaitForRelation
@@ -489,9 +491,48 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	return task, nil
 }
 
+func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
+	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	return t.taskSyncer.UpdateAndSyncTaskActivity(
+		taskID,
+		clientID,
+		entity.TaskActivity{
+			TaskID: taskID,
+			DragTaskActivity: entity.DragTaskActivity{
+				IsDragging:       true,
+				DragByUserID:     userID,
+				DraggingClientID: clientID,
+			}})
+}
+
+func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
+	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
+	if err != nil {
+		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	return t.taskSyncer.UpdateAndSyncTaskActivity(
+		taskID,
+		clientID,
+		entity.TaskActivity{
+			TaskID: taskID,
+			DragTaskActivity: entity.DragTaskActivity{
+				IsDragging:       false,
+				DragByUserID:     userID,
+				DraggingClientID: clientID,
+			}})
+}
+
 func NewTask(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	activityCache cache.Activity,
 	taskDao dao.Task,
 	threadDao dao.Thread,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
@@ -504,6 +545,7 @@ func NewTask(
 	return Task{
 		dataCollector:              dataCollector,
 		cloudClientRegistry:        cloudClientRegistry,
+		activityCache:              activityCache,
 		taskDao:                    taskDao,
 		threadDao:                  threadDao,
 		taskAwaitForRelationDao:    taskAwaitForRelationDao,

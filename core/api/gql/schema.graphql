@@ -23,6 +23,8 @@ type Mutation {
 	moveTaskToBlocked(taskId: ID!, reason: String!): Task!
 	addAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
+	startDraggingTask(taskId: ID!, clientId: ID!): ID!
+	stopDraggingTask(taskId: ID!, clientId: ID!): ID!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
@@ -132,6 +134,18 @@ type Team {
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
 	appInstallations: [AppInstallation!]!
+	taskActivities: [TaskActivity!]!
+}
+
+type TaskActivity {
+	taskId: ID!
+	dragTaskActivity: DragTaskActivity!
+}
+
+type DragTaskActivity {
+	isDragging: Boolean!
+	dragByUserId: ID!
+	draggingClientId: ID!
 }
 
 type Invitation {

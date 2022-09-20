@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -29,14 +30,6 @@ import (
 
 const stateSyncerBufferSize = 50
 
-type Mutation struct {
-	ID             uint64
-	CollectionType CollectionType
-	MutationType   MutationType
-	TeamIDs        []uint64
-	Payload        interface{}
-}
-
 type StateSyncer struct {
 	dataCollector  obs.DataCollector
 	teamMemberDao  dao.TeamMember
@@ -63,6 +56,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 
 	clientNotifier := newClientNotifier(s.dataCollector, conn, s.nextClientID)
 	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
+	clientNotifier.sentMetadata()
 	s.nextClientID++
 	return nil
 }
@@ -71,6 +65,35 @@ func (s *StateSyncer) NotifyMutation(mutation Mutation) {
 	mutation.ID = s.nextMutationID
 	s.nextMutationID++
 	s.mutations <- mutation
+}
+
+func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error {
+	userNotifier, ok := s.userNotifiers[userID]
+	if !ok {
+		err := errors.New("userNotifier not found")
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"userID": userID,
+			},
+		})
+		return err
+	}
+
+	clientNotifier, ok := userNotifier.clientNotifiers[clientID]
+	if !ok {
+		err := errors.New("clientNotifier not found")
+		s.dataCollector.Logger.Log(obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"clientID": clientID,
+			},
+		})
+		return err
+	}
+
+	clientNotifier.onInitialStateReady()
+	return nil
 }
 
 func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {

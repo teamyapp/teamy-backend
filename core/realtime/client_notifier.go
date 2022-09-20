@@ -9,16 +9,12 @@ import (
 
 const clientBufferSize = 50
 
-type MutationMessage struct {
-	CollectionType CollectionType
-	MutationType   MutationType
-	Payload        interface{}
-}
-
 type ClientNotifier struct {
 	dataCollector               obs.DataCollector
 	clientDisconnectSubscribers []chan bool
-	mutations                   chan Mutation
+	clientID                    uint64
+	messages                    chan Message
+	acceptMutation              bool
 }
 
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
@@ -27,19 +23,40 @@ func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 	return subscriber
 }
 
-func (c ClientNotifier) processMutation(mutation Mutation) {
-	c.mutations <- mutation
+func (c *ClientNotifier) onInitialStateReady() {
+	c.acceptMutation = true
+}
+
+func (c *ClientNotifier) processMutation(mutation Mutation) {
+	if !c.acceptMutation {
+		return
+	}
+
+	message := Message{
+		Type: MutationMessageType,
+		Payload: MutationMessage{
+			CollectionType: mutation.CollectionType,
+			MutationType:   mutation.MutationType,
+			Payload:        mutation.Payload,
+		},
+	}
+	c.messages <- message
+}
+
+func (c *ClientNotifier) sentMetadata() {
+	message := Message{
+		Type: MetadataMessageType,
+		Payload: MetadataMessage{
+			ClientID: c.clientID,
+		},
+	}
+	c.messages <- message
 }
 
 func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
-	mutations := make(chan Mutation, clientBufferSize)
+	messages := make(chan Message, clientBufferSize)
 	go func() {
-		for mutation := range mutations {
-			message := MutationMessage{
-				CollectionType: mutation.CollectionType,
-				MutationType:   mutation.MutationType,
-				Payload:        mutation.Payload,
-			}
+		for message := range messages {
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
 			if err != nil {
 				dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
@@ -48,16 +65,17 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 			conn.SendMessage(jsonBuf)
 			dataCollector.Logger.Log(obs.Info, obs.Props{
 				obs.MessageProp: obs.Props{
-					"summary":    "notification sent",
-					"clientID":   clientID,
-					"mutationID": mutation.ID,
+					"summary":  "notification sent",
+					"clientID": clientID,
 				},
 			})
 		}
 	}()
 	clientNotifier := &ClientNotifier{
 		clientDisconnectSubscribers: make([]chan bool, 0),
-		mutations:                   mutations,
+		clientID:                    clientID,
+		messages:                    messages,
+		acceptMutation:              false,
 	}
 	go func() {
 		<-conn.OnClientDisconnect()

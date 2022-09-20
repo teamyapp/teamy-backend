@@ -68,6 +68,16 @@ func (t Team) Members(ct context.Context) ([]User, error) {
 	}), nil
 }
 
+func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
+	taskActivities := t.deps.activityCache.FindAllTaskActivitiesByTeamID(t.team.ID)
+	taskActivityItems := make([]TaskActivity, 0)
+	for _, taskActivity := range taskActivities {
+		taskActivityItems = append(taskActivityItems, newTaskActivity(*taskActivity))
+	}
+
+	return taskActivityItems, nil
+}
+
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
