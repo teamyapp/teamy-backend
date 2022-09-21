@@ -1,6 +1,8 @@
 package realtime
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -31,11 +33,12 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 }
 
 func (t TeamNotifier) processMutation(mutation Mutation) {
-	t.dataCollector.Logger.Log(obs.Info, obs.Props{
+	ct := context.Background()
+	ct = WithMutationID(ct, mutation.ID)
+	t.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary":    "client disconnected",
-			"teamID":     t.teamID,
-			"mutationID": mutation.ID,
+			"summary": "process mutation",
+			"teamId":  t.teamID,
 		},
 	})
 	for _, userNotifier := range t.userNotifiers {

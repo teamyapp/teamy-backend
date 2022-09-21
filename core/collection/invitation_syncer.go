@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -13,10 +15,10 @@ type InvitationSyncer struct {
 	invitationDao       dao.Invitation
 }
 
-func (i InvitationSyncer) CreateAndSyncInvitation(invitation entity.Invitation) error {
-	err := i.invitationDao.CreateInvitation(invitation)
+func (i InvitationSyncer) CreateAndSyncInvitation(ct context.Context, invitation entity.Invitation) error {
+	err := i.invitationDao.CreateInvitation(ct, invitation)
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -31,10 +33,10 @@ func (i InvitationSyncer) CreateAndSyncInvitation(invitation entity.Invitation) 
 	return nil
 }
 
-func (i InvitationSyncer) UpdateAndSyncInvitation(invitation entity.Invitation) error {
-	err := i.invitationDao.UpdateInvitation(invitation)
+func (i InvitationSyncer) UpdateAndSyncInvitation(ct context.Context, invitation entity.Invitation) error {
+	err := i.invitationDao.UpdateInvitation(ct, invitation)
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -49,16 +51,16 @@ func (i InvitationSyncer) UpdateAndSyncInvitation(invitation entity.Invitation) 
 	return nil
 }
 
-func (i InvitationSyncer) DeleteAndSyncInvitation(invitationID uint64) error {
-	invitation, err := i.invitationDao.FindInvitationByID(invitationID)
+func (i InvitationSyncer) DeleteAndSyncInvitation(ct context.Context, invitationID uint64) error {
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	err = i.invitationDao.DeleteInvitation(invitationID)
+	err = i.invitationDao.DeleteInvitation(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 

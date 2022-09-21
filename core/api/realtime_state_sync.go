@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"path"
 	"strconv"
@@ -37,8 +38,11 @@ func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) error {
 }
 
 func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, request *http.Request) {
-	userID, err := ctx.UserIDFromContext(r.dataCollector, request.Context())
-	if err != nil {
+	ct := request.Context()
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -64,8 +68,11 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 }
 
 func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Request) {
-	userID, err := ctx.UserIDFromContext(r.dataCollector, request.Context())
-	if err != nil {
+	ct := request.Context()
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}

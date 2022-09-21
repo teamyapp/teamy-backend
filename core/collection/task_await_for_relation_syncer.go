@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -14,16 +16,16 @@ type TaskAwaitForRelationSyncer struct {
 	taskDao                 dao.Task
 }
 
-func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(relation entity.TaskAwaitForRelation) error {
-	err := t.taskAwaitForRelationDao.CreateRelation(relation)
+func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(ct context.Context, relation entity.TaskAwaitForRelation) error {
+	err := t.taskAwaitForRelationDao.CreateRelation(ct, relation)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := t.taskDao.FindTaskByID(relation.AwaitingTaskID)
+	task, err := t.taskDao.FindTaskByID(ct, relation.AwaitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -38,16 +40,16 @@ func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(relation entity.TaskAw
 	return nil
 }
 
-func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(awaitingTaskID uint64, awaitForTaskID uint64) error {
-	err := t.taskAwaitForRelationDao.DeleteRelation(awaitingTaskID, awaitForTaskID)
+func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(ct context.Context, awaitingTaskID uint64, awaitForTaskID uint64) error {
+	err := t.taskAwaitForRelationDao.DeleteRelation(ct, awaitingTaskID, awaitForTaskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := t.taskDao.FindTaskByID(awaitingTaskID)
+	task, err := t.taskDao.FindTaskByID(ct, awaitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 

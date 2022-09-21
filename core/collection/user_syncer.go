@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -14,16 +16,16 @@ type UserSyncer struct {
 	teamMemberDao       dao.TeamMember
 }
 
-func (u UserSyncer) UpdateAndSyncUser(user entity.User) error {
-	err := u.userDao.UpdateUser(user)
+func (u UserSyncer) UpdateAndSyncUser(ct context.Context, user entity.User) error {
+	err := u.userDao.UpdateUser(ct, user)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	teamIDs, err := u.teamMemberDao.FindTeamIDsByUserID(user.ID)
+	teamIDs, err := u.teamMemberDao.FindTeamIDsByUserID(ct, user.ID)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 

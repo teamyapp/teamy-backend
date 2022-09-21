@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -13,10 +15,14 @@ type SprintTaskRelationSyncer struct {
 	sprintTaskRelationDao dao.SprintTaskRelation
 }
 
-func (s SprintTaskRelationSyncer) CreateAndSyncSprintTaskRelation(sprintTaskRelaltion entity.SprintTaskRelation, OwningTeamID uint64) error {
-	err := s.sprintTaskRelationDao.CreateSprintTaskRelation(sprintTaskRelaltion)
+func (s SprintTaskRelationSyncer) CreateAndSyncSprintTaskRelation(
+	ct context.Context,
+	sprintTaskRelation entity.SprintTaskRelation,
+	OwningTeamID uint64,
+) error {
+	err := s.sprintTaskRelationDao.CreateSprintTaskRelation(ct, sprintTaskRelation)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -26,15 +32,20 @@ func (s SprintTaskRelationSyncer) CreateAndSyncSprintTaskRelation(sprintTaskRela
 		TeamIDs: []uint64{
 			OwningTeamID,
 		},
-		Payload: sprintTaskRelaltion,
+		Payload: sprintTaskRelation,
 	})
 	return nil
 }
 
-func (s SprintTaskRelationSyncer) DeleteAndSyncSprintTaskRelation(sprintID uint64, taskID uint64, OwningTeamID uint64) error {
-	err := s.sprintTaskRelationDao.DeleteSprintTaskRelation(sprintID, taskID)
+func (s SprintTaskRelationSyncer) DeleteAndSyncSprintTaskRelation(
+	ct context.Context,
+	sprintID uint64,
+	taskID uint64,
+	OwningTeamID uint64,
+) error {
+	err := s.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, sprintID, taskID)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 

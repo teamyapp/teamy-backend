@@ -24,19 +24,20 @@ type User struct {
 }
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
-	return u.userDao.FindUserByID(userID)
+	return u.userDao.FindUserByID(ct, userID)
 }
 
 func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error) {
-	userID, err := ctx.UserIDFromContext(u.dataCollector, ct)
-	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
 	}
 
 	res, err := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
 	}
 
@@ -47,9 +48,9 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error)
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	err = u.userFileUploadSessionDao.CreateUserFileUploadSession(fileUploadSession)
+	err = u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, fileUploadSession)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
 	}
 
@@ -57,24 +58,26 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error)
 }
 
 func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (entity.User, error) {
-	userID, err := ctx.UserIDFromContext(u.dataCollector, ct)
-	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.User{}, err
 	}
 
 	profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserID(
+		ct,
 		userID,
 		entity.ProfileUserFileUploadSessionType,
 		fileUploadSessionID)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.User{}, err
 	}
 
 	if profileUploadSession.IsCompleted {
 		err = errors.New("profile upload session is already completed")
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
 				"userID":              userID,
@@ -87,9 +90,9 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	now := time.Now()
 	profileUploadSession.IsCompleted = true
 	profileUploadSession.UpdatedAt = &now
-	err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(profileUploadSession)
+	err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, profileUploadSession)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -99,22 +102,22 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 
 	uploadSession, err := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.User{}, err
 	}
 
-	user, err := u.userDao.FindUserByID(userID)
+	user, err := u.userDao.FindUserByID(ct, userID)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.User{}, err
 	}
 
 	profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	user.ProfileURL = &profileURL
 	user.UpdatedAt = &now
-	err = u.userDao.UpdateUser(user)
+	err = u.userDao.UpdateUser(ct, user)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return user, nil

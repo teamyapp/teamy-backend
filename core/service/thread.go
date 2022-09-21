@@ -19,14 +19,14 @@ func (t Thread) createThread(ct context.Context) (uint64, error) {
 	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
 	genThreadIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
-	err = t.threadDao.CreateThread(threadID)
+	err = t.threadDao.CreateThread(ct, threadID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return threadID, err

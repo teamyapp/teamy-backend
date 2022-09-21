@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
@@ -17,22 +18,23 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		Body string
 	}
 }) (Message, error) {
-	userID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
-	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	genMessageIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "messageID"}
 	genMessageIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genMessageIDReq)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	threadID, err := fromGraphQLID(args.ThreadID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -44,9 +46,9 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		CreatedAt:    time.Now(),
 	}
 
-	err = m.deps.messageSyncer.CreateAndSyncMessage(message)
+	err = m.deps.messageSyncer.CreateAndSyncMessage(ct, message)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -61,22 +63,22 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, err := fromGraphQLID(args.MessageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
-	message, err := m.deps.messageDao.FindMessageByID(messageID)
+	message, err := m.deps.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
 	message.Body = args.Input.Body
 	now := time.Now()
 	message.UpdatedAt = &now
-	err = m.deps.messageSyncer.UpdateAndSyncMessage(message)
+	err = m.deps.messageSyncer.UpdateAndSyncMessage(ct, message)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -88,19 +90,19 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, err := fromGraphQLID(args.MessageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
-	message, err := m.deps.messageDao.FindMessageByID(messageID)
+	message, err := m.deps.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 
-	err = m.deps.messageSyncer.DeleteAndSyncMessage(messageID)
+	err = m.deps.messageSyncer.DeleteAndSyncMessage(ct, messageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
 

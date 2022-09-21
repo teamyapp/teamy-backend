@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -16,7 +17,7 @@ type Team struct {
 
 var _ dao.Team = (*Team)(nil)
 
-func (t Team) FindAllTeams() ([]entity.Team, error) {
+func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 	statement := `
 	SELECT
 		id,
@@ -30,7 +31,7 @@ func (t Team) FindAllTeams() ([]entity.Team, error) {
 `
 	rows, err := t.db.Query(statement)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 	defer rows.Close()
@@ -48,7 +49,7 @@ func (t Team) FindAllTeams() ([]entity.Team, error) {
 			&team.UpdatedAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -58,7 +59,7 @@ func (t Team) FindAllTeams() ([]entity.Team, error) {
 	return teams, nil
 }
 
-func (t Team) FindTeamByID(teamID uint64) (entity.Team, error) {
+func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
 	statement := `
 	SELECT
 		id,
@@ -83,13 +84,13 @@ func (t Team) FindTeamByID(teamID uint64) (entity.Team, error) {
 			&team.UpdatedAt,
 		)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return team, err
 }
 
-func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
+func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Team, error) {
 	if len(teamIDs) == 0 {
 		return []entity.Team{}, nil
 	}
@@ -108,7 +109,7 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
 	WHERE id IN (%s);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -127,7 +128,7 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
 				&team.UpdatedAt,
 			)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -137,7 +138,7 @@ func (t Team) FindTeamsByIDs(teamIDs []uint64) ([]entity.Team, error) {
 	return teams, nil
 }
 
-func (t Team) CreateTeam(team entity.Team) error {
+func (t Team) CreateTeam(ct context.Context, team entity.Team) error {
 	_, err := t.db.Exec(`
 		INSERT INTO team
 		    (
@@ -156,13 +157,13 @@ func (t Team) CreateTeam(team entity.Team) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (t Team) UpdateTeam(team entity.Team) error {
+func (t Team) UpdateTeam(ct context.Context, team entity.Team) error {
 	_, err := t.db.Exec(`
 		UPDATE team
 		SET
@@ -179,7 +180,7 @@ func (t Team) UpdateTeam(team entity.Team) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

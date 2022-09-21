@@ -14,10 +14,9 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api"
 )
 
-func InitDataCollector(severity obs.Severity) obs.DataCollector {
+func InitDataCollector(serviceName string, severity obs.Severity) obs.DataCollector {
 	wire.Build(
-		wire.Bind(new(obs.Logger), new(obs.RawLogger)),
-		obs.NewRawLogger,
+		newLogger,
 		obs.NewDataCollector,
 	)
 	return obs.DataCollector{}
@@ -45,4 +44,10 @@ func InitGithubApp(
 		github.NewApp,
 	)
 	return github.App{}, nil
+}
+
+func newLogger(serviceName string, severity obs.Severity) obs.Logger {
+	return obs.NewServiceLogger(serviceName,
+		obs.NewRequestLogger(
+			obs.NewRawLogger(severity)))
 }

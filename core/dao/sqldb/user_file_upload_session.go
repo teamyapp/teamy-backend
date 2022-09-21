@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ type UserFileUploadSession struct {
 var _ dao.UserFileUploadSession = (*UserFileUploadSession)(nil)
 
 func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
+	ct context.Context,
 	userID uint64,
 	userFileUploadSessionType entity.UserFileUploadSessionType,
 	fileUploadSessionID uint64,
@@ -51,13 +53,16 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 	}
 
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return userFileUploadSession, err
 }
 
-func (u UserFileUploadSession) CreateUserFileUploadSession(userFileUploadSession entity.UserFileUploadSession) error {
+func (u UserFileUploadSession) CreateUserFileUploadSession(
+	ct context.Context,
+	userFileUploadSession entity.UserFileUploadSession,
+) error {
 	_, err := u.db.Exec(`
 		INSERT INTO user_file_upload_session
 		(
@@ -78,13 +83,16 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(userFileUploadSession
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (u UserFileUploadSession) UpdateUserFileUploadSession(userFileUploadSession entity.UserFileUploadSession) error {
+func (u UserFileUploadSession) UpdateUserFileUploadSession(
+	ct context.Context,
+	userFileUploadSession entity.UserFileUploadSession,
+) error {
 	_, err := u.db.Exec(`
 		UPDATE user_file_upload_session
 		SET
@@ -107,7 +115,7 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(userFileUploadSession
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

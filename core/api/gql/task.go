@@ -55,7 +55,7 @@ func (t Task) Context(ct context.Context) *string {
 }
 
 func (t Task) Creator(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(t.task.CreatorUserID)
+	user, err := t.deps.userDao.FindUserByID(ct, t.task.CreatorUserID)
 	if err != nil {
 		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
@@ -69,7 +69,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 		return nil, nil
 	}
 
-	owner, err := t.deps.userDao.FindUserByID(*t.task.OwnerUserID)
+	owner, err := t.deps.userDao.FindUserByID(ct, *t.task.OwnerUserID)
 	if err != nil {
 		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
@@ -80,7 +80,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 }
 
 func (t Task) OwningTeam(ct context.Context) (*Team, error) {
-	team, err := t.deps.teamDao.FindTeamByID(t.task.OwningTeamID)
+	team, err := t.deps.teamDao.FindTeamByID(ct, t.task.OwningTeamID)
 	if err != nil {
 		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err

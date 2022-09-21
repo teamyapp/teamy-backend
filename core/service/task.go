@@ -53,9 +53,9 @@ type Task struct {
 }
 
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, error) {
-	tasks, err := t.taskDao.FindAllTasks()
+	tasks, err := t.taskDao.FindAllTasks(ct)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -67,15 +67,15 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 }
 
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, error) {
-	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(awaitingTaskID)
+	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, awaitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	tasks, err := t.taskDao.FindTasksByIDs(awaitForTaskIds)
+	tasks, err := t.taskDao.FindTasksByIDs(ct, awaitForTaskIds)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -83,22 +83,23 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 }
 
 func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
-	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	threadID, err := t.threadService.createThread(ct)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -121,9 +122,9 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		DueAt:            taskInput.DueAt,
 	}
 
-	err = t.taskSyncer.CreateAndSyncTask(task)
+	err = t.taskSyncer.CreateAndSyncTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -131,9 +132,9 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 }
 
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, error) {
-	task, err := t.taskDao.FindTaskByID(taskID)
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -147,15 +148,15 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	task.DueAt = input.DueAt
 	updatedAt := time.Now()
 	task.UpdatedAt = &updatedAt
-	err = t.taskSyncer.UpdateAndSyncTask(task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = t.updateUnusedBandWidth(taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
+	err = t.updateUnusedBandWidth(ct, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -163,30 +164,31 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 }
 
 func (t Task) updateUnusedBandWidth(
+	ct context.Context,
 	taskID uint64,
 	oldEffort *time.Duration,
 	newEffort *time.Duration,
 	oldOwnerID *uint64,
 	newOwnerID *uint64,
 ) error {
-	err := t.tryIncreaseBandwidth(taskID, oldOwnerID, oldEffort)
+	err := t.tryIncreaseBandwidth(ct, taskID, oldOwnerID, oldEffort)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	if newOwnerID != nil && newEffort != nil {
-		participants, err := t.findTaskOwnerInSprints(taskID, *newOwnerID)
+		participants, err := t.findTaskOwnerInSprints(ct, taskID, *newOwnerID)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth -= *newEffort
-			err = t.sprintParticipantDao.UpdateSprintParticipant(participant)
+			err = t.sprintParticipantDao.UpdateSprintParticipant(ct, participant)
 			if err != nil {
-				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return err
 			}
 		}
@@ -195,19 +197,19 @@ func (t Task) updateUnusedBandWidth(
 	return nil
 }
 
-func (t Task) tryIncreaseBandwidth(taskID uint64, oldOwnerID *uint64, oldEffort *time.Duration) error {
+func (t Task) tryIncreaseBandwidth(ct context.Context, taskID uint64, oldOwnerID *uint64, oldEffort *time.Duration) error {
 	if oldOwnerID != nil && oldEffort != nil {
-		participants, err := t.findTaskOwnerInSprints(taskID, *oldOwnerID)
+		participants, err := t.findTaskOwnerInSprints(ct, taskID, *oldOwnerID)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth += *oldEffort
-			err = t.sprintParticipantDao.UpdateSprintParticipant(participant)
+			err = t.sprintParticipantDao.UpdateSprintParticipant(ct, participant)
 			if err != nil {
-				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return err
 			}
 		}
@@ -216,19 +218,19 @@ func (t Task) tryIncreaseBandwidth(taskID uint64, oldOwnerID *uint64, oldEffort 
 	return nil
 }
 
-func (t Task) findTaskOwnerInSprints(taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, error) {
-	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(taskID)
+func (t Task) findTaskOwnerInSprints(ct context.Context, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, error) {
+	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	participants := make([]entity.SprintParticipant, 0)
 	for _, sprintID := range sprintIDs {
-		participant, err := t.sprintParticipantDao.FindParticipant(sprintID, taskOwnerUserID)
+		participant, err := t.sprintParticipantDao.FindParticipant(ct, sprintID, taskOwnerUserID)
 		if err != nil {
 			if !errors.As(err, &dao.ErrorNotFound) {
-				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return nil, err
 			}
 
@@ -242,28 +244,28 @@ func (t Task) findTaskOwnerInSprints(taskID uint64, taskOwnerUserID uint64) ([]e
 }
 
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error) {
-	task, err := t.taskDao.FindTaskByID(taskID)
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = t.tryIncreaseBandwidth(taskID, task.OwnerUserID, task.Effort)
+	err = t.tryIncreaseBandwidth(ct, taskID, task.OwnerUserID, task.Effort)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	// TODO: delete awaiting, await for and sprint task relationships
-	err = t.taskSyncer.DeleteAndSyncTask(taskID)
+	err = t.taskSyncer.DeleteAndSyncTask(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = t.threadDao.DeleteThread(task.CommentsThreadID)
+	err = t.threadDao.DeleteThread(ct, task.CommentsThreadID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -271,9 +273,9 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 }
 
 func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTask bool) (entity.Task, error) {
-	task, err := t.taskDao.FindTaskByID(taskID)
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -288,9 +290,9 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 
 	now := time.Now()
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -298,21 +300,22 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 }
 
 func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Task, error) {
-	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	task, err := t.taskDao.FindTaskByID(taskID)
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	tasks, err := t.taskDao.FindTasksByTeamID(task.OwningTeamID)
+	tasks, err := t.taskDao.FindTasksByTeamID(ct, task.OwningTeamID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -337,18 +340,18 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		inProgressTask := inProgressTasks[0]
 		inProgressTask.Status = entity.TaskStatusPaused
 		inProgressTask.UpdatedAt = &now
-		err = t.taskSyncer.UpdateAndSyncTask(inProgressTask)
+		err = t.taskSyncer.UpdateAndSyncTask(ct, inProgressTask)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 	}
 
 	task.Status = entity.TaskStatusInProgress
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -356,9 +359,9 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 }
 
 func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Task, error) {
-	task, err := t.taskDao.FindTaskByID(taskID)
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -366,28 +369,28 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 	now := time.Now()
 	task.UpdatedAt = &now
 	task.DeliveredAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(taskID)
+	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	for _, awaitingTaskID := range awaitingTaskIDs {
-		awaitForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(awaitingTaskID)
+		awaitForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, awaitingTaskID)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 
-		awaitForTasks, err := t.taskDao.FindTasksByIDs(awaitForTaskIDs)
+		awaitForTasks, err := t.taskDao.FindTasksByIDs(ct, awaitForTaskIDs)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 
@@ -397,7 +400,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		if len(awaitForTasks) == 0 {
 			_, err = t.MoveTaskToUpcoming(ct, awaitingTaskID, false)
 			if err != nil {
-				t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return entity.Task{}, err
 			}
 		}
@@ -411,15 +414,15 @@ func (t Task) MoveTaskToBlocked(ct context.Context, taskID uint64, reason string
 }
 
 func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitForTaskId uint64) (entity.Task, error) {
-	task, err := t.taskDao.FindTaskByID(awaitingTaskID)
+	task, err := t.taskDao.FindTaskByID(ct, awaitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	if !awaitableTaskStatuses[task.Status] {
 		err = errors.New("task must be awaitable")
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
 				"taskID": awaitingTaskID,
@@ -429,21 +432,21 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	}
 
 	now := time.Now()
-	err = t.taskAwaitForRelationSyncer.CreateAndSyncRelation(entity.TaskAwaitForRelation{
+	err = t.taskAwaitForRelationSyncer.CreateAndSyncRelation(ct, entity.TaskAwaitForRelation{
 		AwaitingTaskID: awaitingTaskID,
 		AwaitForTaskID: awaitForTaskId,
 		CreatedAt:      now,
 	})
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	task.Status = entity.TaskStatusAwaiting
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -451,15 +454,15 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 }
 
 func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTaskId uint64) (entity.Task, error) {
-	task, err := t.taskDao.FindTaskByID(taskID)
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	if task.Status != entity.TaskStatusAwaiting {
 		err = errors.New("task must be awaitable")
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
 				"taskID": taskID,
@@ -468,22 +471,22 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		return entity.Task{}, err
 	}
 
-	err = t.taskAwaitForRelationSyncer.DeleteAndSyncRelation(taskID, awaitForTaskId)
+	err = t.taskAwaitForRelationSyncer.DeleteAndSyncRelation(ct, taskID, awaitForTaskId)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(taskID)
+	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	if len(awaitForTaskIds) == 0 {
 		task, err = t.MoveTaskToUpcoming(ct, taskID, false)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 	}
@@ -492,15 +495,16 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 }
 
 func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
-	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	return t.taskSyncer.UpdateAndSyncTaskActivity(
+		ct,
 		taskID,
-		clientID,
 		entity.TaskActivity{
 			TaskID: taskID,
 			DragTaskActivity: entity.DragTaskActivity{
@@ -511,15 +515,16 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 }
 
 func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
-	userID, err := ctx.UserIDFromContext(t.dataCollector, ct)
-	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	return t.taskSyncer.UpdateAndSyncTaskActivity(
+		ct,
 		taskID,
-		clientID,
 		entity.TaskActivity{
 			TaskID: taskID,
 			DragTaskActivity: entity.DragTaskActivity{

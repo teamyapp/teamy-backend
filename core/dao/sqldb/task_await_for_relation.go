@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/obs"
@@ -15,7 +16,7 @@ type TaskAwaitForRelation struct {
 
 var _ dao.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
 
-func (t TaskAwaitForRelation) FindAwaitingTaskIDs(waitForTaskID uint64) ([]uint64, error) {
+func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTaskID uint64) ([]uint64, error) {
 	rows, err := t.db.Query(`
 	SELECT
 		awaiting_task_id
@@ -23,7 +24,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(waitForTaskID uint64) ([]uint6
 	WHERE await_for_task_id = $1;
 `, waitForTaskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -33,7 +34,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(waitForTaskID uint64) ([]uint6
 		var waitingTaskID uint64
 		err = rows.Scan(&waitingTaskID)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -43,7 +44,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(waitForTaskID uint64) ([]uint6
 	return waitingTaskIDs, nil
 }
 
-func (t TaskAwaitForRelation) FindAwaitForTaskIDs(waitingTaskID uint64) ([]uint64, error) {
+func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTaskID uint64) ([]uint64, error) {
 	rows, err := t.db.Query(`
 	SELECT
 		await_for_task_id
@@ -51,7 +52,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(waitingTaskID uint64) ([]uint6
 	WHERE awaiting_task_id = $1;
 `, waitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -61,7 +62,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(waitingTaskID uint64) ([]uint6
 		var waitForTaskID uint64
 		err = rows.Scan(&waitForTaskID)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -71,7 +72,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(waitingTaskID uint64) ([]uint6
 	return waitForTaskIDs, nil
 }
 
-func (t TaskAwaitForRelation) CreateRelation(relation entity.TaskAwaitForRelation) error {
+func (t TaskAwaitForRelation) CreateRelation(ct context.Context, relation entity.TaskAwaitForRelation) error {
 	_, err := t.db.Exec(`
 	INSERT INTO task_await_for_relation
 	(
@@ -87,13 +88,13 @@ func (t TaskAwaitForRelation) CreateRelation(relation entity.TaskAwaitForRelatio
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (t TaskAwaitForRelation) DeleteRelation(waitingTaskID uint64, awaitForTaskID uint64) error {
+func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, waitingTaskID uint64, awaitForTaskID uint64) error {
 	_, err := t.db.Exec(`
 		DELETE FROM task_await_for_relation
 		WHERE awaiting_task_id = $1 AND await_for_task_id = $2;
@@ -102,7 +103,7 @@ func (t TaskAwaitForRelation) DeleteRelation(waitingTaskID uint64, awaitForTaskI
 		awaitForTaskID)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

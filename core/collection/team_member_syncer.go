@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -13,10 +15,14 @@ type TeamMemberSyncer struct {
 	teamMemberDao       dao.TeamMember
 }
 
-func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) error {
-	err := t.teamMemberDao.CreateTeamMember(teamID, userID)
+func (t TeamMemberSyncer) CreateAndSyncTeamMember(
+	ct context.Context,
+	teamID uint64,
+	userID uint64,
+) error {
+	err := t.teamMemberDao.CreateTeamMember(ct, teamID, userID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -34,10 +40,10 @@ func (t TeamMemberSyncer) CreateAndSyncTeamMember(teamID uint64, userID uint64) 
 	return nil
 }
 
-func (t TeamMemberSyncer) DeleteAndSyncTeamMember(teamID uint64, userID uint64) error {
-	err := t.teamMemberDao.DeleteTeamMember(teamID, userID)
+func (t TeamMemberSyncer) DeleteAndSyncTeamMember(ct context.Context, teamID uint64, userID uint64) error {
+	err := t.teamMemberDao.DeleteTeamMember(ct, teamID, userID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 

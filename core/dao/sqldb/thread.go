@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/obs"
@@ -14,7 +15,7 @@ type Thread struct {
 
 var _ dao.Thread = (*Thread)(nil)
 
-func (t Thread) CreateThread(threadID uint64) error {
+func (t Thread) CreateThread(ct context.Context, threadID uint64) error {
 	_, err := t.db.Exec(`
 		INSERT INTO thread (id)
 		VALUES ($1);
@@ -22,13 +23,13 @@ func (t Thread) CreateThread(threadID uint64) error {
 		threadID)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (t Thread) DeleteThread(threadID uint64) error {
+func (t Thread) DeleteThread(ct context.Context, threadID uint64) error {
 	_, err := t.db.Exec(`
 		DELETE FROM thread
 		WHERE id = $1;
@@ -36,7 +37,7 @@ func (t Thread) DeleteThread(threadID uint64) error {
 		threadID)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

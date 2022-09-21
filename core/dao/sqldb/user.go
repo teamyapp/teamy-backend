@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,7 +18,7 @@ type User struct {
 
 var _ dao.User = (*User)(nil)
 
-func (u User) FindUserByID(userID uint64) (entity.User, error) {
+func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
 	statement := `
 	SELECT
 		id,
@@ -47,13 +48,13 @@ func (u User) FindUserByID(userID uint64) (entity.User, error) {
 	}
 
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return user, err
 }
 
-func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
+func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.User, error) {
 	if len(userIDs) == 0 {
 		return []entity.User{}, nil
 	}
@@ -71,7 +72,7 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
 	WHERE id IN (%s)`, idsString)
 	rows, err := u.db.Query(query)
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 	defer rows.Close()
@@ -89,7 +90,7 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
 				&user.UpdatedAt,
 			)
 		if err != nil {
-			u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -99,7 +100,7 @@ func (u User) FindUsersByIDs(userIDs []uint64) ([]entity.User, error) {
 	return users, nil
 }
 
-func (u User) CreateUser(user entity.User) error {
+func (u User) CreateUser(ct context.Context, user entity.User) error {
 	_, err := u.db.Exec(`
 		INSERT INTO "user"
 		(
@@ -118,13 +119,13 @@ func (u User) CreateUser(user entity.User) error {
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (u User) UpdateUser(user entity.User) error {
+func (u User) UpdateUser(ct context.Context, user entity.User) error {
 	_, err := u.db.Exec(`
 		UPDATE "user"
 		SET
@@ -141,7 +142,7 @@ func (u User) UpdateUser(user entity.User) error {
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

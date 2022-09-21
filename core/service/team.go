@@ -25,9 +25,9 @@ type Team struct {
 }
 
 func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, error) {
-	teams, err := t.teamDao.FindAllTeams()
+	teams, err := t.teamDao.FindAllTeams(ct)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -39,9 +39,9 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 }
 
 func (t Team) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, error) {
-	tasks, err := t.taskDao.FindTasksByTeamID(teamID)
+	tasks, err := t.taskDao.FindTasksByTeamID(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -53,9 +53,9 @@ func (t Team) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFil
 }
 
 func (t Team) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, error) {
-	sprints, err := t.sprintDao.FindSprintsByTeamID(teamID)
+	sprints, err := t.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func (t Team) FindSprintsInTeam(ct context.Context, teamID uint64, filter *Sprin
 func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, error) {
 	res, err := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
 	}
 
@@ -80,9 +80,9 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	err = t.teamFileUploadSessionDao.CreateTeamFileUploadSession(fileUploadSession)
+	err = t.teamFileUploadSessionDao.CreateTeamFileUploadSession(ct, fileUploadSession)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
 	}
 
@@ -91,27 +91,28 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 
 func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fileUploadSessionID uint64) (entity.Team, error) {
 	iconUploadSession, err := t.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamID(
+		ct,
 		teamID,
 		entity.IconTeamFileUploadSessionType,
 		fileUploadSessionID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	if iconUploadSession.IsCompleted {
 		err = fmt.Errorf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
 			teamID, fileUploadSessionID)
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	now := time.Now()
 	iconUploadSession.IsCompleted = true
 	iconUploadSession.UpdatedAt = &now
-	err = t.teamFileUploadSessionDao.UpdateTeamFileUploadSession(iconUploadSession)
+	err = t.teamFileUploadSessionDao.UpdateTeamFileUploadSession(ct, iconUploadSession)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -120,20 +121,20 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	}
 	uploadSession, err := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Team{}, err
 	}
 
-	team, err := t.teamDao.FindTeamByID(teamID)
+	team, err := t.teamDao.FindTeamByID(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 	team.IconURL = &iconUrl
 	team.UpdatedAt = &now
-	return team, t.teamDao.UpdateTeam(team)
+	return team, t.teamDao.UpdateTeam(ct, team)
 }
 
 func NewTeam(

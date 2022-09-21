@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,7 +18,7 @@ type Invitation struct {
 
 var _ dao.Invitation = (*Invitation)(nil)
 
-func (i Invitation) FindInvitationByID(invitationID uint64) (entity.Invitation, error) {
+func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) (entity.Invitation, error) {
 	invitation := entity.Invitation{}
 	err := i.db.QueryRow(`
 	SELECT
@@ -58,13 +59,13 @@ func (i Invitation) FindInvitationByID(invitationID uint64) (entity.Invitation, 
 	}
 
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return invitation, err
 }
 
-func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation, error) {
+func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, error) {
 	rows, err := i.db.Query(`
 	SELECT
 		id,
@@ -84,7 +85,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation,
 `,
 		teamID)
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -109,7 +110,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation,
 		)
 
 		if err != nil {
-			i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -119,7 +120,7 @@ func (i Invitation) FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation,
 	return invitations, err
 }
 
-func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
+func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, error) {
 	rows, err := i.db.Query(`
 	SELECT
 		id,
@@ -137,7 +138,7 @@ func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
 	FROM invitation;
 `)
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -161,7 +162,7 @@ func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
 			&invitation.UpdatedAt,
 		)
 		if err != nil {
-			i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -171,7 +172,7 @@ func (i Invitation) FindAllInvitations() ([]entity.Invitation, error) {
 	return invitations, err
 }
 
-func (i Invitation) CreateInvitation(invitation entity.Invitation) error {
+func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invitation) error {
 	_, err := i.db.Exec(`
 	INSERT INTO invitation
 	(
@@ -200,13 +201,13 @@ func (i Invitation) CreateInvitation(invitation entity.Invitation) error {
 		invitation.CreatedAt,
 	)
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (i Invitation) UpdateInvitation(invitation entity.Invitation) error {
+func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invitation) error {
 	_, err := i.db.Exec(`
 		UPDATE invitation
 		SET
@@ -229,13 +230,13 @@ func (i Invitation) UpdateInvitation(invitation entity.Invitation) error {
 	)
 
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (i Invitation) DeleteInvitation(invitationID uint64) error {
+func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) error {
 	_, err := i.db.Exec(`
 		DELETE FROM invitation
 		WHERE id = $1;
@@ -243,7 +244,7 @@ func (i Invitation) DeleteInvitation(invitationID uint64) error {
 		invitationID)
 
 	if err != nil {
-		i.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

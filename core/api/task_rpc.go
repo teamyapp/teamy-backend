@@ -36,13 +36,13 @@ func (t TaskRPC) FindTask(ct context.Context, req *proto.GetTaskRequest) (*proto
 	}
 	tasks, err := t.taskService.FindTasks(ct, filter)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	if len(tasks) < 1 {
 		err = errors.New("task not found")
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
 				"taskID": req.TaskId,
@@ -77,7 +77,7 @@ func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*
 	}
 	task, err := t.taskService.CreateTask(ct, req.TeamId, input)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -95,7 +95,7 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 	}
 	_, err := t.taskService.UpdateTask(ct, req.TaskId, input)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -105,7 +105,7 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 func (t TaskRPC) DeleteTask(ct context.Context, req *proto.DeleteTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.DeleteTask(ct, req.TaskId)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -115,7 +115,7 @@ func (t TaskRPC) DeleteTask(ct context.Context, req *proto.DeleteTaskRequest) (*
 func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *proto.MoveTaskToUpcomingRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToUpcoming(ct, req.TaskId, true)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -125,7 +125,7 @@ func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *proto.MoveTaskToUpc
 func (t TaskRPC) MoveTaskToInProgress(ct context.Context, req *proto.MoveTaskToInProgressRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToInProgress(ct, req.TaskId)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -135,7 +135,7 @@ func (t TaskRPC) MoveTaskToInProgress(ct context.Context, req *proto.MoveTaskToI
 func (t TaskRPC) MoveTaskToDelivered(ct context.Context, req *proto.MoveTaskToDeliveredRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToDelivered(ct, req.TaskId)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -145,7 +145,7 @@ func (t TaskRPC) MoveTaskToDelivered(ct context.Context, req *proto.MoveTaskToDe
 func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *proto.MoveTaskToBlockedRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToBlocked(ct, req.TaskId, req.Reason)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -155,7 +155,7 @@ func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *proto.MoveTaskToBloc
 func (t TaskRPC) AddAwaitForTask(ct context.Context, req *proto.AddAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.AddAwaitForTask(ct, req.AwaitingTaskId, req.AwaitForTaskId)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -165,7 +165,7 @@ func (t TaskRPC) AddAwaitForTask(ct context.Context, req *proto.AddAwaitForTaskR
 func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *proto.RemoveAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.RemoveAwaitForTask(ct, req.AwaitForTaskId, req.AwaitForTaskId)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
