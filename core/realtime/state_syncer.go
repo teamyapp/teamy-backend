@@ -1,24 +1,16 @@
 package realtime
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
 	"github.com/teamyapp/cloud/libs/connection"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
-
-// Task[Create, Update, Delete] -> :::: Team -> User -> Client
-// Team[Update, Delete] -> :::: Team -> User -> Client
-// Invitation[Create, Update, Delete] -> :::: Team -> User -> Client
-// Message[Create, Update, Delete] -> Thread -> Task -> :::: Team -> User -> Client
-// User[Update, Delete] -> TeamMember -> :::: Team -> User -> Client
-// TeamMember[Create, Delete] -> :::: Team -> User -> Client
-// TaskAwaitForRelation[Create, Delete] -> :::: Task -> Team -> User -> Client
-
-// Team -> User -> Client
 
 // Client connect
 // 1) link client to user ID through access token
@@ -41,16 +33,16 @@ type StateSyncer struct {
 }
 
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
-	s.dataCollector.Logger.Log(obs.Info, obs.Props{
+	ct := ctx.WithClientID(context.Background(), s.nextClientID)
+	s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary":  "client connected",
-			"userID":   userID,
-			"clientID": s.nextClientID,
+			"summary": "client connected",
+			"userID":  userID,
 		},
 	})
-	userNotifier, err := s.getUserNotifier(userID)
+	userNotifier, err := s.getUserNotifier(ct, userID)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -68,10 +60,11 @@ func (s *StateSyncer) NotifyMutation(mutation Mutation) {
 }
 
 func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error {
+	ct := ctx.WithClientID(context.Background(), s.nextClientID)
 	userNotifier, ok := s.userNotifiers[userID]
 	if !ok {
 		err := errors.New("userNotifier not found")
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
 				"userID": userID,
@@ -96,26 +89,26 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 	return nil
 }
 
-func (s *StateSyncer) newUserNotifier(userID uint64) (*UserNotifier, error) {
+func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserNotifier, error) {
 	userNotifier := newUserNotifier(s.dataCollector, userID)
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
 	}()
 	s.userNotifiers[userID] = userNotifier
-	err := s.subscribeToTeams(userID, userNotifier)
+	err := s.subscribeToTeams(ct, userID, userNotifier)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	return userNotifier, nil
 }
 
-func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier) error {
-	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(userID)
+func (s *StateSyncer) subscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier) error {
+	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -125,7 +118,7 @@ func (s *StateSyncer) subscribeToTeams(userID uint64, userNotifier *UserNotifier
 			teamNotifier = s.newTeamNotifier(teamID)
 		}
 
-		s.dataCollector.Logger.Log(obs.Info, obs.Props{
+		s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 			obs.MessageProp: obs.Props{
 				"summary": "subscribed to team",
 				"teamID":  teamID,
@@ -152,13 +145,13 @@ func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	return teamNotifier
 }
 
-func (s StateSyncer) getUserNotifier(userID uint64) (*UserNotifier, error) {
+func (s StateSyncer) getUserNotifier(ct context.Context, userID uint64) (*UserNotifier, error) {
 	userNotifier, ok := s.userNotifiers[userID]
 	var err error
 	if !ok {
-		userNotifier, err = s.newUserNotifier(userID)
+		userNotifier, err = s.newUserNotifier(ct, userID)
 		if err != nil {
-			s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return nil, err
 		}
 	}
@@ -189,14 +182,16 @@ func NewStateSyncer(
 		nextMutationID: 1,
 	}
 	go func() {
+		ct := context.Background()
 		for mutation := range stateSyncer.mutations {
+			newCtx := WithMutationID(ct, mutation.ID)
 			buf, err := json.Marshal(mutation)
 			if err != nil {
-				dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				dataCollector.Logger.LogWithContext(newCtx, obs.Error, obs.Props{obs.CauseProp: err})
 			} else {
-				dataCollector.Logger.Log(obs.Info, obs.Props{
+				dataCollector.Logger.LogWithContext(newCtx, obs.Info, obs.Props{
 					obs.MessageProp: obs.Props{
-						"summary":  "client disconnected",
+						"summary":  "process mutation",
 						"mutation": string(buf),
 					},
 				})
@@ -206,13 +201,14 @@ func NewStateSyncer(
 				if mutation.CollectionType == TeamMemberCollectionType &&
 					mutation.MutationType == CreateMutationType {
 					teamMember := mutation.Payload.(entity.TeamMember)
-					userNotifier, err := stateSyncer.getUserNotifier(teamMember.UserID)
+					newCtx := WithMutationID(ct, mutation.ID)
+					userNotifier, err := stateSyncer.getUserNotifier(newCtx, teamMember.UserID)
 					if err != nil {
-						dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+						dataCollector.Logger.LogWithContext(newCtx, obs.Error, obs.Props{obs.CauseProp: err})
 					} else {
-						err = stateSyncer.subscribeToTeams(teamMember.UserID, userNotifier)
+						err = stateSyncer.subscribeToTeams(newCtx, teamMember.UserID, userNotifier)
 						if err != nil {
-							dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+							dataCollector.Logger.LogWithContext(newCtx, obs.Error, obs.Props{obs.CauseProp: err})
 						}
 					}
 				}

@@ -1,6 +1,8 @@
 package realtime
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 )
 
@@ -22,12 +24,6 @@ func (u UserNotifier) registerClientNotifier(clientID uint64, clientNotifier *Cl
 	u.clientNotifiers[clientID] = clientNotifier
 	go func() {
 		<-clientNotifier.subscribeClientDisconnect()
-		u.dataCollector.Logger.Log(obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
-				"summary":  "client disconnected",
-				"clientID": clientID,
-			},
-		})
 		u.unregisterClientNotifier(clientID)
 	}()
 }
@@ -40,11 +36,12 @@ func (u UserNotifier) unregisterClientNotifier(clientID uint64) {
 }
 
 func (u UserNotifier) processMutation(mutation Mutation) {
-	u.dataCollector.Logger.Log(obs.Info, obs.Props{
+	ct := context.Background()
+	ct = WithMutationID(ct, mutation.ID)
+	u.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary":    "client disconnected",
-			"userID":     u.userID,
-			"mutationID": mutation.ID,
+			"summary": "process mutation",
+			"userId":  u.userID,
 		},
 	})
 	for _, clientNotifier := range u.clientNotifiers {

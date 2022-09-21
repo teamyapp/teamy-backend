@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,7 +18,7 @@ type SprintParticipant struct {
 
 var _ dao.SprintParticipant = (*SprintParticipant)(nil)
 
-func (s SprintParticipant) FindParticipantsBySprintID(sprintID uint64) ([]entity.SprintParticipant, error) {
+func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, error) {
 	rows, err := s.db.Query(
 		`
 	SELECT
@@ -32,7 +33,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(sprintID uint64) ([]entity
 `,
 		sprintID)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -49,7 +50,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(sprintID uint64) ([]entity
 			&sprintParticipant.UpdatedAt,
 		)
 		if err != nil {
-			s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -59,7 +60,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(sprintID uint64) ([]entity
 	return sprintParticipants, nil
 }
 
-func (s SprintParticipant) FindParticipant(sprintID uint64, participantUserID uint64) (entity.SprintParticipant, error) {
+func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, error) {
 	participant := entity.SprintParticipant{}
 	err := s.db.QueryRow(`
 	SELECT
@@ -89,13 +90,13 @@ func (s SprintParticipant) FindParticipant(sprintID uint64, participantUserID ui
 	}
 
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return participant, err
 }
 
-func (s SprintParticipant) CreateSprintParticipant(participant entity.SprintParticipant) error {
+func (s SprintParticipant) CreateSprintParticipant(ct context.Context, participant entity.SprintParticipant) error {
 	_, err := s.db.Exec(`
 	INSERT INTO sprint_participant
 	(
@@ -116,13 +117,13 @@ func (s SprintParticipant) CreateSprintParticipant(participant entity.SprintPart
 		participant.UpdatedAt,
 	)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (s SprintParticipant) UpdateSprintParticipant(participant entity.SprintParticipant) error {
+func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, participant entity.SprintParticipant) error {
 	_, err := s.db.Exec(`
 		UPDATE sprint_participant
 		SET
@@ -144,13 +145,13 @@ func (s SprintParticipant) UpdateSprintParticipant(participant entity.SprintPart
 	)
 
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (s SprintParticipant) DeleteSprintParticipant(sprintID uint64, userID uint64) error {
+func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, sprintID uint64, userID uint64) error {
 	_, err := s.db.Exec(`
 		DELETE FROM sprint_participant
 		WHERE sprint_id = $1 AND user_id = $2;
@@ -159,7 +160,7 @@ func (s SprintParticipant) DeleteSprintParticipant(sprintID uint64, userID uint6
 		userID)
 
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

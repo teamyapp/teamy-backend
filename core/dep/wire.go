@@ -68,16 +68,15 @@ var serviceSet = wire.NewSet(
 	newUserService,
 )
 
-func InitDataCollector(severity obs.Severity) obs.DataCollector {
+func InitDataCollector(serviceName string, severity obs.Severity) obs.DataCollector {
 	wire.Build(
-		wire.Bind(new(obs.Logger), new(obs.RawLogger)),
-		obs.NewRawLogger,
+		newLogger,
 		obs.NewDataCollector,
 	)
 	return obs.DataCollector{}
 }
 
-func InitRealTimeStateSyncer(sdataCollector obs.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
+func InitRealTimeStateSyncer(dataCollector obs.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
@@ -178,4 +177,12 @@ func newTeamService(
 		sprintDao,
 		teamDao,
 		teamFileUploadSessionDao)
+}
+
+func newLogger(serviceName string, severity obs.Severity) obs.Logger {
+	return obs.NewServiceLogger(serviceName,
+		obs.NewRequestLogger(
+			obs.NewClientLogger(
+				realtime.NewMutationLogger(
+					obs.NewRawLogger(severity)))))
 }

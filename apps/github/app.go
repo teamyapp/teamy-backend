@@ -288,12 +288,10 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 
 func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http.Request) {
 	ct := r.Context()
-	userID, err := ctx.UserIDFromContext(a.dataCollector, ct)
-	if err != nil {
-		a.dataCollector.Logger.Log(obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "must provide userId",
-		})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -333,12 +331,10 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 
 func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 	ct := r.Context()
-	requestSenderID, err := ctx.UserIDFromContext(a.dataCollector, ct)
-	if err != nil {
-		a.dataCollector.Logger.Log(obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "must provide request sender ID",
-		})
+	requestSenderID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}

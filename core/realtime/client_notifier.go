@@ -1,9 +1,11 @@
 package realtime
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/teamyapp/cloud/libs/connection"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 )
 
@@ -28,7 +30,21 @@ func (c *ClientNotifier) onInitialStateReady() {
 }
 
 func (c *ClientNotifier) processMutation(mutation Mutation) {
+	ct := context.Background()
+	ct = ctx.WithClientID(ct, c.clientID)
+	ct = WithMutationID(ct, mutation.ID)
+	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
+		obs.MessageProp: obs.Props{
+			"summary": "process mutation",
+		},
+	})
+
 	if !c.acceptMutation {
+		c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
+			obs.MessageProp: obs.Props{
+				"summary": "discard mutation",
+			},
+		})
 		return
 	}
 
@@ -55,23 +71,26 @@ func (c *ClientNotifier) sentMetadata() {
 
 func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
 	messages := make(chan Message, clientBufferSize)
+	ct := context.Background()
+	ct = ctx.WithClientID(ct, clientID)
 	go func() {
 		for message := range messages {
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
+
 			if err != nil {
-				dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+				dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				continue
 			}
 			conn.SendMessage(jsonBuf)
-			dataCollector.Logger.Log(obs.Info, obs.Props{
+			dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 				obs.MessageProp: obs.Props{
-					"summary":  "notification sent",
-					"clientID": clientID,
+					"summary": "notification sent",
 				},
 			})
 		}
 	}()
 	clientNotifier := &ClientNotifier{
+		dataCollector:               dataCollector,
 		clientDisconnectSubscribers: make([]chan bool, 0),
 		clientID:                    clientID,
 		messages:                    messages,

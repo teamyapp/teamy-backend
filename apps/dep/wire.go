@@ -16,8 +16,7 @@ import (
 
 func InitDataCollector(severity obs.Severity) obs.DataCollector {
 	wire.Build(
-		wire.Bind(new(obs.Logger), new(obs.RawLogger)),
-		obs.NewRawLogger,
+		newLogger,
 		obs.NewDataCollector,
 	)
 	return obs.DataCollector{}
@@ -45,4 +44,8 @@ func InitGithubApp(
 		github.NewApp,
 	)
 	return github.App{}, nil
+}
+
+func newLogger(severity obs.Severity) obs.Logger {
+	return obs.NewRequestLogger(obs.NewRawLogger(severity))
 }

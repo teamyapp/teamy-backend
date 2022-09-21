@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
@@ -25,13 +26,13 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 }) (Task, error) {
 	owningTeamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	ownerUserID, err := fromGraphQLIDPtr(m.deps.dataCollector, args.Task.OwnerUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -43,7 +44,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		IsPlanned:   args.Task.IsPlanned,
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -61,15 +62,16 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		DueAt        *graphql.Time
 	}
 }) (Task, error) {
-	userID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
-	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -77,7 +79,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		query := authorization.NewUpdateTaskQuery(userID, taskID)
 		hasPermission, err := m.hasPermission(ct, query)
 		if err != nil {
-			m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return Task{}, err
 		}
 
@@ -91,13 +93,13 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 
 	ownerUserID, err := fromGraphQLIDPtr(m.deps.dataCollector, args.Input.OwnerUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	owningTeamID, err := fromGraphQLID(args.Input.OwningTeamID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -110,7 +112,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		DueAt:        fromGraphQLTimePtr(args.Input.DueAt),
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -122,13 +124,13 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.DeleteTask(ct, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -140,13 +142,13 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID, true)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -158,13 +160,13 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToInProgress(ct, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -176,13 +178,13 @@ func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToDelivered(ct, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -195,13 +197,13 @@ func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.MoveTaskToBlocked(ct, taskID, args.Reason)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -214,19 +216,19 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.AddAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -239,19 +241,19 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 }) (Task, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
 	task, err := m.deps.taskService.RemoveAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
 	}
 
@@ -264,19 +266,19 @@ func (m Mutation) StartDraggingTask(ct context.Context, args struct {
 }) (graphql.ID, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return "", err
 	}
 
 	clientID, err := fromGraphQLID(args.ClientID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return "", err
 	}
 
 	err = m.deps.taskService.StartDraggingTask(ct, taskID, clientID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return "", err
 	}
 
@@ -289,19 +291,19 @@ func (m Mutation) StopDraggingTask(ct context.Context, args struct {
 }) (graphql.ID, error) {
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return "", err
 	}
 
 	clientID, err := fromGraphQLID(args.ClientID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return "", err
 	}
 
 	err = m.deps.taskService.StopDraggingTask(ct, taskID, clientID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return "", err
 	}
 

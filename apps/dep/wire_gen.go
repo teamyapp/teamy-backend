@@ -19,8 +19,8 @@ import (
 // Injectors from wire.go:
 
 func InitDataCollector(severity obs.Severity) obs.DataCollector {
-	rawLogger := obs.NewRawLogger(severity)
-	dataCollector := obs.NewDataCollector(rawLogger)
+	logger := newLogger(severity)
+	dataCollector := obs.NewDataCollector(logger)
 	return dataCollector
 }
 
@@ -32,4 +32,10 @@ func InitGithubApp(dataCollector obs.DataCollector, cloudAPIClientRegistry *api.
 	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
 	app := github.NewApp(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction)
 	return app, nil
+}
+
+// wire.go:
+
+func newLogger(severity obs.Severity) obs.Logger {
+	return obs.NewRequestLogger(obs.NewRawLogger(severity))
 }

@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -18,9 +19,10 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		ProfileURL *string
 	}
 }) (User, error) {
-	userID, err := ctx.UserIDFromContext(m.deps.dataCollector, ct)
-	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -32,9 +34,9 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		ProfileURL: args.User.ProfileURL,
 	}
 
-	err = m.deps.userDao.CreateUser(user)
+	err := m.deps.userDao.CreateUser(ct, user)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -50,13 +52,13 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 }) (User, error) {
 	userID, err := fromGraphQLID(args.UserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
-	user, err := m.deps.userDao.FindUserByID(userID)
+	user, err := m.deps.userDao.FindUserByID(ct, userID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -64,9 +66,9 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	user.LastName = args.Input.LastName
 	updatedAt := time.Now()
 	user.UpdatedAt = &updatedAt
-	err = m.deps.userSyncer.UpdateAndSyncUser(user)
+	err = m.deps.userSyncer.UpdateAndSyncUser(ct, user)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -76,7 +78,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 func (m Mutation) CreateUserProfileUploadSession(ct context.Context) (graphql.ID, error) {
 	uploadSessionID, err := m.deps.userService.CreateUserProfileUploadSession(ct)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return "", err
 	}
 
@@ -88,13 +90,13 @@ func (m Mutation) FinishUserProfileUploadSession(ct context.Context, args struct
 }) (User, error) {
 	fileUploadSessionID, err := fromGraphQLID(args.FileUploadSessionID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
 	user, err := m.deps.userService.FinishUserProfileUploadSession(ct, fileUploadSessionID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 

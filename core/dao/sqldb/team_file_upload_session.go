@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ type TeamFileUploadSession struct {
 var _ dao.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
 
 func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
+	ct context.Context,
 	teamID uint64,
 	teamFileUploadSessionType entity.TeamFileUploadSessionType,
 	fileUploadSessionID uint64,
@@ -51,13 +53,16 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
 	}
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return teamFileUploadSession, err
 }
 
-func (t TeamFileUploadSession) CreateTeamFileUploadSession(teamFileUploadSession entity.TeamFileUploadSession) error {
+func (t TeamFileUploadSession) CreateTeamFileUploadSession(
+	ct context.Context,
+	teamFileUploadSession entity.TeamFileUploadSession,
+) error {
 	_, err := t.db.Exec(`
 		INSERT INTO team_file_upload_session
 		(
@@ -78,13 +83,16 @@ func (t TeamFileUploadSession) CreateTeamFileUploadSession(teamFileUploadSession
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (t TeamFileUploadSession) UpdateTeamFileUploadSession(teamFileUploadSession entity.TeamFileUploadSession) error {
+func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
+	ct context.Context,
+	teamFileUploadSession entity.TeamFileUploadSession,
+) error {
 	_, err := t.db.Exec(`
 		UPDATE team_file_upload_session
 		SET
@@ -107,7 +115,7 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(teamFileUploadSession
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

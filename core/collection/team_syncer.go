@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -13,10 +15,10 @@ type TeamSyncer struct {
 	teamDao             dao.Team
 }
 
-func (t TeamSyncer) CreateAndSyncTeam(team entity.Team) error {
-	err := t.teamDao.CreateTeam(team)
+func (t TeamSyncer) CreateAndSyncTeam(ct context.Context, team entity.Team) error {
+	err := t.teamDao.CreateTeam(ct, team)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -31,10 +33,10 @@ func (t TeamSyncer) CreateAndSyncTeam(team entity.Team) error {
 	return nil
 }
 
-func (t TeamSyncer) UpdateAndSyncTeam(team entity.Team) error {
-	err := t.teamDao.UpdateTeam(team)
+func (t TeamSyncer) UpdateAndSyncTeam(ct context.Context, team entity.Team) error {
+	err := t.teamDao.UpdateTeam(ct, team)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 

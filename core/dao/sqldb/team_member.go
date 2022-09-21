@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"time"
 
@@ -15,7 +16,7 @@ type TeamMember struct {
 
 var _ dao.TeamMember = (*TeamMember)(nil)
 
-func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
+func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]uint64, error) {
 	statement := `
 	SELECT
 		team_id
@@ -24,7 +25,7 @@ func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
 `
 	rows, err := t.db.Query(statement, int64(userID))
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -36,7 +37,7 @@ func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
 			&teamID,
 		)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -46,7 +47,7 @@ func (t TeamMember) FindTeamIDsByUserID(userID uint64) ([]uint64, error) {
 	return teamIDs, nil
 }
 
-func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
+func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64) ([]uint64, error) {
 	statement := `
 	SELECT
 		user_id
@@ -55,7 +56,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 `
 	rows, err := t.db.Query(statement, int64(teamID))
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -67,7 +68,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 			&teamMemberID,
 		)
 		if err != nil {
-			t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -77,7 +78,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(teamID uint64) ([]uint64, error) {
 	return teamMemberIDs, err
 }
 
-func (t TeamMember) HasTeamMember(teamID uint64, userID uint64) (bool, error) {
+func (t TeamMember) HasTeamMember(ct context.Context, teamID uint64, userID uint64) (bool, error) {
 	statement := `
 	SELECT
 		*
@@ -86,14 +87,14 @@ func (t TeamMember) HasTeamMember(teamID uint64, userID uint64) (bool, error) {
 `
 	rows, err := t.db.Query(statement, int64(teamID), int64(userID))
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return false, err
 	}
 
 	return rows.Next(), nil
 }
 
-func (t TeamMember) CreateTeamMember(teamID uint64, userID uint64) error {
+func (t TeamMember) CreateTeamMember(ct context.Context, teamID uint64, userID uint64) error {
 	_, err := t.db.Exec(`
 		INSERT INTO team_member
 		(
@@ -108,13 +109,13 @@ func (t TeamMember) CreateTeamMember(teamID uint64, userID uint64) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (t TeamMember) DeleteTeamMember(teamID uint64, userID uint64) error {
+func (t TeamMember) DeleteTeamMember(ct context.Context, teamID uint64, userID uint64) error {
 	_, err := t.db.Exec(`
 		DELETE FROM team_member
 		WHERE team_id = $1 AND user_id = $2;
@@ -122,7 +123,7 @@ func (t TeamMember) DeleteTeamMember(teamID uint64, userID uint64) error {
 		teamID, userID)
 
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -15,10 +17,10 @@ type TaskSyncer struct {
 	activityCache       cache.Activity
 }
 
-func (t TaskSyncer) CreateAndSyncTask(task entity.Task) error {
-	err := t.taskDao.CreateTask(task)
+func (t TaskSyncer) CreateAndSyncTask(ct context.Context, task entity.Task) error {
+	err := t.taskDao.CreateTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -33,10 +35,10 @@ func (t TaskSyncer) CreateAndSyncTask(task entity.Task) error {
 	return nil
 }
 
-func (t TaskSyncer) UpdateAndSyncTask(task entity.Task) error {
-	err := t.taskDao.UpdateTask(task)
+func (t TaskSyncer) UpdateAndSyncTask(ct context.Context, task entity.Task) error {
+	err := t.taskDao.UpdateTask(ct, task)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -51,16 +53,16 @@ func (t TaskSyncer) UpdateAndSyncTask(task entity.Task) error {
 	return nil
 }
 
-func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
-	task, err := t.taskDao.FindTaskByID(taskID)
+func (t TaskSyncer) DeleteAndSyncTask(ct context.Context, taskID uint64) error {
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	err = t.taskDao.DeleteTask(taskID)
+	err = t.taskDao.DeleteTask(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -75,16 +77,20 @@ func (t TaskSyncer) DeleteAndSyncTask(taskID uint64) error {
 	return nil
 }
 
-func (t TaskSyncer) UpdateAndSyncTaskActivity(taskID uint64, clientID uint64, taskActivity entity.TaskActivity) error {
-	task, err := t.taskDao.FindTaskByID(taskID)
+func (t TaskSyncer) UpdateAndSyncTaskActivity(
+	ct context.Context,
+	taskID uint64,
+	taskActivity entity.TaskActivity,
+) error {
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	_, err = t.activityCache.UpdateTaskActivity(task.OwningTeamID, taskID, &taskActivity)
 	if err != nil {
-		t.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 

@@ -39,7 +39,7 @@ func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSpr
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -55,7 +55,7 @@ func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSpr
 func (s SprintRPC) AddTaskToSprint(ct context.Context, req *proto.AddTaskToSprintRequest) (*emptypb.Empty, error) {
 	_, err := s.sprintService.AddTaskToSprint(ct, req.SprintId, req.TaskId)
 	if err != nil {
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return &emptypb.Empty{}, err

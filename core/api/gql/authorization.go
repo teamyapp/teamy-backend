@@ -12,12 +12,12 @@ func (m Mutation) hasPermission(ct context.Context, query authorization.Query) (
 	hasPermissionReq := &proto.HasPermissionRequest{
 		ResourceType: string(query.ResourceType),
 		ResourceId:   query.ResourceID,
-		Operation:    string(query.Operation),
+		Operation:    query.Operation,
 		UserId:       query.UserID,
 	}
 	hasPermissionRes, err := m.deps.cloudClientRegistry.AuthorizationClient().HasPermission(ct, hasPermissionReq)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return false, err
 	}
 

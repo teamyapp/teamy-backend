@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,7 +18,7 @@ type Message struct {
 
 var _ dao.Message = (*Message)(nil)
 
-func (m Message) FindMessageByID(messageID uint64) (entity.Message, error) {
+func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.Message, error) {
 	message := entity.Message{}
 	err := m.db.QueryRow(`
 		SELECT
@@ -46,13 +47,13 @@ func (m Message) FindMessageByID(messageID uint64) (entity.Message, error) {
 	}
 
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return message, err
 }
 
-func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, error) {
+func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]entity.Message, error) {
 	statement := `
 	SELECT
 		id,
@@ -66,7 +67,7 @@ func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, erro
 `
 	rows, err := m.db.Query(statement, threadID)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -84,7 +85,7 @@ func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, erro
 			&message.UpdatedAt,
 		)
 		if err != nil {
-			m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -94,7 +95,7 @@ func (m Message) FindMessagesByThreadID(threadID uint64) ([]entity.Message, erro
 	return messages, nil
 }
 
-func (m Message) CreateMessage(message entity.Message) error {
+func (m Message) CreateMessage(ct context.Context, message entity.Message) error {
 	_, err := m.db.Exec(`
 		INSERT INTO message
 		(
@@ -113,13 +114,13 @@ func (m Message) CreateMessage(message entity.Message) error {
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (m Message) UpdateMessage(message entity.Message) error {
+func (m Message) UpdateMessage(ct context.Context, message entity.Message) error {
 	_, err := m.db.Exec(`
 		UPDATE message
 		SET
@@ -132,13 +133,13 @@ func (m Message) UpdateMessage(message entity.Message) error {
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (m Message) DeleteMessage(messageID uint64) error {
+func (m Message) DeleteMessage(ct context.Context, messageID uint64) error {
 	_, err := m.db.Exec(`
 		DELETE FROM message
 		WHERE id = $1;
@@ -146,7 +147,7 @@ func (m Message) DeleteMessage(messageID uint64) error {
 		messageID)
 
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

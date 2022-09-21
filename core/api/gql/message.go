@@ -22,9 +22,9 @@ func (m Message) Body(ct context.Context) string {
 }
 
 func (m Message) Author(ct context.Context) (User, error) {
-	user, err := m.deps.userDao.FindUserByID(m.message.AuthorUserID)
+	user, err := m.deps.userDao.FindUserByID(ct, m.message.AuthorUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 

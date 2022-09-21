@@ -1,6 +1,8 @@
 package collection
 
 import (
+	"context"
+
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -14,16 +16,16 @@ type MessageSyncer struct {
 	taskDao             dao.Task
 }
 
-func (m MessageSyncer) CreateAndSyncMessage(message entity.Message) error {
-	err := m.messageDao.CreateMessage(message)
+func (m MessageSyncer) CreateAndSyncMessage(ct context.Context, message entity.Message) error {
+	err := m.messageDao.CreateMessage(ct, message)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentsThreadID(message.ThreadID)
+	task, err := m.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -38,16 +40,16 @@ func (m MessageSyncer) CreateAndSyncMessage(message entity.Message) error {
 	return nil
 }
 
-func (m MessageSyncer) UpdateAndSyncMessage(message entity.Message) error {
-	err := m.messageDao.UpdateMessage(message)
+func (m MessageSyncer) UpdateAndSyncMessage(ct context.Context, message entity.Message) error {
+	err := m.messageDao.UpdateMessage(ct, message)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentsThreadID(message.ThreadID)
+	task, err := m.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
@@ -62,22 +64,22 @@ func (m MessageSyncer) UpdateAndSyncMessage(message entity.Message) error {
 	return nil
 }
 
-func (m MessageSyncer) DeleteAndSyncMessage(messageID uint64) error {
-	message, err := m.messageDao.FindMessageByID(messageID)
+func (m MessageSyncer) DeleteAndSyncMessage(ct context.Context, messageID uint64) error {
+	message, err := m.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentsThreadID(message.ThreadID)
+	task, err := m.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	err = m.messageDao.DeleteMessage(messageID)
+	err = m.messageDao.DeleteMessage(ct, messageID)
 	if err != nil {
-		m.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
