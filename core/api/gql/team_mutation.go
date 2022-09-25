@@ -53,6 +53,14 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		return Team{}, err
 	}
 
+	if feature.EnableAuthorization {
+		err = m.registerResource(ct, authorization.TeamResourceType, team.ID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Team{}, err
+		}
+	}
+
 	return newTeam(m.deps, team), nil
 }
 
