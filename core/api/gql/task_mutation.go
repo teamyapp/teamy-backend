@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -46,6 +45,20 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = m.registerResource(ct, authorization.TaskResourceType, task.ID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Task{}, err
+		}
+
+		err = m.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, task.OwningTeamID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Task{}, err
+		}
 	}
 
 	return newTask(m.deps, task), nil

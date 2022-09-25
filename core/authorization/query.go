@@ -3,7 +3,7 @@ package authorization
 import "fmt"
 
 type Query struct {
-	ResourceType resourceType
+	ResourceType ResourceType
 	ResourceID   uint64
 	Operation    string
 	UserID       uint64
@@ -11,7 +11,7 @@ type Query struct {
 
 func NewUpdateTeamSettingsQuery(userID uint64, teamID uint64) Query {
 	return Query{
-		ResourceType: teamResourceType,
+		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
 		Operation:    "UpdateSettings",
 		UserID:       userID,
@@ -20,7 +20,7 @@ func NewUpdateTeamSettingsQuery(userID uint64, teamID uint64) Query {
 
 func NewUpdateTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
-		ResourceType: taskResourceType,
+		ResourceType: TaskResourceType,
 		ResourceID:   teamID,
 		Operation:    "Update",
 		UserID:       userID,
