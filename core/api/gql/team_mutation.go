@@ -47,7 +47,12 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		return Team{}, err
 	}
 
-	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(ct, team.ID, userID)
+	teamMember := entity.TeamMember{
+		TeamID:    team.ID,
+		UserID:    userID,
+		CreatedAt: time.Now(),
+	}
+	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
@@ -175,7 +180,12 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 		return User{}, err
 	}
 
-	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamID, memberUserID)
+	teamMember := entity.TeamMember{
+		TeamID:    teamID,
+		UserID:    memberUserID,
+		CreatedAt: time.Now(),
+	}
+	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err

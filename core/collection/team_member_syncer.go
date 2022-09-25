@@ -17,10 +17,9 @@ type TeamMemberSyncer struct {
 
 func (t TeamMemberSyncer) CreateAndSyncTeamMember(
 	ct context.Context,
-	teamID uint64,
-	userID uint64,
+	teamMember entity.TeamMember,
 ) error {
-	err := t.teamMemberDao.CreateTeamMember(ct, teamID, userID)
+	err := t.teamMemberDao.CreateTeamMember(ct, teamMember)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -30,12 +29,9 @@ func (t TeamMemberSyncer) CreateAndSyncTeamMember(
 		CollectionType: realtime.TeamMemberCollectionType,
 		MutationType:   realtime.CreateMutationType,
 		TeamIDs: []uint64{
-			teamID,
+			teamMember.TeamID,
 		},
-		Payload: entity.TeamMember{
-			TeamID: teamID,
-			UserID: userID,
-		},
+		Payload: teamMember,
 	})
 	return nil
 }
