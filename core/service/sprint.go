@@ -14,7 +14,6 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
-const workTimePerWeek = 40 * time.Hour
 const timePerWeek = 7 * 24 * time.Hour
 
 type CreateSprintInput struct {
@@ -147,22 +146,22 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		return entity.Sprint{}, err
 	}
 
-	teamMemberIDs, err := s.teamMemberDao.FindTeamMemberIDsByTeamID(ct, teamID)
+	teamMembers, err := s.teamMemberDao.FindTeamMembers(ct, teamID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
 	}
 
 	sprintLength := sprint.EndAt.UTC().Sub(sprint.StartAt.UTC())
-	workWeeks := sprintLength / timePerWeek
+	numOfWeeks := sprintLength / timePerWeek
 	// TODO: fetch from team settings
-	bandwidth := workWeeks * workTimePerWeek
-	for _, teamMemberID := range teamMemberIDs {
+	for _, teamMember := range teamMembers {
+		totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
 		participant := entity.SprintParticipant{
 			SprintID:        sp.ID,
-			UserID:          teamMemberID,
-			TotalBandwidth:  bandwidth,
-			UnusedBandwidth: bandwidth,
+			UserID:          teamMember.UserID,
+			TotalBandwidth:  totalBandwidth,
+			UnusedBandwidth: totalBandwidth,
 			CreatedAt:       time.Now(),
 		}
 		err = s.sprintParticipantDao.CreateSprintParticipant(ct, participant)
