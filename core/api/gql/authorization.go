@@ -29,7 +29,6 @@ func (m Mutation) registerResource(ct context.Context, resourceType authorizatio
 		ResourceType: string(authorization.TaskResourceType),
 		ResourceId:   resourceID,
 	}
-
 	_, err := m.deps.cloudClientRegistry.AuthorizationClient().RegisterResource(ct, registerResourceReq)
 	if err != nil {
 		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
@@ -50,7 +49,6 @@ func (m Mutation) assignParentResource(ct context.Context,
 		ParentResourceType: string(parentResourceType),
 		ParentResourceId:   parentResourceID,
 	}
-
 	_, err := m.deps.cloudClientRegistry.AuthorizationClient().AssignParentResource(ct, assignParentResourceReq)
 	if err != nil {
 		m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})

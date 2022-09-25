@@ -50,11 +50,13 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 	if feature.EnableAuthorization {
 		err = m.registerResource(ct, authorization.TaskResourceType, task.ID)
 		if err != nil {
+			m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return Task{}, err
 		}
 
 		err = m.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, task.OwningTeamID)
 		if err != nil {
+			m.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return Task{}, err
 		}
 	}
