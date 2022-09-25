@@ -17,6 +17,9 @@ spec:
     - name: db-name
       key: kv/data/secrets/db/postgres/teamy/testing
       property: db-name
+    - name: service-account-api-token
+      key: kv/data/secrets/testing/teamy
+      property: service-account-api-token
 ---
 apiVersion: kubernetes-client.io/v1
 kind: ExternalSecret
@@ -111,6 +114,11 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: apps
+                  key: service-account-api-token
+            - name: TEAMY_SERVICE_ACCOUNT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
                   key: service-account-api-token
 ---
 apiVersion: v1
