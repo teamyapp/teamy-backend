@@ -1,11 +1,11 @@
 package authorization
 
-type resourceType string
+type ResourceType string
 
 const (
-	teamResourceType       resourceType = "Team"
-	taskResourceType       resourceType = "Task"
-	sprintResourceType     resourceType = "Sprint"
-	projectResourceType    resourceType = "Project"
-	invitationResourceType resourceType = "Invitation"
+	TeamResourceType       ResourceType = "Team"
+	TaskResourceType       ResourceType = "Task"
+	SprintResourceType     ResourceType = "Sprint"
+	ProjectResourceType    ResourceType = "Project"
+	InvitationResourceType ResourceType = "Invitation"
 )
