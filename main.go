@@ -89,9 +89,12 @@ func startServiceRunner(
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
 		rpc.ConnectionConfig{
-			Host:           cfg.CloudGRPCAPIHost,
-			Port:           cfg.CloudGRPCAPIPort,
-			ShouldEncrypt:  cfg.CloudGRPCAPIShouldEncrypt,
+			Host:          cfg.CloudGRPCAPIHost,
+			Port:          cfg.CloudGRPCAPIPort,
+			ShouldEncrypt: cfg.CloudGRPCAPIShouldEncrypt,
+			GetAccessToken: func() string {
+				return cfg.TeamyServiceAccountAPIToken
+			},
 			RequestTimeout: cfg.RequestTimeout,
 		})
 	if err != nil {
