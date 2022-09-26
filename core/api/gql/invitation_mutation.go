@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/randgen"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -174,13 +175,13 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	hasMember, err := m.deps.teamMemberDao.HasTeamMember(ct, invitation.TeamID, receiverUserID)
+	_, err = m.deps.teamMemberDao.FindTeamMember(ct, invitation.TeamID, receiverUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
+		if !errors.As(err, dao.ErrorNotFound) {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Invitation{}, err
+		}
 
-	if !hasMember {
 		teamMember := entity.TeamMember{
 			TeamID:    invitation.TeamID,
 			UserID:    receiverUserID,

@@ -52,6 +52,10 @@ type Task struct {
 	threadService              Thread
 }
 
+func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, error) {
+	return t.taskDao.FindTaskByID(ct, taskID)
+}
+
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, error) {
 	tasks, err := t.taskDao.FindAllTasks(ct)
 	if err != nil {

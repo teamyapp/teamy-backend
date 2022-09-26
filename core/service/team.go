@@ -24,6 +24,10 @@ type Team struct {
 	teamFileUploadSessionDao   dao.TeamFileUploadSession
 }
 
+func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
+	return t.teamDao.FindTeamByID(ct, teamID)
+}
+
 func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, error) {
 	teams, err := t.teamDao.FindAllTeams(ct)
 	if err != nil {

@@ -50,21 +50,15 @@ func (t Team) Owner(ct context.Context) (User, error) {
 	return newUser(t.deps, user), nil
 }
 
-func (t Team) Members(ct context.Context) ([]User, error) {
-	teamMemberIDs, err := t.deps.teamMemberDao.FindTeamMemberIDsByTeamID(ct, t.team.ID)
+func (t Team) Members(ct context.Context) ([]TeamMember, error) {
+	teamMembers, err := t.deps.teamMemberDao.FindTeamMembersByTeamID(ct, t.team.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	userEntities, err := t.deps.userDao.FindUsersByIDs(ct, teamMemberIDs)
-	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
-	}
-
-	return collect.Map(userEntities, func(userEntity entity.User, _ int) User {
-		return newUser(t.deps, userEntity)
+	return collect.Map(teamMembers, func(teamMember entity.TeamMember, _ int) TeamMember {
+		return newTeamMember(t.deps, teamMember)
 	}), nil
 }
 

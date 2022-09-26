@@ -2,13 +2,11 @@ package gql
 
 import (
 	"context"
-	"errors"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
-	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Sprint struct {
@@ -53,25 +51,13 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 }
 
 func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
-	filter := &service.TeamFilter{TeamID: &s.sprint.OwningTeamID}
-	teams, err := s.deps.teamService.FindTeams(ct, filter)
+	team, err := s.deps.teamService.FindTeamByID(ct, s.sprint.OwningTeamID)
 	if err != nil {
 		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
 
-	if len(teams) == 0 {
-		err = errors.New("team not found")
-		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"teamID": s.sprint.OwningTeamID,
-			},
-		})
-		return Team{}, err
-	}
-
-	return newTeam(s.deps, teams[0]), nil
+	return newTeam(s.deps, team), nil
 }
 
 func (s Sprint) Participants(ct context.Context) ([]SprintParticipant, error) {
