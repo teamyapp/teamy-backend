@@ -2,6 +2,8 @@ package gql
 
 import (
 	"context"
+	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/feature"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -29,6 +31,20 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Sprint{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = m.registerResource(ct, authorization.SprintResourceType, sprint.ID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Sprint{}, err
+		}
+
+		err = m.assignParentResource(ct, authorization.SprintResourceType, sprint.ID, authorization.TeamResourceType, sprint.OwningTeamID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Sprint{}, err
+		}
 	}
 
 	return newSprint(m.deps, sprint), nil
