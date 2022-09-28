@@ -535,10 +535,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 			TaskID: taskID,
 			DragTaskActivity: entity.DragTaskActivity{
 				IsDragging: false,
-				Client: entity.Client{
-					ID:     clientID,
-					UserID: userID,
-				},
+				Client: entity.Client{},
 			}})
 }
 
