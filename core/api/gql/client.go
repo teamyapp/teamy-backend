@@ -13,7 +13,7 @@ type Client struct {
 	client entity.Client
 }
 
-func (c Client) ID(ct context.Context) graphql.ID {
+func (c Client) ID() graphql.ID {
 	return toGraphQLID(c.client.ID)
 }
 
