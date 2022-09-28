@@ -512,9 +512,11 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		entity.TaskActivity{
 			TaskID: taskID,
 			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging:       true,
-				DragByUserID:     userID,
-				DraggingClientID: clientID,
+				IsDragging: true,
+				Client: entity.Client{
+					ID:     clientID,
+					UserID: userID,
+				},
 			}})
 }
 
@@ -532,9 +534,11 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		entity.TaskActivity{
 			TaskID: taskID,
 			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging:       false,
-				DragByUserID:     userID,
-				DraggingClientID: clientID,
+				IsDragging: false,
+				Client: entity.Client{
+					ID:     clientID,
+					UserID: userID,
+				},
 			}})
 }
 

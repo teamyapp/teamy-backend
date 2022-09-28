@@ -6,7 +6,6 @@ type TaskActivity struct {
 }
 
 type DragTaskActivity struct {
-	IsDragging       bool
-	DragByUserID     uint64
-	DraggingClientID uint64
+	IsDragging bool
+	Client     Client
 }
