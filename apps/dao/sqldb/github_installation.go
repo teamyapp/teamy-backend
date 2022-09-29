@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ type GithubAppInstallation struct {
 var _ dao.GithubAppInstallation = (*GithubAppInstallation)(nil)
 
 func (g GithubAppInstallation) CreateGithubAppInstallation(
+	ct context.Context,
 	installation entity.GithubAppInstallation,
 ) error {
 	_, err := g.db.Exec(`
@@ -35,13 +37,13 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (g GithubAppInstallation) FindInstallationByID(installationID uint64) (entity.GithubAppInstallation, error) {
+func (g GithubAppInstallation) FindInstallationByID(ct context.Context, installationID uint64) (entity.GithubAppInstallation, error) {
 	installation := entity.GithubAppInstallation{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -64,7 +66,7 @@ func (g GithubAppInstallation) FindInstallationByID(installationID uint64) (enti
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return installation, err

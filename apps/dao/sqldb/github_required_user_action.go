@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/obs"
@@ -16,6 +17,7 @@ type GithubRequiredUserAction struct {
 var _ dao.GithubRequiredUserAction = (*GithubRequiredUserAction)(nil)
 
 func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
+	ct context.Context,
 	teamID uint64,
 	actionUserID uint64,
 ) ([]entity.GithubRequiredUserAction, error) {
@@ -33,7 +35,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 `,
 		teamID, actionUserID)
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -52,7 +54,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 			&requiredAction.RequestedByUserID,
 		)
 		if err != nil {
-			g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+			g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -62,7 +64,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 	return requiredActions, nil
 }
 
-func (g GithubRequiredUserAction) CreateRequiredUserAction(requiredUserAction entity.GithubRequiredUserAction) error {
+func (g GithubRequiredUserAction) CreateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_required_user_action
 	(
@@ -86,13 +88,13 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(requiredUserAction en
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (g GithubRequiredUserAction) UpdateRequiredUserAction(requiredUserAction entity.GithubRequiredUserAction) error {
+func (g GithubRequiredUserAction) UpdateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) error {
 	_, err := g.db.Exec(`
 		UPDATE apps_github_required_user_action
 		SET
@@ -113,7 +115,7 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(requiredUserAction en
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
