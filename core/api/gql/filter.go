@@ -1,6 +1,8 @@
 package gql
 
 import (
+	"context"
+
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -34,9 +36,9 @@ type AppFilter struct {
 	IsPublic *bool
 }
 
-func matchTeam(dataCollector obs.DataCollector, filter TeamFilter, team entity.Team) bool {
+func matchTeam(ct context.Context, dataCollector obs.DataCollector, filter TeamFilter, team entity.Team) bool {
 	if filter.TeamID != nil {
-		teamID, err := fromGraphQLIDPtr(dataCollector, filter.TeamID)
+		teamID, err := fromGraphQLIDPtr(ct, dataCollector, filter.TeamID)
 		if err != nil {
 			return false
 		}
@@ -49,9 +51,9 @@ func matchTeam(dataCollector obs.DataCollector, filter TeamFilter, team entity.T
 	return true
 }
 
-func matchInvitation(dataCollector obs.DataCollector, filter InvitationFilter, invitation entity.Invitation) bool {
+func matchInvitation(ct context.Context, dataCollector obs.DataCollector, filter InvitationFilter, invitation entity.Invitation) bool {
 	if filter.InvitationID != nil {
-		invitationID, err := fromGraphQLIDPtr(dataCollector, filter.InvitationID)
+		invitationID, err := fromGraphQLIDPtr(ct, dataCollector, filter.InvitationID)
 		if err != nil {
 			return false
 		}

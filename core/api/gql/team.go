@@ -81,7 +81,7 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(t.deps.dataCollector, args.Filter)
+	filter, err := fromGraphQLTaskFilterPtr(ct, t.deps.dataCollector, args.Filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
@@ -109,7 +109,7 @@ func (t Team) Invitations(ct context.Context, args struct {
 
 	if args.Filter != nil {
 		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entity.Invitation) bool {
-			return matchInvitation(t.deps.dataCollector, *args.Filter, invitationEntity)
+			return matchInvitation(ct, t.deps.dataCollector, *args.Filter, invitationEntity)
 		})
 	}
 
@@ -121,7 +121,7 @@ func (t Team) Invitations(ct context.Context, args struct {
 func (t Team) Sprints(ct context.Context, args struct {
 	Filter *SprintFilter
 }) ([]Sprint, error) {
-	filter, err := fromGraphQLSprintFilterPtr(t.deps.dataCollector, args.Filter)
+	filter, err := fromGraphQLSprintFilterPtr(ct, t.deps.dataCollector, args.Filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err

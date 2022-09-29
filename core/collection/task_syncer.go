@@ -88,7 +88,7 @@ func (t TaskSyncer) UpdateAndSyncTaskActivity(
 		return err
 	}
 
-	_, err = t.activityCache.UpdateTaskActivity(task.OwningTeamID, taskID, &taskActivity)
+	_, err = t.activityCache.UpdateTaskActivity(ct, task.OwningTeamID, taskID, &taskActivity)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err

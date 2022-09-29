@@ -50,7 +50,7 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 	clientIDParam := mux.Vars(request)["clientID"]
 	clientID, err := strconv.ParseUint(clientIDParam, 10, 64)
 	if err != nil {
-		r.dataCollector.Logger.Log(obs.Error, obs.Props{
+		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp:   err,
 			obs.MessageProp: "must provide teamId",
 		})
@@ -79,7 +79,7 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 
 	conn, err := connection.WebSocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
-		r.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -87,7 +87,7 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 	webSocketConn := connection.NewWebSocket(r.dataCollector, conn)
 	err = r.realTimeStateSyncer.OnClientConnect(userID, webSocketConn)
 	if err != nil {
-		r.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}

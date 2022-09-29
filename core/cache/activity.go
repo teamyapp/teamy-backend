@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 
 	"github.com/teamyapp/cloud/libs/obs"
@@ -42,11 +43,11 @@ func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) map[uint64]*entit
 	return teamActivity.TaskActivities
 }
 
-func (a Activity) UpdateTaskActivity(teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) (*entity.TaskActivity, error) {
+func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) (*entity.TaskActivity, error) {
 	teamActivity, ok := a.teamActivities[teamID]
 	if !ok {
 		err := errors.New("teamActivity not found")
-		a.dataCollector.Logger.Log(obs.Error, obs.Props{
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
 				"teamID": teamID,

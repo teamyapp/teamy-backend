@@ -34,7 +34,7 @@ func (q Query) Me(ct context.Context) (User, error) {
 func (q Query) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(q.deps.dataCollector, args.Filter)
+	filter, err := fromGraphQLTaskFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
 		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
@@ -62,7 +62,7 @@ func (q Query) Teams(ct context.Context, args struct {
 
 	if args.Filter != nil {
 		teams = collect.Filter(teams, func(team entity.Team) bool {
-			return matchTeam(q.deps.dataCollector, *args.Filter, team)
+			return matchTeam(ct, q.deps.dataCollector, *args.Filter, team)
 		})
 	}
 
@@ -82,7 +82,7 @@ func (q Query) Invitations(ct context.Context, args struct {
 
 	if args.Filter != nil {
 		invitations = collect.Filter(invitations, func(invitation entity.Invitation) bool {
-			return matchInvitation(q.deps.dataCollector, *args.Filter, invitation)
+			return matchInvitation(ct, q.deps.dataCollector, *args.Filter, invitation)
 		})
 	}
 
@@ -94,7 +94,7 @@ func (q Query) Invitations(ct context.Context, args struct {
 func (q Query) Sprints(ct context.Context, args struct {
 	Filter *SprintFilter
 }) ([]Sprint, error) {
-	filter, err := fromGraphQLSprintFilterPtr(q.deps.dataCollector, args.Filter)
+	filter, err := fromGraphQLSprintFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
 		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
