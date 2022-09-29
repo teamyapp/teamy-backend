@@ -18,9 +18,9 @@ func (c Client) ID() graphql.ID {
 }
 
 func (c Client) User(ct context.Context) (User, error) {
-	user, err := c.deps.userDao.FindUserByID(ct, c.client.UserID)
+	user, err := c.deps.userService.FindUserByID(ct, c.client.UserID)
 	if err != nil {
-		c.deps.dataCollector.Logger.LogWithContext(obs.Error, obs.Props{obs.CauseProp: err})
+		c.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 
 		return User{}, err
 	}

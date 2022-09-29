@@ -7,5 +7,5 @@ type TaskActivity struct {
 
 type DragTaskActivity struct {
 	IsDragging bool
-	Client     Client
+	Client     *Client
 }

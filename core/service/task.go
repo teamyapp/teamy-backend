@@ -513,7 +513,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 			TaskID: taskID,
 			DragTaskActivity: entity.DragTaskActivity{
 				IsDragging: true,
-				Client: entity.Client{
+				Client: &entity.Client{
 					ID:     clientID,
 					UserID: userID,
 				},
@@ -521,13 +521,6 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 }
 
 func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
 	return t.taskSyncer.UpdateAndSyncTaskActivity(
 		ct,
 		taskID,
@@ -535,7 +528,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 			TaskID: taskID,
 			DragTaskActivity: entity.DragTaskActivity{
 				IsDragging: false,
-				Client: entity.Client{},
+				Client:     nil,
 			}})
 }
 
