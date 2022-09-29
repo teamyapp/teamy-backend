@@ -3,6 +3,8 @@ package sqldb
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -78,7 +80,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 	return teamMemberIDs, err
 }
 
-func (t TeamMember) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamMember, error) {
+func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) ([]entity.TeamMember, error) {
 	rows, err := t.db.Query(`
 	SELECT
 		team_id,
@@ -116,20 +118,41 @@ func (t TeamMember) FindTeamMembers(ct context.Context, teamID uint64) ([]entity
 	return teamMembers, err
 }
 
-func (t TeamMember) HasTeamMember(ct context.Context, teamID uint64, userID uint64) (bool, error) {
-	statement := `
+func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uint64) (entity.TeamMember, error) {
+	teamMember := entity.TeamMember{}
+	err := t.db.QueryRow(
+		`
 	SELECT
-		user_id
+		team_id,
+		user_id,
+		weekly_bandwidth,
+		created_at,
+		updated_at
 	FROM team_member
-	WHERE team_id = $1 AND user_id = $2;
-`
-	rows, err := t.db.Query(statement, int64(teamID), int64(userID))
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return false, err
+	WHERE team_id = $1 AND user_id=$2;
+`,
+		teamID,
+		userID).
+		Scan(
+			&teamMember.TeamID,
+			&teamMember.UserID,
+			&teamMember.WeeklyBandwidth,
+			&teamMember.CreatedAt,
+			&teamMember.UpdatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.TeamMember{}, dao.ErrNotFound(fmt.Sprintf(
+			"team member not found: teamID=%v, userID=%v",
+			teamMember.TeamID,
+			teamMember.UserID))
 	}
 
-	return rows.Next(), nil
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
+	return teamMember, err
 }
 
 func (t TeamMember) CreateTeamMember(ct context.Context, teamMember entity.TeamMember) error {

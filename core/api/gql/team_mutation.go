@@ -175,17 +175,17 @@ func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 	TeamID       graphql.ID
 	MemberUserID graphql.ID
-}) (User, error) {
+}) (TeamMember, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+		return TeamMember{}, err
 	}
 
 	memberUserID, err := fromGraphQLID(args.MemberUserID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+		return TeamMember{}, err
 	}
 
 	teamMember := entity.TeamMember{
@@ -196,46 +196,40 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+		return TeamMember{}, err
 	}
 
-	user, err := m.deps.userDao.FindUserByID(ct, memberUserID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
-	}
-
-	return newUser(m.deps, user), nil
+	return newTeamMember(m.deps, teamMember), nil
 }
 
 func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 	TeamID       graphql.ID
 	MemberUserID graphql.ID
-}) (User, error) {
+}) (TeamMember, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+		return TeamMember{}, err
 	}
 
 	memberUserID, err := fromGraphQLID(args.MemberUserID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+		return TeamMember{}, err
+	}
+
+	teamMember, err := m.deps.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return TeamMember{}, err
 	}
 
 	// TODO: ensure user is inside the team
 	err = m.deps.teamMemberSyncer.DeleteAndSyncTeamMember(ct, teamID, memberUserID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+		return TeamMember{}, err
 	}
 
-	user, err := m.deps.userDao.FindUserByID(ct, memberUserID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
-	}
-
-	return newUser(m.deps, user), nil
+	return newTeamMember(m.deps, teamMember), nil
 }

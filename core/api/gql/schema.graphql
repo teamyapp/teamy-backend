@@ -36,8 +36,8 @@ type Mutation {
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	createTeamIconUploadSession(teamId: ID!): ID!
 	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): Team!
-	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
-	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
+	addMemberToTeam(teamId: ID!, memberUserId: ID!): TeamMember!
+	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): TeamMember!
 
 	# User
 	createUser(user: CreateUserInput!): User!
@@ -129,12 +129,20 @@ type Team {
 	createdAt: Time!
 	creator: User!
 	owner: User!
-	members: [User!]!
+	members: [TeamMember!]!
 	tasks(filter: TaskFilter): [Task!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
 	appInstallations: [AppInstallation!]!
 	taskActivities: [TaskActivity!]!
+}
+
+type TeamMember {
+	team: Team!
+	user: User!
+	weeklyBandwidth: Duration!
+	createdAt: Time!
+	updatedAt: Time
 }
 
 type TaskActivity {

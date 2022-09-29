@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	_ "embed"
-	"errors"
 
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/runner"
@@ -31,27 +30,12 @@ func (t TaskRPC) Start(runner *runner.ServiceRunner) error {
 }
 
 func (t TaskRPC) FindTask(ct context.Context, req *proto.GetTaskRequest) (*proto.TaskMsg, error) {
-	filter := &service.TaskFilter{
-		TaskID: &req.TaskId,
-	}
-	tasks, err := t.taskService.FindTasks(ct, filter)
+	task, err := t.taskService.FindTaskByID(ct, req.TaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if len(tasks) < 1 {
-		err = errors.New("task not found")
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"taskID": req.TaskId,
-			},
-		})
-		return &proto.TaskMsg{}, err
-	}
-
-	task := tasks[0]
 	return &proto.TaskMsg{
 		TaskId:          task.ID,
 		Goal:            task.Goal,

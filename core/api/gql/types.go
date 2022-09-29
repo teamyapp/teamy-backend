@@ -18,6 +18,10 @@ func toGraphQLTime(tm time.Time) graphql.Time {
 	return graphql.Time{Time: tm}
 }
 
+func toGraphQLDuration(duration time.Duration) scalar.Duration {
+	return scalar.Duration{Duration: duration}
+}
+
 func toGraphQLTimePtr(tm *time.Time) *graphql.Time {
 	if tm == nil {
 		return nil

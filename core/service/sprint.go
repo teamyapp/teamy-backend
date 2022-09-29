@@ -146,7 +146,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		return entity.Sprint{}, err
 	}
 
-	teamMembers, err := s.teamMemberDao.FindTeamMembers(ct, teamID)
+	teamMembers, err := s.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
