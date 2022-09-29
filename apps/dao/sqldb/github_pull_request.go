@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,7 +18,7 @@ type GithubPullRequest struct {
 
 var _ dao.GithubPullRequest = (*GithubPullRequest)(nil)
 
-func (g GithubPullRequest) FindPullRequestByInternalTaskID(internalTaskID uint64) (entity.GithubPullRequest, error) {
+func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, internalTaskID uint64) (entity.GithubPullRequest, error) {
 	pullRequest := entity.GithubPullRequest{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -38,13 +39,13 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(internalTaskID uint64
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return pullRequest, err
 }
 
-func (g GithubPullRequest) FindPullRequestByGithubNodeID(githubNodeID string) (entity.GithubPullRequest, error) {
+func (g GithubPullRequest) FindPullRequestByGithubNodeID(ct context.Context, githubNodeID string) (entity.GithubPullRequest, error) {
 	pullRequest := entity.GithubPullRequest{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -65,13 +66,13 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(githubNodeID string) (e
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return pullRequest, err
 }
 
-func (g GithubPullRequest) CreatePullRequest(pullRequest entity.GithubPullRequest) error {
+func (g GithubPullRequest) CreatePullRequest(ct context.Context, pullRequest entity.GithubPullRequest) error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_pull_request
 	(
@@ -85,13 +86,13 @@ func (g GithubPullRequest) CreatePullRequest(pullRequest entity.GithubPullReques
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (g GithubPullRequest) DeletePullRequestByInternalTaskID(internalTaskID uint64) error {
+func (g GithubPullRequest) DeletePullRequestByInternalTaskID(ct context.Context, internalTaskID uint64) error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_pull_request
 		WHERE internal_task_id = $1;
@@ -99,13 +100,13 @@ func (g GithubPullRequest) DeletePullRequestByInternalTaskID(internalTaskID uint
 		internalTaskID)
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (g GithubPullRequest) DeletePullRequestByGithubNodeID(githubNodeID string) error {
+func (g GithubPullRequest) DeletePullRequestByGithubNodeID(ct context.Context, githubNodeID string) error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_pull_request
 		WHERE github_pull_request_node_id = $1;
@@ -113,7 +114,7 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(githubNodeID string) 
 		githubNodeID)
 
 	if err != nil {
-		g.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err

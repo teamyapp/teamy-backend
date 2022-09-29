@@ -76,7 +76,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 	clientNotifier, ok := userNotifier.clientNotifiers[clientID]
 	if !ok {
 		err := errors.New("clientNotifier not found")
-		s.dataCollector.Logger.Log(obs.Error, obs.Props{
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
 				"clientID": clientID,

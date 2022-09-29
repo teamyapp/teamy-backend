@@ -1,6 +1,7 @@
 package gql
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -46,14 +47,14 @@ func toGraphQLDurationPtr(du *time.Duration) *scalar.Duration {
 	return &scalar.Duration{Duration: *du}
 }
 
-func fromGraphQLIDPtr(dataCollector obs.DataCollector, graphqlID *graphql.ID) (*uint64, error) {
+func fromGraphQLIDPtr(ct context.Context, dataCollector obs.DataCollector, graphqlID *graphql.ID) (*uint64, error) {
 	if graphqlID == nil {
 		return nil, nil
 	}
 
 	id, err := fromGraphQLID(*graphqlID)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -82,20 +83,20 @@ func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
 	return strconv.ParseUint(string(graphqlID), 10, 64)
 }
 
-func fromGraphQLTaskFilterPtr(dataCollector obs.DataCollector, gqlTaskFilter *TaskFilter) (*service.TaskFilter, error) {
+func fromGraphQLTaskFilterPtr(ct context.Context, dataCollector obs.DataCollector, gqlTaskFilter *TaskFilter) (*service.TaskFilter, error) {
 	if gqlTaskFilter == nil {
 		return nil, nil
 	}
 
-	taskID, err := fromGraphQLIDPtr(dataCollector, gqlTaskFilter.TaskID)
+	taskID, err := fromGraphQLIDPtr(ct, dataCollector, gqlTaskFilter.TaskID)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	ownerID, err := fromGraphQLIDPtr(dataCollector, gqlTaskFilter.OwnerID)
+	ownerID, err := fromGraphQLIDPtr(ct, dataCollector, gqlTaskFilter.OwnerID)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -108,14 +109,14 @@ func fromGraphQLTaskFilterPtr(dataCollector obs.DataCollector, gqlTaskFilter *Ta
 	}, nil
 }
 
-func fromGraphQLSprintFilterPtr(dataCollector obs.DataCollector, gqlSprintFilter *SprintFilter) (*service.SprintFilter, error) {
+func fromGraphQLSprintFilterPtr(ct context.Context, dataCollector obs.DataCollector, gqlSprintFilter *SprintFilter) (*service.SprintFilter, error) {
 	if gqlSprintFilter == nil {
 		return nil, nil
 	}
 
-	sprintID, err := fromGraphQLIDPtr(dataCollector, gqlSprintFilter.SprintID)
+	sprintID, err := fromGraphQLIDPtr(ct, dataCollector, gqlSprintFilter.SprintID)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 

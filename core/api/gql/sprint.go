@@ -33,7 +33,7 @@ func (s Sprint) CreatedAt(ct context.Context) graphql.Time {
 func (s Sprint) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(s.deps.dataCollector, args.Filter)
+	filter, err := fromGraphQLTaskFilterPtr(ct, s.deps.dataCollector, args.Filter)
 	if err != nil {
 		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err

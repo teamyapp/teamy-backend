@@ -43,7 +43,7 @@ func (u User) Teams(ct context.Context, args struct {
 }) ([]Team, error) {
 	ids, err := u.deps.teamMemberDao.FindTeamIDsByUserID(ct, u.user.ID)
 	if err != nil {
-		u.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -53,13 +53,13 @@ func (u User) Teams(ct context.Context, args struct {
 
 	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ct, ids)
 	if err != nil {
-		u.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		u.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	if args.Filter != nil {
 		teamEntities = collect.Filter(teamEntities, func(team entity.Team) bool {
-			return matchTeam(u.deps.dataCollector, *args.Filter, team)
+			return matchTeam(ct, u.deps.dataCollector, *args.Filter, team)
 		})
 	}
 

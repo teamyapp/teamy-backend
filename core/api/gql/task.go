@@ -57,7 +57,7 @@ func (t Task) Context(ct context.Context) *string {
 func (t Task) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userDao.FindUserByID(ct, t.task.CreatorUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -71,7 +71,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 
 	owner, err := t.deps.userDao.FindUserByID(ct, *t.task.OwnerUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -82,7 +82,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 func (t Task) OwningTeam(ct context.Context) (*Team, error) {
 	team, err := t.deps.teamDao.FindTeamByID(ct, t.task.OwningTeamID)
 	if err != nil {
-		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -129,7 +129,7 @@ func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 	tasks, err := t.deps.taskService.FindAwaitForTasks(ct, t.task.ID)
 	if err != nil {
-		t.deps.dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 

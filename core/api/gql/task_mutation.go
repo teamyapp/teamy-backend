@@ -30,7 +30,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	ownerUserID, err := fromGraphQLIDPtr(m.deps.dataCollector, args.Task.OwnerUserID)
+	ownerUserID, err := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Task.OwnerUserID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
@@ -105,7 +105,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		}
 	}
 
-	ownerUserID, err := fromGraphQLIDPtr(m.deps.dataCollector, args.Input.OwnerUserID)
+	ownerUserID, err := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Input.OwnerUserID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
