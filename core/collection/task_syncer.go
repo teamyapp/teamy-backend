@@ -79,10 +79,9 @@ func (t TaskSyncer) DeleteAndSyncTask(ct context.Context, taskID uint64) error {
 
 func (t TaskSyncer) UpdateAndSyncTaskActivity(
 	ct context.Context,
-	task entity.Task,
 	taskActivity entity.TaskActivity,
 ) error {
-	_, err := t.activityCache.UpdateTaskActivity(ct, task.OwningTeamID, task.ID, &taskActivity)
+	_, err := t.activityCache.UpdateTaskActivity(ct, taskActivity.TeamID, taskActivity.TaskID, &taskActivity)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -92,7 +91,7 @@ func (t TaskSyncer) UpdateAndSyncTaskActivity(
 		CollectionType: realtime.TaskActivityCollectionType,
 		MutationType:   realtime.UpdateMutationType,
 		TeamIDs: []uint64{
-			task.OwningTeamID,
+			taskActivity.TeamID,
 		},
 		Payload: taskActivity},
 	)

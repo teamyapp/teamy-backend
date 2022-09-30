@@ -514,7 +514,6 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 
 	return t.taskSyncer.UpdateAndSyncTaskActivity(
 		ct,
-		task,
 		entity.TaskActivity{
 			TaskID: taskID,
 			TeamID: task.OwningTeamID,
@@ -536,7 +535,6 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 
 	return t.taskSyncer.UpdateAndSyncTaskActivity(
 		ct,
-		task,
 		entity.TaskActivity{
 			TaskID: taskID,
 			TeamID: task.OwningTeamID,
