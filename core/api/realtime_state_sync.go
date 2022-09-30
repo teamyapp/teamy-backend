@@ -91,8 +91,6 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	writer.WriteHeader(http.StatusNoContent)
 }
 
 func NewRealTimeStateSync(
