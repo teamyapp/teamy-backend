@@ -37,6 +37,7 @@ type Mutation {
 	createTeamIconUploadSession(teamId: ID!): ID!
 	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): Team!
 	addMemberToTeam(teamId: ID!, memberUserId: ID!): TeamMember!
+	updateTeamMember(teamId: ID!, input: UpdateTeamMemberInput!): TeamMember!
 	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): TeamMember!
 
 	# User
@@ -306,6 +307,11 @@ input CreateTeamInput {
 input UpdateTeamInput {
 	name: String!
 	ownerUserId: ID!
+}
+
+input UpdateTeamMemberInput {
+	userId: ID!
+	weeklyBandwidth: Duration!
 }
 
 input CreateUserInput {

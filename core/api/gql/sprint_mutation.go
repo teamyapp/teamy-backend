@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/feature"
 
