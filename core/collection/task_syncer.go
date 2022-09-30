@@ -79,16 +79,10 @@ func (t TaskSyncer) DeleteAndSyncTask(ct context.Context, taskID uint64) error {
 
 func (t TaskSyncer) UpdateAndSyncTaskActivity(
 	ct context.Context,
-	taskID uint64,
+	task entity.Task,
 	taskActivity entity.TaskActivity,
 ) error {
-	task, err := t.taskDao.FindTaskByID(ct, taskID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	_, err = t.activityCache.UpdateTaskActivity(ct, task.OwningTeamID, taskID, &taskActivity)
+	_, err := t.activityCache.UpdateTaskActivity(ct, task.OwningTeamID, task.ID, &taskActivity)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
