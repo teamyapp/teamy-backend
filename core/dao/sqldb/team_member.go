@@ -185,11 +185,9 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, teamMember entity.TeamM
 		UPDATE team_member
 		SET
 			weekly_bandwidth = $1,
-			created_at = $2,
-			updated_at = $3
-		WHERE team_id = $4 AND user_id = $5;`,
+			updated_at = $2
+		WHERE team_id = $3 AND user_id = $4;`,
 		teamMember.WeeklyBandwidth,
-		teamMember.CreatedAt,
 		teamMember.UpdatedAt,
 		teamMember.TeamID,
 		teamMember.UserID,
