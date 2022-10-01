@@ -506,35 +506,41 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		return err
 	}
 
-	return t.taskSyncer.UpdateAndSyncTaskActivity(
-		ct,
-		taskID,
-		entity.TaskActivity{
-			TaskID: taskID,
-			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging:       true,
-				DragByUserID:     userID,
-				DraggingClientID: clientID,
-			}})
-}
-
-func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
+	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
 	return t.taskSyncer.UpdateAndSyncTaskActivity(
 		ct,
-		taskID,
 		entity.TaskActivity{
 			TaskID: taskID,
+			TeamID: task.OwningTeamID,
 			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging:       false,
-				DragByUserID:     userID,
-				DraggingClientID: clientID,
+				IsDragging: true,
+				Client: &entity.Client{
+					ID:     clientID,
+					UserID: userID,
+				},
+			}})
+}
+
+func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	return t.taskSyncer.UpdateAndSyncTaskActivity(
+		ct,
+		entity.TaskActivity{
+			TaskID: taskID,
+			TeamID: task.OwningTeamID,
+			DragTaskActivity: entity.DragTaskActivity{
+				IsDragging: false,
+				Client:     nil,
 			}})
 }
 

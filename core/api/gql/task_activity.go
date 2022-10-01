@@ -8,6 +8,7 @@ import (
 )
 
 type TaskActivity struct {
+	deps         *Dependencies
 	taskActivity entity.TaskActivity
 }
 
@@ -16,11 +17,12 @@ func (t TaskActivity) TaskID(ct context.Context) graphql.ID {
 }
 
 func (t TaskActivity) DragTaskActivity(ct context.Context) DragTaskActivity {
-	return newDragTaskActivity(t.taskActivity.DragTaskActivity)
+	return newDragTaskActivity(t.deps, t.taskActivity.DragTaskActivity)
 }
 
-func newTaskActivity(taskActivity entity.TaskActivity) TaskActivity {
+func newTaskActivity(deps *Dependencies, taskActivity entity.TaskActivity) TaskActivity {
 	return TaskActivity{
+		deps:         deps,
 		taskActivity: taskActivity,
 	}
 }

@@ -66,7 +66,7 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 	taskActivities := t.deps.activityCache.FindAllTaskActivitiesByTeamID(t.team.ID)
 	taskActivityItems := make([]TaskActivity, 0)
 	for _, taskActivity := range taskActivities {
-		taskActivityItems = append(taskActivityItems, newTaskActivity(*taskActivity))
+		taskActivityItems = append(taskActivityItems, newTaskActivity(t.deps, *taskActivity))
 	}
 
 	return taskActivityItems, nil
