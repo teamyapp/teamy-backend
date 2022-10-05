@@ -357,6 +357,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return entity.Task{}, err
 	}
 
+	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false
 		err := s.taskSyncer.UpdateAndSyncTask(ct, task)
