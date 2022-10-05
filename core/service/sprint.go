@@ -228,18 +228,17 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		return entity.Task{}, err
 	}
 
-	err = s.tryReduceBandwidth(ct, sprintID, task)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
+	if !task.IsPlanned {
+		task.IsPlanned = true
+		err = s.taskSyncer.UpdateAndSyncTask(ct, task)
+
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
 	}
 
-	if task.IsPlanned {
-		return task, nil
-	}
-
-	task.IsPlanned = true
-	return task, s.taskSyncer.UpdateAndSyncTask(ct, task)
+	return task, s.tryReduceBandwidth(ct, sprintID, task)
 }
 
 func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
@@ -358,24 +357,27 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return entity.Task{}, err
 	}
 
-	err = s.tryIncreaseBandwidth(ct, sprintID, task)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
+	if len(sprintIDs) <= 1 {
+		task.IsPlanned = false
+		err := s.taskSyncer.UpdateAndSyncTask(ct, task)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
 	}
 
-	if len(sprintIDs) > 1 {
-		return task, nil
-	}
-
-	task.IsPlanned = false
-	return task, s.taskSyncer.UpdateAndSyncTask(ct, task)
+	return task, s.tryIncreaseBandwidth(ct, sprintID, task)
 }
 
 func (s Sprint) tryReduceBandwidth(ct context.Context, sprintID uint64, task entity.Task) error {
 	if task.OwnerUserID != nil && task.Effort != nil {
 		newSprintParticipant, err := s.sprintParticipantDao.FindParticipant(ct, sprintID, *task.OwnerUserID)
 		if err != nil {
+			// TODO: this should be removed once the sprint participants are backfilled
+			if errors.As(err, dao.ErrorNotFound) {
+				return nil
+			}
+
 			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
@@ -395,6 +397,11 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, sprintID uint64, task e
 	if task.OwnerUserID != nil && task.Effort != nil {
 		oldSprintParticipant, err := s.sprintParticipantDao.FindParticipant(ct, sprintID, *task.OwnerUserID)
 		if err != nil {
+			// TODO: this should be removed once the sprint participants are backfilled
+			if errors.As(err, dao.ErrorNotFound) {
+				return nil
+			}
+
 			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
