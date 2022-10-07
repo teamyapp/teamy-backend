@@ -1,6 +1,7 @@
 package scalar
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -25,10 +26,11 @@ func (d Duration) ImplementsGraphQLType(name string) bool {
 
 func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 	dataCollector := inject.Injector.Get(new(obs.DataCollector)).(obs.DataCollector)
+	ct := context.Background()
 	switch input.(type) {
 	case string:
 		var err error
-		d.Duration, err = duration.Parse(dataCollector, input.(string))
+		d.Duration, err = duration.Parse(ct, dataCollector, input.(string))
 		if err != nil {
 			dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 			return err

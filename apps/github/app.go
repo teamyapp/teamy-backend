@@ -329,7 +329,7 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 	requiredUserActions = collect.Filter(requiredUserActions, func(action entity.GithubRequiredUserAction) bool {
 		return action.IsCompleted == false
 	})
-	web.WriteJSON(a.dataCollector, w, requiredUserActions)
+	web.WriteJSON(ct, a.dataCollector, w, requiredUserActions)
 }
 
 func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
