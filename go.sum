@@ -302,6 +302,8 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/teamyapp/cloud v0.0.0-20221007083847-468cf63907be h1:AlGkqSef5QXWAc6hC10igh2QzFVZ2EFd0sU0TPGhSdc=
 github.com/teamyapp/cloud v0.0.0-20221007083847-468cf63907be/go.mod h1:VqJRyV8J06BfeA60iIdPImjZw9excKRyiB12BhM+Ne8=
+github.com/teamyapp/cloud v0.0.0-20221008102641-65a699c335d2 h1:paOfg+l2gscV52ODNqUIU7yvkX+TESIwnYeGfWoiH3s=
+github.com/teamyapp/cloud v0.0.0-20221008102641-65a699c335d2/go.mod h1:VqJRyV8J06BfeA60iIdPImjZw9excKRyiB12BhM+Ne8=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
