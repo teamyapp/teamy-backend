@@ -1,15 +1,5 @@
 package realtime
 
-type DeleteTaskAwaitForRelationPayload struct {
-	AwaitingTaskID uint64
-	AwaitForTaskID uint64
-}
-
-type DeleteSprintTaskRelationPayload struct {
-	SprintID uint64
-	TaskID   uint64
-}
-
 type MutationType string
 
 const (

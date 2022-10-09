@@ -7,6 +7,7 @@ import (
 )
 
 type SprintParticipant interface {
+	FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, error)
 	FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, error)
 	FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, error)
 	CreateSprintParticipant(ct context.Context, participant entity.SprintParticipant) error

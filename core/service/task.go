@@ -49,6 +49,7 @@ type Task struct {
 	sprintTaskRelationDao      dao.SprintTaskRelation
 	taskSyncer                 collection.TaskSyncer
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
+	sprintParticipantSyncer    collection.SprintParticipantSyncer
 	threadService              Thread
 }
 
@@ -190,7 +191,7 @@ func (t Task) updateUnusedBandWidth(
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth -= *newEffort
-			err = t.sprintParticipantDao.UpdateSprintParticipant(ct, participant)
+			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, participant)
 			if err != nil {
 				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return err
@@ -211,7 +212,7 @@ func (t Task) tryIncreaseBandwidth(ct context.Context, taskID uint64, oldOwnerID
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth += *oldEffort
-			err = t.sprintParticipantDao.UpdateSprintParticipant(ct, participant)
+			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, participant)
 			if err != nil {
 				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return err
@@ -555,6 +556,7 @@ func NewTask(
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	taskSyncer collection.TaskSyncer,
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
+	sprintParticipantSyncer collection.SprintParticipantSyncer,
 	threadService Thread,
 ) Task {
 	return Task{
@@ -568,6 +570,7 @@ func NewTask(
 		sprintTaskRelationDao:      sprintTaskRelationDao,
 		taskSyncer:                 taskSyncer,
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
+		sprintParticipantSyncer:    sprintParticipantSyncer,
 		threadService:              threadService,
 	}
 }
