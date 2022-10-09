@@ -14,4 +14,5 @@ const (
 	SprintTaskRelationCollectionType   CollectionType = "SprintTaskRelation"
 	ClientCollectionType               CollectionType = "Client"
 	TaskActivityCollectionType         CollectionType = "TaskActivity"
+	SprintParticipantCollectionType    CollectionType = "SprintParticipant"
 )

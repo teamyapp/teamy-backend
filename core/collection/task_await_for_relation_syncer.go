@@ -59,7 +59,10 @@ func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(ct context.Context, aw
 		TeamIDs: []uint64{
 			task.OwningTeamID,
 		},
-		Payload: realtime.DeleteTaskAwaitForRelationPayload{
+		Payload: struct {
+			AwaitingTaskID uint64
+			AwaitForTaskID uint64
+		}{
 			AwaitingTaskID: awaitingTaskID,
 			AwaitForTaskID: awaitForTaskID,
 		},

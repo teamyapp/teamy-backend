@@ -18,6 +18,38 @@ type SprintParticipant struct {
 
 var _ dao.SprintParticipant = (*SprintParticipant)(nil)
 
+func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, error) {
+	rows, err := s.db.Query(
+		`
+	SELECT
+		user_id
+	FROM sprint_participant
+	WHERE sprint_id = $1;
+`,
+		sprintID)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	defer rows.Close()
+	participantUserIDs := make([]uint64, 0)
+	for rows.Next() {
+		var participantUserID uint64
+		err = rows.Scan(
+			&participantUserID,
+		)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			continue
+		}
+
+		participantUserIDs = append(participantUserIDs, participantUserID)
+	}
+
+	return participantUserIDs, nil
+}
+
 func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, error) {
 	rows, err := s.db.Query(
 		`
