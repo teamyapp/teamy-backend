@@ -70,7 +70,7 @@ func (s SprintParticipantSyncer) UpdateAndSyncSprintParticipant(
 	return nil
 }
 
-func (s SprintParticipantSyncer) DeleteAndSprintParticipant(ct context.Context, sprintID uint64, userID uint64) error {
+func (s SprintParticipantSyncer) DeleteAndSyncSprintParticipant(ct context.Context, sprintID uint64, userID uint64) error {
 	sprint, err := s.sprintDao.FindSprintByID(ct, sprintID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})

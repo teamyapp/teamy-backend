@@ -197,7 +197,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 	}
 
 	for _, participantUserID := range participantUserIDs {
-		err = s.sprintParticipantSyncer.DeleteAndSprintParticipant(ct, sprintID, participantUserID)
+		err = s.sprintParticipantSyncer.DeleteAndSyncSprintParticipant(ct, sprintID, participantUserID)
 		if err != nil {
 			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Sprint{}, err
