@@ -177,7 +177,7 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 
 	_, err = m.deps.teamMemberDao.FindTeamMember(ct, invitation.TeamID, receiverUserID)
 	if err != nil {
-		if !errors.As(err, dao.ErrorNotFound) {
+		if !errors.As(err, &dao.ErrorNotFound) {
 			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return Invitation{}, err
 		}

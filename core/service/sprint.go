@@ -390,7 +390,7 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, sprintID uint64, task ent
 		newSprintParticipant, err := s.sprintParticipantDao.FindParticipant(ct, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
-			if errors.As(err, dao.ErrorNotFound) {
+			if errors.As(err, &dao.ErrorNotFound) {
 				return nil
 			}
 
@@ -414,7 +414,7 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, sprintID uint64, task e
 		oldSprintParticipant, err := s.sprintParticipantDao.FindParticipant(ct, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
-			if errors.As(err, dao.ErrorNotFound) {
+			if errors.As(err, &dao.ErrorNotFound) {
 				return nil
 			}
 
