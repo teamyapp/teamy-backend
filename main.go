@@ -27,8 +27,8 @@ func init() {
 }
 
 func main() {
-	logVisibleSeverity := obs.Severity(getEnv("LOG_VISIBLE_SEVERITY", "INFO"))
-	dataCollector := dep.InitDataCollector("teamy/backend", logVisibleSeverity)
+	visibleLevel := obs.LogLevel(getEnv("LOG_VISIBLE_SEVERITY", "Info"))
+	dataCollector := dep.InitDataCollector("teamy/backend", visibleLevel)
 	inject.Injector.BindType(new(obs.DataCollector), func() interface{} {
 		return dataCollector
 	})
