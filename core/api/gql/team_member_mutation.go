@@ -2,12 +2,11 @@ package gql
 
 import (
 	"context"
-	"time"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
-	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
@@ -26,12 +25,7 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 		return TeamMember{}, err
 	}
 
-	teamMember := entity.TeamMember{
-		TeamID:    teamID,
-		UserID:    memberUserID,
-		CreatedAt: time.Now(),
-	}
-	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
+	teamMember, err := m.deps.teamService.AddMemberToTeam(ct, teamID, memberUserID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return TeamMember{}, err
@@ -59,17 +53,11 @@ func (m Mutation) UpdateTeamMember(ct context.Context, args struct {
 		return TeamMember{}, err
 	}
 
-	teamMember, err := m.deps.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return TeamMember{}, err
+	input := service.UpdateTeamMemberInput{
+		UserID:          memberUserID,
+		WeeklyBandwidth: args.Input.WeeklyBandwidth.Duration,
 	}
-
-	teamMember.WeeklyBandwidth = args.Input.WeeklyBandwidth.Duration
-	now := time.Now()
-	teamMember.UpdatedAt = &now
-
-	err = m.deps.teamMemberDao.UpdateTeamMember(ct, teamMember)
+	teamMember, err := m.deps.teamService.UpdateTeamMember(ct, teamID, input)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return TeamMember{}, err
@@ -94,14 +82,7 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 		return TeamMember{}, err
 	}
 
-	teamMember, err := m.deps.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return TeamMember{}, err
-	}
-
-	// TODO: ensure user is inside the team
-	err = m.deps.teamMemberSyncer.DeleteAndSyncTeamMember(ct, teamID, memberUserID)
+	teamMember, err := m.deps.teamService.RemoveMemberFromTeam(ct, teamID, memberUserID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return TeamMember{}, err
