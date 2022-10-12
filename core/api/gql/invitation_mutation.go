@@ -182,12 +182,7 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 			return Invitation{}, err
 		}
 
-		teamMember := entity.TeamMember{
-			TeamID:    invitation.TeamID,
-			UserID:    receiverUserID,
-			CreatedAt: time.Now(),
-		}
-		err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
+		_, err = m.deps.teamService.AddMemberToTeam(ct, invitation.TeamID, receiverUserID)
 		if err != nil {
 			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return Invitation{}, err
