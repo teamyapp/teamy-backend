@@ -163,6 +163,25 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		return entity.TeamMember{}, err
 	}
 
+	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	for _, sprint := range currAndFutureSprints {
+		participant := entity.SprintParticipant{
+			SprintID:  sprint.ID,
+			UserID:    memberUserID,
+			CreatedAt: time.Now(),
+		}
+		err = t.sprintParticipantSyncer.CreateAndSyncSprintParticipant(ct, participant)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.TeamMember{}, err
+		}
+	}
+
 	return teamMember, nil
 }
 
