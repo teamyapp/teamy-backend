@@ -30,6 +30,8 @@ type Team struct {
 	teamMemberDao              dao.TeamMember
 	teamFileUploadSessionDao   dao.TeamFileUploadSession
 	teamMemberSyncer           collection.TeamMemberSyncer
+	sprintParticipantSyncer    collection.SprintParticipantSyncer
+	sprintService              Sprint
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
@@ -192,6 +194,7 @@ func (t Team) UpdateTeamMember(
 		return entity.TeamMember{}, err
 	}
 
+	bandwidthDelta := input.WeeklyBandwidth - teamMember.WeeklyBandwidth
 	teamMember.WeeklyBandwidth = input.WeeklyBandwidth
 	now := time.Now()
 	teamMember.UpdatedAt = &now
@@ -200,6 +203,34 @@ func (t Team) UpdateTeamMember(
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.TeamMember{}, err
+	}
+
+	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	for _, sprint := range currAndFutureSprints {
+		participants, err := t.sprintService.FindParticipantsInSprint(ct, sprint.ID)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.TeamMember{}, err
+		}
+
+		for _, participant := range participants {
+			if participant.UserID != input.UserID {
+				continue
+			}
+
+			participant.TotalBandwidth += bandwidthDelta
+			participant.UnusedBandwidth += bandwidthDelta
+			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, participant)
+			if err != nil {
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				return entity.TeamMember{}, err
+			}
+		}
 	}
 
 	return teamMember, nil
@@ -215,6 +246,8 @@ func NewTeam(
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberSyncer collection.TeamMemberSyncer,
+	sprintParticipantSyncer collection.SprintParticipantSyncer,
+	sprintService Sprint,
 ) Team {
 	return Team{
 		dataCollector:              dataCollector,
@@ -226,5 +259,7 @@ func NewTeam(
 		teamMemberDao:              teamMemberDao,
 		teamFileUploadSessionDao:   teamFileUploadSessionDao,
 		teamMemberSyncer:           teamMemberSyncer,
+		sprintParticipantSyncer:    sprintParticipantSyncer,
+		sprintService:              sprintService,
 	}
 }
