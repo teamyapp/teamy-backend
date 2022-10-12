@@ -12,19 +12,19 @@ type MutationLogger struct {
 
 var _ obs.Logger = (*MutationLogger)(nil)
 
-func (m MutationLogger) Log(severity obs.Severity, props obs.Props) {
-	m.LogAndSkip(severity, props, 1)
+func (m MutationLogger) Log(level obs.LogLevel, props obs.Props) {
+	m.LogAndSkip(level, props, 1)
 }
 
-func (m MutationLogger) LogAndSkip(severity obs.Severity, props obs.Props, skipCallers int) {
-	m.logger.LogAndSkip(severity, props, skipCallers+1)
+func (m MutationLogger) LogAndSkip(level obs.LogLevel, props obs.Props, skipCallers int) {
+	m.logger.LogAndSkip(level, props, skipCallers+1)
 }
 
-func (m MutationLogger) LogWithContext(ct context.Context, severity obs.Severity, props obs.Props) {
-	m.LogWithContextAndSkip(ct, severity, props, 1)
+func (m MutationLogger) LogWithContext(ct context.Context, level obs.LogLevel, props obs.Props) {
+	m.LogWithContextAndSkip(ct, level, props, 1)
 }
 
-func (m MutationLogger) LogWithContextAndSkip(ct context.Context, severity obs.Severity, props obs.Props, skipCallers int) {
+func (m MutationLogger) LogWithContextAndSkip(ct context.Context, level obs.LogLevel, props obs.Props, skipCallers int) {
 	newProps := obs.Props{}
 	for key, value := range props {
 		newProps[key] = value
@@ -35,7 +35,7 @@ func (m MutationLogger) LogWithContextAndSkip(ct context.Context, severity obs.S
 		newProps["mutationId"] = mutationID
 	}
 
-	m.logger.LogWithContextAndSkip(ct, severity, newProps, skipCallers+1)
+	m.logger.LogWithContextAndSkip(ct, level, newProps, skipCallers+1)
 }
 
 func NewMutationLogger(logger obs.Logger) MutationLogger {

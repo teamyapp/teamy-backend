@@ -24,8 +24,8 @@ import (
 
 // Injectors from wire.go:
 
-func InitDataCollector(serviceName string, severity obs.Severity) obs.DataCollector {
-	logger := newLogger(serviceName, severity)
+func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
+	logger := newLogger(serviceName, visibleLevel)
 	dataCollector := obs.NewDataCollector(logger)
 	return dataCollector
 }
@@ -156,6 +156,6 @@ func newTeamService(
 		teamMemberSyncer)
 }
 
-func newLogger(serviceName string, severity obs.Severity) obs.Logger {
-	return obs.NewServiceLogger(serviceName, obs.NewRequestLogger(obs.NewClientLogger(realtime.NewMutationLogger(obs.NewRawLogger(severity)))))
+func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
+	return obs.NewServiceLogger(serviceName, obs.NewRequestLogger(obs.NewClientLogger(realtime.NewMutationLogger(obs.NewRawLogger(visibleLevel)))))
 }

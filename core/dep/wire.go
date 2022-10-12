@@ -69,7 +69,7 @@ var serviceSet = wire.NewSet(
 	newUserService,
 )
 
-func InitDataCollector(serviceName string, severity obs.Severity) obs.DataCollector {
+func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
 	wire.Build(
 		newLogger,
 		obs.NewDataCollector,
@@ -184,10 +184,10 @@ func newTeamService(
 		teamMemberSyncer)
 }
 
-func newLogger(serviceName string, severity obs.Severity) obs.Logger {
+func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
 	return obs.NewServiceLogger(serviceName,
 		obs.NewRequestLogger(
 			obs.NewClientLogger(
 				realtime.NewMutationLogger(
-					obs.NewRawLogger(severity)))))
+					obs.NewRawLogger(visibleLevel)))))
 }
