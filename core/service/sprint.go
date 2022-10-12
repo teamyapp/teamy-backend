@@ -68,6 +68,20 @@ func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([
 	return participants, nil
 }
 
+func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, error) {
+	sprints, err := s.sprintDao.FindAllSprints(ct)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	if filter != nil {
+		sprints = filterSprints(sprints, *filter)
+	}
+
+	return sprints, nil
+}
+
 func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Sprint, error) {
 	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
@@ -77,7 +91,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 
 	now := time.Now().UTC()
 	sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
-		if now.Before(sprint.StartAt) || now.After(sprint.EndAt) {
+		if now.Before(sprint.StartAt.UTC()) || now.After(sprint.EndAt.UTC()) {
 			return false
 		}
 
@@ -108,18 +122,21 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 	return sprints[0], nil
 }
 
-func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, error) {
-	sprints, err := s.sprintDao.FindAllSprints(ct)
+func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) ([]entity.Sprint, error) {
+	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if filter != nil {
-		sprints = filterSprints(sprints, *filter)
-	}
+	now := time.Now().UTC()
+	return collect.Filter(sprints, func(sprint entity.Sprint) bool {
+		if sprint.EndAt.UTC().Before(now) {
+			return false
+		}
 
-	return sprints, nil
+		return true
+	}), nil
 }
 
 func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, error) {
