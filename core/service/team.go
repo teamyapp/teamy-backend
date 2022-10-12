@@ -232,7 +232,7 @@ func (t Team) UpdateTeamMember(
 	now := time.Now()
 	teamMember.UpdatedAt = &now
 
-	err = t.teamMemberDao.UpdateTeamMember(ct, teamMember)
+	err = t.teamMemberSyncer.UpdateAndSyncTeamMember(ct, teamMember)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.TeamMember{}, err
