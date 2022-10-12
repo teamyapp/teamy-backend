@@ -199,6 +199,20 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		return entity.TeamMember{}, err
 	}
 
+	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	for _, sprint := range currAndFutureSprints {
+		err = t.sprintParticipantSyncer.DeleteAndSyncSprintParticipant(ct, sprint.ID, memberUserID)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.TeamMember{}, err
+		}
+	}
+
 	return teamMember, nil
 }
 
