@@ -229,7 +229,6 @@ func (t Team) UpdateTeamMember(
 
 	bandwidthDelta := input.WeeklyBandwidth - teamMember.WeeklyBandwidth
 	teamMember.WeeklyBandwidth = input.WeeklyBandwidth
-	teamMember.WeeklyBandwidth = input.WeeklyBandwidth
 	now := time.Now()
 	teamMember.UpdatedAt = &now
 
