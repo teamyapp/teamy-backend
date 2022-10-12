@@ -9,10 +9,16 @@ import (
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+type UpdateTeamMemberInput struct {
+	UserID          uint64
+	WeeklyBandwidth time.Duration
+}
 
 type Team struct {
 	dataCollector              obs.DataCollector
@@ -21,7 +27,9 @@ type Team struct {
 	taskDao                    dao.Task
 	sprintDao                  dao.Sprint
 	teamDao                    dao.Team
+	teamMemberDao              dao.TeamMember
 	teamFileUploadSessionDao   dao.TeamFileUploadSession
+	teamMemberSyncer           collection.TeamMemberSyncer
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
@@ -141,6 +149,62 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	return team, t.teamDao.UpdateTeam(ct, team)
 }
 
+func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, error) {
+	teamMember := entity.TeamMember{
+		TeamID:    teamID,
+		UserID:    memberUserID,
+		CreatedAt: time.Now(),
+	}
+	err := t.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	return teamMember, nil
+}
+
+func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, error) {
+	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	// TODO: ensure user is inside the team
+	err = t.teamMemberSyncer.DeleteAndSyncTeamMember(ct, teamID, memberUserID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	return teamMember, nil
+}
+
+func (t Team) UpdateTeamMember(
+	ct context.Context,
+	teamID uint64,
+	input UpdateTeamMemberInput,
+) (entity.TeamMember, error) {
+	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, input.UserID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	teamMember.WeeklyBandwidth = input.WeeklyBandwidth
+	now := time.Now()
+	teamMember.UpdatedAt = &now
+
+	err = t.teamMemberDao.UpdateTeamMember(ct, teamMember)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
+
+	return teamMember, nil
+}
+
 func NewTeam(
 	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL string,
@@ -148,7 +212,9 @@ func NewTeam(
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
+	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
+	teamMemberSyncer collection.TeamMemberSyncer,
 ) Team {
 	return Team{
 		dataCollector:              dataCollector,
@@ -157,6 +223,8 @@ func NewTeam(
 		taskDao:                    taskDao,
 		sprintDao:                  sprintDao,
 		teamDao:                    teamDao,
+		teamMemberDao:              teamMemberDao,
 		teamFileUploadSessionDao:   teamFileUploadSessionDao,
+		teamMemberSyncer:           teamMemberSyncer,
 	}
 }
