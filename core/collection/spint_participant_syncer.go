@@ -84,7 +84,7 @@ func (s SprintParticipantSyncer) DeleteAndSyncSprintParticipant(ct context.Conte
 	}
 
 	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
-		CollectionType: realtime.InvitationCollectionType,
+		CollectionType: realtime.SprintParticipantCollectionType,
 		MutationType:   realtime.DeleteMutationType,
 		TeamIDs: []uint64{
 			sprint.OwningTeamID,
