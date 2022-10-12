@@ -36,6 +36,27 @@ func (t TeamMemberSyncer) CreateAndSyncTeamMember(
 	return nil
 }
 
+func (t TeamMemberSyncer) UpdateAndSyncTeamMember(
+	ct context.Context,
+	teamMember entity.TeamMember,
+) error {
+	err := t.teamMemberDao.UpdateTeamMember(ct, teamMember)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+		CollectionType: realtime.TeamMemberCollectionType,
+		MutationType:   realtime.UpdateMutationType,
+		TeamIDs: []uint64{
+			teamMember.TeamID,
+		},
+		Payload: teamMember,
+	})
+	return nil
+}
+
 func (t TeamMemberSyncer) DeleteAndSyncTeamMember(ct context.Context, teamID uint64, userID uint64) error {
 	err := t.teamMemberDao.DeleteTeamMember(ct, teamID, userID)
 	if err != nil {
