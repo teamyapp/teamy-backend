@@ -225,7 +225,8 @@ type App {
 	versions: [AppVersion!]!
 	installations: [AppInstallation!]!
 	installationCount: Int!
-	isPublic: Boolean!
+	visibility: Visibility!
+	visibleInTeams: [Team!]!
 	creator: User!
 	createdAt: Time!
 	updatedAt: Time
@@ -274,8 +275,14 @@ input SprintFilter {
 	countLimit: Int
 }
 
+enum Visibility {
+	PRIVATE
+	PUBLIC
+	ALL
+}
+
 input AppFilter {
-	isPublic: Boolean
+	visibility: Visibility
 }
 
 # Inputs
