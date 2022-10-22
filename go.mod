@@ -6,7 +6,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/graph-gophers/graphql-go v1.4.0
-	github.com/teamyapp/cloud v0.0.0-20221011065318-62cbf6844dd7
+	github.com/teamyapp/cloud v0.0.0-20221022041352-389a36d75e62
 	google.golang.org/grpc v1.50.0
 	google.golang.org/protobuf v1.28.1
 )
