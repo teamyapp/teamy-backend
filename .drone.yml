@@ -100,7 +100,7 @@ steps:
   - name: notify image update
     image: plugins/webhook
     settings:
-      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      urls: http://keel.deploy.svc.cluster.local:9300/v1/webhooks/native
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
@@ -180,7 +180,7 @@ steps:
   - name: notify image update
     image: plugins/webhook
     settings:
-      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      urls: http://keel.deploy.svc.cluster.local:9300/v1/webhooks/native
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
@@ -260,7 +260,7 @@ steps:
   - name: notify image update
     image: plugins/webhook
     settings:
-      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      urls: http://keel.deploy.svc.cluster.local:9300/v1/webhooks/native
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend",
