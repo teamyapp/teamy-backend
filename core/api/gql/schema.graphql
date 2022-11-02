@@ -74,6 +74,8 @@ type Mutation {
 	createAppVersion(appId: ID!): AppVersion!
 	updateAppVersion(appId: ID!, input: UpdateAppVersionInput!): AppVersion!
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
+	addVisibleTeamToAppVersion(appId: ID!, versionNumber: Int!, teamId: ID!): AppVersion!
+	removeVisibleTeamFromAppVersion(appId: ID!, versionNumber: Int!, teamId: ID!): AppVersion!
 }
 
 scalar Duration
