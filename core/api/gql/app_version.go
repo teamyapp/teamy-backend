@@ -22,19 +22,31 @@ func (a AppVersion) Name() string {
 	panic("implement me")
 }
 
-func (a AppVersion) IconURL() string {
+func (a AppVersion) IconURL() *string {
 	panic("implement me")
 }
 
-func (a AppVersion) HasUiExtension() bool {
+func (a AppVersion) HasUIExtension() bool {
 	panic("implement me")
 }
 
-func (a AppVersion) UiExtensionEntryPointPath() *string {
+func (a AppVersion) UIExtensionEntrypointPath() *string {
+	panic("implement me")
+}
+
+func (a AppVersion) IsPublic() bool {
+	panic("implement me")
+}
+
+func (a AppVersion) VisibleToTeams() []Team {
 	panic("implement me")
 }
 
 func (a AppVersion) CreatedAt() graphql.Time {
+	panic("implement me")
+}
+
+func (a AppVersion) UpdatedAt() *graphql.Time {
 	panic("implement me")
 }
 

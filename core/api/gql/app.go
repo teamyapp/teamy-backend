@@ -32,10 +32,6 @@ func (a App) InstallationCount() int32 {
 	panic("implement me")
 }
 
-func (a App) IsPublic() bool {
-	panic("implement me")
-}
-
 func (a App) Creator() (User, error) {
 	panic("implement me")
 }

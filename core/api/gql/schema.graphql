@@ -65,6 +65,17 @@ type Mutation {
 	finishFileUploadSession(teamId: ID!): FileMetadata!
 	updateFileMetadata(fileId: ID!, input: FileMetadataInput!): FileMetadata!
 	deleteFile(fileId: ID!): FileMetadata!
+
+	# App
+	createApp: App!
+	updateApp(input: UpdateAppInput!): App!
+	deleteApp(appId: ID!): App!
+	refreshAppSecret: App!
+	createAppVersion(appId: ID!): AppVersion!
+	updateAppVersion(appId: ID!, input: UpdateAppVersionInput!): AppVersion!
+	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
+	addVisibleTeamToAppVersion(appId: ID!, versionNumber: Int!, teamId: ID!): AppVersion!
+	removeVisibleTeamFromAppVersion(appId: ID!, versionNumber: Int!, teamId: ID!): AppVersion!
 }
 
 scalar Duration
@@ -225,7 +236,6 @@ type App {
 	versions: [AppVersion!]!
 	installations: [AppInstallation!]!
 	installationCount: Int!
-	isPublic: Boolean!
 	creator: User!
 	createdAt: Time!
 	updatedAt: Time
@@ -235,10 +245,13 @@ type AppVersion {
 	app: App!
 	versionNumber: Int!
 	name: String!
-	iconUrl: String!
+	iconUrl: String
 	hasUiExtension: Boolean!
 	uiExtensionEntryPointPath: String
+	isPublic: Boolean!
+	visibleToTeams: [Team!]!
 	createdAt: Time!
+	updatedAt: Time
 }
 
 type AppInstallation {
@@ -349,4 +362,17 @@ input CreateSprintInput {
 
 input FileMetadataInput {
 	name: String!
+}
+
+input UpdateAppInput {
+	activeVersionNumber: Int
+}
+
+input UpdateAppVersionInput {
+	versionNumber: Int!
+	name: String!
+	iconUrl: String
+	hasUiExtension: Boolean!
+	uiExtensionEntryPointPath: String
+	isPublic: Boolean!
 }
