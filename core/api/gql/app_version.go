@@ -34,7 +34,7 @@ func (a AppVersion) UiExtensionEntryPointPath() *string {
 	panic("implement me")
 }
 
-func (a AppVersion) IsPrivate() bool {
+func (a AppVersion) IsPublic() bool {
 	panic("implement me")
 }
 

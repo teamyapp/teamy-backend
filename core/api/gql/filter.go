@@ -33,7 +33,7 @@ type SprintFilter struct {
 }
 
 type AppFilter struct {
-	IsPrivate *bool
+	IsPublic *bool
 }
 
 func matchTeam(ct context.Context, dataCollector obs.DataCollector, filter TeamFilter, team entity.Team) bool {

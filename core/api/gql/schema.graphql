@@ -246,7 +246,7 @@ type AppVersion {
 	iconUrl: String
 	hasUiExtension: Boolean!
 	uiExtensionEntryPointPath: String
-	isPrivate: Boolean!
+	isPublic: Boolean!
 	visibleToTeams: [Team!]!
 	createdAt: Time!
 	updatedAt: Time
@@ -286,7 +286,7 @@ input SprintFilter {
 }
 
 input AppFilter {
-	isPrivate: Boolean
+	isPublic: Boolean
 }
 
 # Inputs
@@ -372,5 +372,5 @@ input UpdateAppVersionInput {
 	iconUrl: String
 	hasUiExtension: Boolean!
 	uiExtensionEntryPointPath: String
-	isPrivate: Boolean!
+	isPublic: Boolean!
 }
