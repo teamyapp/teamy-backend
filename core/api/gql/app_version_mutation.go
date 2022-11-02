@@ -18,7 +18,7 @@ func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
 		VersionNumber             int32
 		Name                      string
 		IconUrl                   *string
-		HasUiExtension            bool
+		HasUIExtension            bool
 		UIExtensionEntryPointPath *string
 		IsPublic                  bool
 	}

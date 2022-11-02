@@ -26,11 +26,11 @@ func (a AppVersion) IconURL() *string {
 	panic("implement me")
 }
 
-func (a AppVersion) HasUiExtension() bool {
+func (a AppVersion) HasUIExtension() bool {
 	panic("implement me")
 }
 
-func (a AppVersion) UiExtensionEntryPointPath() *string {
+func (a AppVersion) UIExtensionEntrypointPath() *string {
 	panic("implement me")
 }
 
