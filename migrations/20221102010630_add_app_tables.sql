@@ -36,6 +36,7 @@ CREATE TABLE app_installation (
 	installed_by_user_id BIGINT NOT NULL REFERENCES "user" (id) ON UPDATE CASCADE ON DELETE CASCADE,
 	installed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 -- +migrate Down
 DROP TABLE app_installation;
 DROP TABLE app_version_visible_team;
