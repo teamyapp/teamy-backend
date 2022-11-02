@@ -37,4 +37,7 @@ CREATE TABLE app_installation (
 	installed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 -- +migrate Down
-
+DROP TABLE app_installation;
+DROP TABLE app_version_visible_team;
+DROP TABLE app_version;
+DROP TABLE app;
