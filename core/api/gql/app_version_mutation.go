@@ -1,0 +1,34 @@
+package gql
+
+import (
+	"context"
+
+	"github.com/graph-gophers/graphql-go"
+)
+
+func (m Mutation) CreateAppVersion(ct context.Context, args struct {
+	AppID graphql.ID
+}) (AppVersion, error) {
+	panic("implement me")
+}
+
+func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
+	AppID graphql.ID
+	Input struct {
+		VersionNumber             int32
+		Name                      string
+		IconUrl                   *string
+		HasUiExtension            bool
+		UIExtensionEntryPointPath *string
+		IsPrivate                 bool
+	}
+}) (AppVersion, error) {
+	panic("implement me")
+}
+
+func (m Mutation) DeleteAppVersion(ct context.Context, args struct {
+	AppID         graphql.ID
+	VersionNumber int32
+}) (AppVersion, error) {
+	panic("implement me")
+}
