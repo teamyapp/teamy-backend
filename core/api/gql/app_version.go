@@ -18,7 +18,7 @@ func (a AppVersion) VersionNumber() int32 {
 	panic("implement me")
 }
 
-func (a AppVersion) Name() string {
+func (a AppVersion) AppName() string {
 	panic("implement me")
 }
 

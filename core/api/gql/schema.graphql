@@ -244,10 +244,10 @@ type App {
 type AppVersion {
 	app: App!
 	versionNumber: Int!
-	name: String!
+	appName: String!
 	iconUrl: String
 	hasUiExtension: Boolean!
-	uiExtensionEntryPointPath: String
+	uiExtensionEntrypointPath: String
 	isPublic: Boolean!
 	visibleToTeams: [Team!]!
 	createdAt: Time!
