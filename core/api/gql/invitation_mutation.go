@@ -3,8 +3,6 @@ package gql
 import (
 	"context"
 	"errors"
-	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/feature"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
@@ -12,8 +10,10 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/randgen"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 )
 
 const invitationCodeLen = 20
