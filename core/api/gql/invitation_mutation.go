@@ -3,6 +3,8 @@ package gql
 import (
 	"context"
 	"errors"
+	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
@@ -61,6 +63,20 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = m.registerResource(ct, authorization.InvitationResourceType, invitation.ID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Invitation{}, err
+		}
+
+		err = m.assignParentResource(ct, authorization.InvitationResourceType, invitation.ID, authorization.TeamResourceType, invitation.TeamID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Invitation{}, err
+		}
 	}
 
 	return newInvitation(m.deps, invitation), err
