@@ -101,8 +101,8 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"teamID":      teamID,
-				"currentTime": now.UTC(),
+				"TeamID":      teamID,
+				"CurrentTime": now.UTC(),
 			},
 		})
 		return entity.Sprint{}, err
@@ -113,7 +113,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"teamID": teamID,
+				"TeamID": teamID,
 			},
 		})
 		return entity.Sprint{}, err
@@ -304,8 +304,8 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"sprintID": fromSprintID,
-				"taskID":   taskID,
+				"SprintID": fromSprintID,
+				"TaskID":   taskID,
 			},
 		})
 		return entity.Task{}, err
@@ -370,8 +370,8 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"sprintID": sprintID,
-				"taskID":   taskID,
+				"SprintID": sprintID,
+				"TaskID":   taskID,
 			},
 		})
 		return entity.Task{}, err

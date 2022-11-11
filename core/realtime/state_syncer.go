@@ -36,8 +36,8 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 	ct := ctx.WithClientID(context.Background(), s.nextClientID)
 	s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary": "client connected",
-			"userID":  userID,
+			"Summary": "client connected",
+			"UserID":  userID,
 		},
 	})
 	userNotifier, err := s.getUserNotifier(ct, userID)
@@ -67,7 +67,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"userID": userID,
+				"UserID": userID,
 			},
 		})
 		return err
@@ -79,7 +79,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"clientID": clientID,
+				"ClientID": clientID,
 			},
 		})
 		return err
@@ -120,9 +120,9 @@ func (s *StateSyncer) subscribeToTeams(ct context.Context, userID uint64, userNo
 
 		s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 			obs.MessageProp: obs.Props{
-				"summary": "subscribed to team",
-				"teamID":  teamID,
-				"userID":  userID,
+				"Summary": "subscribed to team",
+				"TeamID":  teamID,
+				"UserID":  userID,
 			},
 		})
 		teamNotifier.registerUserNotifier(userID, userNotifier)
@@ -191,8 +191,8 @@ func NewStateSyncer(
 			} else {
 				dataCollector.Logger.LogWithContext(newCtx, obs.Info, obs.Props{
 					obs.MessageProp: obs.Props{
-						"summary":  "process mutation",
-						"mutation": string(buf),
+						"Summary":  "process mutation",
+						"Mutation": string(buf),
 					},
 				})
 			}

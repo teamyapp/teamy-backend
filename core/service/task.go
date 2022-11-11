@@ -430,7 +430,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"taskID": awaitingTaskID,
+				"TaskID": awaitingTaskID,
 			},
 		})
 		return entity.Task{}, err
@@ -470,7 +470,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"taskID": taskID,
+				"TaskID": taskID,
 			},
 		})
 		return entity.Task{}, err

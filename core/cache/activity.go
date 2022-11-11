@@ -50,7 +50,7 @@ func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID u
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"teamID": teamID,
+				"TeamID": teamID,
 			},
 		})
 		return nil, err

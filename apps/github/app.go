@@ -165,8 +165,8 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"summary": "fail to find state ID",
-				"stateID": stateID,
+				"Summary": "fail to find state ID",
+				"StateID": stateID,
 			},
 		})
 		w.WriteHeader(http.StatusInternalServerError)
@@ -204,8 +204,8 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"summary": "ail to delete state",
-				"stateID": stateID,
+				"Summary": "ail to delete state",
+				"StateID": stateID,
 			},
 		})
 		w.WriteHeader(http.StatusInternalServerError)
@@ -259,8 +259,8 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"summary":   "invalid request body signature",
-				"signature": bodySignatureHeaderParts[1],
+				"Summary":   "invalid request body signature",
+				"Signature": bodySignatureHeaderParts[1],
 			},
 		})
 		w.WriteHeader(http.StatusBadRequest)
@@ -271,9 +271,9 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	evtType := r.Header.Get("X-GitHub-Event")
 	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary":    "signature header mus start with sha256",
-			"deliveryID": deliveryID,
-			"eventType":  evtType,
+			"Summary":    "signature header mus start with sha256",
+			"DeliveryID": deliveryID,
+			"EventType":  evtType,
 		},
 	})
 	err = a.processEvent(ct, eventType(evtType), buf)
@@ -477,8 +477,8 @@ func (a App) processEvent(ct context.Context, evtType eventType, payload []byte)
 	default:
 		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 			obs.MessageProp: obs.Props{
-				"summary":   "unknown event",
-				"eventType": evtType,
+				"Summary":   "unknown event",
+				"EventType": evtType,
 			},
 		})
 	}
@@ -492,7 +492,7 @@ func (a App) processPullRequestEvent(ct context.Context, teamID uint64, evt even
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"senderType": evt.Sender.Type,
+				"SenderType": evt.Sender.Type,
 			},
 		})
 		return err
@@ -557,10 +557,10 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 
 	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary":           "pull request task created",
-			"repo":              evt.Repository.Name,
-			"pullRequestNumber": prEvt.Number,
-			"taskID":            createTaskRes.TaskId,
+			"Summary":           "pull request task created",
+			"Repo":              evt.Repository.Name,
+			"PullRequestNumber": prEvt.Number,
+			"TaskID":            createTaskRes.TaskId,
 		},
 	})
 	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: createTaskRes.TaskId}
@@ -572,8 +572,8 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 
 	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary": "task moved to in progress",
-			"taskID":  createTaskRes.TaskId,
+			"Summary": "task moved to in progress",
+			"TaskID":  createTaskRes.TaskId,
 		},
 	})
 	pr := entity.GithubPullRequest{
@@ -616,8 +616,8 @@ func (a App) processPullRequestReviewEvent(ct context.Context, teamID uint64, ev
 
 	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary": "moved review task to delivered",
-			"taskID":  codeReview.InternalCodeReviewTaskID,
+			"Summary": "moved review task to delivered",
+			"TaskID":  codeReview.InternalCodeReviewTaskID,
 		},
 	})
 	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
@@ -664,10 +664,10 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 			addressFeedbackTaskID := createTaskRes.TaskId
 			a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 				obs.MessageProp: obs.Props{
-					"summary":           "address feedback task created",
-					"repo":              evt.Repository.Name,
-					"pullRequestNumber": prReviewEvt.PullRequest.Number,
-					"taskID":            createTaskRes.TaskId,
+					"Summary":           "address feedback task created",
+					"Repo":              evt.Repository.Name,
+					"PullRequestNumber": prReviewEvt.PullRequest.Number,
+					"TaskID":            createTaskRes.TaskId,
 				},
 			})
 			pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prReviewEvt.PullRequest.NodeID)
@@ -688,10 +688,10 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 
 			a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 				obs.MessageProp: obs.Props{
-					"summary":           "pull request is waiting for address feedback task",
-					"repo":              evt.Repository.Name,
-					"pullRequestNumber": prReviewEvt.PullRequest.Number,
-					"taskID":            addressFeedbackTaskID,
+					"Summary":           "pull request is waiting for address feedback task",
+					"Repo":              evt.Repository.Name,
+					"PullRequestNumber": prReviewEvt.PullRequest.Number,
+					"TaskID":            addressFeedbackTaskID,
 				},
 			})
 			codeReview.InternalAddressFeedbackTaskID = &addressFeedbackTaskID
@@ -824,10 +824,10 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 
 	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary":           "review task created",
-			"repo":              evt.Repository.Name,
-			"pullRequestNumber": prEvt.PullRequest.Number,
-			"taskID":            createTaskRes.TaskId,
+			"Summary":           "review task created",
+			"Repo":              evt.Repository.Name,
+			"PullRequestNumber": prEvt.PullRequest.Number,
+			"TaskID":            createTaskRes.TaskId,
 		},
 	})
 	addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
@@ -843,10 +843,10 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 
 	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary":           "pull request is waiting for review task",
-			"pullRequestTaskID": pullRequestTaskID,
-			"githubReviewerID":  githubReviewerID,
-			"reviewTaskID":      createTaskRes.TaskId,
+			"Summary":           "pull request is waiting for review task",
+			"PullRequestTaskID": pullRequestTaskID,
+			"GithubReviewerID":  githubReviewerID,
+			"ReviewTaskID":      createTaskRes.TaskId,
 		},
 	})
 	return createTaskRes.TaskId, nil
