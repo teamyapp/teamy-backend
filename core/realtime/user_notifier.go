@@ -40,8 +40,8 @@ func (u UserNotifier) processMutation(mutation Mutation) {
 	ct = WithMutationID(ct, mutation.ID)
 	u.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary": "process mutation",
-			"userId":  u.userID,
+			"Summary": "process mutation",
+			"UserId":  u.userID,
 		},
 	})
 	for _, clientNotifier := range u.clientNotifiers {
