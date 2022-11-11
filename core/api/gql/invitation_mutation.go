@@ -168,8 +168,8 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"invitationID":   args.InvitationID,
-				"invitationCode": args.InvitationCode,
+				"InvitationID":   args.InvitationID,
+				"InvitationCode": args.InvitationCode,
 			},
 		})
 		return Invitation{}, err

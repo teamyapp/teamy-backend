@@ -35,14 +35,14 @@ func (c *ClientNotifier) processMutation(mutation Mutation) {
 	ct = WithMutationID(ct, mutation.ID)
 	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary": "process mutation",
+			"Summary": "process mutation",
 		},
 	})
 
 	if !c.acceptMutation {
 		c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 			obs.MessageProp: obs.Props{
-				"summary": "discard mutation",
+				"Summary": "discard mutation",
 			},
 		})
 		return
@@ -84,7 +84,7 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 			conn.SendMessage(jsonBuf)
 			dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 				obs.MessageProp: obs.Props{
-					"summary": "notification sent",
+					"Summary": "notification sent",
 				},
 			})
 		}

@@ -80,8 +80,8 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{
-				"userID":              userID,
-				"fileUploadSessionID": fileUploadSessionID,
+				"UserID":              userID,
+				"FileUploadSessionID": fileUploadSessionID,
 			},
 		})
 		return entity.User{}, err
