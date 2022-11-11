@@ -32,7 +32,7 @@ func (m MutationLogger) LogWithContextAndSkip(ct context.Context, level obs.LogL
 
 	mutationID, ok := GetMutationID(ct)
 	if ok {
-		newProps["mutationId"] = mutationID
+		newProps["MutationId"] = mutationID
 	}
 
 	m.logger.LogWithContextAndSkip(ct, level, newProps, skipCallers+1)
