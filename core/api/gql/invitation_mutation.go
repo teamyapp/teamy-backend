@@ -10,8 +10,10 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/randgen"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 )
 
 const invitationCodeLen = 20
@@ -61,6 +63,20 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = m.registerResource(ct, authorization.InvitationResourceType, invitation.ID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Invitation{}, err
+		}
+
+		err = m.assignParentResource(ct, authorization.InvitationResourceType, invitation.ID, authorization.TeamResourceType, invitation.TeamID)
+		if err != nil {
+			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return Invitation{}, err
+		}
 	}
 
 	return newInvitation(m.deps, invitation), err
