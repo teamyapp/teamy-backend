@@ -20,7 +20,7 @@
 - [staging](https://teamy-backend.staging.teamyapp.com)
 - [production](https://teamy-backend.teamyapp.com)
 
-3. Development
+## Development
 
 - Develop with [teamy/cloud](https://github.com/teamyapp/cloud):
    1. Uncomment this [line](https://github.com/teamyapp/teamy-backend/blob/master/go.mod#L14) 
