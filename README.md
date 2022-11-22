@@ -19,3 +19,11 @@
 - [testing](https://teamy-backend.testing.teamyapp.com)
 - [staging](https://teamy-backend.staging.teamyapp.com)
 - [production](https://teamy-backend.teamyapp.com)
+
+3. Development
+
+- Develop with [teamy/cloud](https://github.com/teamyapp/cloud):
+   1. Uncomment this [line](https://github.com/teamyapp/teamy-backend/blob/master/go.mod#L14) 
+   2. run `go run main.go` in teamy/backend
+
+
