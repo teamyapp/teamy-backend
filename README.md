@@ -22,8 +22,6 @@
 
 ## Development
 
-- Develop with [teamy/cloud](https://github.com/teamyapp/cloud):
+- Develop with local [teamy/cloud](https://github.com/teamyapp/cloud) backend:
    1. Uncomment this [line](https://github.com/teamyapp/teamy-backend/blob/master/go.mod#L14) 
-   2. run `go run main.go` in teamy/backend
-
-
+   2. run `go run main.go` in root of teamy/backend
