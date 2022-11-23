@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
@@ -41,6 +44,7 @@ type UpdateTaskInput struct {
 type Task struct {
 	dataCollector              obs.DataCollector
 	cloudClientRegistry        *cloudAPI.ClientRegistry
+	authorizer                 Authorizer
 	activityCache              cache.Activity
 	taskDao                    dao.Task
 	threadDao                  dao.Thread
@@ -133,10 +137,47 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		return entity.Task{}, err
 	}
 
+	if feature.EnableAuthorization {
+		err = t.authorizer.registerResource(ct, authorization.TaskResourceType, task.ID)
+		if err != nil {
+			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+
+		err = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, task.OwningTeamID)
+		if err != nil {
+			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+	}
+
 	return task, nil
 }
 
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewUpdateTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, authorization.Error{
+				Code:    authorization.UnauthorizedErrorCode,
+				Message: fmt.Sprintf("Unauthorize: %v", query),
+			}
+		}
+	}
+
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -562,6 +603,7 @@ func NewTask(
 	return Task{
 		dataCollector:              dataCollector,
 		cloudClientRegistry:        cloudClientRegistry,
+		authorizer:                 newAuthorizer(dataCollector, cloudClientRegistry),
 		activityCache:              activityCache,
 		taskDao:                    taskDao,
 		threadDao:                  threadDao,
