@@ -10,8 +10,11 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/retry"
+	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/runtime"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDi "github.com/teamyapp/teamy-backend/apps/inject"
@@ -86,6 +89,8 @@ func startServiceRunner(
 		return err
 	}
 
+	exponentialBackOff := backoff.NewExponentialBuilder().Build()
+	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), &exponentialBackOff, cfg.RequestRetryMaxCount)
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
 		rpc.ConnectionConfig{
@@ -96,7 +101,7 @@ func startServiceRunner(
 				return cfg.TeamyServiceAccountAPIToken
 			},
 			RequestTimeout: cfg.RequestTimeout,
-		})
+		}, maxCountRetry)
 	if err != nil {
 		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -112,7 +117,7 @@ func startServiceRunner(
 				return cfg.AppsServiceAccountAPIToken
 			},
 			RequestTimeout: cfg.RequestTimeout,
-		})
+		}, maxCountRetry)
 	if err != nil {
 		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
