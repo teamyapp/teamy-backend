@@ -89,8 +89,8 @@ func startServiceRunner(
 		return err
 	}
 
-	exponential := backoff.NewExponentialBuilder().Build()
-	maxCount := retry.NewMaxCount(runtime.NewBuiltInRuntime(), &exponential, cfg.RequestRetryMaxCount)
+	exponentialBackOff := backoff.NewExponentialBuilder().Build()
+	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), &exponentialBackOff, cfg.RequestRetryMaxCount)
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
 		rpc.ConnectionConfig{
@@ -101,7 +101,7 @@ func startServiceRunner(
 				return cfg.TeamyServiceAccountAPIToken
 			},
 			RequestTimeout: cfg.RequestTimeout,
-		}, maxCount)
+		}, maxCountRetry)
 	if err != nil {
 		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -117,7 +117,7 @@ func startServiceRunner(
 				return cfg.AppsServiceAccountAPIToken
 			},
 			RequestTimeout: cfg.RequestTimeout,
-		}, maxCount)
+		}, maxCountRetry)
 	if err != nil {
 		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return err
