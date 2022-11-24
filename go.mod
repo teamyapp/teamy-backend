@@ -6,8 +6,8 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/graph-gophers/graphql-go v1.4.0
-	github.com/teamyapp/cloud v0.0.0-20221111035346-975f92128917
-	google.golang.org/grpc v1.50.1
+	github.com/teamyapp/cloud v0.0.0-20221123233446-711ad11defdc
+	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 )
 
@@ -26,9 +26,9 @@ require (
 	github.com/minio/minio-go v6.0.14+incompatible // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/rubenv/sql-migrate v1.2.0 // indirect
-	golang.org/x/crypto v0.2.0 // indirect
+	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
-	google.golang.org/genproto v0.0.0-20221109142239-94d6d90a7d66 // indirect
+	google.golang.org/genproto v0.0.0-20221118155620-16455021b5e6 // indirect
 )

@@ -22,6 +22,7 @@ type Config struct {
 	TeamyAPIPort                int           `envconfig:"TEAMY_API_PORT" default:"9001"`
 	TeamyAPIShouldEncrypt       bool          `envconfig:"TEAMY_API_SHOULD_ENCRYPT" default:"false"`
 	RequestTimeout              time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10s"`
+	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
 }
 
 func FromEnv(dataCollector obs.DataCollector) (Config, error) {
