@@ -2,15 +2,9 @@ package gql
 
 import (
 	"context"
-	"errors"
-	"fmt"
-
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
-	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -48,20 +42,6 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		return Task{}, err
 	}
 
-	if feature.EnableAuthorization {
-		err = m.registerResource(ct, authorization.TaskResourceType, task.ID)
-		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return Task{}, err
-		}
-
-		err = m.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, task.OwningTeamID)
-		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return Task{}, err
-		}
-	}
-
 	return newTask(m.deps, task), nil
 }
 
@@ -76,33 +56,10 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		DueAt        *graphql.Time
 	}
 }) (Task, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Task{}, err
-	}
-
 	taskID, err := fromGraphQLID(args.TaskID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Task{}, err
-	}
-
-	if feature.EnableAuthorization {
-		query := authorization.NewUpdateTaskQuery(userID, taskID)
-		hasPermission, err := m.hasPermission(ct, query)
-		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return Task{}, err
-		}
-
-		if !hasPermission {
-			return Task{}, ResolverError{
-				Code:    unauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorize: %v", query),
-			}
-		}
 	}
 
 	ownerUserID, err := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Input.OwnerUserID)
