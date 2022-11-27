@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/feature"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
@@ -13,10 +11,12 @@ import (
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 )
 
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
@@ -144,7 +144,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 			return entity.Task{}, err
 		}
 
-		err = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, task.OwningTeamID)
+		err = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, teamID)
 		if err != nil {
 			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
@@ -173,7 +173,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		if !hasPermission {
 			return entity.Task{}, authorization.Error{
 				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorize: %v", query),
+				Message: fmt.Sprintf("Unauthorized: %v", query),
 			}
 		}
 	}
