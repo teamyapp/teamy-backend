@@ -18,6 +18,15 @@ func NewUpdateTeamSettingsQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewCreateTaskQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "CreateTask",
+		UserID:       userID,
+	}
+}
+
 func NewUpdateTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TaskResourceType,
