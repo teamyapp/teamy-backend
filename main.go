@@ -90,7 +90,7 @@ func startServiceRunner(
 	}
 
 	exponentialBackOff := backoff.NewExponentialBuilder().Build()
-	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), &exponentialBackOff, cfg.RequestRetryMaxCount)
+	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, cfg.RequestRetryMaxCount)
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
 		rpc.ConnectionConfig{
