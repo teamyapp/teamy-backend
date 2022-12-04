@@ -32,6 +32,7 @@ type Sprint struct {
 	taskSyncer               collection.TaskSyncer
 	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer
 	sprintParticipantSyncer  collection.SprintParticipantSyncer
+	taskService              Task
 }
 
 func (s Sprint) FindTasksInSprint(
@@ -273,6 +274,22 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	return task, s.tryReduceBandwidth(ct, sprintID, task)
 }
 
+func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
+	res := make([]entity.Task, 0)
+	for _, taskID := range taskIDs {
+		task, err := s.copyTaskToSprint(ct, toSprintID, taskID)
+
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			continue
+		}
+
+		res = append(res, task)
+	}
+
+	return res, nil
+}
+
 func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
 	res := make([]entity.Task, 0)
 	for _, taskID := range taskIDs {
@@ -287,6 +304,57 @@ func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSpr
 	}
 
 	return res, nil
+}
+
+func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID uint64) (entity.Task, error) {
+	task, err := s.taskDao.FindTaskByID(ct, taskID)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	cloneTaskInput := CreateTaskInput{
+		Goal:          task.Goal,
+		Context:       task.Context,
+		OwnerUserID:   task.OwnerUserID,
+		CreatorUserID: task.CreatorUserID,
+		OwningTeamID:  task.OwningTeamID,
+		Status:        task.Status,
+		DueAt:         task.DueAt,
+		DeliveredAt:   task.DeliveredAt,
+		IsPlanned:     &task.IsPlanned,
+		Effort:        task.Effort,
+	}
+	task, err = s.taskService.CloneTask(ct, task.OwningTeamID, cloneTaskInput)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	relation := entity.SprintTaskRelation{
+		SprintID:  toSprintID,
+		TaskID:    task.ID,
+		CreatedAt: time.Now().UTC(),
+	}
+	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(ct, relation)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	task, err = s.taskDao.FindTaskByID(ct, task.ID)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	err = s.tryReduceBandwidth(ct, toSprintID, task)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	return task, nil
 }
 
 func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {
@@ -461,6 +529,7 @@ func NewSprint(
 	taskSyncer collection.TaskSyncer,
 	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
+	taskService Task,
 ) Sprint {
 	return Sprint{
 		dataCollector:            dataCollector,
@@ -473,5 +542,6 @@ func NewSprint(
 		taskSyncer:               taskSyncer,
 		sprintTaskRelationSyncer: sprintTaskRelationSyncer,
 		sprintParticipantSyncer:  sprintParticipantSyncer,
+		taskService:              taskService,
 	}
 }

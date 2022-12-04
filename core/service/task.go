@@ -25,11 +25,16 @@ var awaitableTaskStatuses = map[entity.TaskStatus]bool{
 }
 
 type CreateTaskInput struct {
-	Goal        string
-	Context     *string
-	OwnerUserID *uint64
-	DueAt       *time.Time
-	IsPlanned   *bool
+	Goal          string
+	Context       *string
+	OwnerUserID   *uint64
+	CreatorUserID uint64
+	OwningTeamID  uint64
+	Status        entity.TaskStatus
+	DueAt         *time.Time
+	DeliveredAt   *time.Time
+	IsPlanned     *bool
+	Effort        *time.Duration
 }
 
 type UpdateTaskInput struct {
@@ -91,6 +96,86 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	return tasks, nil
 }
 
+func (t Task) createTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
+	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
+	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	threadID, err := t.threadService.createThread(ct)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	task := entity.Task{
+		ID:               genTaskIDRes.UniqueNumber,
+		Goal:             taskInput.Goal,
+		Context:          taskInput.Context,
+		Status:           taskInput.Status,
+		IsPlanned:        *taskInput.IsPlanned,
+		CreatorUserID:    taskInput.CreatorUserID,
+		OwningTeamID:     taskInput.OwningTeamID,
+		Effort:           taskInput.Effort,
+		OwnerUserID:      taskInput.OwnerUserID,
+		CommentsThreadID: threadID,
+		CreatedAt:        time.Now(),
+		DueAt:            taskInput.DueAt,
+		DeliveredAt:      taskInput.DeliveredAt,
+	}
+
+	err = t.taskSyncer.CreateAndSyncTask(ct, task)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = t.authorizer.registerResource(ct, authorization.TaskResourceType, task.ID)
+		if err != nil {
+			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+
+		err = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, teamID)
+		if err != nil {
+			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+	}
+
+	return task, nil
+}
+
+func (t Task) CloneTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewCreateTaskQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, authorization.Error{
+				Code:    authorization.UnauthorizedErrorCode,
+				Message: fmt.Sprintf("Unauthorized: %v", query),
+			}
+		}
+	}
+
+	return t.createTask(ct, teamID, taskInput)
+}
+
 func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
@@ -115,59 +200,23 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		}
 	}
 
-	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
-	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	threadID, err := t.threadService.createThread(ct)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
 	var isPlanned bool
 	if taskInput.IsPlanned != nil {
 		isPlanned = *taskInput.IsPlanned
 	}
 
-	task := entity.Task{
-		ID:               genTaskIDRes.UniqueNumber,
-		Goal:             taskInput.Goal,
-		Context:          taskInput.Context,
-		Status:           entity.TaskStatusTodo,
-		IsPlanned:        isPlanned,
-		CreatorUserID:    userID,
-		OwningTeamID:     teamID,
-		OwnerUserID:      taskInput.OwnerUserID,
-		CommentsThreadID: threadID,
-		CreatedAt:        time.Now(),
-		DueAt:            taskInput.DueAt,
+	createTaskInput := CreateTaskInput{
+		IsPlanned:     &isPlanned,
+		Goal:          taskInput.Goal,
+		Context:       taskInput.Context,
+		Status:        entity.TaskStatusTodo,
+		CreatorUserID: userID,
+		OwningTeamID:  teamID,
+		OwnerUserID:   taskInput.OwnerUserID,
+		DueAt:         taskInput.DueAt,
 	}
 
-	err = t.taskSyncer.CreateAndSyncTask(ct, task)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	if feature.EnableAuthorization {
-		err = t.authorizer.registerResource(ct, authorization.TaskResourceType, task.ID)
-		if err != nil {
-			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Task{}, err
-		}
-
-		err = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, teamID)
-		if err != nil {
-			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Task{}, err
-		}
-	}
-
-	return task, nil
+	return t.createTask(ct, teamID, createTaskInput)
 }
 
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, error) {

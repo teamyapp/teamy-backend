@@ -65,7 +65,7 @@ var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
 	newTeamService,
-	service.NewSprint,
+	newSprintService,
 	newUserService,
 )
 
@@ -159,6 +159,34 @@ func newUserService(
 		cloudClientRegistry,
 		userDao,
 		userFileUploadSessionDao)
+}
+
+func newSprintService(
+	dataCollector obs.DataCollector,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
+	taskDao dao.Task,
+	sprintDao dao.Sprint,
+	sprintTaskRelationDao dao.SprintTaskRelation,
+	sprintParticipantDao dao.SprintParticipant,
+	teamMemberDao dao.TeamMember,
+	taskSyncer collection.TaskSyncer,
+	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer,
+	sprintParticipantSyncer collection.SprintParticipantSyncer,
+	taskService service.Task,
+) service.Sprint {
+	return service.NewSprint(
+		dataCollector,
+		cloudClientRegistry,
+		taskDao,
+		sprintDao,
+		sprintTaskRelationDao,
+		sprintParticipantDao,
+		teamMemberDao,
+		taskSyncer,
+		sprintTaskRelationSyncer,
+		sprintParticipantSyncer,
+		taskService,
+	)
 }
 
 func newTeamService(
