@@ -278,7 +278,6 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 	res := make([]entity.Task, 0)
 	for _, taskID := range taskIDs {
 		task, err := s.copyTaskToSprint(ct, toSprintID, taskID)
-
 		if err != nil {
 			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
