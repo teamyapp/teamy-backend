@@ -61,8 +61,13 @@ func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL 
 	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, taskSyncer, taskAwaitForRelationSyncer, sprintParticipantSyncer, serviceThread)
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(dataCollector, sqlDB)
 	sprintTaskRelationSyncer := collection.NewSprintTaskRelationSyncer(dataCollector, realTimeStateSyncer, sprintTaskRelation, sprint)
+<<<<<<< HEAD
 	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, taskSyncer, sprintTaskRelationSyncer, sprintParticipantSyncer, serviceTask)
 	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, task, sprint, team, teamMember, teamFileUploadSession, teamMemberSyncer, sprintParticipantSyncer, serviceSprint)
+=======
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, taskSyncer, sprintTaskRelationSyncer, sprintParticipantSyncer)
+	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, task, sprint, team, teamMember, teamFileUploadSession, teamMemberSyncer, sprintParticipantSyncer, serviceSprint, teamSyncer)
+>>>>>>> 4c4b606 (Add userGroups and permission when creating new team)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
 	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
 	dependencies := gql.NewDependencies(dataCollector, cloudAPIClientRegistry, user, team, teamMember, invitation, message, activity, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint, serviceUser)
@@ -152,6 +157,7 @@ func newTeamService(
 	teamMemberSyncer collection.TeamMemberSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
 	sprintService service.Sprint,
+	teamSyncer collection.TeamSyncer,
 ) service.Team {
 	return service.NewTeam(
 		dataCollector,
@@ -164,7 +170,9 @@ func newTeamService(
 		teamFileUploadSessionDao,
 		teamMemberSyncer,
 		sprintParticipantSyncer,
-		sprintService)
+		sprintService,
+		teamSyncer,
+	)
 }
 
 func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {

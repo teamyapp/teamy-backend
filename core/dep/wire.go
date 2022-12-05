@@ -174,6 +174,7 @@ func newTeamService(
 	teamMemberSyncer collection.TeamMemberSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
 	sprintService service.Sprint,
+	teamSyncer collection.TeamSyncer,
 ) service.Team {
 	return service.NewTeam(
 		dataCollector,
@@ -186,7 +187,9 @@ func newTeamService(
 		teamFileUploadSessionDao,
 		teamMemberSyncer,
 		sprintParticipantSyncer,
-		sprintService)
+		sprintService,
+		teamSyncer,
+	)
 }
 
 func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
