@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -151,12 +153,9 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 		return []Task{}, err
 	}
 
-	gqlTasks := make([]Task, 0)
-	for _, task := range tasks {
-		gqlTasks = append(gqlTasks, newTask(m.deps, task))
-	}
-
-	return gqlTasks, nil
+	return collect.Map(tasks, func(task entity.Task, _ int) Task {
+		return newTask(m.deps, task)
+	}), nil
 }
 
 func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
