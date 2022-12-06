@@ -3,15 +3,19 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 )
 
 const timePerWeek = 7 * 24 * time.Hour
@@ -24,6 +28,7 @@ type CreateSprintInput struct {
 type Sprint struct {
 	dataCollector            obs.DataCollector
 	cloudClientRegistry      *cloudAPI.ClientRegistry
+	authorizer               Authorizer
 	taskDao                  dao.Task
 	sprintDao                dao.Sprint
 	sprintTaskRelationDao    dao.SprintTaskRelation
@@ -276,6 +281,36 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 
 func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
 	res := make([]entity.Task, 0)
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []entity.Task{}, err
+	}
+
+	if feature.EnableAuthorization {
+		sprint, err := s.sprintDao.FindSprintByID(ct, toSprintID)
+
+		if !ok {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return []entity.Task{}, err
+		}
+		// TODO: should replace by Clone Task authorization
+		query := authorization.NewCreateTaskQuery(userID, sprint.OwningTeamID)
+		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		if err != nil {
+			s.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return []entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return []entity.Task{}, authorization.Error{
+				Code:    authorization.UnauthorizedErrorCode,
+				Message: fmt.Sprintf("Unauthorized: %v", query),
+			}
+		}
+	}
+
 	for _, taskID := range taskIDs {
 		task, err := s.copyTaskToSprint(ct, toSprintID, taskID)
 		if err != nil {
@@ -312,7 +347,7 @@ func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID u
 		return entity.Task{}, err
 	}
 
-	cloneTaskInput := CreateTaskInput{
+	cloneTask := createTaskInput{
 		Goal:          task.Goal,
 		Context:       task.Context,
 		OwnerUserID:   task.OwnerUserID,
@@ -321,10 +356,10 @@ func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID u
 		Status:        task.Status,
 		DueAt:         task.DueAt,
 		DeliveredAt:   task.DeliveredAt,
-		IsPlanned:     &task.IsPlanned,
+		IsPlanned:     task.IsPlanned,
 		Effort:        task.Effort,
 	}
-	task, err = s.taskService.CloneTask(ct, task.OwningTeamID, cloneTaskInput)
+	task, err = s.taskService.createTask(ct, task.OwningTeamID, cloneTask)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -520,6 +555,7 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, sprintID uint64, task e
 func NewSprint(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	authorizer Authorizer,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintTaskRelationDao dao.SprintTaskRelation,
@@ -533,6 +569,7 @@ func NewSprint(
 	return Sprint{
 		dataCollector:            dataCollector,
 		cloudClientRegistry:      cloudClientRegistry,
+		authorizer:               authorizer,
 		taskDao:                  taskDao,
 		sprintDao:                sprintDao,
 		sprintTaskRelationDao:    sprintTaskRelationDao,

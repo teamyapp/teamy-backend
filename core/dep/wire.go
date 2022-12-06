@@ -65,7 +65,7 @@ var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
 	newTeamService,
-	newSprintService,
+	service.NewSprint,
 	newUserService,
 )
 
@@ -100,6 +100,7 @@ func InitGraphQLAPI(
 		gql.NewDependencies,
 		gql.NewResolver,
 		api.NewGraphQL,
+		service.NewAuthorizer,
 	)
 	return api.GraphQL{}, nil
 }
@@ -126,6 +127,7 @@ func InitTaskRPCAPI(
 		cache.NewActivity,
 		serviceSet,
 		api.NewTaskRPC,
+		service.NewAuthorizer,
 	)
 	return api.TaskRPC{}
 }
@@ -142,6 +144,7 @@ func InitSprintRPCAPI(
 		serviceSet,
 		cache.NewActivity,
 		api.NewSprintRPC,
+		service.NewAuthorizer,
 	)
 	return api.SprintRPC{}
 }
@@ -159,34 +162,6 @@ func newUserService(
 		cloudClientRegistry,
 		userDao,
 		userFileUploadSessionDao)
-}
-
-func newSprintService(
-	dataCollector obs.DataCollector,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	taskDao dao.Task,
-	sprintDao dao.Sprint,
-	sprintTaskRelationDao dao.SprintTaskRelation,
-	sprintParticipantDao dao.SprintParticipant,
-	teamMemberDao dao.TeamMember,
-	taskSyncer collection.TaskSyncer,
-	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer,
-	sprintParticipantSyncer collection.SprintParticipantSyncer,
-	taskService service.Task,
-) service.Sprint {
-	return service.NewSprint(
-		dataCollector,
-		cloudClientRegistry,
-		taskDao,
-		sprintDao,
-		sprintTaskRelationDao,
-		sprintParticipantDao,
-		teamMemberDao,
-		taskSyncer,
-		sprintTaskRelationSyncer,
-		sprintParticipantSyncer,
-		taskService,
-	)
 }
 
 func newTeamService(

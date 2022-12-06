@@ -25,16 +25,26 @@ var awaitableTaskStatuses = map[entity.TaskStatus]bool{
 }
 
 type CreateTaskInput struct {
+	Goal         string
+	Context      *string
+	OwnerUserID  *uint64
+	OwningTeamID uint64
+	IsPlanned    *bool
+	DueAt        *time.Time
+}
+
+type createTaskInput struct {
 	Goal          string
+	DueAt         *time.Time
 	Context       *string
-	OwnerUserID   *uint64
 	CreatorUserID uint64
+	OwnerUserID   *uint64
 	OwningTeamID  uint64
 	Status        entity.TaskStatus
-	DueAt         *time.Time
-	DeliveredAt   *time.Time
-	IsPlanned     *bool
+	IsPlanned     bool
 	Effort        *time.Duration
+	UpdatedAt     *time.Time
+	DeliveredAt   *time.Time
 }
 
 type UpdateTaskInput struct {
@@ -96,7 +106,7 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	return tasks, nil
 }
 
-func (t Task) createTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
+func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTaskInput) (entity.Task, error) {
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
@@ -115,7 +125,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput CreateTask
 		Goal:             taskInput.Goal,
 		Context:          taskInput.Context,
 		Status:           taskInput.Status,
-		IsPlanned:        *taskInput.IsPlanned,
+		IsPlanned:        taskInput.IsPlanned,
 		CreatorUserID:    taskInput.CreatorUserID,
 		OwningTeamID:     taskInput.OwningTeamID,
 		Effort:           taskInput.Effort,
@@ -149,33 +159,6 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput CreateTask
 	return task, nil
 }
 
-func (t Task) CloneTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	if feature.EnableAuthorization {
-		query := authorization.NewCreateTaskQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
-		if err != nil {
-			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Task{}, err
-		}
-
-		if !hasPermission {
-			return entity.Task{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
-			}
-		}
-	}
-
-	return t.createTask(ct, teamID, taskInput)
-}
-
 func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
@@ -199,24 +182,22 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 			}
 		}
 	}
-
 	var isPlanned bool
 	if taskInput.IsPlanned != nil {
 		isPlanned = *taskInput.IsPlanned
 	}
 
-	createTaskInput := CreateTaskInput{
-		IsPlanned:     &isPlanned,
+	input := createTaskInput{
+		IsPlanned:     isPlanned,
 		Goal:          taskInput.Goal,
 		Context:       taskInput.Context,
 		Status:        entity.TaskStatusTodo,
 		CreatorUserID: userID,
 		OwningTeamID:  teamID,
 		OwnerUserID:   taskInput.OwnerUserID,
-		DueAt:         taskInput.DueAt,
 	}
 
-	return t.createTask(ct, teamID, createTaskInput)
+	return t.createTask(ct, teamID, input)
 }
 
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, error) {
@@ -654,6 +635,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 func NewTask(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	authorizer Authorizer,
 	activityCache cache.Activity,
 	taskDao dao.Task,
 	threadDao dao.Thread,
@@ -668,7 +650,7 @@ func NewTask(
 	return Task{
 		dataCollector:              dataCollector,
 		cloudClientRegistry:        cloudClientRegistry,
-		authorizer:                 newAuthorizer(dataCollector, cloudClientRegistry),
+		authorizer:                 authorizer,
 		activityCache:              activityCache,
 		taskDao:                    taskDao,
 		threadDao:                  threadDao,
