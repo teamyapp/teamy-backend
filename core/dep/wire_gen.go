@@ -123,7 +123,7 @@ var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), 
 
 var collectionSyncerSet = wire.NewSet(collection.NewInvitationSyncer, collection.NewMessageSyncer, collection.NewTaskSyncer, collection.NewTaskAwaitForRelationSyncer, collection.NewSprintTaskRelationSyncer, collection.NewTeamSyncer, collection.NewTeamMemberSyncer, collection.NewUserSyncer, collection.NewSprintParticipantSyncer)
 
-var serviceSet = wire.NewSet(service.NewThread, service.NewTask, newTeamService, service.NewSprint, newUserService)
+var serviceSet = wire.NewSet(service.NewThread, service.NewTask, newTeamService, service.NewSprint, newUserService, service.NewAuthorizer)
 
 func newUserService(
 	dataCollector obs.DataCollector,

@@ -25,11 +25,11 @@ var awaitableTaskStatuses = map[entity.TaskStatus]bool{
 }
 
 type CreateTaskInput struct {
-	Goal         string
-	Context      *string
-	OwnerUserID  *uint64
-	IsPlanned    *bool
-	DueAt        *time.Time
+	Goal        string
+	Context     *string
+	OwnerUserID *uint64
+	IsPlanned   *bool
+	DueAt       *time.Time
 }
 
 type createTaskInput struct {
@@ -125,7 +125,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		Status:           taskInput.Status,
 		IsPlanned:        taskInput.IsPlanned,
 		CreatorUserID:    taskInput.CreatorUserID,
-		OwningTeamID:     taskInput.OwningTeamID,
+		OwningTeamID:     teamID,
 		Effort:           taskInput.Effort,
 		OwnerUserID:      taskInput.OwnerUserID,
 		CommentsThreadID: threadID,
@@ -191,7 +191,6 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		Context:       taskInput.Context,
 		Status:        entity.TaskStatusTodo,
 		CreatorUserID: userID,
-		OwningTeamID:  teamID,
 		OwnerUserID:   taskInput.OwnerUserID,
 	}
 

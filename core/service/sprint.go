@@ -294,7 +294,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return []entity.Task{}, err
 		}
-		
+
 		// TODO: should replace by Clone Task authorization
 		query := authorization.NewCreateTaskQuery(userID, sprint.OwningTeamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
@@ -352,28 +352,21 @@ func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID u
 		Context:       task.Context,
 		OwnerUserID:   task.OwnerUserID,
 		CreatorUserID: task.CreatorUserID,
-		OwningTeamID:  task.OwningTeamID,
 		Status:        task.Status,
 		DueAt:         task.DueAt,
 		DeliveredAt:   task.DeliveredAt,
 		IsPlanned:     task.IsPlanned,
 		Effort:        task.Effort,
 	}
-	createdTask, err = s.taskService.createTask(ct, task.OwningTeamID, cloneTask)
+	createdTask, err := s.taskService.createTask(ct, task.OwningTeamID, cloneTask)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	s.AddTaskToSprint()
+	s.AddTaskToSprint(ct, toSprintID, createdTask.ID)
 
-	task, err = s.taskDao.FindTaskByID(ct, task.ID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	return task, nil
+	return createdTask, nil
 }
 
 func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {

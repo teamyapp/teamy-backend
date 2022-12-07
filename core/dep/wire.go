@@ -67,6 +67,7 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
+	service.NewAuthorizer,
 )
 
 func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
@@ -100,7 +101,6 @@ func InitGraphQLAPI(
 		gql.NewDependencies,
 		gql.NewResolver,
 		api.NewGraphQL,
-		service.NewAuthorizer,
 	)
 	return api.GraphQL{}, nil
 }
