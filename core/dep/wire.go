@@ -127,7 +127,6 @@ func InitTaskRPCAPI(
 		cache.NewActivity,
 		serviceSet,
 		api.NewTaskRPC,
-		service.NewAuthorizer,
 	)
 	return api.TaskRPC{}
 }
@@ -144,7 +143,6 @@ func InitSprintRPCAPI(
 		serviceSet,
 		cache.NewActivity,
 		api.NewSprintRPC,
-		service.NewAuthorizer,
 	)
 	return api.SprintRPC{}
 }

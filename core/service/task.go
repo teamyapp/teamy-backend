@@ -28,7 +28,6 @@ type CreateTaskInput struct {
 	Goal         string
 	Context      *string
 	OwnerUserID  *uint64
-	OwningTeamID uint64
 	IsPlanned    *bool
 	DueAt        *time.Time
 }
@@ -39,7 +38,6 @@ type createTaskInput struct {
 	Context       *string
 	CreatorUserID uint64
 	OwnerUserID   *uint64
-	OwningTeamID  uint64
 	Status        entity.TaskStatus
 	IsPlanned     bool
 	Effort        *time.Duration
