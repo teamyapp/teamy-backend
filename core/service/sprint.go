@@ -280,15 +280,14 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 }
 
 func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
-	res := make([]entity.Task, 0)
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("Unauthorized")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []entity.Task{}, err
-	}
-
 	if feature.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			err := errors.New("Unauthorized")
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return []entity.Task{}, err
+		}
+
 		sprint, err := s.sprintDao.FindSprintByID(ct, toSprintID)
 		if err != nil {
 			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -311,6 +310,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		}
 	}
 
+	res := make([]entity.Task, 0)
 	for _, taskID := range taskIDs {
 		task, err := s.copyTaskToSprint(ct, toSprintID, taskID)
 		if err != nil {
