@@ -283,18 +283,18 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 	res := make([]entity.Task, 0)
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
+		err := errors.New("Unauthorized")
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return []entity.Task{}, err
 	}
 
 	if feature.EnableAuthorization {
 		sprint, err := s.sprintDao.FindSprintByID(ct, toSprintID)
-
-		if !ok {
+		if err != nil {
 			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return []entity.Task{}, err
 		}
+		
 		// TODO: should replace by Clone Task authorization
 		query := authorization.NewCreateTaskQuery(userID, sprint.OwningTeamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
@@ -359,30 +359,15 @@ func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID u
 		IsPlanned:     task.IsPlanned,
 		Effort:        task.Effort,
 	}
-	task, err = s.taskService.createTask(ct, task.OwningTeamID, cloneTask)
+	createdTask, err = s.taskService.createTask(ct, task.OwningTeamID, cloneTask)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	relation := entity.SprintTaskRelation{
-		SprintID:  toSprintID,
-		TaskID:    task.ID,
-		CreatedAt: time.Now().UTC(),
-	}
-	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(ct, relation)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
+	s.AddTaskToSprint()
 
 	task, err = s.taskDao.FindTaskByID(ct, task.ID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	err = s.tryReduceBandwidth(ct, toSprintID, task)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
