@@ -47,8 +47,14 @@ type Mutation {
 	finishUserProfileUploadSession(fileUploadSessionId: ID!): User!
 
 	# Invitation
-	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!
-	updateInvitation(invitationId: ID!, input: UpdateInvitationInput!): Invitation!
+	createInvitation(
+		teamId: ID!
+		invitation: CreateInvitationInput!
+	): Invitation!
+	updateInvitation(
+		invitationId: ID!
+		input: UpdateInvitationInput!
+	): Invitation!
 	acceptInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	declineInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	deleteInvitation(invitationId: ID!): Invitation!
@@ -57,7 +63,15 @@ type Mutation {
 	createSprint(teamId: ID!, sprint: CreateSprintInput!): Sprint!
 	deleteSprint(sprintId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
-	moveTasksToSprint(fromSprintId: ID!, toSprintId: ID!, taskIds: [ID!]!): [Task!]!
+	moveTasksToSprint(
+		fromSprintId: ID!
+		toSprintId: ID!
+		taskIds: [ID!]!
+	): [Task!]!
+	copyTasksToSprint(
+		toSprintId: ID!
+		taskIds: [ID!]!
+	): [Task!]!
 	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
 
 	# File
@@ -74,8 +88,16 @@ type Mutation {
 	createAppVersion(appId: ID!): AppVersion!
 	updateAppVersion(appId: ID!, input: UpdateAppVersionInput!): AppVersion!
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
-	addVisibleTeamToAppVersion(appId: ID!, versionNumber: Int!, teamId: ID!): AppVersion!
-	removeVisibleTeamFromAppVersion(appId: ID!, versionNumber: Int!, teamId: ID!): AppVersion!
+	addVisibleTeamToAppVersion(
+		appId: ID!
+		versionNumber: Int!
+		teamId: ID!
+	): AppVersion!
+	removeVisibleTeamFromAppVersion(
+		appId: ID!
+		versionNumber: Int!
+		teamId: ID!
+	): AppVersion!
 }
 
 scalar Duration

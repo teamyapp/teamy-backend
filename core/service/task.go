@@ -28,8 +28,21 @@ type CreateTaskInput struct {
 	Goal        string
 	Context     *string
 	OwnerUserID *uint64
-	DueAt       *time.Time
 	IsPlanned   *bool
+	DueAt       *time.Time
+}
+
+type createTaskInput struct {
+	Goal          string
+	DueAt         *time.Time
+	Context       *string
+	CreatorUserID uint64
+	OwnerUserID   *uint64
+	Status        entity.TaskStatus
+	IsPlanned     bool
+	Effort        *time.Duration
+	UpdatedAt     *time.Time
+	DeliveredAt   *time.Time
 }
 
 type UpdateTaskInput struct {
@@ -91,30 +104,7 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	return tasks, nil
 }
 
-func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	if feature.EnableAuthorization {
-		query := authorization.NewCreateTaskQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
-		if err != nil {
-			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Task{}, err
-		}
-
-		if !hasPermission {
-			return entity.Task{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
-			}
-		}
-	}
-
+func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTaskInput) (entity.Task, error) {
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
@@ -128,23 +118,20 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		return entity.Task{}, err
 	}
 
-	var isPlanned bool
-	if taskInput.IsPlanned != nil {
-		isPlanned = *taskInput.IsPlanned
-	}
-
 	task := entity.Task{
 		ID:               genTaskIDRes.UniqueNumber,
 		Goal:             taskInput.Goal,
 		Context:          taskInput.Context,
-		Status:           entity.TaskStatusTodo,
-		IsPlanned:        isPlanned,
-		CreatorUserID:    userID,
+		Status:           taskInput.Status,
+		IsPlanned:        taskInput.IsPlanned,
+		CreatorUserID:    taskInput.CreatorUserID,
 		OwningTeamID:     teamID,
+		Effort:           taskInput.Effort,
 		OwnerUserID:      taskInput.OwnerUserID,
 		CommentsThreadID: threadID,
 		CreatedAt:        time.Now(),
 		DueAt:            taskInput.DueAt,
+		DeliveredAt:      taskInput.DeliveredAt,
 	}
 
 	err = t.taskSyncer.CreateAndSyncTask(ct, task)
@@ -168,6 +155,46 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 	}
 
 	return task, nil
+}
+
+func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewCreateTaskQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			t.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, authorization.Error{
+				Code:    authorization.UnauthorizedErrorCode,
+				Message: fmt.Sprintf("Unauthorized: %v", query),
+			}
+		}
+	}
+	var isPlanned bool
+	if taskInput.IsPlanned != nil {
+		isPlanned = *taskInput.IsPlanned
+	}
+
+	input := createTaskInput{
+		IsPlanned:     isPlanned,
+		Goal:          taskInput.Goal,
+		Context:       taskInput.Context,
+		Status:        entity.TaskStatusTodo,
+		CreatorUserID: userID,
+		OwnerUserID:   taskInput.OwnerUserID,
+	}
+
+	return t.createTask(ct, teamID, input)
 }
 
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, error) {
@@ -605,6 +632,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 func NewTask(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	authorizer Authorizer,
 	activityCache cache.Activity,
 	taskDao dao.Task,
 	threadDao dao.Thread,
@@ -619,7 +647,7 @@ func NewTask(
 	return Task{
 		dataCollector:              dataCollector,
 		cloudClientRegistry:        cloudClientRegistry,
-		authorizer:                 newAuthorizer(dataCollector, cloudClientRegistry),
+		authorizer:                 authorizer,
 		activityCache:              activityCache,
 		taskDao:                    taskDao,
 		threadDao:                  threadDao,

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -64,7 +65,7 @@ func (a Authorizer) assignParentResource(
 	return nil
 }
 
-func newAuthorizer(
+func NewAuthorizer(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *api.ClientRegistry,
 ) Authorizer {
