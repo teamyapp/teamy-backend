@@ -27,6 +27,15 @@ func NewCreateTaskQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewCloneTaskQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "CloneTask",
+		UserID:       userID,
+	}
+}
+
 func NewUpdateTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TaskResourceType,

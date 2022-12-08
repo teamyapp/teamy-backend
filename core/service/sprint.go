@@ -294,8 +294,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 			return []entity.Task{}, err
 		}
 
-		// TODO: should replace by Clone Task authorization
-		query := authorization.NewCreateTaskQuery(userID, sprint.OwningTeamID)
+		query := authorization.NewCloneTaskQuery(userID, sprint.OwningTeamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
 			s.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
