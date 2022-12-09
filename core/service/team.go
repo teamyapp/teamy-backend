@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/feature"
-	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
@@ -412,6 +413,7 @@ func NewTeam(
 	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	authorizer Authorizer,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
@@ -426,7 +428,7 @@ func NewTeam(
 		dataCollector:              dataCollector,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
-		authorizer:                 newAuthorizer(dataCollector, cloudClientRegistry),
+		authorizer:                 authorizer,
 		taskDao:                    taskDao,
 		sprintDao:                  sprintDao,
 		teamDao:                    teamDao,
