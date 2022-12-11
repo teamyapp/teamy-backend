@@ -27,7 +27,6 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 	Input  struct {
 		Name        string
-		IconURL     *string
 		OwnerUserID graphql.ID
 	}
 }) (Team, error) {
@@ -45,7 +44,6 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 
 	updateTeamInput := service.UpdateTeamInput{
 		Name:        args.Input.Name,
-		IconURL:     args.Input.IconURL,
 		OwnerUserID: ownerUserID,
 	}
 	team, err := m.deps.teamService.UpdateTeam(ct, teamID, updateTeamInput)

@@ -26,7 +26,6 @@ type UpdateTeamMemberInput struct {
 
 type UpdateTeamInput struct {
 	Name        string
-	IconURL     *string
 	OwnerUserID uint64
 }
 
@@ -156,12 +155,20 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		// 		assign TeamMember permissions to team owner
 		teamAdminUserGroupName := fmt.Sprintf("Team%d/Admin", team.ID)
 		teamAdminDescription := fmt.Sprintf("Admins for %s", teamAdminUserGroupName)
+		teamAdminOperations := make([]authorization.ResourceOperation, 0)
+		for _, teamAdminResourceTypeOperation := range authorization.TeamAdminResourceTypeOperations {
+			teamAdminOperations = append(teamAdminOperations, authorization.ResourceOperation{
+				ResourceType: teamAdminResourceTypeOperation.ResourceType,
+				Operation:    teamAdminResourceTypeOperation.Operation,
+				ResourceID:   team.ID,
+			})
+		}
+
 		_, err := t.authorizer.createUserGroupAndAssignPermissions(ct,
 			userID,
 			teamAdminUserGroupName,
 			&teamAdminDescription,
-			authorization.TeamAdminOperations,
-			team.ID,
+			teamAdminOperations,
 		)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -170,12 +177,20 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 
 		teamMemberUserGroupName := fmt.Sprintf("Team%d/Member", team.ID)
 		teamMemberDescription := fmt.Sprintf("Members for %s", teamMemberUserGroupName)
+		teamMemberOperations := make([]authorization.ResourceOperation, 0)
+		for _, teamMemberResourceTypeOperation := range authorization.TeamMemberResourceTypeOperations {
+			teamMemberOperations = append(teamMemberOperations, authorization.ResourceOperation{
+				ResourceType: teamMemberResourceTypeOperation.ResourceType,
+				Operation:    teamMemberResourceTypeOperation.Operation,
+				ResourceID:   team.ID,
+			})
+		}
+
 		_, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
 			userID,
 			teamMemberUserGroupName,
 			&teamMemberDescription,
-			authorization.TeamMemberOperations,
-			team.ID,
+			teamMemberOperations,
 		)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -216,7 +231,6 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	}
 
 	team.Name = input.Name
-	team.IconURL = input.IconURL
 	team.OwnerUserID = input.OwnerUserID
 	updatedAt := time.Now()
 	team.UpdatedAt = &updatedAt

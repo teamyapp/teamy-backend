@@ -71,7 +71,6 @@ func (a Authorizer) addMemberToUserGroup(ct context.Context, userGroupID uint64,
 		GroupId: userGroupID,
 		UserId:  memberID,
 	}
-
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddUserGroupMember(ct, addUserGroupMemberReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -110,12 +109,11 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 func (a Authorizer) assignPermission(
 	ct context.Context,
 	resourceOperation authorization.ResourceOperation,
-	resourceID uint64,
 	userGroupID uint64,
 ) error {
 	addPermissionReq := &proto.AddPermissionRequest{
 		ResourceType: string(resourceOperation.ResourceType),
-		ResourceId:   resourceID,
+		ResourceId:   resourceOperation.ResourceID,
 		Operation:    resourceOperation.Operation,
 		GroupId:      userGroupID,
 	}
@@ -135,11 +133,10 @@ func (a Authorizer) assignPermission(
 func (a Authorizer) assignUserGroupPermissions(
 	ct context.Context,
 	resourceOperations []authorization.ResourceOperation,
-	resourceID uint64,
 	groupID uint64,
 ) error {
 	for _, resourceOperation := range resourceOperations {
-		err := a.assignPermission(ct, resourceOperation, resourceID, groupID)
+		err := a.assignPermission(ct, resourceOperation, groupID)
 		if err != nil {
 			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
@@ -155,7 +152,6 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 	userGroupName string,
 	description *string,
 	resourceOperations []authorization.ResourceOperation,
-	resourceID uint64,
 ) (uint64, error) {
 	userGroupID, err := a.createUserGroup(ct, creatorUserID, userGroupName, description)
 	if err != nil {
@@ -163,7 +159,7 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 		return 0, err
 	}
 
-	err = a.assignUserGroupPermissions(ct, resourceOperations, resourceID, userGroupID)
+	err = a.assignUserGroupPermissions(ct, resourceOperations, userGroupID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
