@@ -6,23 +6,32 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/feature"
-
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type UpdateTeamMemberInput struct {
 	UserID          uint64
 	WeeklyBandwidth time.Duration
+}
+
+type UpdateTeamInput struct {
+	Name        string
+	IconURL     *string
+	OwnerUserID uint64
+}
+
+type CreateTeamInput struct {
+	Name string
 }
 
 type Team struct {
@@ -87,7 +96,7 @@ func (t Team) FindSprintsInTeam(ct context.Context, teamID uint64, filter *Sprin
 	return sprints, nil
 }
 
-func (t Team) CreateTeam(ct context.Context, teamName string) (entity.Team, error) {
+func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team, error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
@@ -104,12 +113,13 @@ func (t Team) CreateTeam(ct context.Context, teamName string) (entity.Team, erro
 
 	team := entity.Team{
 		ID:            genTeamIDRes.UniqueNumber,
-		Name:          teamName,
+		Name:          input.Name,
 		CreatorUserID: userID,
 		OwnerUserID:   userID,
 		CreatedAt:     time.Now(),
 	}
 
+	// All users are authorized to create team
 	err = t.teamSyncer.CreateAndSyncTeam(ct, team)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -144,30 +154,28 @@ func (t Team) CreateTeam(ct context.Context, teamName string) (entity.Team, erro
 		// 4) Permissions:
 		//		assign TeamAdmin permissions to team owner
 		// 		assign TeamMember permissions to team owner
-		teamAdminUserGroupName := fmt.Sprintf("TeamAdmin%d", team.ID)
-		teamAdminDescription := fmt.Sprintf("Admin user(s) for %s", teamAdminUserGroupName)
+		teamAdminUserGroupName := fmt.Sprintf("Team%d/Admin", team.ID)
+		teamAdminDescription := fmt.Sprintf("Admins for %s", teamAdminUserGroupName)
 		_, err := t.authorizer.createUserGroupAndAssignPermissions(ct,
 			userID,
 			teamAdminUserGroupName,
 			&teamAdminDescription,
-			authorization.TeamResourceType,
-			team.ID,
 			authorization.TeamAdminOperations,
+			team.ID,
 		)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Team{}, err
 		}
 
-		teamMemberUserGroupName := fmt.Sprintf("TeamMember%d", team.ID)
-		teamMemberDescription := fmt.Sprintf("Team user(s) for %s", teamMemberUserGroupName)
+		teamMemberUserGroupName := fmt.Sprintf("Team%d/Member", team.ID)
+		teamMemberDescription := fmt.Sprintf("Members for %s", teamMemberUserGroupName)
 		_, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
 			userID,
 			teamMemberUserGroupName,
 			&teamMemberDescription,
-			authorization.TeamResourceType,
-			team.ID,
 			authorization.TeamMemberOperations,
+			team.ID,
 		)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -178,7 +186,7 @@ func (t Team) CreateTeam(ct context.Context, teamName string) (entity.Team, erro
 	return team, nil
 }
 
-func (t Team) UpdateTeam(ct context.Context, teamID uint64, teamName string, ownerUserID uint64) (entity.Team, error) {
+func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInput) (entity.Team, error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
@@ -207,8 +215,9 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, teamName string, own
 		return entity.Team{}, err
 	}
 
-	team.Name = teamName
-	team.OwnerUserID = ownerUserID
+	team.Name = input.Name
+	team.IconURL = input.IconURL
+	team.OwnerUserID = input.OwnerUserID
 	updatedAt := time.Now()
 	team.UpdatedAt = &updatedAt
 	err = t.teamSyncer.UpdateAndSyncTeam(ct, team)
@@ -421,8 +430,8 @@ func NewTeam(
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberSyncer collection.TeamMemberSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
-	sprintService Sprint,
 	teamSyncer collection.TeamSyncer,
+	sprintService Sprint,
 ) Team {
 	return Team{
 		dataCollector:              dataCollector,
@@ -436,7 +445,7 @@ func NewTeam(
 		teamFileUploadSessionDao:   teamFileUploadSessionDao,
 		teamMemberSyncer:           teamMemberSyncer,
 		sprintParticipantSyncer:    sprintParticipantSyncer,
-		sprintService:              sprintService,
 		teamSyncer:                 teamSyncer,
+		sprintService:              sprintService,
 	}
 }

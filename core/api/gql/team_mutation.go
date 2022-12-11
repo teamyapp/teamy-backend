@@ -2,9 +2,9 @@ package gql
 
 import (
 	"context"
-
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 func (m Mutation) CreateTeam(ct context.Context, args struct {
@@ -12,7 +12,10 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		Name string
 	}
 }) (Team, error) {
-	team, err := m.deps.teamService.CreateTeam(ct, args.Team.Name)
+	createTeamInput := service.CreateTeamInput{
+		Name: args.Team.Name,
+	}
+	team, err := m.deps.teamService.CreateTeam(ct, createTeamInput)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
@@ -24,6 +27,7 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 	Input  struct {
 		Name        string
+		IconURL     *string
 		OwnerUserID graphql.ID
 	}
 }) (Team, error) {
@@ -39,7 +43,12 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 		return Team{}, err
 	}
 
-	team, err := m.deps.teamService.UpdateTeam(ct, teamID, args.Input.Name, ownerUserID)
+	updateTeamInput := service.UpdateTeamInput{
+		Name:        args.Input.Name,
+		IconURL:     args.Input.IconURL,
+		OwnerUserID: ownerUserID,
+	}
+	team, err := m.deps.teamService.UpdateTeam(ct, teamID, updateTeamInput)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err

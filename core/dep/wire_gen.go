@@ -8,7 +8,6 @@ package dep
 
 import (
 	"database/sql"
-
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -63,7 +62,7 @@ func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL 
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(dataCollector, sqlDB)
 	sprintTaskRelationSyncer := collection.NewSprintTaskRelationSyncer(dataCollector, realTimeStateSyncer, sprintTaskRelation, sprint)
 	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, taskSyncer, sprintTaskRelationSyncer, sprintParticipantSyncer, serviceTask)
-	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, task, sprint, team, teamMember, teamFileUploadSession, teamMemberSyncer, sprintParticipantSyncer, serviceSprint, teamSyncer)
+	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, task, sprint, team, teamMember, teamFileUploadSession, teamMemberSyncer, sprintParticipantSyncer, teamSyncer, serviceSprint)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
 	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
 	dependencies := gql.NewDependencies(dataCollector, cloudAPIClientRegistry, user, team, teamMember, invitation, message, activity, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint, serviceUser)
@@ -153,8 +152,8 @@ func newTeamService(
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberSyncer collection.TeamMemberSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
-	sprintService service.Sprint,
 	teamSyncer collection.TeamSyncer,
+	sprintService service.Sprint,
 ) service.Team {
 	return service.NewTeam(
 		dataCollector,
@@ -168,8 +167,8 @@ func newTeamService(
 		teamFileUploadSessionDao,
 		teamMemberSyncer,
 		sprintParticipantSyncer,
-		sprintService,
 		teamSyncer,
+		sprintService,
 	)
 }
 

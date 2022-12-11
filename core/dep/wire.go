@@ -174,8 +174,8 @@ func newTeamService(
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberSyncer collection.TeamMemberSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
-	sprintService service.Sprint,
 	teamSyncer collection.TeamSyncer,
+	sprintService service.Sprint,
 ) service.Team {
 	return service.NewTeam(
 		dataCollector,
@@ -189,8 +189,8 @@ func newTeamService(
 		teamFileUploadSessionDao,
 		teamMemberSyncer,
 		sprintParticipantSyncer,
-		sprintService,
 		teamSyncer,
+		sprintService,
 	)
 }
 

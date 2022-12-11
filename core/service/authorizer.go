@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-
 	"fmt"
 
 	"github.com/teamyapp/cloud/app/api"
@@ -110,18 +109,16 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 
 func (a Authorizer) assignPermission(
 	ct context.Context,
-	resourceType authorization.ResourceType,
+	resourceOperation authorization.ResourceOperation,
 	resourceID uint64,
-	operation authorization.Operation,
 	userGroupID uint64,
 ) error {
 	addPermissionReq := &proto.AddPermissionRequest{
-		ResourceType: string(resourceType),
+		ResourceType: string(resourceOperation.ResourceType),
 		ResourceId:   resourceID,
-		Operation:    string(operation),
+		Operation:    resourceOperation.Operation,
 		GroupId:      userGroupID,
 	}
-
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddPermission(ct, addPermissionReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -137,13 +134,12 @@ func (a Authorizer) assignPermission(
 
 func (a Authorizer) assignUserGroupPermissions(
 	ct context.Context,
-	resourceType authorization.ResourceType,
+	resourceOperations []authorization.ResourceOperation,
 	resourceID uint64,
 	groupID uint64,
-	userGroupOperations []authorization.Operation,
 ) error {
-	for _, operation := range userGroupOperations {
-		err := a.assignPermission(ct, resourceType, resourceID, operation, groupID)
+	for _, resourceOperation := range resourceOperations {
+		err := a.assignPermission(ct, resourceOperation, resourceID, groupID)
 		if err != nil {
 			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
@@ -158,9 +154,8 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 	creatorUserID uint64,
 	userGroupName string,
 	description *string,
-	resourceType authorization.ResourceType,
+	resourceOperations []authorization.ResourceOperation,
 	resourceID uint64,
-	userGroupOperations []authorization.Operation,
 ) (uint64, error) {
 	userGroupID, err := a.createUserGroup(ct, creatorUserID, userGroupName, description)
 	if err != nil {
@@ -168,7 +163,7 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 		return 0, err
 	}
 
-	err = a.assignUserGroupPermissions(ct, resourceType, resourceID, userGroupID, userGroupOperations)
+	err = a.assignUserGroupPermissions(ct, resourceOperations, resourceID, userGroupID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return 0, err
