@@ -130,7 +130,6 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		UserID:    userID,
 		CreatedAt: time.Now(),
 	}
-
 	err = t.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
