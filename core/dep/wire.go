@@ -166,6 +166,7 @@ func newTeamService(
 	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	authorizer service.Authorizer,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
@@ -173,12 +174,14 @@ func newTeamService(
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberSyncer collection.TeamMemberSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
+	teamSyncer collection.TeamSyncer,
 	sprintService service.Sprint,
 ) service.Team {
 	return service.NewTeam(
 		dataCollector,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
+		authorizer,
 		taskDao,
 		sprintDao,
 		teamDao,
@@ -186,7 +189,9 @@ func newTeamService(
 		teamFileUploadSessionDao,
 		teamMemberSyncer,
 		sprintParticipantSyncer,
-		sprintService)
+		teamSyncer,
+		sprintService,
+	)
 }
 
 func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
@@ -63,6 +64,108 @@ func (a Authorizer) assignParentResource(
 	}
 
 	return nil
+}
+
+func (a Authorizer) addMemberToUserGroup(ct context.Context, userGroupID uint64, memberID uint64) error {
+	addUserGroupMemberReq := &proto.AddUserGroupMemberRequest{
+		GroupId: userGroupID,
+		UserId:  memberID,
+	}
+	_, err := a.cloudClientRegistry.AuthorizationClient().AddUserGroupMember(ct, addUserGroupMemberReq)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	return nil
+}
+
+func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, userGroupName string, description *string) (uint64, error) {
+	createUserGroupReq := &proto.CreateUserGroupRequest{
+		Name:        userGroupName,
+		Description: description,
+	}
+
+	createUserGroupRes, err := a.cloudClientRegistry.AuthorizationClient().CreateUserGroup(ct, createUserGroupReq)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return 0, err
+	}
+
+	// add the group creator to the newly created userGroup
+	err = a.addMemberToUserGroup(ct, createUserGroupRes.UserGroup.GroupId, creatorUserID)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return 0, err
+	}
+
+	a.dataCollector.Logger.LogWithContext(ct, obs.Info,
+		obs.Props{obs.MessageProp: fmt.Sprintf("UserGroup %s is successfully created", userGroupName)},
+	)
+
+	return createUserGroupRes.UserGroup.GroupId, nil
+}
+
+func (a Authorizer) assignPermission(
+	ct context.Context,
+	resourceOperation authorization.ResourceOperation,
+	userGroupID uint64,
+) error {
+	addPermissionReq := &proto.AddPermissionRequest{
+		ResourceType: string(resourceOperation.ResourceType),
+		ResourceId:   resourceOperation.ResourceID,
+		Operation:    resourceOperation.Operation,
+		GroupId:      userGroupID,
+	}
+	_, err := a.cloudClientRegistry.AuthorizationClient().AddPermission(ct, addPermissionReq)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	a.dataCollector.Logger.LogWithContext(ct, obs.Info,
+		obs.Props{obs.MessageProp: fmt.Sprintf("Permission %s is successfully assigned", addPermissionReq)},
+	)
+
+	return nil
+}
+
+func (a Authorizer) assignUserGroupPermissions(
+	ct context.Context,
+	resourceOperations []authorization.ResourceOperation,
+	groupID uint64,
+) error {
+	for _, resourceOperation := range resourceOperations {
+		err := a.assignPermission(ct, resourceOperation, groupID)
+		if err != nil {
+			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (a Authorizer) createUserGroupAndAssignPermissions(
+	ct context.Context,
+	creatorUserID uint64,
+	userGroupName string,
+	description *string,
+	resourceOperations []authorization.ResourceOperation,
+) (uint64, error) {
+	userGroupID, err := a.createUserGroup(ct, creatorUserID, userGroupName, description)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return 0, err
+	}
+
+	err = a.assignUserGroupPermissions(ct, resourceOperations, userGroupID)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return 0, err
+	}
+
+	return userGroupID, nil
 }
 
 func NewAuthorizer(

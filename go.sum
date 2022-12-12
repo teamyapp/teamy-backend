@@ -305,12 +305,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
-github.com/teamyapp/cloud v0.0.0-20221123233446-711ad11defdc h1:auneNU+P+yEbi5p4fNjdOXhCmmlq3NHuJfU8WteyZ4Y=
-github.com/teamyapp/cloud v0.0.0-20221123233446-711ad11defdc/go.mod h1:VqJRyV8J06BfeA60iIdPImjZw9excKRyiB12BhM+Ne8=
-github.com/teamyapp/cloud v0.0.0-20221127000512-383ef6b806c4 h1:zp4PlQr+4/hZqj21cwJUcO6w3HjW7SNm56zB23UErqA=
-github.com/teamyapp/cloud v0.0.0-20221127000512-383ef6b806c4/go.mod h1:VqJRyV8J06BfeA60iIdPImjZw9excKRyiB12BhM+Ne8=
-github.com/teamyapp/cloud v0.0.0-20221204231753-fcc74c422305 h1:CJaP4uhFelTiyR+mdGurKcukvDmPakaRRc6TzqvLsOk=
-github.com/teamyapp/cloud v0.0.0-20221204231753-fcc74c422305/go.mod h1:VqJRyV8J06BfeA60iIdPImjZw9excKRyiB12BhM+Ne8=
+github.com/teamyapp/cloud v0.0.0-20221209085210-71471ca28305 h1:PDVdPdabCyMwgn+YJe+yrJ1xC0L0PrB0pT0WrW6isyk=
+github.com/teamyapp/cloud v0.0.0-20221209085210-71471ca28305/go.mod h1:VqJRyV8J06BfeA60iIdPImjZw9excKRyiB12BhM+Ne8=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

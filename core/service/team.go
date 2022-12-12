@@ -2,16 +2,20 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -20,10 +24,20 @@ type UpdateTeamMemberInput struct {
 	WeeklyBandwidth time.Duration
 }
 
+type UpdateTeamInput struct {
+	Name        string
+	OwnerUserID uint64
+}
+
+type CreateTeamInput struct {
+	Name string
+}
+
 type Team struct {
 	dataCollector              obs.DataCollector
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
+	authorizer                 Authorizer
 	taskDao                    dao.Task
 	sprintDao                  dao.Sprint
 	teamDao                    dao.Team
@@ -32,6 +46,7 @@ type Team struct {
 	teamMemberSyncer           collection.TeamMemberSyncer
 	sprintParticipantSyncer    collection.SprintParticipantSyncer
 	sprintService              Sprint
+	teamSyncer                 collection.TeamSyncer
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
@@ -78,6 +93,153 @@ func (t Team) FindSprintsInTeam(ct context.Context, teamID uint64, filter *Sprin
 	}
 
 	return sprints, nil
+}
+
+func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team, error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
+
+	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
+	genTeamIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
+
+	team := entity.Team{
+		ID:            genTeamIDRes.UniqueNumber,
+		Name:          input.Name,
+		CreatorUserID: userID,
+		OwnerUserID:   userID,
+		CreatedAt:     time.Now(),
+	}
+
+	// All users are authorized to create team
+	err = t.teamSyncer.CreateAndSyncTeam(ct, team)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
+
+	teamMember := entity.TeamMember{
+		TeamID:    team.ID,
+		UserID:    userID,
+		CreatedAt: time.Now(),
+	}
+	err = t.teamMemberSyncer.CreateAndSyncTeamMember(ct, teamMember)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = t.authorizer.registerResource(ct, authorization.TeamResourceType, team.ID)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Team{}, err
+		}
+
+		// When create a new team,
+		// 1) Resource: register team resource
+		// 2) UserGroup: create TeamAdmin and TeamMember userGroups
+		// 3) UserGroupMember:
+		// 		add team owner to TeamAdmin group
+		// 		add team owner to TeamMember group
+		// 4) Permissions:
+		//		assign TeamAdmin permissions to team owner
+		// 		assign TeamMember permissions to team owner
+		teamAdminUserGroupName := fmt.Sprintf("Team%d/Admin", team.ID)
+		teamAdminDescription := fmt.Sprintf("Admins for %s", teamAdminUserGroupName)
+		teamAdminOperations := make([]authorization.ResourceOperation, 0)
+		for _, teamAdminResourceTypeOperation := range authorization.TeamAdminResourceTypeOperations {
+			teamAdminOperations = append(teamAdminOperations, authorization.ResourceOperation{
+				ResourceType: teamAdminResourceTypeOperation.ResourceType,
+				Operation:    teamAdminResourceTypeOperation.Operation,
+				ResourceID:   team.ID,
+			})
+		}
+
+		_, err := t.authorizer.createUserGroupAndAssignPermissions(ct,
+			userID,
+			teamAdminUserGroupName,
+			&teamAdminDescription,
+			teamAdminOperations,
+		)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Team{}, err
+		}
+
+		teamMemberUserGroupName := fmt.Sprintf("Team%d/Member", team.ID)
+		teamMemberDescription := fmt.Sprintf("Members for %s", teamMemberUserGroupName)
+		teamMemberOperations := make([]authorization.ResourceOperation, 0)
+		for _, teamMemberResourceTypeOperation := range authorization.TeamMemberResourceTypeOperations {
+			teamMemberOperations = append(teamMemberOperations, authorization.ResourceOperation{
+				ResourceType: teamMemberResourceTypeOperation.ResourceType,
+				Operation:    teamMemberResourceTypeOperation.Operation,
+				ResourceID:   team.ID,
+			})
+		}
+
+		_, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
+			userID,
+			teamMemberUserGroupName,
+			&teamMemberDescription,
+			teamMemberOperations,
+		)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Team{}, err
+		}
+	}
+
+	return team, nil
+}
+
+func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInput) (entity.Team, error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewUpdateTeamSettingsQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		if !hasPermission {
+			return entity.Team{}, authorization.Error{
+				Code:    authorization.UnauthorizedErrorCode,
+				Message: fmt.Sprintf("Unauthorized: %v", query),
+			}
+		}
+	}
+
+	team, err := t.teamDao.FindTeamByID(ct, teamID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
+
+	team.Name = input.Name
+	team.OwnerUserID = input.OwnerUserID
+	updatedAt := time.Now()
+	team.UpdatedAt = &updatedAt
+	err = t.teamSyncer.UpdateAndSyncTeam(ct, team)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
+
+	return team, nil
 }
 
 func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, error) {
@@ -273,6 +435,7 @@ func NewTeam(
 	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	authorizer Authorizer,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
@@ -280,12 +443,14 @@ func NewTeam(
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberSyncer collection.TeamMemberSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
+	teamSyncer collection.TeamSyncer,
 	sprintService Sprint,
 ) Team {
 	return Team{
 		dataCollector:              dataCollector,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
+		authorizer:                 authorizer,
 		taskDao:                    taskDao,
 		sprintDao:                  sprintDao,
 		teamDao:                    teamDao,
@@ -293,6 +458,7 @@ func NewTeam(
 		teamFileUploadSessionDao:   teamFileUploadSessionDao,
 		teamMemberSyncer:           teamMemberSyncer,
 		sprintParticipantSyncer:    sprintParticipantSyncer,
+		teamSyncer:                 teamSyncer,
 		sprintService:              sprintService,
 	}
 }
