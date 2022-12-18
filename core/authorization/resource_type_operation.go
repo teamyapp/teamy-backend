@@ -145,5 +145,5 @@ var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
 	ReadSprintUnderTeam,
 	ReadTaskUnderTeam,
 	UpdateSprint,
-	UpdateTask,
+	UpdateTaskUnderTeam,
 }

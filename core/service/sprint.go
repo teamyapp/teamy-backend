@@ -150,6 +150,29 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 }
 
 func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSprintInput) (entity.Sprint, error) {
+	if feature.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			err := errors.New("user id not found")
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Sprint{}, err
+		}
+
+		query := authorization.NewCreateSprintQuery(userID, teamID)
+		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		if err != nil {
+			s.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Sprint{}, err
+		}
+
+		if !hasPermission {
+			return entity.Sprint{}, authorization.Error{
+				Code:    authorization.UnauthorizedErrorCode,
+				Message: fmt.Sprintf("Unauthorized: %v", query),
+			}
+		}
+	}
+	
 	genSprintIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "sprintID"}
 	genSprintIDRes, err := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSprintIDReq)
 	if err != nil {
@@ -168,6 +191,20 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = s.authorizer.registerResource(ct, authorization.SprintResourceType, sp.ID)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Sprint{}, err
+		}
+
+		err = s.authorizer.assignParentResource(ct, authorization.SprintResourceType, sp.ID, authorization.TeamResourceType, sp.OwningTeamID)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Sprint{}, err
+		}
 	}
 
 	teamMembers, err := s.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
