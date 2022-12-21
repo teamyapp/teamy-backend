@@ -15,38 +15,32 @@ type TeamSyncer struct {
 	teamDao             dao.Team
 }
 
-func (t TeamSyncer) CreateAndSyncTeam(ct context.Context, team entity.Team) error {
+func (t TeamSyncer) CreateAndSyncTeam(ct context.Context, tx realtime.Transaction, team entity.Team) error {
 	err := t.teamDao.CreateTeam(ct, team)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TeamCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			team.ID,
-		},
-		Payload: team,
+		Payload:        team,
 	})
 	return nil
 }
 
-func (t TeamSyncer) UpdateAndSyncTeam(ct context.Context, team entity.Team) error {
+func (t TeamSyncer) UpdateAndSyncTeam(ct context.Context, tx realtime.Transaction, team entity.Team) error {
 	err := t.teamDao.UpdateTeam(ct, team)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TeamCollectionType,
 		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			team.ID,
-		},
-		Payload: team,
+		Payload:        team,
 	})
 	return nil
 }

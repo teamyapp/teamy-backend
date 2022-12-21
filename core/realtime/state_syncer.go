@@ -20,16 +20,14 @@ import (
 // 1) Remove client for that user
 // 2) Clean up user and team if no subscription
 
-const stateSyncerBufferSize = 50
-
 type StateSyncer struct {
-	dataCollector  obs.DataCollector
-	teamMemberDao  dao.TeamMember
-	mutations      chan Mutation
-	teamNotifiers  map[uint64]*TeamNotifier
-	userNotifiers  map[uint64]*UserNotifier
-	nextClientID   uint64
-	nextMutationID uint64
+	dataCollector     obs.DataCollector
+	teamMemberDao     dao.TeamMember
+	teamNotifiers     map[uint64]*TeamNotifier
+	userNotifiers     map[uint64]*UserNotifier
+	nextClientID      uint64
+	nextMutationID    uint64
+	nextTransactionID uint64
 }
 
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
@@ -53,10 +51,16 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 	return nil
 }
 
-func (s *StateSyncer) NotifyMutation(mutation Mutation) {
-	mutation.ID = s.nextMutationID
+func (s *StateSyncer) NextMutationID() uint64 {
+	mutationID := s.nextMutationID
 	s.nextMutationID++
-	s.mutations <- mutation
+	return mutationID
+}
+
+func (s *StateSyncer) NextTransactionID() uint64 {
+	transactionID := s.nextTransactionID
+	s.nextTransactionID++
+	return transactionID
 }
 
 func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error {
@@ -159,13 +163,77 @@ func (s StateSyncer) getUserNotifier(ct context.Context, userID uint64) (*UserNo
 	return userNotifier, nil
 }
 
-func (s StateSyncer) notifyTeam(teamID uint64, mutation Mutation) {
+func (s *StateSyncer) logMutation(ct context.Context, mutation Mutation) {
+	ct = WithMutationID(ct, mutation.ID)
+	buf, err := json.Marshal(mutation)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	} else {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
+			obs.MessageProp: obs.Props{
+				"Summary":  "add mutation",
+				"Mutation": string(buf),
+			},
+		})
+	}
+}
+
+func (s *StateSyncer) getTeamNotifier(ct context.Context, teamID uint64) (*TeamNotifier, error) {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
-		return
+		err := errors.New("teamNotifier not found")
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"TeamID": teamID,
+			},
+		})
+		return nil, err
 	}
 
-	teamNotifier.processMutation(mutation)
+	return teamNotifier, nil
+}
+
+func (s *StateSyncer) ProcessTransaction(ct context.Context, transaction *Transaction) error {
+	for _, mutation := range transaction.mutations {
+		ct = WithMutationID(ct, mutation.ID)
+
+		if mutation.CollectionType == TeamMemberCollectionType &&
+			mutation.MutationType == CreateMutationType {
+			teamMember := mutation.Payload.(entity.TeamMember)
+			userNotifier, err := s.getUserNotifier(ct, teamMember.UserID)
+			if err != nil {
+				s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				return err
+			} else {
+				err = s.subscribeToTeams(ct, teamMember.UserID, userNotifier)
+				if err != nil {
+					s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+					return err
+				}
+			}
+
+		} else if mutation.CollectionType == TeamMemberCollectionType &&
+			mutation.MutationType == DeleteMutationType {
+			teamMember := mutation.Payload.(entity.TeamMember)
+			teamNotifier, err := s.getTeamNotifier(ct, transaction.teamID)
+			if err != nil {
+				s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				return err
+			}
+
+			teamNotifier.unregisterUserNotifier(teamMember.UserID)
+		}
+
+	}
+
+	teamNotifier, err := s.getTeamNotifier(ct, transaction.teamID)
+	if err != nil {
+		return err
+	}
+
+	teamNotifier.notifyTransaction(ct, transaction)
+	return nil
 }
 
 func NewStateSyncer(
@@ -173,49 +241,14 @@ func NewStateSyncer(
 	teamMemberDao dao.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
-		dataCollector:  dataCollector,
-		teamMemberDao:  teamMemberDao,
-		mutations:      make(chan Mutation, stateSyncerBufferSize),
-		teamNotifiers:  map[uint64]*TeamNotifier{},
-		userNotifiers:  map[uint64]*UserNotifier{},
-		nextClientID:   1,
-		nextMutationID: 1,
+		dataCollector:     dataCollector,
+		teamMemberDao:     teamMemberDao,
+		teamNotifiers:     map[uint64]*TeamNotifier{},
+		userNotifiers:     map[uint64]*UserNotifier{},
+		nextClientID:      1,
+		nextMutationID:    1,
+		nextTransactionID: 1,
 	}
-	go func() {
-		ct := context.Background()
-		for mutation := range stateSyncer.mutations {
-			newCtx := WithMutationID(ct, mutation.ID)
-			buf, err := json.Marshal(mutation)
-			if err != nil {
-				dataCollector.Logger.LogWithContext(newCtx, obs.Error, obs.Props{obs.CauseProp: err})
-			} else {
-				dataCollector.Logger.LogWithContext(newCtx, obs.Info, obs.Props{
-					obs.MessageProp: obs.Props{
-						"Summary":  "process mutation",
-						"Mutation": string(buf),
-					},
-				})
-			}
 
-			for _, teamID := range mutation.TeamIDs {
-				if mutation.CollectionType == TeamMemberCollectionType &&
-					mutation.MutationType == CreateMutationType {
-					teamMember := mutation.Payload.(entity.TeamMember)
-					newCtx := WithMutationID(ct, mutation.ID)
-					userNotifier, err := stateSyncer.getUserNotifier(newCtx, teamMember.UserID)
-					if err != nil {
-						dataCollector.Logger.LogWithContext(newCtx, obs.Error, obs.Props{obs.CauseProp: err})
-					} else {
-						err = stateSyncer.subscribeToTeams(newCtx, teamMember.UserID, userNotifier)
-						if err != nil {
-							dataCollector.Logger.LogWithContext(newCtx, obs.Error, obs.Props{obs.CauseProp: err})
-						}
-					}
-				}
-
-				stateSyncer.notifyTeam(teamID, mutation)
-			}
-		}
-	}()
 	return stateSyncer
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
@@ -68,6 +69,7 @@ type Task struct {
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
 	sprintParticipantSyncer    collection.SprintParticipantSyncer
 	threadService              Thread
+	stateSyncer                *realtime.StateSyncer
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, error) {
@@ -105,6 +107,7 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 }
 
 func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTaskInput) (entity.Task, error) {
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, teamID)
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
@@ -134,7 +137,13 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		DeliveredAt:      taskInput.DeliveredAt,
 	}
 
-	err = t.taskSyncer.CreateAndSyncTask(ct, task)
+	err = t.taskSyncer.CreateAndSyncTask(ct, *transaction, task)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -227,6 +236,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		return entity.Task{}, err
 	}
 
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
 	oldEffort := task.Effort
 	oldOwnerID := task.OwnerUserID
 	task.Goal = input.Goal
@@ -237,30 +247,36 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	task.DueAt = input.DueAt
 	updatedAt := time.Now()
 	task.UpdatedAt = &updatedAt
-	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = t.updateUnusedBandWidth(ct, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
+	err = t.updateUnusedBandWidth(ct, *transaction, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 	return task, nil
 }
 
 func (t Task) updateUnusedBandWidth(
 	ct context.Context,
+	tx realtime.Transaction,
 	taskID uint64,
 	oldEffort *time.Duration,
 	newEffort *time.Duration,
 	oldOwnerID *uint64,
 	newOwnerID *uint64,
 ) error {
-	err := t.tryIncreaseBandwidth(ct, taskID, oldOwnerID, oldEffort)
+	err := t.tryIncreaseBandwidth(ct, tx, taskID, oldOwnerID, oldEffort)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -275,7 +291,7 @@ func (t Task) updateUnusedBandWidth(
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth -= *newEffort
-			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, participant)
+			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, tx, participant)
 			if err != nil {
 				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return err
@@ -286,7 +302,7 @@ func (t Task) updateUnusedBandWidth(
 	return nil
 }
 
-func (t Task) tryIncreaseBandwidth(ct context.Context, taskID uint64, oldOwnerID *uint64, oldEffort *time.Duration) error {
+func (t Task) tryIncreaseBandwidth(ct context.Context, tx realtime.Transaction, taskID uint64, oldOwnerID *uint64, oldEffort *time.Duration) error {
 	if oldOwnerID != nil && oldEffort != nil {
 		participants, err := t.findTaskOwnerInSprints(ct, taskID, *oldOwnerID)
 		if err != nil {
@@ -296,7 +312,7 @@ func (t Task) tryIncreaseBandwidth(ct context.Context, taskID uint64, oldOwnerID
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth += *oldEffort
-			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, participant)
+			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, tx, participant)
 			if err != nil {
 				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return err
@@ -339,14 +355,15 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
-	err = t.tryIncreaseBandwidth(ct, taskID, task.OwnerUserID, task.Effort)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	err = t.tryIncreaseBandwidth(ct, *transaction, taskID, task.OwnerUserID, task.Effort)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	// TODO: delete awaiting, await for and sprint task relationships
-	err = t.taskSyncer.DeleteAndSyncTask(ct, taskID)
+	err = t.taskSyncer.DeleteAndSyncTask(ct, *transaction, taskID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -358,7 +375,40 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
 	return task, nil
+}
+
+func (t Task) moveTaskToUpcoming(ct context.Context, tx realtime.Transaction, taskID uint64, autoPauseTask bool) (entity.Task, error) {
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	if autoPauseTask {
+		switch task.Status {
+		case entity.TaskStatusInProgress, entity.TaskStatusPaused:
+			task.Status = entity.TaskStatusPaused
+		}
+	} else {
+		task.Status = entity.TaskStatusTodo
+	}
+	now := time.Now()
+	task.UpdatedAt = &now
+
+	err = t.taskSyncer.UpdateAndSyncTask(ct, tx, task)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	return task, err
 }
 
 func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTask bool) (entity.Task, error) {
@@ -376,10 +426,17 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 	} else {
 		task.Status = entity.TaskStatusTodo
 	}
-
 	now := time.Now()
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
+
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -424,12 +481,14 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		return eachTask.Status == entity.TaskStatusInProgress
 	})
 
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+
 	now := time.Now()
 	if len(inProgressTasks) > 0 {
 		inProgressTask := inProgressTasks[0]
 		inProgressTask.Status = entity.TaskStatusPaused
 		inProgressTask.UpdatedAt = &now
-		err = t.taskSyncer.UpdateAndSyncTask(ct, inProgressTask)
+		err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, inProgressTask)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
@@ -438,7 +497,13 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 
 	task.Status = entity.TaskStatusInProgress
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -454,11 +519,12 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		return entity.Task{}, err
 	}
 
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
 	task.Status = entity.TaskStatusDelivered
 	now := time.Now()
 	task.UpdatedAt = &now
 	task.DeliveredAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -487,12 +553,18 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 			return awaitForTask.Status != entity.TaskStatusDelivered
 		})
 		if len(awaitForTasks) == 0 {
-			_, err = t.MoveTaskToUpcoming(ct, awaitingTaskID, false)
+			_, err = t.moveTaskToUpcoming(ct, *transaction, awaitingTaskID, false)
 			if err != nil {
 				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 				return entity.Task{}, err
 			}
 		}
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
 	}
 
 	return task, nil
@@ -509,6 +581,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		return entity.Task{}, err
 	}
 
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
 	if !awaitableTaskStatuses[task.Status] {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
@@ -521,7 +594,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	}
 
 	now := time.Now()
-	err = t.taskAwaitForRelationSyncer.CreateAndSyncRelation(ct, entity.TaskAwaitForRelation{
+	err = t.taskAwaitForRelationSyncer.CreateAndSyncRelation(ct, *transaction, entity.TaskAwaitForRelation{
 		AwaitingTaskID: awaitingTaskID,
 		AwaitForTaskID: awaitForTaskId,
 		CreatedAt:      now,
@@ -533,7 +606,13 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 
 	task.Status = entity.TaskStatusAwaiting
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(ct, task)
+	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -549,6 +628,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		return entity.Task{}, err
 	}
 
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
 	if task.Status != entity.TaskStatusAwaiting {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
@@ -560,7 +640,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		return entity.Task{}, err
 	}
 
-	err = t.taskAwaitForRelationSyncer.DeleteAndSyncRelation(ct, taskID, awaitForTaskId)
+	err = t.taskAwaitForRelationSyncer.DeleteAndSyncRelation(ct, *transaction, taskID, awaitForTaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -573,11 +653,17 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	}
 
 	if len(awaitForTaskIds) == 0 {
-		task, err = t.MoveTaskToUpcoming(ct, taskID, false)
+		task, err = t.moveTaskToUpcoming(ct, *transaction, taskID, false)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
 	}
 
 	return task, nil
@@ -597,8 +683,10 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		return err
 	}
 
-	return t.taskSyncer.UpdateAndSyncTaskActivity(
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	err = t.taskSyncer.UpdateAndSyncTaskActivity(
 		ct,
+		*transaction,
 		entity.TaskActivity{
 			TaskID: taskID,
 			TeamID: task.OwningTeamID,
@@ -609,6 +697,18 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 					UserID: userID,
 				},
 			}})
+
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+	return nil
 }
 
 func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) error {
@@ -618,8 +718,10 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		return err
 	}
 
-	return t.taskSyncer.UpdateAndSyncTaskActivity(
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	err = t.taskSyncer.UpdateAndSyncTaskActivity(
 		ct,
+		*transaction,
 		entity.TaskActivity{
 			TaskID: taskID,
 			TeamID: task.OwningTeamID,
@@ -627,6 +729,18 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 				IsDragging: false,
 				Client:     nil,
 			}})
+
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+	return nil
 }
 
 func NewTask(
@@ -643,6 +757,7 @@ func NewTask(
 	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
 	sprintParticipantSyncer collection.SprintParticipantSyncer,
 	threadService Thread,
+	stateSyncer *realtime.StateSyncer,
 ) Task {
 	return Task{
 		dataCollector:              dataCollector,
@@ -658,5 +773,6 @@ func NewTask(
 		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
 		sprintParticipantSyncer:    sprintParticipantSyncer,
 		threadService:              threadService,
+		stateSyncer:                stateSyncer,
 	}
 }

@@ -18,6 +18,7 @@ type SprintParticipantSyncer struct {
 
 func (s SprintParticipantSyncer) CreateAndSyncSprintParticipant(
 	ct context.Context,
+	tx realtime.Transaction,
 	sprintParticipant entity.SprintParticipant,
 ) error {
 	err := s.sprintParticipantDao.CreateSprintParticipant(ct, sprintParticipant)
@@ -26,25 +27,17 @@ func (s SprintParticipantSyncer) CreateAndSyncSprintParticipant(
 		return err
 	}
 
-	sprint, err := s.sprintDao.FindSprintByID(ct, sprintParticipant.SprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.SprintParticipantCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			sprint.OwningTeamID,
-		},
-		Payload: sprintParticipant,
+		Payload:        sprintParticipant,
 	})
 	return nil
 }
 
 func (s SprintParticipantSyncer) UpdateAndSyncSprintParticipant(
 	ct context.Context,
+	tx realtime.Transaction,
 	sprintParticipant entity.SprintParticipant,
 ) error {
 	err := s.sprintParticipantDao.UpdateSprintParticipant(ct, sprintParticipant)
@@ -53,42 +46,24 @@ func (s SprintParticipantSyncer) UpdateAndSyncSprintParticipant(
 		return err
 	}
 
-	sprint, err := s.sprintDao.FindSprintByID(ct, sprintParticipant.SprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.SprintParticipantCollectionType,
 		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			sprint.OwningTeamID,
-		},
-		Payload: sprintParticipant,
+		Payload:        sprintParticipant,
 	})
 	return nil
 }
 
-func (s SprintParticipantSyncer) DeleteAndSyncSprintParticipant(ct context.Context, sprintID uint64, userID uint64) error {
-	sprint, err := s.sprintDao.FindSprintByID(ct, sprintID)
+func (s SprintParticipantSyncer) DeleteAndSyncSprintParticipant(ct context.Context, tx realtime.Transaction, sprintID uint64, userID uint64) error {
+	err := s.sprintParticipantDao.DeleteSprintParticipant(ct, sprintID, userID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	err = s.sprintParticipantDao.DeleteSprintParticipant(ct, sprintID, userID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.SprintParticipantCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			sprint.OwningTeamID,
-		},
 		Payload: struct {
 			SprintID uint64
 			UserID   uint64

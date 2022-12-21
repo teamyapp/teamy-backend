@@ -13,5 +13,4 @@ type Mutation struct {
 	CollectionType CollectionType
 	MutationType   MutationType
 	Payload        interface{}
-	TeamIDs        []uint64
 }

@@ -17,68 +17,54 @@ type TaskSyncer struct {
 	activityCache       cache.Activity
 }
 
-func (t TaskSyncer) CreateAndSyncTask(ct context.Context, task entity.Task) error {
+func (t TaskSyncer) CreateAndSyncTask(ct context.Context, tx realtime.Transaction, task entity.Task) error {
 	err := t.taskDao.CreateTask(ct, task)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TaskCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: task,
+		Payload:        task,
 	})
 	return nil
 }
 
-func (t TaskSyncer) UpdateAndSyncTask(ct context.Context, task entity.Task) error {
+func (t TaskSyncer) UpdateAndSyncTask(ct context.Context, tx realtime.Transaction, task entity.Task) error {
 	err := t.taskDao.UpdateTask(ct, task)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TaskCollectionType,
 		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: task,
+		Payload:        task,
 	})
 	return nil
 }
 
-func (t TaskSyncer) DeleteAndSyncTask(ct context.Context, taskID uint64) error {
-	task, err := t.taskDao.FindTaskByID(ct, taskID)
+func (t TaskSyncer) DeleteAndSyncTask(ct context.Context, tx realtime.Transaction, taskID uint64) error {
+	err := t.taskDao.DeleteTask(ct, taskID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	err = t.taskDao.DeleteTask(ct, taskID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TaskCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: taskID,
+		Payload:        taskID,
 	})
 	return nil
 }
 
 func (t TaskSyncer) UpdateAndSyncTaskActivity(
 	ct context.Context,
+	tx realtime.Transaction,
 	taskActivity entity.TaskActivity,
 ) error {
 	_, err := t.activityCache.UpdateTaskActivity(ct, taskActivity.TeamID, taskActivity.TaskID, &taskActivity)
@@ -87,13 +73,10 @@ func (t TaskSyncer) UpdateAndSyncTaskActivity(
 		return err
 	}
 
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TaskActivityCollectionType,
 		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			taskActivity.TeamID,
-		},
-		Payload: taskActivity},
+		Payload:        taskActivity},
 	)
 	return nil
 }

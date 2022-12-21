@@ -18,6 +18,7 @@ type SprintTaskRelationSyncer struct {
 
 func (s SprintTaskRelationSyncer) CreateAndSyncSprintTaskRelation(
 	ct context.Context,
+	tx realtime.Transaction,
 	sprintTaskRelation entity.SprintTaskRelation,
 ) error {
 	err := s.sprintTaskRelationDao.CreateSprintTaskRelation(ct, sprintTaskRelation)
@@ -26,25 +27,17 @@ func (s SprintTaskRelationSyncer) CreateAndSyncSprintTaskRelation(
 		return err
 	}
 
-	sprint, err := s.sprintDao.FindSprintByID(ct, sprintTaskRelation.SprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.SprintTaskRelationCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			sprint.OwningTeamID,
-		},
-		Payload: sprintTaskRelation,
+		Payload:        sprintTaskRelation,
 	})
 	return nil
 }
 
 func (s SprintTaskRelationSyncer) DeleteAndSyncSprintTaskRelation(
 	ct context.Context,
+	tx realtime.Transaction,
 	sprintID uint64,
 	taskID uint64,
 ) error {
@@ -54,18 +47,9 @@ func (s SprintTaskRelationSyncer) DeleteAndSyncSprintTaskRelation(
 		return err
 	}
 
-	sprint, err := s.sprintDao.FindSprintByID(ct, sprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	s.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.SprintTaskRelationCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			sprint.OwningTeamID,
-		},
 		Payload: struct {
 			SprintID uint64
 			TaskID   uint64
@@ -75,7 +59,6 @@ func (s SprintTaskRelationSyncer) DeleteAndSyncSprintTaskRelation(
 		},
 	})
 	return nil
-
 }
 
 func NewSprintTaskRelationSyncer(

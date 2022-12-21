@@ -16,80 +16,47 @@ type MessageSyncer struct {
 	taskDao             dao.Task
 }
 
-func (m MessageSyncer) CreateAndSyncMessage(ct context.Context, message entity.Message) error {
+func (m MessageSyncer) CreateAndSyncMessage(ct context.Context, tx realtime.Transaction, message entity.Message) error {
 	err := m.messageDao.CreateMessage(ct, message)
 	if err != nil {
 		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
-	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.MessageCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: message,
+		Payload:        message,
 	})
 	return nil
 }
 
-func (m MessageSyncer) UpdateAndSyncMessage(ct context.Context, message entity.Message) error {
+func (m MessageSyncer) UpdateAndSyncMessage(ct context.Context, tx realtime.Transaction, message entity.Message) error {
 	err := m.messageDao.UpdateMessage(ct, message)
 	if err != nil {
 		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
-	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.MessageCollectionType,
 		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: message,
+		Payload:        message,
 	})
 	return nil
 }
 
-func (m MessageSyncer) DeleteAndSyncMessage(ct context.Context, messageID uint64) error {
-	message, err := m.messageDao.FindMessageByID(ct, messageID)
+func (m MessageSyncer) DeleteAndSyncMessage(ct context.Context, tx realtime.Transaction, messageID uint64) error {
+	err := m.messageDao.DeleteMessage(ct, messageID)
 	if err != nil {
 		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := m.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
-	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	err = m.messageDao.DeleteMessage(ct, messageID)
-	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	m.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.MessageCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: messageID,
+		Payload:        messageID,
 	})
 	return nil
 }

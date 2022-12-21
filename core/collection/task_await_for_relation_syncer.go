@@ -16,49 +16,38 @@ type TaskAwaitForRelationSyncer struct {
 	taskDao                 dao.Task
 }
 
-func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(ct context.Context, relation entity.TaskAwaitForRelation) error {
+func (t TaskAwaitForRelationSyncer) CreateAndSyncRelation(
+	ct context.Context,
+	tx realtime.Transaction,
+	relation entity.TaskAwaitForRelation) error {
 	err := t.taskAwaitForRelationDao.CreateRelation(ct, relation)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := t.taskDao.FindTaskByID(ct, relation.AwaitingTaskID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TaskAwaitForRelationCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
-		Payload: relation,
+		Payload:        relation,
 	})
 	return nil
 }
 
-func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(ct context.Context, awaitingTaskID uint64, awaitForTaskID uint64) error {
+func (t TaskAwaitForRelationSyncer) DeleteAndSyncRelation(
+	ct context.Context,
+	tx realtime.Transaction,
+	awaitingTaskID uint64,
+	awaitForTaskID uint64) error {
 	err := t.taskAwaitForRelationDao.DeleteRelation(ct, awaitingTaskID, awaitForTaskID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	task, err := t.taskDao.FindTaskByID(ct, awaitingTaskID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	t.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.TaskAwaitForRelationCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			task.OwningTeamID,
-		},
 		Payload: struct {
 			AwaitingTaskID uint64
 			AwaitForTaskID uint64

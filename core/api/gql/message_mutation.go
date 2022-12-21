@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 func (m Mutation) CreateMessage(ct context.Context, args struct {
@@ -46,7 +47,20 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		CreatedAt:    time.Now(),
 	}
 
-	err = m.deps.messageSyncer.CreateAndSyncMessage(ct, message)
+	task, err := m.deps.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, task.OwningTeamID)
+	err = m.deps.messageSyncer.CreateAndSyncMessage(ct, *transaction, message)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
+	err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
@@ -76,7 +90,21 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	message.Body = args.Input.Body
 	now := time.Now()
 	message.UpdatedAt = &now
-	err = m.deps.messageSyncer.UpdateAndSyncMessage(ct, message)
+
+	task, err := m.deps.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, task.OwningTeamID)
+	err = m.deps.messageSyncer.UpdateAndSyncMessage(ct, *transaction, message)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
+	err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
@@ -100,7 +128,19 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 		return Message{}, err
 	}
 
-	err = m.deps.messageSyncer.DeleteAndSyncMessage(ct, messageID)
+	task, err := m.deps.taskDao.FindTaskByCommentsThreadID(ct, message.ThreadID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, task.OwningTeamID)
+	err = m.deps.messageSyncer.DeleteAndSyncMessage(ct, *transaction, messageID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
+	err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err

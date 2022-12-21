@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -16,7 +17,7 @@ type ClientNotifier struct {
 	clientDisconnectSubscribers []chan bool
 	clientID                    uint64
 	messages                    chan Message
-	acceptMutation              bool
+	acceptTransaction           bool
 }
 
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
@@ -26,35 +27,43 @@ func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 }
 
 func (c *ClientNotifier) onInitialStateReady() {
-	c.acceptMutation = true
+	c.acceptTransaction = true
 }
 
-func (c *ClientNotifier) processMutation(mutation Mutation) {
-	ct := context.Background()
-	ct = ctx.WithClientID(ct, c.clientID)
-	ct = WithMutationID(ct, mutation.ID)
+func (c *ClientNotifier) notifyTransaction(ct context.Context, transaction *Transaction) {
 	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"Summary": "process mutation",
+			"Summary": "process transaction",
 		},
 	})
 
-	if !c.acceptMutation {
+	if !c.acceptTransaction {
 		c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 			obs.MessageProp: obs.Props{
-				"Summary": "discard mutation",
+				"Summary": "discard transaction",
 			},
 		})
 		return
 	}
 
-	message := Message{
-		Type: MutationMessageType,
-		Payload: MutationMessage{
+	mutationMessages := collect.Map(transaction.mutations, func(mutation Mutation, _ int) MutationMessage {
+		return MutationMessage{
+			ID:             mutation.ID,
 			CollectionType: mutation.CollectionType,
 			MutationType:   mutation.MutationType,
 			Payload:        mutation.Payload,
-		},
+		}
+	})
+
+	transactionMessage := TransactionMessage{
+		ID:        transaction.id,
+		TeamID:    transaction.teamID,
+		Mutations: mutationMessages,
+	}
+
+	message := Message{
+		Type:    TransactionMessageType,
+		Payload: transactionMessage,
 	}
 	c.messages <- message
 }
@@ -94,7 +103,7 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 		clientDisconnectSubscribers: make([]chan bool, 0),
 		clientID:                    clientID,
 		messages:                    messages,
-		acceptMutation:              false,
+		acceptTransaction:           false,
 	}
 	go func() {
 		<-conn.OnClientDisconnect()

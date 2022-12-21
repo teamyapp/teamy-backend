@@ -15,62 +15,48 @@ type InvitationSyncer struct {
 	invitationDao       dao.Invitation
 }
 
-func (i InvitationSyncer) CreateAndSyncInvitation(ct context.Context, invitation entity.Invitation) error {
+func (i InvitationSyncer) CreateAndSyncInvitation(ct context.Context, tx realtime.Transaction, invitation entity.Invitation) error {
 	err := i.invitationDao.CreateInvitation(ct, invitation)
 	if err != nil {
 		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.InvitationCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		TeamIDs: []uint64{
-			invitation.TeamID,
-		},
-		Payload: invitation,
+		Payload:        invitation,
 	})
 	return nil
 }
 
-func (i InvitationSyncer) UpdateAndSyncInvitation(ct context.Context, invitation entity.Invitation) error {
+func (i InvitationSyncer) UpdateAndSyncInvitation(ct context.Context, tx realtime.Transaction, invitation entity.Invitation) error {
 	err := i.invitationDao.UpdateInvitation(ct, invitation)
 	if err != nil {
 		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.InvitationCollectionType,
 		MutationType:   realtime.UpdateMutationType,
-		TeamIDs: []uint64{
-			invitation.TeamID,
-		},
-		Payload: invitation,
+		Payload:        invitation,
 	})
 	return nil
 }
 
-func (i InvitationSyncer) DeleteAndSyncInvitation(ct context.Context, invitationID uint64) error {
-	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
+func (i InvitationSyncer) DeleteAndSyncInvitation(ct context.Context, tx realtime.Transaction, invitationID uint64) error {
+
+	err := i.invitationDao.DeleteInvitation(ct, invitationID)
 	if err != nil {
 		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	err = i.invitationDao.DeleteInvitation(ct, invitationID)
-	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	i.realTimeStateSyncer.NotifyMutation(realtime.Mutation{
+	tx.AddMutation(ct, realtime.MutationInput{
 		CollectionType: realtime.InvitationCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		TeamIDs: []uint64{
-			invitation.TeamID,
-		},
-		Payload: invitationID,
+		Payload:        invitationID,
 	})
 	return nil
 }

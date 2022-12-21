@@ -35,17 +35,15 @@ func (u UserNotifier) unregisterClientNotifier(clientID uint64) {
 	}
 }
 
-func (u UserNotifier) processMutation(mutation Mutation) {
-	ct := context.Background()
-	ct = WithMutationID(ct, mutation.ID)
+func (u UserNotifier) notifyTransaction(ct context.Context, transaction *Transaction) {
 	u.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"Summary": "process mutation",
+			"Summary": "notify transaction",
 			"UserId":  u.userID,
 		},
 	})
 	for _, clientNotifier := range u.clientNotifiers {
-		clientNotifier.processMutation(mutation)
+		clientNotifier.notifyTransaction(ct, transaction)
 	}
 }
 

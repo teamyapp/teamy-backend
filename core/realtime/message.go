@@ -3,8 +3,9 @@ package realtime
 type MessageType string
 
 const (
-	MutationMessageType MessageType = "Mutation"
-	MetadataMessageType MessageType = "Metadata"
+	MetadataMessageType    MessageType = "Metadata"
+	MutationMessageType    MessageType = "Mutation"
+	TransactionMessageType MessageType = "Transaction"
 )
 
 type Message struct {
@@ -12,12 +13,19 @@ type Message struct {
 	Payload interface{}
 }
 
+type MetadataMessage struct {
+	ClientID uint64
+}
+
 type MutationMessage struct {
+	ID             uint64
 	CollectionType CollectionType
 	MutationType   MutationType
 	Payload        interface{}
 }
 
-type MetadataMessage struct {
-	ClientID uint64
+type TransactionMessage struct {
+	ID        uint64
+	TeamID    uint64
+	Mutations []MutationMessage
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/obs"
-	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamNotifier struct {
@@ -32,23 +31,15 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 	return subscriber
 }
 
-func (t TeamNotifier) processMutation(mutation Mutation) {
-	ct := context.Background()
-	ct = WithMutationID(ct, mutation.ID)
+func (t TeamNotifier) notifyTransaction(ct context.Context, transaction *Transaction) {
 	t.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"summary": "process mutation",
+			"summary": "notify transaction",
 			"teamId":  t.teamID,
 		},
 	})
 	for _, userNotifier := range t.userNotifiers {
-		userNotifier.processMutation(mutation)
-	}
-
-	if mutation.CollectionType == TeamMemberCollectionType &&
-		mutation.MutationType == DeleteMutationType {
-		teamMember := mutation.Payload.(entity.TeamMember)
-		t.unregisterUserNotifier(teamMember.UserID)
+		userNotifier.notifyTransaction(ct, transaction)
 	}
 }
 
