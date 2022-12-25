@@ -69,15 +69,15 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	updatedAt := time.Now()
 	user.UpdatedAt = &updatedAt
 
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	userMutation := mutation.NewUpdateUserMutation(
 		m.deps.stateSyncer,
 		user,
 		m.deps.teamMemberDao,
 		m.deps.userDao,
 		m.deps.dataCollector)
-	transaction.AddMutation(ct, userMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, userMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err

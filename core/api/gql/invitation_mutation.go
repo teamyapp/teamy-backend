@@ -66,7 +66,7 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 	now := time.Now()
 	invitation.UpdatedAt = &now
 
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
 		invitation.TeamID,
 		m.deps.stateSyncer,
@@ -74,8 +74,8 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		m.deps.dataCollector)
 
-	transaction.AddMutation(ct, updateInvitationMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
@@ -99,7 +99,7 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 		return Invitation{}, err
 	}
 
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	deleteInvitationMutation := mutation.NewDeleteInvitationMutation(
 		invitation.TeamID,
 		m.deps.stateSyncer,
@@ -107,8 +107,8 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		m.deps.dataCollector)
 
-	transaction.AddMutation(ct, deleteInvitationMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, deleteInvitationMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
@@ -162,7 +162,7 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
 		invitation.TeamID,
 		m.deps.stateSyncer,
@@ -170,8 +170,8 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		m.deps.dataCollector)
 
-	transaction.AddMutation(ct, updateInvitationMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
@@ -239,7 +239,7 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
 		invitation.TeamID,
 		m.deps.stateSyncer,
@@ -247,8 +247,8 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		m.deps.dataCollector)
 
-	transaction.AddMutation(ct, updateInvitationMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err

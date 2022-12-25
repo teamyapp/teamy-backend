@@ -54,15 +54,15 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		return Message{}, err
 	}
 
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	createMessageMutation := mutation.NewCreateMessageMutation(
 		task.OwningTeamID,
 		m.deps.stateSyncer,
 		message,
 		m.deps.messageDao,
 		m.deps.dataCollector)
-	transaction.AddMutation(ct, createMessageMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, createMessageMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
@@ -99,15 +99,15 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 		return Message{}, err
 	}
 
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	updateMessageMutation := mutation.NewUpdateMessageMutation(
 		task.OwningTeamID,
 		m.deps.stateSyncer,
 		message,
 		m.deps.messageDao,
 		m.deps.dataCollector)
-	transaction.AddMutation(ct, updateMessageMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, updateMessageMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
@@ -136,15 +136,15 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	deleteMessageMutation := mutation.NewDeleteMessageMutation(
 		task.OwningTeamID,
 		m.deps.stateSyncer,
 		message.ID,
 		m.deps.messageDao,
 		m.deps.dataCollector)
-	transaction.AddMutation(ct, deleteMessageMutation)
-	err = transaction.Commit(ct)
+	realTimeTransaction.AddMutation(ct, deleteMessageMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
