@@ -26,6 +26,5 @@ type MutationMessage struct {
 
 type TransactionMessage struct {
 	ID        uint64
-	TeamID    uint64
 	Mutations []MutationMessage
 }

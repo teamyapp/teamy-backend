@@ -14,7 +14,6 @@ import (
 	api2 "github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -44,24 +43,16 @@ func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL 
 	message := sqldb.NewMessage(dataCollector, sqlDB)
 	activity := cache.NewActivity(dataCollector)
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
-	teamSyncer := collection.NewTeamSyncer(dataCollector, realTimeStateSyncer, team)
-	teamMemberSyncer := collection.NewTeamMemberSyncer(dataCollector, realTimeStateSyncer, teamMember)
-	invitationSyncer := collection.NewInvitationSyncer(dataCollector, realTimeStateSyncer, invitation)
-	messageSyncer := collection.NewMessageSyncer(dataCollector, realTimeStateSyncer, message, task)
-	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(dataCollector, realTimeStateSyncer, taskAwaitForRelation, task)
 	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
 	thread := sqldb.NewThread(dataCollector, sqlDB)
 	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
-	taskSyncer := collection.NewTaskSyncer(dataCollector, realTimeStateSyncer, task, activity)
-	sprint := sqldb.NewSprint(dataCollector, sqlDB)
-	sprintParticipantSyncer := collection.NewSprintParticipantSyncer(dataCollector, realTimeStateSyncer, sprintParticipant, sprint)
 	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, thread)
-	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, taskSyncer, taskAwaitForRelationSyncer, sprintParticipantSyncer, serviceThread, realTimeStateSyncer)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread, realTimeStateSyncer)
+	sprint := sqldb.NewSprint(dataCollector, sqlDB)
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(dataCollector, sqlDB)
-	sprintTaskRelationSyncer := collection.NewSprintTaskRelationSyncer(dataCollector, realTimeStateSyncer, sprintTaskRelation, sprint)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, taskSyncer, sprintTaskRelationSyncer, sprintParticipantSyncer, serviceTask, realTimeStateSyncer)
-	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, task, sprint, team, teamMember, teamFileUploadSession, teamMemberSyncer, sprintParticipantSyncer, teamSyncer, serviceSprint, realTimeStateSyncer)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask, realTimeStateSyncer)
+	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, task, sprint, team, teamMember, teamFileUploadSession, serviceSprint, realTimeStateSyncer)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
 	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
 	serviceInvitation := service.NewInvitation(dataCollector, cloudAPIClientRegistry, authorizer, invitationSyncer)
@@ -84,12 +75,8 @@ func InitTaskRPCAPI(dataCollector obs.DataCollector, cloudAPIClientRegistry *api
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
 	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
-	taskSyncer := collection.NewTaskSyncer(dataCollector, realTimeStateSyncer, task, activity)
-	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(dataCollector, realTimeStateSyncer, taskAwaitForRelation, task)
-	sprint := sqldb.NewSprint(dataCollector, sqlDB)
-	sprintParticipantSyncer := collection.NewSprintParticipantSyncer(dataCollector, realTimeStateSyncer, sprintParticipant, sprint)
 	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, thread)
-	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, taskSyncer, taskAwaitForRelationSyncer, sprintParticipantSyncer, serviceThread, realTimeStateSyncer)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread, realTimeStateSyncer)
 	taskRPC := api2.NewTaskRPC(dataCollector, serviceTask)
 	return taskRPC
 }
@@ -102,15 +89,11 @@ func InitSprintRPCAPI(dataCollector obs.DataCollector, cloudAPIClientRegistry *a
 	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
 	teamMember := sqldb.NewTeamMember(dataCollector, sqlDB)
 	activity := cache.NewActivity(dataCollector)
-	taskSyncer := collection.NewTaskSyncer(dataCollector, realTimeStateSyncer, task, activity)
-	sprintTaskRelationSyncer := collection.NewSprintTaskRelationSyncer(dataCollector, realTimeStateSyncer, sprintTaskRelation, sprint)
-	sprintParticipantSyncer := collection.NewSprintParticipantSyncer(dataCollector, realTimeStateSyncer, sprintParticipant, sprint)
 	thread := sqldb.NewThread(dataCollector, sqlDB)
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
-	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(dataCollector, realTimeStateSyncer, taskAwaitForRelation, task)
 	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, thread)
-	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, taskSyncer, taskAwaitForRelationSyncer, sprintParticipantSyncer, serviceThread, realTimeStateSyncer)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, taskSyncer, sprintTaskRelationSyncer, sprintParticipantSyncer, serviceTask, realTimeStateSyncer)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread, realTimeStateSyncer)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask, realTimeStateSyncer)
 	sprintRPC := api2.NewSprintRPC(dataCollector, serviceSprint)
 	return sprintRPC
 }
@@ -150,9 +133,6 @@ func newTeamService(
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
-	teamMemberSyncer collection.TeamMemberSyncer,
-	sprintParticipantSyncer collection.SprintParticipantSyncer,
-	teamSyncer collection.TeamSyncer,
 	sprintService service.Sprint,
 	stateSyncer *realtime.StateSyncer,
 ) service.Team {
@@ -166,9 +146,6 @@ func newTeamService(
 		teamDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
-		teamMemberSyncer,
-		sprintParticipantSyncer,
-		teamSyncer,
 		sprintService,
 		stateSyncer)
 }

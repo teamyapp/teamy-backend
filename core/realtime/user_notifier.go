@@ -1,8 +1,6 @@
 package realtime
 
 import (
-	"context"
-
 	"github.com/teamyapp/cloud/libs/obs"
 )
 
@@ -12,6 +10,10 @@ type UserNotifier struct {
 	userDisconnectCh          chan bool
 	userDisconnectSubscribers []chan bool
 	clientNotifiers           map[uint64]*ClientNotifier
+}
+
+func (u *UserNotifier) GetClientNotifiers() map[uint64]*ClientNotifier {
+	return u.clientNotifiers
 }
 
 func (u *UserNotifier) subscribeUserDisconnect() chan bool {
@@ -32,18 +34,6 @@ func (u UserNotifier) unregisterClientNotifier(clientID uint64) {
 	delete(u.clientNotifiers, clientID)
 	if len(u.clientNotifiers) == 0 {
 		u.userDisconnectCh <- true
-	}
-}
-
-func (u UserNotifier) notifyTransaction(ct context.Context, transaction *Transaction) {
-	u.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
-			"Summary": "notify transaction",
-			"UserId":  u.userID,
-		},
-	})
-	for _, clientNotifier := range u.clientNotifiers {
-		clientNotifier.notifyTransaction(ct, transaction)
 	}
 }
 

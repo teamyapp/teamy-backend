@@ -12,11 +12,11 @@ import (
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -44,10 +44,7 @@ type Team struct {
 	teamDao                    dao.Team
 	teamMemberDao              dao.TeamMember
 	teamFileUploadSessionDao   dao.TeamFileUploadSession
-	teamMemberSyncer           collection.TeamMemberSyncer
-	sprintParticipantSyncer    collection.SprintParticipantSyncer
 	sprintService              Sprint
-	teamSyncer                 collection.TeamSyncer
 	stateSyncer                *realtime.StateSyncer
 }
 
@@ -120,26 +117,32 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		CreatedAt:     time.Now(),
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, team.ID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	// All users are authorized to create team
-	err = t.teamSyncer.CreateAndSyncTeam(ct, *transaction, team)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Team{}, err
-	}
+	createTeamMutation := mutation.NewCreateTeamMutation(
+		team.ID,
+		t.stateSyncer,
+		team,
+		t.teamDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, createTeamMutation)
 
 	teamMember := entity.TeamMember{
 		TeamID:    team.ID,
 		UserID:    userID,
 		CreatedAt: time.Now(),
 	}
-	err = t.teamMemberSyncer.CreateAndSyncTeamMember(ct, *transaction, teamMember)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Team{}, err
-	}
+	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+		teamMember.TeamID,
+		t.stateSyncer,
+		teamMember,
+		t.teamMemberDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, createTeamMemberMutation)
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Team{}, err
@@ -242,14 +245,17 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	team.OwnerUserID = input.OwnerUserID
 	updatedAt := time.Now()
 	team.UpdatedAt = &updatedAt
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, team.ID)
-	err = t.teamSyncer.UpdateAndSyncTeam(ct, *transaction, team)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Team{}, err
-	}
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	updateTeamMutation := mutation.NewUpdateTeamMutation(
+		teamID,
+		t.stateSyncer,
+		team,
+		t.teamDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTeamMutation)
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Team{}, err
@@ -335,12 +341,15 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		UserID:    memberUserID,
 		CreatedAt: time.Now(),
 	}
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, teamID)
-	err := t.teamMemberSyncer.CreateAndSyncTeamMember(ct, *transaction, teamMember)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.TeamMember{}, err
-	}
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+		teamID,
+		t.stateSyncer,
+		teamMember,
+		t.teamMemberDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, createTeamMemberMutation)
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
@@ -354,14 +363,17 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			UserID:    memberUserID,
 			CreatedAt: time.Now(),
 		}
-		err = t.sprintParticipantSyncer.CreateAndSyncSprintParticipant(ct, *transaction, participant)
-		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.TeamMember{}, err
-		}
+		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+			teamID,
+			t.stateSyncer,
+			participant,
+			t.sprintService.sprintParticipantDao,
+			t.dataCollector,
+		)
+		transaction.AddMutation(ct, createSprintParticipantMutation)
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.TeamMember{}, err
@@ -376,13 +388,16 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, teamID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	// TODO: ensure user is inside the team
-	err = t.teamMemberSyncer.DeleteAndSyncTeamMember(ct, *transaction, teamID, memberUserID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.TeamMember{}, err
-	}
+	deleteTeamMemberMutation := mutation.NewDeleteTeamMemberMutation(
+		teamID,
+		t.stateSyncer,
+		teamMember.UserID,
+		t.teamMemberDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, deleteTeamMemberMutation)
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
@@ -391,14 +406,18 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 	}
 
 	for _, sprint := range currAndFutureSprints {
-		err = t.sprintParticipantSyncer.DeleteAndSyncSprintParticipant(ct, *transaction, sprint.ID, memberUserID)
-		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.TeamMember{}, err
-		}
+		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+			teamID,
+			t.stateSyncer,
+			teamMember.UserID,
+			sprint.ID,
+			t.sprintService.sprintParticipantDao,
+			t.dataCollector,
+		)
+		transaction.AddMutation(ct, deleteSprintParticipantMutation)
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.TeamMember{}, err
@@ -422,12 +441,15 @@ func (t Team) UpdateTeamMember(
 	teamMember.WeeklyBandwidth = input.WeeklyBandwidth
 	now := time.Now()
 	teamMember.UpdatedAt = &now
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, teamID)
-	err = t.teamMemberSyncer.UpdateAndSyncTeamMember(ct, *transaction, teamMember)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.TeamMember{}, err
-	}
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
+		teamID,
+		t.stateSyncer,
+		teamMember,
+		t.teamMemberDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTeamMemberMutation)
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
@@ -449,15 +471,18 @@ func (t Team) UpdateTeamMember(
 
 			participant.TotalBandwidth += bandwidthDelta
 			participant.UnusedBandwidth += bandwidthDelta
-			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, *transaction, participant)
-			if err != nil {
-				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-				return entity.TeamMember{}, err
-			}
+			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+				teamID,
+				t.stateSyncer,
+				participant,
+				t.sprintService.sprintParticipantDao,
+				t.dataCollector,
+			)
+			transaction.AddMutation(ct, updateSprintParticipantMutation)
 		}
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.TeamMember{}, err
@@ -476,9 +501,6 @@ func NewTeam(
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
-	teamMemberSyncer collection.TeamMemberSyncer,
-	sprintParticipantSyncer collection.SprintParticipantSyncer,
-	teamSyncer collection.TeamSyncer,
 	sprintService Sprint,
 	stateSyncer *realtime.StateSyncer,
 ) Team {
@@ -492,9 +514,6 @@ func NewTeam(
 		teamDao:                    teamDao,
 		teamMemberDao:              teamMemberDao,
 		teamFileUploadSessionDao:   teamFileUploadSessionDao,
-		teamMemberSyncer:           teamMemberSyncer,
-		sprintParticipantSyncer:    sprintParticipantSyncer,
-		teamSyncer:                 teamSyncer,
 		sprintService:              sprintService,
 		stateSyncer:                stateSyncer,
 	}

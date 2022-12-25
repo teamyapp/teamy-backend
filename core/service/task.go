@@ -13,11 +13,11 @@ import (
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 )
 
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
@@ -56,20 +56,17 @@ type UpdateTaskInput struct {
 }
 
 type Task struct {
-	dataCollector              obs.DataCollector
-	cloudClientRegistry        *cloudAPI.ClientRegistry
-	authorizer                 Authorizer
-	activityCache              cache.Activity
-	taskDao                    dao.Task
-	threadDao                  dao.Thread
-	taskAwaitForRelationDao    dao.TaskAwaitForRelation
-	sprintParticipantDao       dao.SprintParticipant
-	sprintTaskRelationDao      dao.SprintTaskRelation
-	taskSyncer                 collection.TaskSyncer
-	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer
-	sprintParticipantSyncer    collection.SprintParticipantSyncer
-	threadService              Thread
-	stateSyncer                *realtime.StateSyncer
+	dataCollector           obs.DataCollector
+	cloudClientRegistry     *cloudAPI.ClientRegistry
+	authorizer              Authorizer
+	activityCache           cache.Activity
+	taskDao                 dao.Task
+	threadDao               dao.Thread
+	taskAwaitForRelationDao dao.TaskAwaitForRelation
+	sprintParticipantDao    dao.SprintParticipant
+	sprintTaskRelationDao   dao.SprintTaskRelation
+	threadService           Thread
+	stateSyncer             *realtime.StateSyncer
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, error) {
@@ -107,7 +104,7 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 }
 
 func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTaskInput) (entity.Task, error) {
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, teamID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
@@ -137,13 +134,16 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		DeliveredAt:      taskInput.DeliveredAt,
 	}
 
-	err = t.taskSyncer.CreateAndSyncTask(ct, *transaction, task)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
+	createTaskMutation := mutation.NewCreateTaskMutation(
+		teamID,
+		t.stateSyncer,
+		task,
+		t.taskDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, createTaskMutation)
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -236,7 +236,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		return entity.Task{}, err
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	oldEffort := task.Effort
 	oldOwnerID := task.OwnerUserID
 	task.Goal = input.Goal
@@ -247,36 +247,40 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	task.DueAt = input.DueAt
 	updatedAt := time.Now()
 	task.UpdatedAt = &updatedAt
-	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
+	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		input.OwningTeamID,
+		t.stateSyncer,
+		task,
+		t.taskDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTaskMutation)
+	err = t.updateUnusedBandWidth(ct, *transaction, task.OwningTeamID, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = t.updateUnusedBandWidth(ct, *transaction, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
 	return task, nil
 }
 
 func (t Task) updateUnusedBandWidth(
 	ct context.Context,
 	tx realtime.Transaction,
+	teamID uint64,
 	taskID uint64,
 	oldEffort *time.Duration,
 	newEffort *time.Duration,
 	oldOwnerID *uint64,
 	newOwnerID *uint64,
 ) error {
-	err := t.tryIncreaseBandwidth(ct, tx, taskID, oldOwnerID, oldEffort)
+	err := t.tryIncreaseBandwidth(ct, tx, teamID, taskID, oldOwnerID, oldEffort)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -291,18 +295,22 @@ func (t Task) updateUnusedBandWidth(
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth -= *newEffort
-			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, tx, participant)
-			if err != nil {
-				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-				return err
-			}
+
+			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+				teamID,
+				t.stateSyncer,
+				participant,
+				t.sprintParticipantDao,
+				t.dataCollector,
+			)
+			tx.AddMutation(ct, updateSprintParticipantMutation)
 		}
 	}
 
 	return nil
 }
 
-func (t Task) tryIncreaseBandwidth(ct context.Context, tx realtime.Transaction, taskID uint64, oldOwnerID *uint64, oldEffort *time.Duration) error {
+func (t Task) tryIncreaseBandwidth(ct context.Context, tx realtime.Transaction, teamID uint64, taskID uint64, oldOwnerID *uint64, oldEffort *time.Duration) error {
 	if oldOwnerID != nil && oldEffort != nil {
 		participants, err := t.findTaskOwnerInSprints(ct, taskID, *oldOwnerID)
 		if err != nil {
@@ -312,11 +320,14 @@ func (t Task) tryIncreaseBandwidth(ct context.Context, tx realtime.Transaction, 
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth += *oldEffort
-			err = t.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, tx, participant)
-			if err != nil {
-				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-				return err
-			}
+			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+				teamID,
+				t.stateSyncer,
+				participant,
+				t.sprintParticipantDao,
+				t.dataCollector,
+			)
+			tx.AddMutation(ct, updateSprintParticipantMutation)
 		}
 	}
 
@@ -355,19 +366,21 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
-	err = t.tryIncreaseBandwidth(ct, *transaction, taskID, task.OwnerUserID, task.Effort)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	err = t.tryIncreaseBandwidth(ct, *transaction, task.OwningTeamID, taskID, task.OwnerUserID, task.Effort)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	// TODO: delete awaiting, await for and sprint task relationships
-	err = t.taskSyncer.DeleteAndSyncTask(ct, *transaction, taskID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
+	deleteTaskMutation := mutation.NewDeleteTaskMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		taskID,
+		t.taskDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, deleteTaskMutation)
 
 	err = t.threadDao.DeleteThread(ct, task.CommentsThreadID)
 	if err != nil {
@@ -375,7 +388,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -402,12 +415,14 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx realtime.Transaction, ta
 	now := time.Now()
 	task.UpdatedAt = &now
 
-	err = t.taskSyncer.UpdateAndSyncTask(ct, tx, task)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
+	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		task,
+		t.taskDao,
+		t.dataCollector,
+	)
+	tx.AddMutation(ct, updateTaskMutation)
 	return task, err
 }
 
@@ -428,15 +443,16 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 	}
 	now := time.Now()
 	task.UpdatedAt = &now
-
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
-	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		task,
+		t.taskDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTaskMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -481,29 +497,35 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		return eachTask.Status == entity.TaskStatusInProgress
 	})
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 
 	now := time.Now()
 	if len(inProgressTasks) > 0 {
 		inProgressTask := inProgressTasks[0]
 		inProgressTask.Status = entity.TaskStatusPaused
 		inProgressTask.UpdatedAt = &now
-		err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, inProgressTask)
-		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Task{}, err
-		}
+		updateTaskMutation := mutation.NewUpdateTaskMutation(
+			inProgressTask.OwningTeamID,
+			t.stateSyncer,
+			inProgressTask,
+			t.taskDao,
+			t.dataCollector,
+		)
+		transaction.AddMutation(ct, updateTaskMutation)
 	}
 
 	task.Status = entity.TaskStatusInProgress
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
+	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		task,
+		t.taskDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTaskMutation)
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -519,16 +541,19 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		return entity.Task{}, err
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	task.Status = entity.TaskStatusDelivered
 	now := time.Now()
 	task.UpdatedAt = &now
 	task.DeliveredAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
+	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		task,
+		t.taskDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTaskMutation)
 
 	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
 	if err != nil {
@@ -561,7 +586,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		}
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -581,7 +606,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		return entity.Task{}, err
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	if !awaitableTaskStatuses[task.Status] {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
@@ -594,25 +619,32 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	}
 
 	now := time.Now()
-	err = t.taskAwaitForRelationSyncer.CreateAndSyncRelation(ct, *transaction, entity.TaskAwaitForRelation{
+	taskAwaitForRelation := entity.TaskAwaitForRelation{
 		AwaitingTaskID: awaitingTaskID,
 		AwaitForTaskID: awaitForTaskId,
 		CreatedAt:      now,
-	})
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
 	}
+	createTaskAwaitForRelationMutation := mutation.NewCreateTaskAwaitForRelationMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		taskAwaitForRelation,
+		t.taskAwaitForRelationDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, createTaskAwaitForRelationMutation)
 
 	task.Status = entity.TaskStatusAwaiting
 	task.UpdatedAt = &now
-	err = t.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
+	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		task,
+		t.taskDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTaskMutation)
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -628,7 +660,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		return entity.Task{}, err
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	if task.Status != entity.TaskStatusAwaiting {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
@@ -640,12 +672,15 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		return entity.Task{}, err
 	}
 
-	err = t.taskAwaitForRelationSyncer.DeleteAndSyncRelation(ct, *transaction, taskID, awaitForTaskId)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
+	deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+		task.OwningTeamID,
+		t.stateSyncer,
+		taskID,
+		awaitForTaskId,
+		t.taskAwaitForRelationDao,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, deleteTaskAwaitForRelationMutation)
 	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, taskID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -660,7 +695,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		}
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -683,27 +718,33 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		return err
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
-	err = t.taskSyncer.UpdateAndSyncTaskActivity(
-		ct,
-		*transaction,
-		entity.TaskActivity{
-			TaskID: taskID,
-			TeamID: task.OwningTeamID,
-			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging: true,
-				Client: &entity.Client{
-					ID:     clientID,
-					UserID: userID,
-				},
-			}})
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	taskActivity := entity.TaskActivity{
+		TaskID: taskID,
+		TeamID: task.OwningTeamID,
+		DragTaskActivity: entity.DragTaskActivity{
+			IsDragging: true,
+			Client: &entity.Client{
+				ID:     clientID,
+				UserID: userID,
+			},
+		}}
+
+	updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
+		taskActivity.TeamID,
+		t.stateSyncer,
+		t.activityCache,
+		taskActivity,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTaskActivityMutation)
 
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
 	}
 
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -718,24 +759,24 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		return err
 	}
 
-	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector, task.OwningTeamID)
-	err = t.taskSyncer.UpdateAndSyncTaskActivity(
-		ct,
-		*transaction,
-		entity.TaskActivity{
-			TaskID: taskID,
-			TeamID: task.OwningTeamID,
-			DragTaskActivity: entity.DragTaskActivity{
-				IsDragging: false,
-				Client:     nil,
-			}})
+	transaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	taskActivity := entity.TaskActivity{
+		TaskID: taskID,
+		TeamID: task.OwningTeamID,
+		DragTaskActivity: entity.DragTaskActivity{
+			IsDragging: false,
+			Client:     nil,
+		}}
 
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	err = t.stateSyncer.ProcessTransaction(ct, transaction)
+	updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
+		taskActivity.TeamID,
+		t.stateSyncer,
+		t.activityCache,
+		taskActivity,
+		t.dataCollector,
+	)
+	transaction.AddMutation(ct, updateTaskActivityMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -753,26 +794,20 @@ func NewTask(
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintTaskRelationDao dao.SprintTaskRelation,
-	taskSyncer collection.TaskSyncer,
-	taskAwaitForRelationSyncer collection.TaskAwaitForRelationSyncer,
-	sprintParticipantSyncer collection.SprintParticipantSyncer,
 	threadService Thread,
 	stateSyncer *realtime.StateSyncer,
 ) Task {
 	return Task{
-		dataCollector:              dataCollector,
-		cloudClientRegistry:        cloudClientRegistry,
-		authorizer:                 authorizer,
-		activityCache:              activityCache,
-		taskDao:                    taskDao,
-		threadDao:                  threadDao,
-		taskAwaitForRelationDao:    taskAwaitForRelationDao,
-		sprintParticipantDao:       sprintParticipantDao,
-		sprintTaskRelationDao:      sprintTaskRelationDao,
-		taskSyncer:                 taskSyncer,
-		taskAwaitForRelationSyncer: taskAwaitForRelationSyncer,
-		sprintParticipantSyncer:    sprintParticipantSyncer,
-		threadService:              threadService,
-		stateSyncer:                stateSyncer,
+		dataCollector:           dataCollector,
+		cloudClientRegistry:     cloudClientRegistry,
+		authorizer:              authorizer,
+		activityCache:           activityCache,
+		taskDao:                 taskDao,
+		threadDao:               threadDao,
+		taskAwaitForRelationDao: taskAwaitForRelationDao,
+		sprintParticipantDao:    sprintParticipantDao,
+		sprintTaskRelationDao:   sprintTaskRelationDao,
+		threadService:           threadService,
+		stateSyncer:             stateSyncer,
 	}
 }

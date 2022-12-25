@@ -2,14 +2,13 @@ package realtime
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"sync"
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
-	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 // Client connect
@@ -21,13 +20,23 @@ import (
 // 2) Clean up user and team if no subscription
 
 type StateSyncer struct {
-	dataCollector     obs.DataCollector
-	teamMemberDao     dao.TeamMember
-	teamNotifiers     map[uint64]*TeamNotifier
-	userNotifiers     map[uint64]*UserNotifier
-	nextClientID      uint64
-	nextMutationID    uint64
-	nextTransactionID uint64
+	dataCollector           obs.DataCollector
+	teamMemberDao           dao.TeamMember
+	teamNotifiers           map[uint64]*TeamNotifier
+	userNotifiers           map[uint64]*UserNotifier
+	nextClientID            uint64
+	nextMutationID          uint64
+	nextTransactionID       uint64
+	nextClientTransactionID uint64
+	transactionMut          *sync.Mutex
+}
+
+func (s *StateSyncer) BeginTransaction() {
+	s.transactionMut.Lock()
+}
+
+func (s *StateSyncer) EndTransaction() {
+	s.transactionMut.Unlock()
 }
 
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
@@ -38,7 +47,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 			"UserID":  userID,
 		},
 	})
-	userNotifier, err := s.getUserNotifier(ct, userID)
+	userNotifier, err := s.GetUserNotifier(ct, userID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -61,6 +70,12 @@ func (s *StateSyncer) NextTransactionID() uint64 {
 	transactionID := s.nextTransactionID
 	s.nextTransactionID++
 	return transactionID
+}
+
+func (s *StateSyncer) NextClientTransactionID() uint64 {
+	clientTransactionID := s.nextClientTransactionID
+	s.nextClientTransactionID++
+	return clientTransactionID
 }
 
 func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error {
@@ -100,7 +115,7 @@ func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserN
 		delete(s.userNotifiers, userID)
 	}()
 	s.userNotifiers[userID] = userNotifier
-	err := s.subscribeToTeams(ct, userID, userNotifier)
+	err := s.SubscribeToTeams(ct, userID, userNotifier)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
@@ -109,7 +124,7 @@ func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserN
 	return userNotifier, nil
 }
 
-func (s *StateSyncer) subscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier) error {
+func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier) error {
 	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -149,7 +164,7 @@ func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	return teamNotifier
 }
 
-func (s StateSyncer) getUserNotifier(ct context.Context, userID uint64) (*UserNotifier, error) {
+func (s StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserNotifier, error) {
 	userNotifier, ok := s.userNotifiers[userID]
 	var err error
 	if !ok {
@@ -163,22 +178,7 @@ func (s StateSyncer) getUserNotifier(ct context.Context, userID uint64) (*UserNo
 	return userNotifier, nil
 }
 
-func (s *StateSyncer) logMutation(ct context.Context, mutation Mutation) {
-	ct = WithMutationID(ct, mutation.ID)
-	buf, err := json.Marshal(mutation)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-	} else {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
-				"Summary":  "add mutation",
-				"Mutation": string(buf),
-			},
-		})
-	}
-}
-
-func (s *StateSyncer) getTeamNotifier(ct context.Context, teamID uint64) (*TeamNotifier, error) {
+func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamNotifier, error) {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
 		err := errors.New("teamNotifier not found")
@@ -194,46 +194,20 @@ func (s *StateSyncer) getTeamNotifier(ct context.Context, teamID uint64) (*TeamN
 	return teamNotifier, nil
 }
 
-func (s *StateSyncer) ProcessTransaction(ct context.Context, transaction *Transaction) error {
-	for _, mutation := range transaction.mutations {
-		ct = WithMutationID(ct, mutation.ID)
-
-		if mutation.CollectionType == TeamMemberCollectionType &&
-			mutation.MutationType == CreateMutationType {
-			teamMember := mutation.Payload.(entity.TeamMember)
-			userNotifier, err := s.getUserNotifier(ct, teamMember.UserID)
-			if err != nil {
-				s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-				return err
-			} else {
-				err = s.subscribeToTeams(ct, teamMember.UserID, userNotifier)
-				if err != nil {
-					s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-					return err
-				}
-			}
-
-		} else if mutation.CollectionType == TeamMemberCollectionType &&
-			mutation.MutationType == DeleteMutationType {
-			teamMember := mutation.Payload.(entity.TeamMember)
-			teamNotifier, err := s.getTeamNotifier(ct, transaction.teamID)
-			if err != nil {
-				s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-				return err
-			}
-
-			teamNotifier.unregisterUserNotifier(teamMember.UserID)
-		}
-
-	}
-
-	teamNotifier, err := s.getTeamNotifier(ct, transaction.teamID)
+func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, error) {
+	teamNotifier, err := s.GetTeamNotifier(ct, teamID)
 	if err != nil {
-		return err
+		return []*ClientNotifier{}, err
 	}
 
-	teamNotifier.notifyTransaction(ct, transaction)
-	return nil
+	clientNotifiers := make([]*ClientNotifier, 0)
+	for _, userNotifier := range teamNotifier.GetUserNotifiers() {
+		for _, clientNotifier := range userNotifier.GetClientNotifiers() {
+			clientNotifiers = append(clientNotifiers, clientNotifier)
+		}
+	}
+
+	return clientNotifiers, nil
 }
 
 func NewStateSyncer(
@@ -241,13 +215,15 @@ func NewStateSyncer(
 	teamMemberDao dao.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
-		dataCollector:     dataCollector,
-		teamMemberDao:     teamMemberDao,
-		teamNotifiers:     map[uint64]*TeamNotifier{},
-		userNotifiers:     map[uint64]*UserNotifier{},
-		nextClientID:      1,
-		nextMutationID:    1,
-		nextTransactionID: 1,
+		dataCollector:           dataCollector,
+		teamMemberDao:           teamMemberDao,
+		teamNotifiers:           map[uint64]*TeamNotifier{},
+		userNotifiers:           map[uint64]*UserNotifier{},
+		nextClientID:            1,
+		nextMutationID:          1,
+		nextTransactionID:       1,
+		nextClientTransactionID: 1,
+		transactionMut:          new(sync.Mutex),
 	}
 
 	return stateSyncer

@@ -20,6 +20,10 @@ type ClientNotifier struct {
 	acceptTransaction           bool
 }
 
+func (c *ClientNotifier) getClientID() uint64 {
+	return c.clientID
+}
+
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 	subscriber := make(chan bool)
 	c.clientDisconnectSubscribers = append(c.clientDisconnectSubscribers, subscriber)
@@ -30,7 +34,7 @@ func (c *ClientNotifier) onInitialStateReady() {
 	c.acceptTransaction = true
 }
 
-func (c *ClientNotifier) notifyTransaction(ct context.Context, transaction *Transaction) {
+func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction ClientTransaction) {
 	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
 			"Summary": "process transaction",
@@ -46,18 +50,12 @@ func (c *ClientNotifier) notifyTransaction(ct context.Context, transaction *Tran
 		return
 	}
 
-	mutationMessages := collect.Map(transaction.mutations, func(mutation Mutation, _ int) MutationMessage {
-		return MutationMessage{
-			ID:             mutation.ID,
-			CollectionType: mutation.CollectionType,
-			MutationType:   mutation.MutationType,
-			Payload:        mutation.Payload,
-		}
+	mutationMessages := collect.Map(clientTransaction.mutations, func(mutation Mutation, _ int) MutationMessage {
+		return mutation.ToMessage()
 	})
 
 	transactionMessage := TransactionMessage{
-		ID:        transaction.id,
-		TeamID:    transaction.teamID,
+		ID:        clientTransaction.id,
 		Mutations: mutationMessages,
 	}
 

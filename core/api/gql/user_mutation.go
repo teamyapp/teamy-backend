@@ -11,6 +11,7 @@ import (
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 )
 
 func (m Mutation) CreateUser(ct context.Context, args struct {
@@ -67,30 +68,19 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	user.LastName = args.Input.LastName
 	updatedAt := time.Now()
 	user.UpdatedAt = &updatedAt
-	err = m.deps.userDao.UpdateUser(ct, user)
+
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	userMutation := mutation.NewUpdateUserMutation(
+		m.deps.stateSyncer,
+		user,
+		m.deps.teamMemberDao,
+		m.deps.userDao,
+		m.deps.dataCollector)
+	transaction.AddMutation(ct, userMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
-	}
-
-	teamIDs, err := m.deps.teamMemberDao.FindTeamIDsByUserID(ct, user.ID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
-	}
-
-	for _, teamID := range teamIDs {
-		transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, teamID)
-		transaction.AddMutation(ct, realtime.MutationInput{
-			CollectionType: realtime.UserCollectionType,
-			MutationType:   realtime.UpdateMutationType,
-			Payload:        user,
-		})
-		err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
-		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return User{}, err
-		}
 	}
 
 	return newUser(m.deps, user), nil

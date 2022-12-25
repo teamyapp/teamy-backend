@@ -11,6 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -64,14 +65,17 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 	invitation.ExpireAt = args.Input.ExpireAt.Time
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, invitation.TeamID)
-	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(ct, *transaction, invitation)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
 
-	err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		invitation.TeamID,
+		m.deps.stateSyncer,
+		invitation,
+		m.deps.invitationDao,
+		m.deps.dataCollector)
+
+	transaction.AddMutation(ct, updateInvitationMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
@@ -94,14 +98,17 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, invitation.TeamID)
-	err = m.deps.invitationSyncer.DeleteAndSyncInvitation(ct, *transaction, invitationID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
 
-	err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	deleteInvitationMutation := mutation.NewDeleteInvitationMutation(
+		invitation.TeamID,
+		m.deps.stateSyncer,
+		invitation.ID,
+		m.deps.invitationDao,
+		m.deps.dataCollector)
+
+	transaction.AddMutation(ct, deleteInvitationMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
@@ -155,14 +162,16 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, invitation.TeamID)
-	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(ct, *transaction, invitation)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		invitation.TeamID,
+		m.deps.stateSyncer,
+		invitation,
+		m.deps.invitationDao,
+		m.deps.dataCollector)
 
-	err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
+	transaction.AddMutation(ct, updateInvitationMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
@@ -230,14 +239,16 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector, invitation.TeamID)
-	err = m.deps.invitationSyncer.UpdateAndSyncInvitation(ct, *transaction, invitation)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
+	transaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		invitation.TeamID,
+		m.deps.stateSyncer,
+		invitation,
+		m.deps.invitationDao,
+		m.deps.dataCollector)
 
-	err = m.deps.stateSyncer.ProcessTransaction(ct, transaction)
+	transaction.AddMutation(ct, updateInvitationMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err

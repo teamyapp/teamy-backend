@@ -12,11 +12,11 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 )
 
 const timePerWeek = 7 * 24 * time.Hour
@@ -27,19 +27,16 @@ type CreateSprintInput struct {
 }
 
 type Sprint struct {
-	dataCollector            obs.DataCollector
-	cloudClientRegistry      *cloudAPI.ClientRegistry
-	authorizer               Authorizer
-	taskDao                  dao.Task
-	sprintDao                dao.Sprint
-	sprintTaskRelationDao    dao.SprintTaskRelation
-	sprintParticipantDao     dao.SprintParticipant
-	teamMemberDao            dao.TeamMember
-	taskSyncer               collection.TaskSyncer
-	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer
-	sprintParticipantSyncer  collection.SprintParticipantSyncer
-	taskService              Task
-	stateSyncer              *realtime.StateSyncer
+	dataCollector         obs.DataCollector
+	cloudClientRegistry   *cloudAPI.ClientRegistry
+	authorizer            Authorizer
+	taskDao               dao.Task
+	sprintDao             dao.Sprint
+	sprintTaskRelationDao dao.SprintTaskRelation
+	sprintParticipantDao  dao.SprintParticipant
+	teamMemberDao         dao.TeamMember
+	taskService           Task
+	stateSyncer           *realtime.StateSyncer
 }
 
 func (s Sprint) FindTasksInSprint(
@@ -218,7 +215,8 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 	sprintLength := sprint.EndAt.UTC().Sub(sprint.StartAt.UTC())
 	numOfWeeks := sprintLength / timePerWeek
 	// TODO: fetch from team settings
-	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector, teamID)
+
+	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
 	for _, teamMember := range teamMembers {
 		totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
 		participant := entity.SprintParticipant{
@@ -228,14 +226,17 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 			UnusedBandwidth: totalBandwidth,
 			CreatedAt:       time.Now(),
 		}
-		err = s.sprintParticipantSyncer.CreateAndSyncSprintParticipant(ct, *transaction, participant)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Sprint{}, err
-		}
+
+		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+			teamID,
+			s.stateSyncer,
+			participant,
+			s.sprintParticipantDao,
+			s.dataCollector)
+		transaction.AddMutation(ct, createSprintParticipantMutation)
 	}
 
-	err = s.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
@@ -270,15 +271,18 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		return entity.Sprint{}, err
 	}
 
-	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector, sprint.OwningTeamID)
+	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
 	for _, participantUserID := range participantUserIDs {
-		err = s.sprintParticipantSyncer.DeleteAndSyncSprintParticipant(ct, *transaction, sprintID, participantUserID)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Sprint{}, err
-		}
+		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+			sprint.OwningTeamID,
+			s.stateSyncer,
+			participantUserID,
+			sprintID,
+			s.sprintParticipantDao,
+			s.dataCollector)
+		transaction.AddMutation(ct, deleteSprintParticipantMutation)
 	}
-	err = s.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
@@ -306,26 +310,29 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		return entity.Task{}, err
 	}
 
-	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector, sprint.OwningTeamID)
+	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
 	relation := entity.SprintTaskRelation{
 		SprintID:  sprintID,
 		TaskID:    taskID,
 		CreatedAt: time.Now().UTC(),
 	}
-	err = s.sprintTaskRelationSyncer.CreateAndSyncSprintTaskRelation(ct, *transaction, relation)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
+	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelationMutation(
+		sprint.OwningTeamID,
+		s.stateSyncer,
+		relation,
+		s.sprintTaskRelationDao,
+		s.dataCollector)
+	transaction.AddMutation(ct, createSprintTaskRelationMutation)
 
 	if !task.IsPlanned {
 		task.IsPlanned = true
-		err = s.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
-
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Task{}, err
-		}
+		updateTaskMutation := mutation.NewUpdateTaskMutation(
+			sprint.OwningTeamID,
+			s.stateSyncer,
+			task,
+			s.taskDao,
+			s.dataCollector)
+		transaction.AddMutation(ct, updateTaskMutation)
 	}
 
 	err = s.tryReduceBandwidth(ct, *transaction, sprintID, task)
@@ -334,7 +341,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		return entity.Task{}, err
 	}
 
-	err = s.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -483,7 +490,7 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		return entity.Task{}, err
 	}
 
-	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector, task.OwningTeamID)
+	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
 	err = s.tryIncreaseBandwidth(ct, *transaction, fromSprintID, task)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -496,7 +503,7 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		return entity.Task{}, err
 	}
 
-	err = s.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -532,21 +539,25 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
-	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector, task.OwningTeamID)
-	err = s.sprintTaskRelationSyncer.DeleteAndSyncSprintTaskRelation(ct, *transaction, sprintID, taskID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
+	transaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
+	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
+		task.OwningTeamID,
+		s.stateSyncer,
+		sprintID,
+		taskID,
+		s.dataCollector,
+	)
+	transaction.AddMutation(ct, deleteSprintTaskRelationMutation)
 	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false
-		err := s.taskSyncer.UpdateAndSyncTask(ct, *transaction, task)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Task{}, err
-		}
+		updateTaskMutation := mutation.NewUpdateTaskMutation(
+			task.OwningTeamID,
+			s.stateSyncer,
+			task,
+			s.taskDao,
+			s.dataCollector)
+		transaction.AddMutation(ct, updateTaskMutation)
 	}
 
 	err = s.tryIncreaseBandwidth(ct, *transaction, sprintID, task)
@@ -555,7 +566,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return entity.Task{}, err
 	}
 
-	err = s.stateSyncer.ProcessTransaction(ct, transaction)
+	err = transaction.Commit(ct)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
@@ -578,11 +589,13 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx realtime.Transaction, 
 		}
 
 		newSprintParticipant.UnusedBandwidth -= *task.Effort
-		err = s.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, tx, newSprintParticipant)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return err
-		}
+		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+			task.OwningTeamID,
+			s.stateSyncer,
+			newSprintParticipant,
+			s.sprintParticipantDao,
+			s.dataCollector)
+		tx.AddMutation(ct, updateSprintParticipantMutation)
 	}
 
 	return nil
@@ -602,11 +615,13 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx realtime.Transaction
 		}
 
 		oldSprintParticipant.UnusedBandwidth += *task.Effort
-		err = s.sprintParticipantSyncer.UpdateAndSyncSprintParticipant(ct, tx, oldSprintParticipant)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return err
-		}
+		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+			task.OwningTeamID,
+			s.stateSyncer,
+			oldSprintParticipant,
+			s.sprintParticipantDao,
+			s.dataCollector)
+		tx.AddMutation(ct, updateSprintParticipantMutation)
 	}
 
 	return nil
@@ -621,25 +636,19 @@ func NewSprint(
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintParticipantDao dao.SprintParticipant,
 	teamMemberDao dao.TeamMember,
-	taskSyncer collection.TaskSyncer,
-	sprintTaskRelationSyncer collection.SprintTaskRelationSyncer,
-	sprintParticipantSyncer collection.SprintParticipantSyncer,
 	taskService Task,
 	stateSyncer *realtime.StateSyncer,
 ) Sprint {
 	return Sprint{
-		dataCollector:            dataCollector,
-		cloudClientRegistry:      cloudClientRegistry,
-		authorizer:               authorizer,
-		taskDao:                  taskDao,
-		sprintDao:                sprintDao,
-		sprintTaskRelationDao:    sprintTaskRelationDao,
-		sprintParticipantDao:     sprintParticipantDao,
-		teamMemberDao:            teamMemberDao,
-		taskSyncer:               taskSyncer,
-		sprintTaskRelationSyncer: sprintTaskRelationSyncer,
-		sprintParticipantSyncer:  sprintParticipantSyncer,
-		taskService:              taskService,
-		stateSyncer:              stateSyncer,
+		dataCollector:         dataCollector,
+		cloudClientRegistry:   cloudClientRegistry,
+		authorizer:            authorizer,
+		taskDao:               taskDao,
+		sprintDao:             sprintDao,
+		sprintTaskRelationDao: sprintTaskRelationDao,
+		sprintParticipantDao:  sprintParticipantDao,
+		teamMemberDao:         teamMemberDao,
+		taskService:           taskService,
+		stateSyncer:           stateSyncer,
 	}
 }
