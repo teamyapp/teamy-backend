@@ -3,7 +3,6 @@ package gql
 import (
 	"context"
 	"errors"
-	"github.com/teamyapp/teamy-backend/core/service"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
@@ -11,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 func (m Mutation) CreateInvitation(ct context.Context, args struct {
