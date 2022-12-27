@@ -10,12 +10,12 @@ import (
 )
 
 type CreateTaskAwaitForRelationMutation struct {
-	id                      uint64
-	teamID                  uint64
 	stateSyncer             *realtime.StateSyncer
-	taskAwaitForRelation    entity.TaskAwaitForRelation
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
+	taskDao                 dao.Task
 	dataCollector           obs.DataCollector
+	id                      uint64
+	taskAwaitForRelation    entity.TaskAwaitForRelation
 }
 
 func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
@@ -37,7 +37,13 @@ func (c *CreateTaskAwaitForRelationMutation) Undo() error {
 }
 
 func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamID)
+	task, err := c.taskDao.FindTaskByID(ct, c.taskAwaitForRelation.AwaitForTaskID)
+	if err != nil {
+		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []*realtime.ClientNotifier{}, err
+	}
+
+	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
 func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessage {
@@ -50,17 +56,17 @@ func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 }
 
 func NewCreateTaskAwaitForRelationMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	taskAwaitForRelation entity.TaskAwaitForRelation,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
-	dataCollector obs.DataCollector) *CreateTaskAwaitForRelationMutation {
+	taskDao dao.Task,
+	dataCollector obs.DataCollector,
+	taskAwaitForRelation entity.TaskAwaitForRelation) *CreateTaskAwaitForRelationMutation {
 	return &CreateTaskAwaitForRelationMutation{
-		id:                      stateSyncer.NextMutationID(),
-		teamID:                  teamID,
 		stateSyncer:             stateSyncer,
-		taskAwaitForRelation:    taskAwaitForRelation,
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
+		taskDao:                 taskDao,
 		dataCollector:           dataCollector,
+		id:                      stateSyncer.NextMutationID(),
+		taskAwaitForRelation:    taskAwaitForRelation,
 	}
 }

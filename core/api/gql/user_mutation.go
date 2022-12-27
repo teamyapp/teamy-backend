@@ -10,8 +10,8 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
-	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 )
 
 func (m Mutation) CreateUser(ct context.Context, args struct {
@@ -72,10 +72,10 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	userMutation := mutation.NewUpdateUserMutation(
 		m.deps.stateSyncer,
-		user,
 		m.deps.teamMemberDao,
 		m.deps.userDao,
-		m.deps.dataCollector)
+		m.deps.dataCollector,
+		user)
 	realTimeTransaction.AddMutation(ct, userMutation)
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {

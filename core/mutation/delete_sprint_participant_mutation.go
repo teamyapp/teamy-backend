@@ -9,13 +9,13 @@ import (
 )
 
 type DeleteSprintParticipantMutation struct {
-	id                   uint64
-	teamID               uint64
 	stateSyncer          *realtime.StateSyncer
+	sprintParticipantDao dao.SprintParticipant
+	sprintDao            dao.Sprint
+	dataCollector        obs.DataCollector
+	id                   uint64
 	userID               uint64
 	sprintID             uint64
-	sprintParticipantDao dao.SprintParticipant
-	dataCollector        obs.DataCollector
 }
 
 func (c *DeleteSprintParticipantMutation) GetID() uint64 {
@@ -37,7 +37,13 @@ func (d *DeleteSprintParticipantMutation) Undo() error {
 }
 
 func (d *DeleteSprintParticipantMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
+	sprint, err := d.sprintDao.FindSprintByID(ct, d.sprintID)
+	if err != nil {
+		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []*realtime.ClientNotifier{}, err
+	}
+
+	return d.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
 func (d *DeleteSprintParticipantMutation) ToMessage() realtime.MutationMessage {
@@ -56,19 +62,19 @@ func (d *DeleteSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewDeleteSprintParticipantMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	userID uint64,
-	sprintID uint64,
 	sprintParticipantDao dao.SprintParticipant,
-	dataCollector obs.DataCollector) *DeleteSprintParticipantMutation {
+	sprintDao dao.Sprint,
+	dataCollector obs.DataCollector,
+	userID uint64,
+	sprintID uint64) *DeleteSprintParticipantMutation {
 	return &DeleteSprintParticipantMutation{
-		id:                   stateSyncer.NextMutationID(),
-		teamID:               teamID,
 		stateSyncer:          stateSyncer,
+		sprintParticipantDao: sprintParticipantDao,
+		sprintDao:            sprintDao,
+		dataCollector:        dataCollector,
+		id:                   stateSyncer.NextMutationID(),
 		userID:               userID,
 		sprintID:             sprintID,
-		sprintParticipantDao: sprintParticipantDao,
-		dataCollector:        dataCollector,
 	}
 }

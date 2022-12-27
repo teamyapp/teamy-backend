@@ -15,8 +15,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
-	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -120,11 +120,10 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	// All users are authorized to create team
 	createTeamMutation := mutation.NewCreateTeamMutation(
-		team.ID,
 		t.stateSyncer,
-		team,
 		t.teamDao,
 		t.dataCollector,
+		team,
 	)
 	realTimeTransaction.AddMutation(ct, createTeamMutation)
 
@@ -134,11 +133,10 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		CreatedAt: time.Now(),
 	}
 	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
-		teamMember.TeamID,
 		t.stateSyncer,
-		teamMember,
 		t.teamMemberDao,
 		t.dataCollector,
+		teamMember,
 	)
 	realTimeTransaction.AddMutation(ct, createTeamMemberMutation)
 
@@ -247,11 +245,10 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	team.UpdatedAt = &updatedAt
 	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	updateTeamMutation := mutation.NewUpdateTeamMutation(
-		teamID,
 		t.stateSyncer,
-		team,
 		t.teamDao,
 		t.dataCollector,
+		team,
 	)
 	realTimeTransaction.AddMutation(ct, updateTeamMutation)
 
@@ -343,11 +340,10 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 	}
 	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
-		teamID,
 		t.stateSyncer,
-		teamMember,
 		t.teamMemberDao,
 		t.dataCollector,
+		teamMember,
 	)
 	realTimeTransaction.AddMutation(ct, createTeamMemberMutation)
 
@@ -364,11 +360,11 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			CreatedAt: time.Now(),
 		}
 		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
-			teamID,
 			t.stateSyncer,
-			participant,
 			t.sprintService.sprintParticipantDao,
+			t.sprintDao,
 			t.dataCollector,
+			participant,
 		)
 		realTimeTransaction.AddMutation(ct, createSprintParticipantMutation)
 	}
@@ -391,11 +387,11 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	// TODO: ensure user is inside the team
 	deleteTeamMemberMutation := mutation.NewDeleteTeamMemberMutation(
-		teamID,
 		t.stateSyncer,
-		teamMember.UserID,
 		t.teamMemberDao,
 		t.dataCollector,
+		teamID,
+		teamMember.UserID,
 	)
 	realTimeTransaction.AddMutation(ct, deleteTeamMemberMutation)
 
@@ -407,12 +403,12 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 
 	for _, sprint := range currAndFutureSprints {
 		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
-			teamID,
 			t.stateSyncer,
+			t.sprintService.sprintParticipantDao,
+			t.sprintDao,
+			t.dataCollector,
 			teamMember.UserID,
 			sprint.ID,
-			t.sprintService.sprintParticipantDao,
-			t.dataCollector,
 		)
 		realTimeTransaction.AddMutation(ct, deleteSprintParticipantMutation)
 	}
@@ -443,11 +439,10 @@ func (t Team) UpdateTeamMember(
 	teamMember.UpdatedAt = &now
 	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
 	updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
-		teamID,
 		t.stateSyncer,
-		teamMember,
 		t.teamMemberDao,
 		t.dataCollector,
+		teamMember,
 	)
 	realTimeTransaction.AddMutation(ct, updateTeamMemberMutation)
 
@@ -472,11 +467,11 @@ func (t Team) UpdateTeamMember(
 			participant.TotalBandwidth += bandwidthDelta
 			participant.UnusedBandwidth += bandwidthDelta
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-				teamID,
 				t.stateSyncer,
-				participant,
 				t.sprintService.sprintParticipantDao,
+				t.sprintDao,
 				t.dataCollector,
+				participant,
 			)
 			realTimeTransaction.AddMutation(ct, updateSprintParticipantMutation)
 		}

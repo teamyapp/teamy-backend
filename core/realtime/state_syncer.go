@@ -194,6 +194,34 @@ func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamN
 	return teamNotifier, nil
 }
 
+func (s *StateSyncer) GetClientNotifiersByUserID(ct context.Context, userID uint64) ([]*ClientNotifier, error) {
+	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []*ClientNotifier{}, err
+	}
+
+	clientNotifiersMap := make(map[uint64]*ClientNotifier)
+	for _, teamID := range teamIDs {
+		teamClientNotifiers, err := s.GetClientNotifiersByTeamID(ct, teamID)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return []*ClientNotifier{}, err
+		}
+
+		for _, clientNotifier := range teamClientNotifiers {
+			clientNotifiersMap[clientNotifier.clientID] = clientNotifier
+		}
+	}
+
+	clientNotifiers := make([]*ClientNotifier, 0)
+	for _, clientNotifier := range clientNotifiersMap {
+		clientNotifiers = append(clientNotifiers, clientNotifier)
+	}
+
+	return clientNotifiers, nil
+}
+
 func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, error) {
 	teamNotifier, err := s.GetTeamNotifier(ct, teamID)
 	if err != nil {

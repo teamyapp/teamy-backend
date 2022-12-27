@@ -5,16 +5,16 @@ import (
 
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteTaskMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	taskID        uint64
 	taskDao       dao.Task
 	dataCollector obs.DataCollector
+	id            uint64
+	task          entity.Task
 }
 
 func (c *DeleteTaskMutation) GetID() uint64 {
@@ -22,7 +22,7 @@ func (c *DeleteTaskMutation) GetID() uint64 {
 }
 
 func (d *DeleteTaskMutation) Execute(ct context.Context) error {
-	err := d.taskDao.DeleteTask(ct, d.taskID)
+	err := d.taskDao.DeleteTask(ct, d.task.ID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -36,7 +36,7 @@ func (d *DeleteTaskMutation) Undo() error {
 }
 
 func (d *DeleteTaskMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
+	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 }
 
 func (d *DeleteTaskMutation) ToMessage() realtime.MutationMessage {
@@ -44,22 +44,20 @@ func (d *DeleteTaskMutation) ToMessage() realtime.MutationMessage {
 		ID:             d.id,
 		CollectionType: realtime.TaskCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		Payload:        d.taskID,
+		Payload:        d.task.ID,
 	}
 }
 
 func NewDeleteTaskMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	taskID uint64,
 	taskDao dao.Task,
-	dataCollector obs.DataCollector) *DeleteTaskMutation {
+	dataCollector obs.DataCollector,
+	task entity.Task) *DeleteTaskMutation {
 	return &DeleteTaskMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		taskID:        taskID,
 		taskDao:       taskDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		task:          task,
 	}
 }

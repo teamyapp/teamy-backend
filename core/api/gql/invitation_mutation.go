@@ -10,8 +10,8 @@ import (
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
-	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -68,11 +68,10 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 
 	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
-		invitation.TeamID,
 		m.deps.stateSyncer,
-		invitation,
 		m.deps.invitationDao,
-		m.deps.dataCollector)
+		m.deps.dataCollector,
+		invitation)
 
 	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
 	err = realTimeTransaction.Commit(ct)
@@ -101,11 +100,10 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 
 	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	deleteInvitationMutation := mutation.NewDeleteInvitationMutation(
-		invitation.TeamID,
 		m.deps.stateSyncer,
-		invitation.ID,
 		m.deps.invitationDao,
-		m.deps.dataCollector)
+		m.deps.dataCollector,
+		invitation)
 
 	realTimeTransaction.AddMutation(ct, deleteInvitationMutation)
 	err = realTimeTransaction.Commit(ct)
@@ -164,11 +162,10 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	invitation.UpdatedAt = &now
 	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
-		invitation.TeamID,
 		m.deps.stateSyncer,
-		invitation,
 		m.deps.invitationDao,
-		m.deps.dataCollector)
+		m.deps.dataCollector,
+		invitation)
 
 	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
 	err = realTimeTransaction.Commit(ct)
@@ -241,11 +238,10 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	invitation.UpdatedAt = &now
 	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
-		invitation.TeamID,
 		m.deps.stateSyncer,
-		invitation,
 		m.deps.invitationDao,
-		m.deps.dataCollector)
+		m.deps.dataCollector,
+		invitation)
 
 	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
 	err = realTimeTransaction.Commit(ct)

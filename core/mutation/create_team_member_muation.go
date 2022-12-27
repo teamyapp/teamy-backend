@@ -10,12 +10,11 @@ import (
 )
 
 type CreateTeamMemberMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	teamMember    entity.TeamMember
 	teamMemberDao dao.TeamMember
 	dataCollector obs.DataCollector
+	id            uint64
+	teamMember    entity.TeamMember
 }
 
 func (c *CreateTeamMemberMutation) GetID() uint64 {
@@ -23,6 +22,12 @@ func (c *CreateTeamMemberMutation) GetID() uint64 {
 }
 
 func (c *CreateTeamMemberMutation) Execute(ct context.Context) error {
+	err := c.teamMemberDao.CreateTeamMember(ct, c.teamMember)
+	if err != nil {
+		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
 	userNotifier, err := c.stateSyncer.GetUserNotifier(ct, c.teamMember.UserID)
 	if err != nil {
 		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -35,12 +40,6 @@ func (c *CreateTeamMemberMutation) Execute(ct context.Context) error {
 		}
 	}
 
-	err = c.teamMemberDao.CreateTeamMember(ct, c.teamMember)
-	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
 	return nil
 }
 
@@ -49,7 +48,7 @@ func (c *CreateTeamMemberMutation) Undo() error {
 }
 
 func (c *CreateTeamMemberMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamID)
+	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamMember.TeamID)
 }
 
 func (c *CreateTeamMemberMutation) ToMessage() realtime.MutationMessage {
@@ -62,17 +61,15 @@ func (c *CreateTeamMemberMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateTeamMemberMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	teamMember entity.TeamMember,
 	teamMemberDao dao.TeamMember,
-	dataCollector obs.DataCollector) *CreateTeamMemberMutation {
+	dataCollector obs.DataCollector,
+	teamMember entity.TeamMember) *CreateTeamMemberMutation {
 	return &CreateTeamMemberMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		teamMember:    teamMember,
 		teamMemberDao: teamMemberDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		teamMember:    teamMember,
 	}
 }

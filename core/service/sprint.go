@@ -15,8 +15,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
-	"github.com/teamyapp/teamy-backend/core/realtime/mutation"
 )
 
 const timePerWeek = 7 * 24 * time.Hour
@@ -29,6 +29,7 @@ type CreateSprintInput struct {
 type Sprint struct {
 	dataCollector         obs.DataCollector
 	cloudClientRegistry   *cloudAPI.ClientRegistry
+	stateSyncer           *realtime.StateSyncer
 	authorizer            Authorizer
 	taskDao               dao.Task
 	sprintDao             dao.Sprint
@@ -36,7 +37,6 @@ type Sprint struct {
 	sprintParticipantDao  dao.SprintParticipant
 	teamMemberDao         dao.TeamMember
 	taskService           Task
-	stateSyncer           *realtime.StateSyncer
 }
 
 func (s Sprint) FindTasksInSprint(
@@ -228,11 +228,11 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		}
 
 		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
-			teamID,
 			s.stateSyncer,
-			participant,
 			s.sprintParticipantDao,
-			s.dataCollector)
+			s.sprintDao,
+			s.dataCollector,
+			participant)
 		realTimeTransaction.AddMutation(ct, createSprintParticipantMutation)
 	}
 
@@ -274,12 +274,12 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
 	for _, participantUserID := range participantUserIDs {
 		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
-			sprint.OwningTeamID,
 			s.stateSyncer,
-			participantUserID,
-			sprintID,
 			s.sprintParticipantDao,
-			s.dataCollector)
+			s.sprintDao,
+			s.dataCollector,
+			participantUserID,
+			sprintID)
 		realTimeTransaction.AddMutation(ct, deleteSprintParticipantMutation)
 	}
 	err = realTimeTransaction.Commit(ct)
@@ -317,21 +317,20 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		CreatedAt: time.Now().UTC(),
 	}
 	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelationMutation(
-		sprint.OwningTeamID,
 		s.stateSyncer,
-		relation,
 		s.sprintTaskRelationDao,
-		s.dataCollector)
+		s.sprintDao,
+		s.dataCollector,
+		relation)
 	realTimeTransaction.AddMutation(ct, createSprintTaskRelationMutation)
 
 	if !task.IsPlanned {
 		task.IsPlanned = true
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			sprint.OwningTeamID,
 			s.stateSyncer,
-			task,
 			s.taskDao,
-			s.dataCollector)
+			s.dataCollector,
+			task)
 		realTimeTransaction.AddMutation(ct, updateTaskMutation)
 	}
 
@@ -541,22 +540,21 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	}
 	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
 	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
-		task.OwningTeamID,
 		s.stateSyncer,
-		sprintID,
-		taskID,
+		s.sprintTaskRelationDao,
 		s.dataCollector,
+		sprintID,
+		task,
 	)
 	realTimeTransaction.AddMutation(ct, deleteSprintTaskRelationMutation)
 	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			task.OwningTeamID,
 			s.stateSyncer,
-			task,
 			s.taskDao,
-			s.dataCollector)
+			s.dataCollector,
+			task)
 		realTimeTransaction.AddMutation(ct, updateTaskMutation)
 	}
 
@@ -590,11 +588,11 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction,
 
 		newSprintParticipant.UnusedBandwidth -= *task.Effort
 		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-			task.OwningTeamID,
 			s.stateSyncer,
-			newSprintParticipant,
 			s.sprintParticipantDao,
-			s.dataCollector)
+			s.sprintDao,
+			s.dataCollector,
+			newSprintParticipant)
 		tx.AddMutation(ct, updateSprintParticipantMutation)
 	}
 
@@ -616,11 +614,11 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 
 		oldSprintParticipant.UnusedBandwidth += *task.Effort
 		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-			task.OwningTeamID,
 			s.stateSyncer,
-			oldSprintParticipant,
 			s.sprintParticipantDao,
-			s.dataCollector)
+			s.sprintDao,
+			s.dataCollector,
+			oldSprintParticipant)
 		tx.AddMutation(ct, updateSprintParticipantMutation)
 	}
 
@@ -630,6 +628,7 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 func NewSprint(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	stateSyncer *realtime.StateSyncer,
 	authorizer Authorizer,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
@@ -637,11 +636,11 @@ func NewSprint(
 	sprintParticipantDao dao.SprintParticipant,
 	teamMemberDao dao.TeamMember,
 	taskService Task,
-	stateSyncer *realtime.StateSyncer,
 ) Sprint {
 	return Sprint{
 		dataCollector:         dataCollector,
 		cloudClientRegistry:   cloudClientRegistry,
+		stateSyncer:           stateSyncer,
 		authorizer:            authorizer,
 		taskDao:               taskDao,
 		sprintDao:             sprintDao,
@@ -649,6 +648,5 @@ func NewSprint(
 		sprintParticipantDao:  sprintParticipantDao,
 		teamMemberDao:         teamMemberDao,
 		taskService:           taskService,
-		stateSyncer:           stateSyncer,
 	}
 }

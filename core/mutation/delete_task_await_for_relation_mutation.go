@@ -5,17 +5,17 @@ import (
 
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteTaskAwaitForRelationMutation struct {
-	id                      uint64
-	teamID                  uint64
 	stateSyncer             *realtime.StateSyncer
-	awaitingTaskID          uint64
-	awaitForTaskID          uint64
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	dataCollector           obs.DataCollector
+	id                      uint64
+	awaitingTask            entity.Task
+	awaitForTaskID          uint64
 }
 
 func (c *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
@@ -23,7 +23,7 @@ func (c *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
 }
 
 func (d *DeleteTaskAwaitForRelationMutation) Execute(ct context.Context) error {
-	err := d.taskAwaitForRelationDao.DeleteRelation(ct, d.awaitingTaskID, d.awaitForTaskID)
+	err := d.taskAwaitForRelationDao.DeleteRelation(ct, d.awaitingTask.ID, d.awaitForTaskID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -37,7 +37,7 @@ func (d *DeleteTaskAwaitForRelationMutation) Undo() error {
 }
 
 func (d *DeleteTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
+	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.awaitingTask.OwningTeamID)
 }
 
 func (d *DeleteTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessage {
@@ -49,25 +49,24 @@ func (d *DeleteTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 			AwaitingTaskID uint64
 			AwaitForTaskID uint64
 		}{
-			AwaitingTaskID: d.awaitingTaskID,
+			AwaitingTaskID: d.awaitingTask.ID,
 			AwaitForTaskID: d.awaitForTaskID,
 		},
 	}
 }
 
 func NewDeleteTaskAwaitForRelationMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	awaitingTaskID uint64,
-	awaitForTaskID uint64,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
-	dataCollector obs.DataCollector) *DeleteTaskAwaitForRelationMutation {
+	dataCollector obs.DataCollector,
+	awaitingTask entity.Task,
+	awaitForTaskID uint64) *DeleteTaskAwaitForRelationMutation {
 	return &DeleteTaskAwaitForRelationMutation{
-		id:             stateSyncer.NextMutationID(),
-		teamID:         teamID,
-		stateSyncer:    stateSyncer,
-		awaitingTaskID: awaitingTaskID,
-		awaitForTaskID: awaitForTaskID,
-		dataCollector:  dataCollector,
+		stateSyncer:             stateSyncer,
+		taskAwaitForRelationDao: taskAwaitForRelationDao,
+		dataCollector:           dataCollector,
+		id:                      stateSyncer.NextMutationID(),
+		awaitingTask:            awaitingTask,
+		awaitForTaskID:          awaitForTaskID,
 	}
 }

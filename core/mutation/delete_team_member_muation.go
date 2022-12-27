@@ -10,12 +10,12 @@ import (
 )
 
 type DeleteTeamMemberMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	userID        uint64
 	teamMemberDao dao.TeamMember
 	dataCollector obs.DataCollector
+	id            uint64
+	teamID        uint64
+	userID        uint64
 }
 
 func (c *DeleteTeamMemberMutation) GetID() uint64 {
@@ -60,17 +60,17 @@ func (d *DeleteTeamMemberMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewDeleteTeamMemberMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	userID uint64,
 	teamMemberDao dao.TeamMember,
-	dataCollector obs.DataCollector) *DeleteTeamMemberMutation {
+	dataCollector obs.DataCollector,
+	teamID uint64,
+	userID uint64) *DeleteTeamMemberMutation {
 	return &DeleteTeamMemberMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		userID:        userID,
 		teamMemberDao: teamMemberDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		teamID:        teamID,
+		userID:        userID,
 	}
 }

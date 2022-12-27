@@ -10,12 +10,11 @@ import (
 )
 
 type UpdateTeamMemberMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	teamMember    entity.TeamMember
 	teamMemberDao dao.TeamMember
 	dataCollector obs.DataCollector
+	id            uint64
+	teamMember    entity.TeamMember
 }
 
 func (c *UpdateTeamMemberMutation) GetID() uint64 {
@@ -37,7 +36,7 @@ func (u *UpdateTeamMemberMutation) Undo() error {
 }
 
 func (u *UpdateTeamMemberMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.teamID)
+	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.teamMember.TeamID)
 }
 
 func (u *UpdateTeamMemberMutation) ToMessage() realtime.MutationMessage {
@@ -50,17 +49,15 @@ func (u *UpdateTeamMemberMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewUpdateTeamMemberMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	teamMember entity.TeamMember,
 	teamMemberDao dao.TeamMember,
-	dataCollector obs.DataCollector) *UpdateTeamMemberMutation {
+	dataCollector obs.DataCollector,
+	teamMember entity.TeamMember) *UpdateTeamMemberMutation {
 	return &UpdateTeamMemberMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		teamMember:    teamMember,
 		teamMemberDao: teamMemberDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		teamMember:    teamMember,
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/obs"
 )
 
@@ -22,6 +23,17 @@ func (c *ClientTransaction) commit(ct context.Context) {
 	c.clientNotifier.notifyTransaction(ct, *c)
 }
 
+func (c *ClientTransaction) ToMessage() TransactionMessage {
+	mutationMessages := collect.Map(c.mutations, func(mutation Mutation, _ int) MutationMessage {
+		return mutation.ToMessage()
+	})
+
+	return TransactionMessage{
+		ID:        c.id,
+		Mutations: mutationMessages,
+	}
+}
+
 func NewClientTransaction(id uint64, dataCollector obs.DataCollector, clientNotifier *ClientNotifier) *ClientTransaction {
 	return &ClientTransaction{
 		id:             id,
@@ -38,21 +50,6 @@ type Transaction struct {
 	stateSyncer            *StateSyncer
 }
 
-func (c *Transaction) logMutation(ct context.Context, mutation Mutation) {
-	ct = WithMutationID(ct, mutation.GetID())
-	buf, err := json.Marshal(mutation)
-	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-	} else {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
-				"Summary":  "add mutation",
-				"Mutation": string(buf),
-			},
-		})
-	}
-}
-
 func (t *Transaction) rollback(ct context.Context) error {
 	for index := t.processedMutationIndex; index >= 0; index-- {
 		err := t.mutations[index].Undo()
@@ -65,7 +62,19 @@ func (t *Transaction) rollback(ct context.Context) error {
 }
 
 func (t *Transaction) AddMutation(ct context.Context, mutation Mutation) {
-	t.logMutation(ct, mutation)
+	ct = WithMutationID(ct, mutation.GetID())
+	buf, err := json.Marshal(mutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	} else {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
+			obs.MessageProp: obs.Props{
+				"Summary":  "add mutation",
+				"Mutation": string(buf),
+			},
+		})
+	}
+
 	t.mutations = append(t.mutations, mutation)
 }
 
@@ -103,9 +112,12 @@ func (t *Transaction) Commit(ct context.Context) error {
 		for _, clientNotifier := range clientNotifiers {
 			clientID := clientNotifier.getClientID()
 			_, ok := clientTransactions[clientID]
-
+			clientTransactionID := t.stateSyncer.NextClientTransactionID()
 			if !ok {
-				clientTransactions[clientID] = NewClientTransaction(t.stateSyncer.NextClientTransactionID(), clientNotifier.dataCollector, clientNotifier)
+				clientTransactions[clientID] = NewClientTransaction(
+					clientTransactionID,
+					clientNotifier.dataCollector,
+					clientNotifier)
 			}
 
 			clientTransaction := clientTransactions[clientID]

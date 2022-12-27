@@ -10,12 +10,12 @@ import (
 )
 
 type CreateMessageMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	message       entity.Message
 	messageDao    dao.Message
+	taskDao       dao.Task
 	dataCollector obs.DataCollector
+	id            uint64
+	message       entity.Message
 }
 
 func (c *CreateMessageMutation) GetID() uint64 {
@@ -37,7 +37,13 @@ func (c *CreateMessageMutation) Undo() error {
 }
 
 func (c *CreateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamID)
+	task, err := c.taskDao.FindTaskByCommentsThreadID(ct, c.message.ThreadID)
+	if err != nil {
+		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []*realtime.ClientNotifier{}, err
+	}
+
+	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
 func (c *CreateMessageMutation) ToMessage() realtime.MutationMessage {
@@ -50,17 +56,17 @@ func (c *CreateMessageMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateMessageMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	message entity.Message,
 	messageDao dao.Message,
-	dataCollector obs.DataCollector) *CreateMessageMutation {
+	taskDao dao.Task,
+	dataCollector obs.DataCollector,
+	message entity.Message) *CreateMessageMutation {
 	return &CreateMessageMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		message:       message,
 		messageDao:    messageDao,
+		taskDao:       taskDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		message:       message,
 	}
 }

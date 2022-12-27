@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -50,18 +49,9 @@ func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction
 		return
 	}
 
-	mutationMessages := collect.Map(clientTransaction.mutations, func(mutation Mutation, _ int) MutationMessage {
-		return mutation.ToMessage()
-	})
-
-	transactionMessage := TransactionMessage{
-		ID:        clientTransaction.id,
-		Mutations: mutationMessages,
-	}
-
 	message := Message{
 		Type:    TransactionMessageType,
-		Payload: transactionMessage,
+		Payload: clientTransaction.ToMessage(),
 	}
 	c.messages <- message
 }

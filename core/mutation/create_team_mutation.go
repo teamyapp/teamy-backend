@@ -10,12 +10,11 @@ import (
 )
 
 type CreateTeamMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	team          entity.Team
 	teamDao       dao.Team
 	dataCollector obs.DataCollector
+	id            uint64
+	team          entity.Team
 }
 
 func (c *CreateTeamMutation) GetID() uint64 {
@@ -37,7 +36,7 @@ func (c *CreateTeamMutation) Undo() error {
 }
 
 func (c *CreateTeamMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamID)
+	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.team.ID)
 }
 
 func (c *CreateTeamMutation) ToMessage() realtime.MutationMessage {
@@ -50,17 +49,15 @@ func (c *CreateTeamMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateTeamMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	team entity.Team,
 	teamDao dao.Team,
-	dataCollector obs.DataCollector) *CreateTeamMutation {
+	dataCollector obs.DataCollector,
+	team entity.Team) *CreateTeamMutation {
 	return &CreateTeamMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		team:          team,
 		teamDao:       teamDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		team:          team,
 	}
 }

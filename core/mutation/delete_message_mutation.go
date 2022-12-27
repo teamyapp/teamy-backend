@@ -5,16 +5,17 @@ import (
 
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteMessageMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	messageID     uint64
+	message       entity.Message
 	messageDao    dao.Message
 	dataCollector obs.DataCollector
+	id            uint64
+	taskDao       dao.Task
 }
 
 func (c *DeleteMessageMutation) GetID() uint64 {
@@ -22,7 +23,7 @@ func (c *DeleteMessageMutation) GetID() uint64 {
 }
 
 func (d *DeleteMessageMutation) Execute(ct context.Context) error {
-	err := d.messageDao.DeleteMessage(ct, d.messageID)
+	err := d.messageDao.DeleteMessage(ct, d.message.ID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -36,7 +37,13 @@ func (d *DeleteMessageMutation) Undo() error {
 }
 
 func (d *DeleteMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
+	task, err := d.taskDao.FindTaskByCommentsThreadID(ct, d.message.ThreadID)
+	if err != nil {
+		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []*realtime.ClientNotifier{}, err
+	}
+
+	return d.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
 func (d *DeleteMessageMutation) ToMessage() realtime.MutationMessage {
@@ -44,22 +51,22 @@ func (d *DeleteMessageMutation) ToMessage() realtime.MutationMessage {
 		ID:             d.id,
 		CollectionType: realtime.MessageCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		Payload:        d.messageID,
+		Payload:        d.message.ID,
 	}
 }
 
 func NewDeleteMessageMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	messageID uint64,
 	messageDao dao.Message,
-	dataCollector obs.DataCollector) *DeleteMessageMutation {
+	taskDao dao.Task,
+	dataCollector obs.DataCollector,
+	message entity.Message) *DeleteMessageMutation {
 	return &DeleteMessageMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		messageID:     messageID,
 		messageDao:    messageDao,
+		taskDao:       taskDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		message:       message,
 	}
 }

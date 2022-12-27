@@ -10,12 +10,11 @@ import (
 )
 
 type CreateInvitationMutation struct {
-	id            uint64
-	teamID        uint64
 	stateSyncer   *realtime.StateSyncer
-	invitation    entity.Invitation
 	invitationDao dao.Invitation
 	dataCollector obs.DataCollector
+	id            uint64
+	invitation    entity.Invitation
 }
 
 func (c *CreateInvitationMutation) GetID() uint64 {
@@ -37,7 +36,7 @@ func (c *CreateInvitationMutation) Undo() error {
 }
 
 func (c *CreateInvitationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamID)
+	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.invitation.TeamID)
 }
 
 func (c *CreateInvitationMutation) ToMessage() realtime.MutationMessage {
@@ -50,17 +49,15 @@ func (c *CreateInvitationMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateInvitationMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	invitation entity.Invitation,
 	invitationDao dao.Invitation,
-	dataCollector obs.DataCollector) *CreateInvitationMutation {
+	dataCollector obs.DataCollector,
+	invitation entity.Invitation) *CreateInvitationMutation {
 	return &CreateInvitationMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
 		stateSyncer:   stateSyncer,
-		invitation:    invitation,
 		invitationDao: invitationDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		invitation:    invitation,
 	}
 }

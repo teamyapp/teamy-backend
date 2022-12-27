@@ -10,12 +10,12 @@ import (
 )
 
 type UpdateSprintParticipantMutation struct {
-	id                   uint64
-	teamID               uint64
 	stateSyncer          *realtime.StateSyncer
-	sprintParticipant    entity.SprintParticipant
 	sprintParticipantDao dao.SprintParticipant
+	sprintDao            dao.Sprint
 	dataCollector        obs.DataCollector
+	id                   uint64
+	sprintParticipant    entity.SprintParticipant
 }
 
 func (c *UpdateSprintParticipantMutation) GetID() uint64 {
@@ -37,7 +37,13 @@ func (u *UpdateSprintParticipantMutation) Undo() error {
 }
 
 func (u *UpdateSprintParticipantMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.teamID)
+	sprint, err := u.sprintDao.FindSprintByID(ct, u.sprintParticipant.SprintID)
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []*realtime.ClientNotifier{}, err
+	}
+
+	return u.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
 func (u *UpdateSprintParticipantMutation) ToMessage() realtime.MutationMessage {
@@ -50,17 +56,17 @@ func (u *UpdateSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewUpdateSprintParticipantMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	sprintParticipant entity.SprintParticipant,
 	sprintParticipantDao dao.SprintParticipant,
-	dataCollector obs.DataCollector) *UpdateSprintParticipantMutation {
+	sprintDao dao.Sprint,
+	dataCollector obs.DataCollector,
+	sprintParticipant entity.SprintParticipant) *UpdateSprintParticipantMutation {
 	return &UpdateSprintParticipantMutation{
-		id:                   stateSyncer.NextMutationID(),
-		teamID:               teamID,
 		stateSyncer:          stateSyncer,
-		sprintParticipant:    sprintParticipant,
 		sprintParticipantDao: sprintParticipantDao,
+		sprintDao:            sprintDao,
 		dataCollector:        dataCollector,
+		id:                   stateSyncer.NextMutationID(),
+		sprintParticipant:    sprintParticipant,
 	}
 }

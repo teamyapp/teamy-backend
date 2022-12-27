@@ -5,17 +5,17 @@ import (
 
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteSprintTaskRelationMutation struct {
-	id                    uint64
-	teamID                uint64
 	stateSyncer           *realtime.StateSyncer
-	sprintID              uint64
-	taskID                uint64
 	sprintTaskRelationDao dao.SprintTaskRelation
 	dataCollector         obs.DataCollector
+	id                    uint64
+	sprintID              uint64
+	task                  entity.Task
 }
 
 func (c *DeleteSprintTaskRelationMutation) GetID() uint64 {
@@ -23,7 +23,7 @@ func (c *DeleteSprintTaskRelationMutation) GetID() uint64 {
 }
 
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) error {
-	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.taskID)
+	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -37,7 +37,7 @@ func (d *DeleteSprintTaskRelationMutation) Undo() error {
 }
 
 func (d *DeleteSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
+	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 }
 
 func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage {
@@ -50,23 +50,23 @@ func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 			TaskID   uint64
 		}{
 			SprintID: d.sprintID,
-			TaskID:   d.taskID,
+			TaskID:   d.task.ID,
 		},
 	}
 }
 
 func NewDeleteSprintTaskRelationMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
+	sprintTaskRelationDao dao.SprintTaskRelation,
+	dataCollector obs.DataCollector,
 	sprintID uint64,
-	taskID uint64,
-	dataCollector obs.DataCollector) *DeleteSprintTaskRelationMutation {
+	task entity.Task) *DeleteSprintTaskRelationMutation {
 	return &DeleteSprintTaskRelationMutation{
-		id:            stateSyncer.NextMutationID(),
-		teamID:        teamID,
-		stateSyncer:   stateSyncer,
-		sprintID:      sprintID,
-		taskID:        taskID,
-		dataCollector: dataCollector,
+		stateSyncer:           stateSyncer,
+		sprintTaskRelationDao: sprintTaskRelationDao,
+		dataCollector:         dataCollector,
+		id:                    stateSyncer.NextMutationID(),
+		sprintID:              sprintID,
+		task:                  task,
 	}
 }

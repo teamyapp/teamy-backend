@@ -10,12 +10,12 @@ import (
 )
 
 type UpdateUserMutation struct {
-	id            uint64
 	stateSyncer   *realtime.StateSyncer
-	user          entity.User
 	teamMemberDao dao.TeamMember
 	userDao       dao.User
 	dataCollector obs.DataCollector
+	id            uint64
+	user          entity.User
 }
 
 func (c *UpdateUserMutation) GetID() uint64 {
@@ -37,24 +37,7 @@ func (u *UpdateUserMutation) Undo() error {
 }
 
 func (u *UpdateUserMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	teamIDs, err := u.teamMemberDao.FindTeamIDsByUserID(ct, u.user.ID)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []*realtime.ClientNotifier{}, err
-	}
-
-	clientNotifiers := make([]*realtime.ClientNotifier, 0)
-
-	for _, teamID := range teamIDs {
-		teamClientNotifiers, err := u.stateSyncer.GetClientNotifiersByTeamID(ct, teamID)
-		if err != nil {
-			u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return []*realtime.ClientNotifier{}, err
-		}
-		clientNotifiers = append(clientNotifiers, teamClientNotifiers...)
-	}
-
-	return clientNotifiers, nil
+	return u.stateSyncer.GetClientNotifiersByUserID(ct, u.user.ID)
 }
 
 func (u *UpdateUserMutation) ToMessage() realtime.MutationMessage {
@@ -68,16 +51,16 @@ func (u *UpdateUserMutation) ToMessage() realtime.MutationMessage {
 
 func NewUpdateUserMutation(
 	stateSyncer *realtime.StateSyncer,
-	user entity.User,
 	teamMemberDao dao.TeamMember,
 	userDao dao.User,
-	dataCollector obs.DataCollector) *UpdateUserMutation {
+	dataCollector obs.DataCollector,
+	user entity.User) *UpdateUserMutation {
 	return &UpdateUserMutation{
-		id:            stateSyncer.NextMutationID(),
 		stateSyncer:   stateSyncer,
-		user:          user,
 		teamMemberDao: teamMemberDao,
 		userDao:       userDao,
 		dataCollector: dataCollector,
+		id:            stateSyncer.NextMutationID(),
+		user:          user,
 	}
 }

@@ -51,7 +51,7 @@ func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL 
 	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread, realTimeStateSyncer)
 	sprint := sqldb.NewSprint(dataCollector, sqlDB)
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(dataCollector, sqlDB)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask, realTimeStateSyncer)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask)
 	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, task, sprint, team, teamMember, teamFileUploadSession, serviceSprint, realTimeStateSyncer)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
 	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
@@ -93,7 +93,7 @@ func InitSprintRPCAPI(dataCollector obs.DataCollector, cloudAPIClientRegistry *a
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
 	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, thread)
 	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, activity, task, thread, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread, realTimeStateSyncer)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask, realTimeStateSyncer)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask)
 	sprintRPC := api2.NewSprintRPC(dataCollector, serviceSprint)
 	return sprintRPC
 }

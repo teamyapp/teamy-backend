@@ -10,12 +10,12 @@ import (
 )
 
 type CreateSprintTaskRelationMutation struct {
-	id                    uint64
-	teamID                uint64
 	stateSyncer           *realtime.StateSyncer
-	sprintTaskRelation    entity.SprintTaskRelation
 	sprintTaskRelationDao dao.SprintTaskRelation
+	sprintDao             dao.Sprint
 	dataCollector         obs.DataCollector
+	id                    uint64
+	sprintTaskRelation    entity.SprintTaskRelation
 }
 
 func (c *CreateSprintTaskRelationMutation) GetID() uint64 {
@@ -37,7 +37,13 @@ func (c *CreateSprintTaskRelationMutation) Undo() error {
 }
 
 func (c *CreateSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamID)
+	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
+	if err != nil {
+		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return []*realtime.ClientNotifier{}, err
+	}
+
+	return c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
 func (c *CreateSprintTaskRelationMutation) ToMessage() realtime.MutationMessage {
@@ -50,17 +56,17 @@ func (c *CreateSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 }
 
 func NewCreateSprintTaskRelationMutation(
-	teamID uint64,
 	stateSyncer *realtime.StateSyncer,
-	sprintTaskRelation entity.SprintTaskRelation,
 	sprintTaskRelationDao dao.SprintTaskRelation,
-	dataCollector obs.DataCollector) *CreateSprintTaskRelationMutation {
+	sprintDao dao.Sprint,
+	dataCollector obs.DataCollector,
+	sprintTaskRelation entity.SprintTaskRelation) *CreateSprintTaskRelationMutation {
 	return &CreateSprintTaskRelationMutation{
-		id:                    stateSyncer.NextMutationID(),
-		teamID:                teamID,
 		stateSyncer:           stateSyncer,
-		sprintTaskRelation:    sprintTaskRelation,
 		sprintTaskRelationDao: sprintTaskRelationDao,
+		sprintDao:             sprintDao,
 		dataCollector:         dataCollector,
+		id:                    stateSyncer.NextMutationID(),
+		sprintTaskRelation:    sprintTaskRelation,
 	}
 }
