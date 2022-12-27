@@ -28,6 +28,7 @@ type Dependencies struct {
 	taskService                service.Task
 	teamService                service.Team
 	sprintService              service.Sprint
+	invitationService          service.Invitation
 	userService                service.User
 }
 
@@ -51,6 +52,7 @@ func NewDependencies(
 	teamService service.Team,
 	sprintService service.Sprint,
 	userService service.User,
+	invitationService service.Invitation,
 ) *Dependencies {
 	return &Dependencies{
 		dataCollector:              dataCollector,
@@ -72,5 +74,6 @@ func NewDependencies(
 		teamService:                teamService,
 		sprintService:              sprintService,
 		userService:                userService,
+		invitationService:          invitationService,
 	}
 }

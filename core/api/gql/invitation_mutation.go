@@ -3,20 +3,15 @@ package gql
 import (
 	"context"
 	"errors"
+	"github.com/teamyapp/teamy-backend/core/service"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
-	"github.com/teamyapp/cloud/libs/randgen"
-	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
-	"github.com/teamyapp/teamy-backend/core/feature"
 )
-
-const invitationCodeLen = 20
 
 func (m Mutation) CreateInvitation(ct context.Context, args struct {
 	TeamID     graphql.ID
@@ -27,57 +22,18 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		ExpireAt          graphql.Time
 	}
 }) (Invitation, error) {
-	senderID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
-
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
 
-	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
-	genInvitationIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genInvitationIDReq)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
-
-	invitation := entity.Invitation{
-		ID:                genInvitationIDRes.UniqueNumber,
-		SenderUserID:      senderID,
+	invitation, err := m.deps.invitationService.CreateInvitation(ct, teamID, service.CreateInvitationInput{
 		ReceiverFirstName: args.Invitation.ReceiverFirstName,
 		ReceiverLastName:  args.Invitation.ReceiverLastName,
 		ReceiverEmail:     args.Invitation.ReceiverEmail,
-		TeamID:            teamID,
 		ExpireAt:          args.Invitation.ExpireAt.Time,
-		Status:            entity.InvitationStatusPending,
-		Code:              randgen.String(randgen.Base62, invitationCodeLen),
-		CreatedAt:         time.Now(),
-	}
-	err = m.deps.invitationSyncer.CreateAndSyncInvitation(ct, invitation)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
-	}
-
-	if feature.EnableAuthorization {
-		err = m.registerResource(ct, authorization.InvitationResourceType, invitation.ID)
-		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return Invitation{}, err
-		}
-
-		err = m.assignParentResource(ct, authorization.InvitationResourceType, invitation.ID, authorization.TeamResourceType, invitation.TeamID)
-		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return Invitation{}, err
-		}
-	}
+	})
 
 	return newInvitation(m.deps, invitation), err
 }

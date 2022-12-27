@@ -64,6 +64,7 @@ var collectionSyncerSet = wire.NewSet(
 var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
+	service.NewInvitation,
 	newTeamService,
 	service.NewSprint,
 	newUserService,
