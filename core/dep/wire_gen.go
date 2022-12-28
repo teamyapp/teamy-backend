@@ -65,7 +65,8 @@ func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL 
 	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, task, sprint, team, teamMember, teamFileUploadSession, teamMemberSyncer, sprintParticipantSyncer, teamSyncer, serviceSprint)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
 	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
-	dependencies := gql.NewDependencies(dataCollector, cloudAPIClientRegistry, user, team, teamMember, invitation, message, activity, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint, serviceUser)
+	serviceInvitation := service.NewInvitation(dataCollector, cloudAPIClientRegistry, authorizer, invitationSyncer)
+	dependencies := gql.NewDependencies(dataCollector, cloudAPIClientRegistry, user, team, teamMember, invitation, message, activity, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint, serviceUser, serviceInvitation)
 	resolver := gql.NewResolver(dependencies)
 	graphQL := api2.NewGraphQL(dataCollector, resolver)
 	return graphQL, nil
@@ -123,7 +124,7 @@ var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), 
 
 var collectionSyncerSet = wire.NewSet(collection.NewInvitationSyncer, collection.NewMessageSyncer, collection.NewTaskSyncer, collection.NewTaskAwaitForRelationSyncer, collection.NewSprintTaskRelationSyncer, collection.NewTeamSyncer, collection.NewTeamMemberSyncer, collection.NewUserSyncer, collection.NewSprintParticipantSyncer)
 
-var serviceSet = wire.NewSet(service.NewThread, service.NewTask, newTeamService, service.NewSprint, newUserService, service.NewAuthorizer)
+var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewAuthorizer)
 
 func newUserService(
 	dataCollector obs.DataCollector,
