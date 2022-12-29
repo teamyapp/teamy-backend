@@ -10,9 +10,9 @@ import (
 )
 
 type UpdateTaskActivityMutation struct {
+        dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	activityCache cache.Activity
-	dataCollector obs.DataCollector
 	id            uint64
 	taskActivity  entity.TaskActivity
 }
@@ -49,14 +49,15 @@ func (u *UpdateTaskActivityMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewUpdateTaskActivityMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	activityCache cache.Activity,
-	dataCollector obs.DataCollector,
-	taskActivity entity.TaskActivity) *UpdateTaskActivityMutation {
+	taskActivity entity.TaskActivity,
+) *UpdateTaskActivityMutation {
 	return &UpdateTaskActivityMutation{
+	        dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		activityCache: activityCache,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		taskActivity:  taskActivity,
 	}
