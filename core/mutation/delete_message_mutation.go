@@ -63,10 +63,10 @@ func NewDeleteMessageMutation(
 	message entity.Message,
 ) *DeleteMessageMutation {
 	return &DeleteMessageMutation{
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		messageDao:    messageDao,
 		taskDao:       taskDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		message:       message,
 	}
