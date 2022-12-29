@@ -55,9 +55,9 @@ func NewDeleteInvitationMutation(
 	invitation entity.Invitation,
 ) *DeleteInvitationMutation {
 	return &DeleteInvitationMutation{
+	        dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		invitationDao: invitationDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		invitation:    invitation,
 	}

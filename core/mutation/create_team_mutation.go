@@ -49,14 +49,15 @@ func (c *CreateTeamMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateTeamMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamDao dao.Team,
-	dataCollector obs.DataCollector,
-	team entity.Team) *CreateTeamMutation {
+	team entity.Team,
+) *CreateTeamMutation {
 	return &CreateTeamMutation{
+	        dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		teamDao:       teamDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		team:          team,
 	}
