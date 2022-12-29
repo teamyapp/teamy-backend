@@ -10,9 +10,9 @@ import (
 )
 
 type DeleteSprintTaskRelationMutation struct {
+	dataCollector         obs.DataCollector
 	stateSyncer           *realtime.StateSyncer
 	sprintTaskRelationDao dao.SprintTaskRelation
-	dataCollector         obs.DataCollector
 	id                    uint64
 	sprintID              uint64
 	task                  entity.Task
@@ -56,15 +56,16 @@ func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 }
 
 func NewDeleteSprintTaskRelationMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
-	dataCollector obs.DataCollector,
 	sprintID uint64,
-	task entity.Task) *DeleteSprintTaskRelationMutation {
+	task entity.Task,
+) *DeleteSprintTaskRelationMutation {
 	return &DeleteSprintTaskRelationMutation{
+                dataCollector:         dataCollector,
 		stateSyncer:           stateSyncer,
 		sprintTaskRelationDao: sprintTaskRelationDao,
-		dataCollector:         dataCollector,
 		id:                    stateSyncer.NextMutationID(),
 		sprintID:              sprintID,
 		task:                  task,

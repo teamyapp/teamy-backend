@@ -9,10 +9,10 @@ import (
 )
 
 type DeleteSprintParticipantMutation struct {
+	dataCollector        obs.DataCollector
 	stateSyncer          *realtime.StateSyncer
 	sprintParticipantDao dao.SprintParticipant
 	sprintDao            dao.Sprint
-	dataCollector        obs.DataCollector
 	id                   uint64
 	userID               uint64
 	sprintID             uint64
@@ -62,17 +62,18 @@ func (d *DeleteSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewDeleteSprintParticipantMutation(
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintDao dao.Sprint,
-	dataCollector obs.DataCollector,
 	userID uint64,
-	sprintID uint64) *DeleteSprintParticipantMutation {
+	sprintID uint64,
+) *DeleteSprintParticipantMutation {
 	return &DeleteSprintParticipantMutation{
+		dataCollector:        dataCollector,
 		stateSyncer:          stateSyncer,
 		sprintParticipantDao: sprintParticipantDao,
 		sprintDao:            sprintDao,
-		dataCollector:        dataCollector,
 		id:                   stateSyncer.NextMutationID(),
 		userID:               userID,
 		sprintID:             sprintID,
