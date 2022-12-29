@@ -225,7 +225,7 @@ func (s *StateSyncer) GetClientNotifiersByUserID(ct context.Context, userID uint
 func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, error) {
 	teamNotifier, err := s.GetTeamNotifier(ct, teamID)
 	if err != nil {
-		return []*ClientNotifier{}, err
+		return nil, err
 	}
 
 	clientNotifiers := make([]*ClientNotifier, 0)

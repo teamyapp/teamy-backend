@@ -33,7 +33,7 @@ func (c *ClientNotifier) onInitialStateReady() {
 	c.acceptTransaction = true
 }
 
-func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction ClientTransaction) {
+func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
 	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
 			"Summary": "process transaction",

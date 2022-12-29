@@ -10,10 +10,10 @@ import (
 )
 
 type UpdateUserMutation struct {
+        dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	teamMemberDao dao.TeamMember
 	userDao       dao.User
-	dataCollector obs.DataCollector
 	id            uint64
 	user          entity.User
 }
@@ -50,16 +50,17 @@ func (u *UpdateUserMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewUpdateUserMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
 	userDao dao.User,
-	dataCollector obs.DataCollector,
-	user entity.User) *UpdateUserMutation {
+	user entity.User,
+) *UpdateUserMutation {
 	return &UpdateUserMutation{
+	        dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		teamMemberDao: teamMemberDao,
 		userDao:       userDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		user:          user,
 	}

@@ -9,8 +9,8 @@ import (
 )
 
 type ClientTransaction struct {
-	id             uint64
 	dataCollector  obs.DataCollector
+	id             uint64
 	mutations      []Mutation
 	clientNotifier *ClientNotifier
 }
@@ -20,21 +20,20 @@ func (c *ClientTransaction) addMutation(mutation Mutation) {
 }
 
 func (c *ClientTransaction) commit(ct context.Context) {
-	c.clientNotifier.notifyTransaction(ct, *c)
+	c.clientNotifier.notifyTransaction(ct, c)
 }
 
 func (c *ClientTransaction) ToMessage() TransactionMessage {
 	mutationMessages := collect.Map(c.mutations, func(mutation Mutation, _ int) MutationMessage {
 		return mutation.ToMessage()
 	})
-
 	return TransactionMessage{
 		ID:        c.id,
 		Mutations: mutationMessages,
 	}
 }
 
-func NewClientTransaction(id uint64, dataCollector obs.DataCollector, clientNotifier *ClientNotifier) *ClientTransaction {
+func newClientTransaction(dataCollector obs.DataCollector, clientNotifier *ClientNotifier, id uint64) *ClientTransaction {
 	return &ClientTransaction{
 		dataCollector:  dataCollector,
 		clientNotifier: clientNotifier,
