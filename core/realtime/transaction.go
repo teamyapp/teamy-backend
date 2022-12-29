@@ -36,18 +36,18 @@ func (c *ClientTransaction) ToMessage() TransactionMessage {
 
 func NewClientTransaction(id uint64, dataCollector obs.DataCollector, clientNotifier *ClientNotifier) *ClientTransaction {
 	return &ClientTransaction{
-		id:             id,
 		dataCollector:  dataCollector,
 		clientNotifier: clientNotifier,
+		id:             id,
 	}
 }
 
 type Transaction struct {
+        dataCollector          obs.DataCollector
+	stateSyncer            *StateSyncer
 	id                     uint64
-	dataCollector          obs.DataCollector
 	mutations              []Mutation
 	processedMutationIndex int
-	stateSyncer            *StateSyncer
 }
 
 func (t *Transaction) rollback(ct context.Context) error {
@@ -62,19 +62,6 @@ func (t *Transaction) rollback(ct context.Context) error {
 }
 
 func (t *Transaction) AddMutation(ct context.Context, mutation Mutation) {
-	ct = WithMutationID(ct, mutation.GetID())
-	buf, err := json.Marshal(mutation)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-	} else {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
-				"Summary":  "add mutation",
-				"Mutation": string(buf),
-			},
-		})
-	}
-
 	t.mutations = append(t.mutations, mutation)
 }
 
@@ -132,12 +119,12 @@ func (t *Transaction) Commit(ct context.Context) error {
 	return nil
 }
 
-func NewTransaction(stateSyncer *StateSyncer, dataCollector obs.DataCollector) *Transaction {
+func NewTransaction(dataCollector obs.DataCollector, stateSyncer *StateSyncer) *Transaction {
 	return &Transaction{
+                 dataCollector:          dataCollector,
+		stateSyncer:            stateSyncer,
 		id:                     stateSyncer.NextTransactionID(),
-		dataCollector:          dataCollector,
 		mutations:              make([]Mutation, 0),
 		processedMutationIndex: 0,
-		stateSyncer:            stateSyncer,
 	}
 }

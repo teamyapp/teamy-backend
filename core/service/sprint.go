@@ -226,12 +226,11 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 			UnusedBandwidth: totalBandwidth,
 			CreatedAt:       time.Now(),
 		}
-
 		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+			s.dataCollector,
 			s.stateSyncer,
 			s.sprintParticipantDao,
 			s.sprintDao,
-			s.dataCollector,
 			participant)
 		realTimeTransaction.AddMutation(ct, createSprintParticipantMutation)
 	}
@@ -241,6 +240,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
 	}
+	
 	return sp, nil
 }
 
@@ -282,6 +282,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 			sprintID)
 		realTimeTransaction.AddMutation(ct, deleteSprintParticipantMutation)
 	}
+	
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -538,6 +539,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
+
 	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
 	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
 		s.stateSyncer,
