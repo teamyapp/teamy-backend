@@ -10,9 +10,9 @@ import (
 )
 
 type DeleteTeamMemberMutation struct {
+        dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	teamMemberDao dao.TeamMember
-	dataCollector obs.DataCollector
 	id            uint64
 	teamID        uint64
 	userID        uint64
@@ -60,15 +60,16 @@ func (d *DeleteTeamMemberMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewDeleteTeamMemberMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
-	dataCollector obs.DataCollector,
 	teamID uint64,
-	userID uint64) *DeleteTeamMemberMutation {
+	userID uint64,
+) *DeleteTeamMemberMutation {
 	return &DeleteTeamMemberMutation{
+	        dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		teamMemberDao: teamMemberDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		teamID:        teamID,
 		userID:        userID,
