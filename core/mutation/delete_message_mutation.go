@@ -10,10 +10,10 @@ import (
 )
 
 type DeleteMessageMutation struct {
+        dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	message       entity.Message
 	messageDao    dao.Message
-	dataCollector obs.DataCollector
 	id            uint64
 	taskDao       dao.Task
 }
@@ -56,11 +56,12 @@ func (d *DeleteMessageMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewDeleteMessageMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
 	taskDao dao.Task,
-	dataCollector obs.DataCollector,
-	message entity.Message) *DeleteMessageMutation {
+	message entity.Message,
+) *DeleteMessageMutation {
 	return &DeleteMessageMutation{
 		stateSyncer:   stateSyncer,
 		messageDao:    messageDao,
