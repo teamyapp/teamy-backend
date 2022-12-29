@@ -10,10 +10,10 @@ import (
 )
 
 type CreateSprintTaskRelationMutation struct {
+	dataCollector         obs.DataCollector
 	stateSyncer           *realtime.StateSyncer
 	sprintTaskRelationDao dao.SprintTaskRelation
 	sprintDao             dao.Sprint
-	dataCollector         obs.DataCollector
 	id                    uint64
 	sprintTaskRelation    entity.SprintTaskRelation
 }
@@ -56,11 +56,12 @@ func (c *CreateSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 }
 
 func NewCreateSprintTaskRelationMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintDao dao.Sprint,
-	dataCollector obs.DataCollector,
-	sprintTaskRelation entity.SprintTaskRelation) *CreateSprintTaskRelationMutation {
+	sprintTaskRelation entity.SprintTaskRelation,
+) *CreateSprintTaskRelationMutation {
 	return &CreateSprintTaskRelationMutation{
 		stateSyncer:           stateSyncer,
 		sprintTaskRelationDao: sprintTaskRelationDao,

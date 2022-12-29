@@ -10,9 +10,9 @@ import (
 )
 
 type CreateTaskMutation struct {
+	dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	taskDao       dao.Task
-	dataCollector obs.DataCollector
 	id            uint64
 	task          entity.Task
 }
@@ -49,14 +49,15 @@ func (c *CreateTaskMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateTaskMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
-	dataCollector obs.DataCollector,
-	task entity.Task) *CreateTaskMutation {
+	task entity.Task,
+) *CreateTaskMutation {
 	return &CreateTaskMutation{
+                dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		taskDao:       taskDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		task:          task,
 	}

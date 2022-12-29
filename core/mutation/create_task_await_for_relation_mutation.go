@@ -10,10 +10,10 @@ import (
 )
 
 type CreateTaskAwaitForRelationMutation struct {
+	dataCollector           obs.DataCollector
 	stateSyncer             *realtime.StateSyncer
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	taskDao                 dao.Task
-	dataCollector           obs.DataCollector
 	id                      uint64
 	taskAwaitForRelation    entity.TaskAwaitForRelation
 }
@@ -56,16 +56,17 @@ func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 }
 
 func NewCreateTaskAwaitForRelationMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskDao dao.Task,
-	dataCollector obs.DataCollector,
-	taskAwaitForRelation entity.TaskAwaitForRelation) *CreateTaskAwaitForRelationMutation {
+	taskAwaitForRelation entity.TaskAwaitForRelation,
+) *CreateTaskAwaitForRelationMutation {
 	return &CreateTaskAwaitForRelationMutation{
+	        dataCollector:           dataCollector,
 		stateSyncer:             stateSyncer,
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
-		taskDao:                 taskDao,
-		dataCollector:           dataCollector,
+		taskDao:                 taskDao,	
 		id:                      stateSyncer.NextMutationID(),
 		taskAwaitForRelation:    taskAwaitForRelation,
 	}
