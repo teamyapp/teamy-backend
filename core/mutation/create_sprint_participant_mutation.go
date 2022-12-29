@@ -10,10 +10,10 @@ import (
 )
 
 type CreateSprintParticipantMutation struct {
+	dataCollector        obs.DataCollector
 	stateSyncer          *realtime.StateSyncer
 	sprintParticipantDao dao.SprintParticipant
 	sprintDao            dao.Sprint
-	dataCollector        obs.DataCollector
 	id                   uint64
 	sprintParticipant    entity.SprintParticipant
 }
@@ -56,16 +56,17 @@ func (c *CreateSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateSprintParticipantMutation(
+        dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintDao dao.Sprint,
-	dataCollector obs.DataCollector,
-	sprintParticipant entity.SprintParticipant) *CreateSprintParticipantMutation {
+	sprintParticipant entity.SprintParticipant,
+) *CreateSprintParticipantMutation {
 	return &CreateSprintParticipantMutation{
+		dataCollector:        dataCollector,
 		stateSyncer:          stateSyncer,
 		sprintParticipantDao: sprintParticipantDao,
 		sprintDao:            sprintDao,
-		dataCollector:        dataCollector,
 		id:                   stateSyncer.NextMutationID(),
 		sprintParticipant:    sprintParticipant,
 	}

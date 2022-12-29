@@ -10,10 +10,10 @@ import (
 )
 
 type CreateMessageMutation struct {
+	dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	messageDao    dao.Message
 	taskDao       dao.Task
-	dataCollector obs.DataCollector
 	id            uint64
 	message       entity.Message
 }
@@ -62,10 +62,10 @@ func NewCreateMessageMutation(
 	dataCollector obs.DataCollector,
 	message entity.Message) *CreateMessageMutation {
 	return &CreateMessageMutation{
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		messageDao:    messageDao,
 		taskDao:       taskDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		message:       message,
 	}

@@ -10,9 +10,9 @@ import (
 )
 
 type CreateInvitationMutation struct {
+	dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	invitationDao dao.Invitation
-	dataCollector obs.DataCollector
 	id            uint64
 	invitation    entity.Invitation
 }
@@ -49,14 +49,15 @@ func (c *CreateInvitationMutation) ToMessage() realtime.MutationMessage {
 }
 
 func NewCreateInvitationMutation(
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
-	dataCollector obs.DataCollector,
-	invitation entity.Invitation) *CreateInvitationMutation {
+	invitation entity.Invitation,
+) *CreateInvitationMutation {
 	return &CreateInvitationMutation{
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		invitationDao: invitationDao,
-		dataCollector: dataCollector,
 		id:            stateSyncer.NextMutationID(),
 		invitation:    invitation,
 	}
