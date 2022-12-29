@@ -10,9 +10,9 @@ import (
 )
 
 type CreateTeamMutation struct {
+	dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	teamDao       dao.Team
-	dataCollector obs.DataCollector
 	id            uint64
 	team          entity.Team
 }
