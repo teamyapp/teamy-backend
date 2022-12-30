@@ -68,13 +68,13 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	user.LastName = args.Input.LastName
 	updatedAt := time.Now()
 	user.UpdatedAt = &updatedAt
-
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	// TODO move this to user service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	userMutation := mutation.NewUpdateUserMutation(
+		m.deps.dataCollector,
 		m.deps.stateSyncer,
 		m.deps.teamMemberDao,
 		m.deps.userDao,
-		m.deps.dataCollector,
 		user)
 	realTimeTransaction.AddMutation(ct, userMutation)
 	err = realTimeTransaction.Commit(ct)

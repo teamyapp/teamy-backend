@@ -105,7 +105,7 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 }
 
 func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTaskInput) (entity.Task, error) {
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 	genTaskIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if err != nil {
@@ -136,9 +136,9 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	}
 
 	createTaskMutation := mutation.NewCreateTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	realTimeTransaction.AddMutation(ct, createTaskMutation)
@@ -236,7 +236,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	oldEffort := task.Effort
 	oldOwnerID := task.OwnerUserID
 	task.Goal = input.Goal
@@ -248,9 +248,9 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	updatedAt := time.Now()
 	task.UpdatedAt = &updatedAt
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	realTimeTransaction.AddMutation(ct, updateTaskMutation)
@@ -296,10 +296,10 @@ func (t Task) updateUnusedBandWidth(
 			participant.UnusedBandwidth -= *newEffort
 
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+				t.dataCollector,
 				t.stateSyncer,
 				t.sprintParticipantDao,
 				t.sprintDao,
-				t.dataCollector,
 				participant,
 			)
 			tx.AddMutation(ct, updateSprintParticipantMutation)
@@ -326,10 +326,10 @@ func (t Task) tryIncreaseBandwidth(
 		for _, participant := range participants {
 			participant.UnusedBandwidth += *oldEffort
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+				t.dataCollector,
 				t.stateSyncer,
 				t.sprintParticipantDao,
 				t.sprintDao,
-				t.dataCollector,
 				participant,
 			)
 			tx.AddMutation(ct, updateSprintParticipantMutation)
@@ -371,7 +371,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	err = t.tryIncreaseBandwidth(ct, realTimeTransaction, task.OwningTeamID, taskID, task.OwnerUserID, task.Effort)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -379,9 +379,9 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 	}
 
 	deleteTaskMutation := mutation.NewDeleteTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	realTimeTransaction.AddMutation(ct, deleteTaskMutation)
@@ -420,9 +420,9 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *realtime.Transaction, t
 	task.UpdatedAt = &now
 
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	tx.AddMutation(ct, updateTaskMutation)
@@ -446,11 +446,11 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 	}
 	now := time.Now()
 	task.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	realTimeTransaction.AddMutation(ct, updateTaskMutation)
@@ -499,7 +499,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		return eachTask.Status == entity.TaskStatusInProgress
 	})
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 
 	now := time.Now()
 	if len(inProgressTasks) > 0 {
@@ -507,9 +507,9 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		inProgressTask.Status = entity.TaskStatusPaused
 		inProgressTask.UpdatedAt = &now
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
+			t.dataCollector,
 			t.stateSyncer,
 			t.taskDao,
-			t.dataCollector,
 			inProgressTask,
 		)
 		realTimeTransaction.AddMutation(ct, updateTaskMutation)
@@ -518,9 +518,9 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 	task.Status = entity.TaskStatusInProgress
 	task.UpdatedAt = &now
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	realTimeTransaction.AddMutation(ct, updateTaskMutation)
@@ -541,15 +541,15 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	task.Status = entity.TaskStatusDelivered
 	now := time.Now()
 	task.UpdatedAt = &now
 	task.DeliveredAt = &now
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	realTimeTransaction.AddMutation(ct, updateTaskMutation)
@@ -605,7 +605,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	if !awaitableTaskStatuses[task.Status] {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
@@ -624,10 +624,10 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		CreatedAt:      now,
 	}
 	createTaskAwaitForRelationMutation := mutation.NewCreateTaskAwaitForRelationMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskAwaitForRelationDao,
 		t.taskDao,
-		t.dataCollector,
 		taskAwaitForRelation,
 	)
 	realTimeTransaction.AddMutation(ct, createTaskAwaitForRelationMutation)
@@ -635,9 +635,9 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	task.Status = entity.TaskStatusAwaiting
 	task.UpdatedAt = &now
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
-		t.dataCollector,
 		task,
 	)
 	realTimeTransaction.AddMutation(ct, updateTaskMutation)
@@ -658,7 +658,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	if task.Status != entity.TaskStatusAwaiting {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
@@ -671,9 +671,9 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	}
 
 	deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.taskAwaitForRelationDao,
-		t.dataCollector,
 		task,
 		awaitForTaskId,
 	)
@@ -715,7 +715,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		return err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	taskActivity := entity.TaskActivity{
 		TaskID: taskID,
 		TeamID: task.OwningTeamID,
@@ -728,9 +728,9 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		}}
 
 	updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.activityCache,
-		t.dataCollector,
 		taskActivity,
 	)
 	realTimeTransaction.AddMutation(ct, updateTaskActivityMutation)
@@ -755,7 +755,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		return err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	taskActivity := entity.TaskActivity{
 		TaskID: taskID,
 		TeamID: task.OwningTeamID,
@@ -765,9 +765,9 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		}}
 
 	updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.activityCache,
-		t.dataCollector,
 		taskActivity,
 	)
 	realTimeTransaction.AddMutation(ct, updateTaskActivityMutation)

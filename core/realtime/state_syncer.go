@@ -29,6 +29,10 @@ type StateSyncer struct {
 	nextTransactionID       uint64
 	nextClientTransactionID uint64
 	transactionMut          *sync.Mutex
+	clientIDMut             *sync.Mutex
+	mutationIDMut           *sync.Mutex
+	transactionIDMut        *sync.Mutex
+	clientTransactionIDMut  *sync.Mutex
 }
 
 func (s *StateSyncer) BeginTransaction() {
@@ -53,28 +57,38 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 		return err
 	}
 
-	clientNotifier := newClientNotifier(s.dataCollector, conn, s.nextClientID)
-	userNotifier.registerClientNotifier(s.nextClientID, clientNotifier)
-	clientNotifier.sentMetadata()
+	s.clientIDMut.Lock()
+	nextClientID := s.nextClientID
 	s.nextClientID++
+	s.clientIDMut.Unlock()
+	clientNotifier := newClientNotifier(s.dataCollector, conn, nextClientID)
+	userNotifier.registerClientNotifier(nextClientID, clientNotifier)
+	clientNotifier.sentMetadata()
+
 	return nil
 }
 
 func (s *StateSyncer) NextMutationID() uint64 {
+	s.mutationIDMut.Lock()
 	mutationID := s.nextMutationID
 	s.nextMutationID++
+	s.mutationIDMut.Unlock()
 	return mutationID
 }
 
 func (s *StateSyncer) NextTransactionID() uint64 {
+	s.transactionIDMut.Lock()
 	transactionID := s.nextTransactionID
 	s.nextTransactionID++
+	s.transactionIDMut.Unlock()
 	return transactionID
 }
 
 func (s *StateSyncer) NextClientTransactionID() uint64 {
+	s.clientTransactionIDMut.Lock()
 	clientTransactionID := s.nextClientTransactionID
 	s.nextClientTransactionID++
+	s.clientTransactionIDMut.Unlock()
 	return clientTransactionID
 }
 
@@ -228,6 +242,7 @@ func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint
 		return nil, err
 	}
 
+	// There can be only 1 user client for a given team on a given device.
 	clientNotifiers := make([]*ClientNotifier, 0)
 	for _, userNotifier := range teamNotifier.GetUserNotifiers() {
 		for _, clientNotifier := range userNotifier.GetClientNotifiers() {
@@ -251,6 +266,10 @@ func NewStateSyncer(
 		nextMutationID:          1,
 		nextTransactionID:       1,
 		nextClientTransactionID: 1,
+		clientIDMut:             new(sync.Mutex),
+		mutationIDMut:           new(sync.Mutex),
+		transactionIDMut:        new(sync.Mutex),
+		clientTransactionIDMut:  new(sync.Mutex),
 		transactionMut:          new(sync.Mutex),
 	}
 

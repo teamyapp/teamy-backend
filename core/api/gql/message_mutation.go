@@ -48,7 +48,7 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		CreatedAt:    time.Now(),
 	}
 
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	createMessageMutation := mutation.NewCreateMessageMutation(
 		m.deps.stateSyncer,
 		m.deps.messageDao,
@@ -86,12 +86,12 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	message.Body = args.Input.Body
 	now := time.Now()
 	message.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	updateMessageMutation := mutation.NewUpdateMessageMutation(
+		m.deps.dataCollector,
 		m.deps.stateSyncer,
 		m.deps.messageDao,
 		m.deps.taskDao,
-		m.deps.dataCollector,
 		message)
 	realTimeTransaction.AddMutation(ct, updateMessageMutation)
 	err = realTimeTransaction.Commit(ct)
@@ -118,12 +118,12 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 		return Message{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	deleteMessageMutation := mutation.NewDeleteMessageMutation(
+		m.deps.dataCollector,
 		m.deps.stateSyncer,
 		m.deps.messageDao,
 		m.deps.taskDao,
-		m.deps.dataCollector,
 		message)
 	realTimeTransaction.AddMutation(ct, deleteMessageMutation)
 	err = realTimeTransaction.Commit(ct)

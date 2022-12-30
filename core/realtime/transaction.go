@@ -2,7 +2,6 @@ package realtime
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/obs"
@@ -42,7 +41,7 @@ func newClientTransaction(dataCollector obs.DataCollector, clientNotifier *Clien
 }
 
 type Transaction struct {
-        dataCollector          obs.DataCollector
+	dataCollector          obs.DataCollector
 	stateSyncer            *StateSyncer
 	id                     uint64
 	mutations              []Mutation
@@ -100,10 +99,11 @@ func (t *Transaction) Commit(ct context.Context) error {
 			_, ok := clientTransactions[clientID]
 			clientTransactionID := t.stateSyncer.NextClientTransactionID()
 			if !ok {
-				clientTransactions[clientID] = NewClientTransaction(
-					clientTransactionID,
+				clientTransactions[clientID] = newClientTransaction(
 					clientNotifier.dataCollector,
-					clientNotifier)
+					clientNotifier,
+					clientTransactionID,
+				)
 			}
 
 			clientTransaction := clientTransactions[clientID]
@@ -120,7 +120,7 @@ func (t *Transaction) Commit(ct context.Context) error {
 
 func NewTransaction(dataCollector obs.DataCollector, stateSyncer *StateSyncer) *Transaction {
 	return &Transaction{
-                 dataCollector:          dataCollector,
+		dataCollector:          dataCollector,
 		stateSyncer:            stateSyncer,
 		id:                     stateSyncer.NextTransactionID(),
 		mutations:              make([]Mutation, 0),

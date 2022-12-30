@@ -65,12 +65,12 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 	invitation.ExpireAt = args.Input.ExpireAt.Time
 	now := time.Now()
 	invitation.UpdatedAt = &now
-
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	// TODO move this to invitation service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		m.deps.dataCollector,
 		m.deps.stateSyncer,
 		m.deps.invitationDao,
-		m.deps.dataCollector,
 		invitation)
 
 	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
@@ -97,12 +97,12 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Invitation{}, err
 	}
-
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	// TODO move this to invitation service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	deleteInvitationMutation := mutation.NewDeleteInvitationMutation(
+		m.deps.dataCollector,
 		m.deps.stateSyncer,
 		m.deps.invitationDao,
-		m.deps.dataCollector,
 		invitation)
 
 	realTimeTransaction.AddMutation(ct, deleteInvitationMutation)
@@ -160,11 +160,12 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	// TODO move this to invitation service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		m.deps.dataCollector,
 		m.deps.stateSyncer,
 		m.deps.invitationDao,
-		m.deps.dataCollector,
 		invitation)
 
 	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
@@ -236,11 +237,12 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(m.deps.stateSyncer, m.deps.dataCollector)
+	// TODO move this to invitation service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		m.deps.dataCollector,
 		m.deps.stateSyncer,
 		m.deps.invitationDao,
-		m.deps.dataCollector,
 		invitation)
 
 	realTimeTransaction.AddMutation(ct, updateInvitationMutation)

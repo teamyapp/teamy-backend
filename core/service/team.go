@@ -39,13 +39,13 @@ type Team struct {
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	authorizer                 Authorizer
+	stateSyncer                *realtime.StateSyncer
 	taskDao                    dao.Task
 	sprintDao                  dao.Sprint
 	teamDao                    dao.Team
 	teamMemberDao              dao.TeamMember
 	teamFileUploadSessionDao   dao.TeamFileUploadSession
 	sprintService              Sprint
-	stateSyncer                *realtime.StateSyncer
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
@@ -117,12 +117,12 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		CreatedAt:     time.Now(),
 	}
 
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	// All users are authorized to create team
 	createTeamMutation := mutation.NewCreateTeamMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.teamDao,
-		t.dataCollector,
 		team,
 	)
 	realTimeTransaction.AddMutation(ct, createTeamMutation)
@@ -133,9 +133,9 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		CreatedAt: time.Now(),
 	}
 	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.teamMemberDao,
-		t.dataCollector,
 		teamMember,
 	)
 	realTimeTransaction.AddMutation(ct, createTeamMemberMutation)
@@ -243,11 +243,11 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	team.OwnerUserID = input.OwnerUserID
 	updatedAt := time.Now()
 	team.UpdatedAt = &updatedAt
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	updateTeamMutation := mutation.NewUpdateTeamMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.teamDao,
-		t.dataCollector,
 		team,
 	)
 	realTimeTransaction.AddMutation(ct, updateTeamMutation)
@@ -338,11 +338,11 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		UserID:    memberUserID,
 		CreatedAt: time.Now(),
 	}
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.teamMemberDao,
-		t.dataCollector,
 		teamMember,
 	)
 	realTimeTransaction.AddMutation(ct, createTeamMemberMutation)
@@ -360,10 +360,10 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			CreatedAt: time.Now(),
 		}
 		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+			t.dataCollector,
 			t.stateSyncer,
 			t.sprintService.sprintParticipantDao,
 			t.sprintDao,
-			t.dataCollector,
 			participant,
 		)
 		realTimeTransaction.AddMutation(ct, createSprintParticipantMutation)
@@ -384,12 +384,12 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	// TODO: ensure user is inside the team
 	deleteTeamMemberMutation := mutation.NewDeleteTeamMemberMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.teamMemberDao,
-		t.dataCollector,
 		teamID,
 		teamMember.UserID,
 	)
@@ -403,10 +403,10 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 
 	for _, sprint := range currAndFutureSprints {
 		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+			t.dataCollector,
 			t.stateSyncer,
 			t.sprintService.sprintParticipantDao,
 			t.sprintDao,
-			t.dataCollector,
 			teamMember.UserID,
 			sprint.ID,
 		)
@@ -437,11 +437,11 @@ func (t Team) UpdateTeamMember(
 	teamMember.WeeklyBandwidth = input.WeeklyBandwidth
 	now := time.Now()
 	teamMember.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(t.stateSyncer, t.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
+		t.dataCollector,
 		t.stateSyncer,
 		t.teamMemberDao,
-		t.dataCollector,
 		teamMember,
 	)
 	realTimeTransaction.AddMutation(ct, updateTeamMemberMutation)
@@ -467,10 +467,10 @@ func (t Team) UpdateTeamMember(
 			participant.TotalBandwidth += bandwidthDelta
 			participant.UnusedBandwidth += bandwidthDelta
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+				t.dataCollector,
 				t.stateSyncer,
 				t.sprintService.sprintParticipantDao,
 				t.sprintDao,
-				t.dataCollector,
 				participant,
 			)
 			realTimeTransaction.AddMutation(ct, updateSprintParticipantMutation)
@@ -491,25 +491,25 @@ func NewTeam(
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	sprintService Sprint,
-	stateSyncer *realtime.StateSyncer,
 ) Team {
 	return Team{
 		dataCollector:              dataCollector,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		authorizer:                 authorizer,
+		stateSyncer:                stateSyncer,
 		taskDao:                    taskDao,
 		sprintDao:                  sprintDao,
 		teamDao:                    teamDao,
 		teamMemberDao:              teamMemberDao,
 		teamFileUploadSessionDao:   teamFileUploadSessionDao,
 		sprintService:              sprintService,
-		stateSyncer:                stateSyncer,
 	}
 }

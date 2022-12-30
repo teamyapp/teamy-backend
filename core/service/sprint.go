@@ -171,7 +171,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 			}
 		}
 	}
-	
+
 	genSprintIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "sprintID"}
 	genSprintIDRes, err := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSprintIDReq)
 	if err != nil {
@@ -216,7 +216,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 	numOfWeeks := sprintLength / timePerWeek
 	// TODO: fetch from team settings
 
-	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
 	for _, teamMember := range teamMembers {
 		totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
 		participant := entity.SprintParticipant{
@@ -240,7 +240,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
 	}
-	
+
 	return sp, nil
 }
 
@@ -271,18 +271,18 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		return entity.Sprint{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
 	for _, participantUserID := range participantUserIDs {
 		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+			s.dataCollector,
 			s.stateSyncer,
 			s.sprintParticipantDao,
 			s.sprintDao,
-			s.dataCollector,
 			participantUserID,
 			sprintID)
 		realTimeTransaction.AddMutation(ct, deleteSprintParticipantMutation)
 	}
-	
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -311,26 +311,26 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
 	relation := entity.SprintTaskRelation{
 		SprintID:  sprintID,
 		TaskID:    taskID,
 		CreatedAt: time.Now().UTC(),
 	}
 	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelationMutation(
+		s.dataCollector,
 		s.stateSyncer,
 		s.sprintTaskRelationDao,
 		s.sprintDao,
-		s.dataCollector,
 		relation)
 	realTimeTransaction.AddMutation(ct, createSprintTaskRelationMutation)
 
 	if !task.IsPlanned {
 		task.IsPlanned = true
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
+			s.dataCollector,
 			s.stateSyncer,
 			s.taskDao,
-			s.dataCollector,
 			task)
 		realTimeTransaction.AddMutation(ct, updateTaskMutation)
 	}
@@ -490,7 +490,7 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
 	err = s.tryIncreaseBandwidth(ct, realTimeTransaction, fromSprintID, task)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -540,11 +540,11 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(s.stateSyncer, s.dataCollector)
+	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
 	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
+		s.dataCollector,
 		s.stateSyncer,
 		s.sprintTaskRelationDao,
-		s.dataCollector,
 		sprintID,
 		task,
 	)
@@ -553,9 +553,9 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
+			s.dataCollector,
 			s.stateSyncer,
 			s.taskDao,
-			s.dataCollector,
 			task)
 		realTimeTransaction.AddMutation(ct, updateTaskMutation)
 	}
@@ -590,10 +590,10 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction,
 
 		newSprintParticipant.UnusedBandwidth -= *task.Effort
 		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+			s.dataCollector,
 			s.stateSyncer,
 			s.sprintParticipantDao,
 			s.sprintDao,
-			s.dataCollector,
 			newSprintParticipant)
 		tx.AddMutation(ct, updateSprintParticipantMutation)
 	}
@@ -616,10 +616,10 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 
 		oldSprintParticipant.UnusedBandwidth += *task.Effort
 		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+			s.dataCollector,
 			s.stateSyncer,
 			s.sprintParticipantDao,
 			s.sprintDao,
-			s.dataCollector,
 			oldSprintParticipant)
 		tx.AddMutation(ct, updateSprintParticipantMutation)
 	}
