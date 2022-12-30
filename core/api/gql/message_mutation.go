@@ -47,7 +47,7 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		AuthorUserID: userID,
 		CreatedAt:    time.Now(),
 	}
-
+	// TODO move this to message service
 	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	createMessageMutation := mutation.NewCreateMessageMutation(
 		m.deps.stateSyncer,
@@ -86,6 +86,7 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	message.Body = args.Input.Body
 	now := time.Now()
 	message.UpdatedAt = &now
+	// TODO move this to message service
 	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	updateMessageMutation := mutation.NewUpdateMessageMutation(
 		m.deps.dataCollector,
@@ -117,7 +118,7 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
-
+	// TODO move this to message service
 	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
 	deleteMessageMutation := mutation.NewDeleteMessageMutation(
 		m.deps.dataCollector,
