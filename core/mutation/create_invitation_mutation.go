@@ -48,6 +48,10 @@ func (c *CreateInvitationMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (c *CreateInvitationMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewCreateInvitationMutation(
 	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,

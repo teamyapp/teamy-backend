@@ -55,8 +55,12 @@ func (c *CreateSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (c *CreateSprintParticipantMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewCreateSprintParticipantMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintDao dao.Sprint,

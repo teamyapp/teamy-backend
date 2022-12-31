@@ -55,6 +55,10 @@ func (c *CreateMessageMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (c *CreateMessageMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewCreateMessageMutation(
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,

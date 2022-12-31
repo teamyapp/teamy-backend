@@ -10,7 +10,7 @@ import (
 )
 
 type DeleteTaskAwaitForRelationMutation struct {
-        dataCollector           obs.DataCollector
+	dataCollector           obs.DataCollector
 	stateSyncer             *realtime.StateSyncer
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	id                      uint64
@@ -55,15 +55,19 @@ func (d *DeleteTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 	}
 }
 
+func (d *DeleteTaskAwaitForRelationMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewDeleteTaskAwaitForRelationMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	awaitingTask entity.Task,
 	awaitForTaskID uint64,
 ) *DeleteTaskAwaitForRelationMutation {
 	return &DeleteTaskAwaitForRelationMutation{
-	        dataCollector:           dataCollector,
+		dataCollector:           dataCollector,
 		stateSyncer:             stateSyncer,
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
 		id:                      stateSyncer.NextMutationID(),

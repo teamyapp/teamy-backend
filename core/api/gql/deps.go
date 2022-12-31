@@ -31,6 +31,7 @@ type Dependencies struct {
 func NewDependencies(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *api.ClientRegistry,
+	stateSyncer *realtime.StateSyncer,
 	userDao dao.User,
 	teamDao dao.Team,
 	taskDao dao.Task,
@@ -44,7 +45,6 @@ func NewDependencies(
 	sprintService service.Sprint,
 	userService service.User,
 	invitationService service.Invitation,
-	stateSyncer *realtime.StateSyncer,
 ) *Dependencies {
 	return &Dependencies{
 		dataCollector:           dataCollector,

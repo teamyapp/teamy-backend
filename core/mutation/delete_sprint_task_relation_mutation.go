@@ -55,15 +55,19 @@ func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 	}
 }
 
+func (d *DeleteSprintTaskRelationMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewDeleteSprintTaskRelationMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintID uint64,
 	task entity.Task,
 ) *DeleteSprintTaskRelationMutation {
 	return &DeleteSprintTaskRelationMutation{
-                dataCollector:         dataCollector,
+		dataCollector:         dataCollector,
 		stateSyncer:           stateSyncer,
 		sprintTaskRelationDao: sprintTaskRelationDao,
 		id:                    stateSyncer.NextMutationID(),

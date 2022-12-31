@@ -48,14 +48,18 @@ func (c *CreateTeamMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (c *CreateTeamMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewCreateTeamMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamDao dao.Team,
 	team entity.Team,
 ) *CreateTeamMutation {
 	return &CreateTeamMutation{
-	        dataCollector: dataCollector,
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		teamDao:       teamDao,
 		id:            stateSyncer.NextMutationID(),

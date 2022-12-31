@@ -10,7 +10,7 @@ import (
 )
 
 type UpdateMessageMutation struct {
-        dataCollector obs.DataCollector
+	dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	messageDao    dao.Message
 	taskDao       dao.Task
@@ -55,15 +55,19 @@ func (u *UpdateMessageMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (u *UpdateMessageMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewUpdateMessageMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
 	taskDao dao.Task,
 	message entity.Message,
 ) *UpdateMessageMutation {
 	return &UpdateMessageMutation{
-	        dataCollector: dataCollector,
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		messageDao:    messageDao,
 		taskDao:       taskDao,

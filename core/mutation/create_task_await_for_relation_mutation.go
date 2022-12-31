@@ -55,18 +55,22 @@ func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 	}
 }
 
+func (c *CreateTaskAwaitForRelationMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewCreateTaskAwaitForRelationMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskDao dao.Task,
 	taskAwaitForRelation entity.TaskAwaitForRelation,
 ) *CreateTaskAwaitForRelationMutation {
 	return &CreateTaskAwaitForRelationMutation{
-	        dataCollector:           dataCollector,
+		dataCollector:           dataCollector,
 		stateSyncer:             stateSyncer,
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
-		taskDao:                 taskDao,	
+		taskDao:                 taskDao,
 		id:                      stateSyncer.NextMutationID(),
 		taskAwaitForRelation:    taskAwaitForRelation,
 	}

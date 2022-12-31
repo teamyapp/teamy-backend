@@ -56,7 +56,7 @@ func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL 
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
 	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
 	serviceInvitation := service.NewInvitation(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, invitation)
-	dependencies := gql.NewDependencies(dataCollector, cloudAPIClientRegistry, user, team, task, teamMember, invitation, message, activity, taskAwaitForRelation, serviceTask, serviceTeam, serviceSprint, serviceUser, serviceInvitation, realTimeStateSyncer)
+	dependencies := gql.NewDependencies(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, user, team, task, teamMember, invitation, message, activity, taskAwaitForRelation, serviceTask, serviceTeam, serviceSprint, serviceUser, serviceInvitation)
 	resolver := gql.NewResolver(dependencies)
 	graphQL := api2.NewGraphQL(dataCollector, resolver)
 	return graphQL, nil

@@ -61,6 +61,10 @@ func (d *DeleteSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (d *DeleteSprintParticipantMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewDeleteSprintParticipantMutation(
 	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,

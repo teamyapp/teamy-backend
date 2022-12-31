@@ -48,14 +48,18 @@ func (c *CreateTaskMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (c *CreateTaskMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewCreateTaskMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
 	task entity.Task,
 ) *CreateTaskMutation {
 	return &CreateTaskMutation{
-                dataCollector: dataCollector,
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		taskDao:       taskDao,
 		id:            stateSyncer.NextMutationID(),

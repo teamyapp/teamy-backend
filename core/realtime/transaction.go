@@ -98,7 +98,7 @@ func (t *Transaction) Commit(ct context.Context) error {
 			clientID := clientNotifier.getClientID()
 			_, ok := clientTransactions[clientID]
 			if !ok {
-			    clientTransactionID := t.stateSyncer.NextClientTransactionID()
+				clientTransactionID := t.stateSyncer.NextClientTransactionID()
 				clientTransactions[clientID] = newClientTransaction(
 					clientNotifier.dataCollector,
 					clientNotifier,
@@ -113,6 +113,14 @@ func (t *Transaction) Commit(ct context.Context) error {
 
 	for _, clientTransaction := range clientTransactions {
 		clientTransaction.commit(ct)
+	}
+
+	for _, mutation := range t.mutations {
+		err := mutation.CleanUp(ct)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
 	}
 
 	return nil

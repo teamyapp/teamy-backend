@@ -10,7 +10,7 @@ import (
 )
 
 type DeleteTeamMemberMutation struct {
-        dataCollector obs.DataCollector
+	dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	teamMemberDao dao.TeamMember
 	id            uint64
@@ -23,14 +23,7 @@ func (c *DeleteTeamMemberMutation) GetID() uint64 {
 }
 
 func (d *DeleteTeamMemberMutation) Execute(ct context.Context) error {
-	teamNotifier, err := d.stateSyncer.GetTeamNotifier(ct, d.teamID)
-	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
-	teamNotifier.UnregisterUserNotifier(d.userID)
-	err = d.teamMemberDao.DeleteTeamMember(ct, d.teamID, d.userID)
+	err := d.teamMemberDao.DeleteTeamMember(ct, d.teamID, d.userID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return err
@@ -59,15 +52,26 @@ func (d *DeleteTeamMemberMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) error {
+	teamNotifier, err := d.stateSyncer.GetTeamNotifier(ct, d.teamID)
+	if err != nil {
+		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	teamNotifier.UnregisterUserNotifier(d.userID)
+	return nil
+}
+
 func NewDeleteTeamMemberMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
 	teamID uint64,
 	userID uint64,
 ) *DeleteTeamMemberMutation {
 	return &DeleteTeamMemberMutation{
-	        dataCollector: dataCollector,
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		teamMemberDao: teamMemberDao,
 		id:            stateSyncer.NextMutationID(),

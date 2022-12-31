@@ -48,14 +48,18 @@ func (u *UpdateInvitationMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (u *UpdateInvitationMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewUpdateInvitationMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
 	invitation entity.Invitation,
 ) *UpdateInvitationMutation {
 	return &UpdateInvitationMutation{
-	        dataCollector: dataCollector,
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		invitationDao: invitationDao,
 		id:            stateSyncer.NextMutationID(),

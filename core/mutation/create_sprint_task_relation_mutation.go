@@ -55,8 +55,12 @@ func (c *CreateSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 	}
 }
 
+func (c *CreateSprintTaskRelationMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewCreateSprintTaskRelationMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintDao dao.Sprint,

@@ -10,7 +10,7 @@ import (
 )
 
 type UpdateUserMutation struct {
-        dataCollector obs.DataCollector
+	dataCollector obs.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	teamMemberDao dao.TeamMember
 	userDao       dao.User
@@ -37,7 +37,7 @@ func (u *UpdateUserMutation) Undo() error {
 }
 
 func (u *UpdateUserMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
-	return u.stateSyncer.GetClientNotifiersByUserID(ct, u.user.ID)
+	return u.stateSyncer.GetAllClientNotifiersByUserID(ct, u.user.ID)
 }
 
 func (u *UpdateUserMutation) ToMessage() realtime.MutationMessage {
@@ -49,15 +49,19 @@ func (u *UpdateUserMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
+func (u *UpdateUserMutation) CleanUp(ct context.Context) error {
+	return nil
+}
+
 func NewUpdateUserMutation(
-        dataCollector obs.DataCollector,
+	dataCollector obs.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
 	userDao dao.User,
 	user entity.User,
 ) *UpdateUserMutation {
 	return &UpdateUserMutation{
-	        dataCollector: dataCollector,
+		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,
 		teamMemberDao: teamMemberDao,
 		userDao:       userDao,
