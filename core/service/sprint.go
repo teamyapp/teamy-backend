@@ -232,7 +232,11 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 			s.sprintParticipantDao,
 			s.sprintDao,
 			participant)
-		realTimeTransaction.AddMutation(ct, createSprintParticipantMutation)
+		err = realTimeTransaction.ApplyMutation(ct, createSprintParticipantMutation)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Sprint{}, err
+		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
@@ -280,7 +284,11 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 			s.sprintDao,
 			participantUserID,
 			sprintID)
-		realTimeTransaction.AddMutation(ct, deleteSprintParticipantMutation)
+		err = realTimeTransaction.ApplyMutation(ct, deleteSprintParticipantMutation)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Sprint{}, err
+		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
@@ -323,7 +331,11 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		s.sprintTaskRelationDao,
 		s.sprintDao,
 		relation)
-	realTimeTransaction.AddMutation(ct, createSprintTaskRelationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, createSprintTaskRelationMutation)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
 	if !task.IsPlanned {
 		task.IsPlanned = true
@@ -332,7 +344,11 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			s.stateSyncer,
 			s.taskDao,
 			task)
-		realTimeTransaction.AddMutation(ct, updateTaskMutation)
+		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
 	}
 
 	err = s.tryReduceBandwidth(ct, realTimeTransaction, sprintID, task)
@@ -548,7 +564,11 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		sprintID,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, deleteSprintTaskRelationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, deleteSprintTaskRelationMutation)
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false
@@ -557,7 +577,11 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 			s.stateSyncer,
 			s.taskDao,
 			task)
-		realTimeTransaction.AddMutation(ct, updateTaskMutation)
+		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
 	}
 
 	err = s.tryIncreaseBandwidth(ct, realTimeTransaction, sprintID, task)
@@ -595,7 +619,11 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction,
 			s.sprintParticipantDao,
 			s.sprintDao,
 			newSprintParticipant)
-		tx.AddMutation(ct, updateSprintParticipantMutation)
+		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
 	}
 
 	return nil
@@ -621,7 +649,11 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 			s.sprintParticipantDao,
 			s.sprintDao,
 			oldSprintParticipant)
-		tx.AddMutation(ct, updateSprintParticipantMutation)
+		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
+		if err != nil {
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
 	}
 
 	return nil

@@ -55,7 +55,12 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		m.deps.taskDao,
 		m.deps.dataCollector,
 		message)
-	realTimeTransaction.AddMutation(ct, createMessageMutation)
+	err = realTimeTransaction.ApplyMutation(ct, createMessageMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -94,7 +99,12 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 		m.deps.messageDao,
 		m.deps.taskDao,
 		message)
-	realTimeTransaction.AddMutation(ct, updateMessageMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateMessageMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -126,7 +136,12 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 		m.deps.messageDao,
 		m.deps.taskDao,
 		message)
-	realTimeTransaction.AddMutation(ct, deleteMessageMutation)
+	err = realTimeTransaction.ApplyMutation(ct, deleteMessageMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Message{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})

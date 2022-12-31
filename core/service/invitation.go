@@ -87,7 +87,12 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		i.invitationDao,
 		invitation,
 	)
-	transaction.AddMutation(ct, createInvitationMutation)
+	err = transaction.ApplyMutation(ct, createInvitationMutation)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
 	err = transaction.Commit(ct)
 	if err != nil {
 		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})

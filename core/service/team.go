@@ -125,7 +125,11 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		t.teamDao,
 		team,
 	)
-	realTimeTransaction.AddMutation(ct, createTeamMutation)
+	err = realTimeTransaction.ApplyMutation(ct, createTeamMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
 
 	teamMember := entity.TeamMember{
 		TeamID:    team.ID,
@@ -138,7 +142,11 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		t.teamMemberDao,
 		teamMember,
 	)
-	realTimeTransaction.AddMutation(ct, createTeamMemberMutation)
+	err = realTimeTransaction.ApplyMutation(ct, createTeamMemberMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
@@ -250,7 +258,11 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		t.teamDao,
 		team,
 	)
-	realTimeTransaction.AddMutation(ct, updateTeamMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTeamMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Team{}, err
+	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
@@ -345,7 +357,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		t.teamMemberDao,
 		teamMember,
 	)
-	realTimeTransaction.AddMutation(ct, createTeamMemberMutation)
+	realTimeTransaction.ApplyMutation(ct, createTeamMemberMutation)
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
@@ -366,7 +378,11 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			t.sprintDao,
 			participant,
 		)
-		realTimeTransaction.AddMutation(ct, createSprintParticipantMutation)
+		err = realTimeTransaction.ApplyMutation(ct, createSprintParticipantMutation)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.TeamMember{}, err
+		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
@@ -393,7 +409,11 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		teamID,
 		teamMember.UserID,
 	)
-	realTimeTransaction.AddMutation(ct, deleteTeamMemberMutation)
+	err = realTimeTransaction.ApplyMutation(ct, deleteTeamMemberMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
@@ -410,7 +430,11 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 			teamMember.UserID,
 			sprint.ID,
 		)
-		realTimeTransaction.AddMutation(ct, deleteSprintParticipantMutation)
+		err = realTimeTransaction.ApplyMutation(ct, deleteSprintParticipantMutation)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.TeamMember{}, err
+		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
@@ -444,7 +468,11 @@ func (t Team) UpdateTeamMember(
 		t.teamMemberDao,
 		teamMember,
 	)
-	realTimeTransaction.AddMutation(ct, updateTeamMemberMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTeamMemberMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TeamMember{}, err
+	}
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
@@ -473,7 +501,11 @@ func (t Team) UpdateTeamMember(
 				t.sprintDao,
 				participant,
 			)
-			realTimeTransaction.AddMutation(ct, updateSprintParticipantMutation)
+			err = realTimeTransaction.ApplyMutation(ct, updateSprintParticipantMutation)
+			if err != nil {
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				return entity.TeamMember{}, err
+			}
 		}
 	}
 
