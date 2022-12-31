@@ -12,9 +12,11 @@ import (
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/collection"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 const invitationCodeLen = 20
@@ -23,7 +25,8 @@ type Invitation struct {
 	dataCollector       obs.DataCollector
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	authorizer          Authorizer
-	invitationSyncer    collection.InvitationSyncer
+	stateSyncer         *realtime.StateSyncer
+	invitationDao       dao.Invitation
 }
 
 type CreateInvitationInput struct {
@@ -77,7 +80,15 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		CreatedAt:         time.Now(),
 	}
 
-	err = i.invitationSyncer.CreateAndSyncInvitation(ct, invitation)
+	transaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	createInvitationMutation := mutation.NewCreateInvitationMutation(
+		i.dataCollector,
+		i.stateSyncer,
+		i.invitationDao,
+		invitation,
+	)
+	transaction.AddMutation(ct, createInvitationMutation)
+	err = transaction.Commit(ct)
 	if err != nil {
 		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Invitation{}, err
@@ -104,12 +115,14 @@ func NewInvitation(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
-	invitationSyncer collection.InvitationSyncer,
+	stateSyncer *realtime.StateSyncer,
+	invitationDao dao.Invitation,
 ) Invitation {
 	return Invitation{
 		dataCollector:       dataCollector,
 		cloudClientRegistry: cloudClientRegistry,
 		authorizer:          authorizer,
-		invitationSyncer:    invitationSyncer,
+		stateSyncer:         stateSyncer,
+		invitationDao:       invitationDao,
 	}
 }

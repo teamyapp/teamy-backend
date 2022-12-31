@@ -16,7 +16,11 @@ type ClientNotifier struct {
 	clientDisconnectSubscribers []chan bool
 	clientID                    uint64
 	messages                    chan Message
-	acceptMutation              bool
+	acceptTransaction           bool
+}
+
+func (c *ClientNotifier) getClientID() uint64 {
+	return c.clientID
 }
 
 func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
@@ -26,35 +30,28 @@ func (c *ClientNotifier) subscribeClientDisconnect() <-chan bool {
 }
 
 func (c *ClientNotifier) onInitialStateReady() {
-	c.acceptMutation = true
+	c.acceptTransaction = true
 }
 
-func (c *ClientNotifier) processMutation(mutation Mutation) {
-	ct := context.Background()
-	ct = ctx.WithClientID(ct, c.clientID)
-	ct = WithMutationID(ct, mutation.ID)
+func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
 	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"Summary": "process mutation",
+			"Summary": "process transaction",
 		},
 	})
 
-	if !c.acceptMutation {
+	if !c.acceptTransaction {
 		c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 			obs.MessageProp: obs.Props{
-				"Summary": "discard mutation",
+				"Summary": "discard transaction",
 			},
 		})
 		return
 	}
 
 	message := Message{
-		Type: MutationMessageType,
-		Payload: MutationMessage{
-			CollectionType: mutation.CollectionType,
-			MutationType:   mutation.MutationType,
-			Payload:        mutation.Payload,
-		},
+		Type:    TransactionMessageType,
+		Payload: clientTransaction.ToMessage(),
 	}
 	c.messages <- message
 }
@@ -94,7 +91,7 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 		clientDisconnectSubscribers: make([]chan bool, 0),
 		clientID:                    clientID,
 		messages:                    messages,
-		acceptMutation:              false,
+		acceptTransaction:           false,
 	}
 	go func() {
 		<-conn.OnClientDisconnect()

@@ -10,6 +10,8 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/mutation"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 func (m Mutation) CreateMessage(ct context.Context, args struct {
@@ -45,8 +47,16 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		AuthorUserID: userID,
 		CreatedAt:    time.Now(),
 	}
-
-	err = m.deps.messageSyncer.CreateAndSyncMessage(ct, message)
+	// TODO move this to message service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
+	createMessageMutation := mutation.NewCreateMessageMutation(
+		m.deps.stateSyncer,
+		m.deps.messageDao,
+		m.deps.taskDao,
+		m.deps.dataCollector,
+		message)
+	realTimeTransaction.AddMutation(ct, createMessageMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
@@ -76,7 +86,16 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	message.Body = args.Input.Body
 	now := time.Now()
 	message.UpdatedAt = &now
-	err = m.deps.messageSyncer.UpdateAndSyncMessage(ct, message)
+	// TODO move this to message service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
+	updateMessageMutation := mutation.NewUpdateMessageMutation(
+		m.deps.dataCollector,
+		m.deps.stateSyncer,
+		m.deps.messageDao,
+		m.deps.taskDao,
+		message)
+	realTimeTransaction.AddMutation(ct, updateMessageMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
@@ -99,8 +118,16 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err
 	}
-
-	err = m.deps.messageSyncer.DeleteAndSyncMessage(ct, messageID)
+	// TODO move this to message service
+	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
+	deleteMessageMutation := mutation.NewDeleteMessageMutation(
+		m.deps.dataCollector,
+		m.deps.stateSyncer,
+		m.deps.messageDao,
+		m.deps.taskDao,
+		message)
+	realTimeTransaction.AddMutation(ct, deleteMessageMutation)
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Message{}, err

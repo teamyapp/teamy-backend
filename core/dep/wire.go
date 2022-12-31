@@ -11,7 +11,6 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/collection"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -49,18 +48,6 @@ var daoSet = wire.NewSet(
 	sqldb.NewSprintParticipant,
 )
 
-var collectionSyncerSet = wire.NewSet(
-	collection.NewInvitationSyncer,
-	collection.NewMessageSyncer,
-	collection.NewTaskSyncer,
-	collection.NewTaskAwaitForRelationSyncer,
-	collection.NewSprintTaskRelationSyncer,
-	collection.NewTeamSyncer,
-	collection.NewTeamMemberSyncer,
-	collection.NewUserSyncer,
-	collection.NewSprintParticipantSyncer,
-)
-
 var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
@@ -96,7 +83,6 @@ func InitGraphQLAPI(
 ) (api.GraphQL, error) {
 	wire.Build(
 		daoSet,
-		collectionSyncerSet,
 		serviceSet,
 		cache.NewActivity,
 		gql.NewDependencies,
@@ -124,7 +110,6 @@ func InitTaskRPCAPI(
 ) api.TaskRPC {
 	wire.Build(
 		daoSet,
-		collectionSyncerSet,
 		cache.NewActivity,
 		serviceSet,
 		api.NewTaskRPC,
@@ -140,7 +125,6 @@ func InitSprintRPCAPI(
 ) api.SprintRPC {
 	wire.Build(
 		daoSet,
-		collectionSyncerSet,
 		serviceSet,
 		cache.NewActivity,
 		api.NewSprintRPC,
@@ -168,14 +152,12 @@ func newTeamService(
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer service.Authorizer,
+	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
-	teamMemberSyncer collection.TeamMemberSyncer,
-	sprintParticipantSyncer collection.SprintParticipantSyncer,
-	teamSyncer collection.TeamSyncer,
 	sprintService service.Sprint,
 ) service.Team {
 	return service.NewTeam(
@@ -183,16 +165,13 @@ func newTeamService(
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		authorizer,
+		stateSyncer,
 		taskDao,
 		sprintDao,
 		teamDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
-		teamMemberSyncer,
-		sprintParticipantSyncer,
-		teamSyncer,
-		sprintService,
-	)
+		sprintService)
 }
 
 func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
