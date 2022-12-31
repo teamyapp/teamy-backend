@@ -97,8 +97,8 @@ func (t *Transaction) Commit(ct context.Context) error {
 		for _, clientNotifier := range clientNotifiers {
 			clientID := clientNotifier.getClientID()
 			_, ok := clientTransactions[clientID]
-			clientTransactionID := t.stateSyncer.NextClientTransactionID()
 			if !ok {
+			    clientTransactionID := t.stateSyncer.NextClientTransactionID()
 				clientTransactions[clientID] = newClientTransaction(
 					clientNotifier.dataCollector,
 					clientNotifier,

@@ -87,7 +87,6 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		i.invitationDao,
 		invitation,
 	)
-
 	transaction.AddMutation(ct, createInvitationMutation)
 	err = transaction.Commit(ct)
 	if err != nil {

@@ -60,7 +60,8 @@ func NewCreateMessageMutation(
 	messageDao dao.Message,
 	taskDao dao.Task,
 	dataCollector obs.DataCollector,
-	message entity.Message) *CreateMessageMutation {
+	message entity.Message,
+) *CreateMessageMutation {
 	return &CreateMessageMutation{
 		dataCollector: dataCollector,
 		stateSyncer:   stateSyncer,

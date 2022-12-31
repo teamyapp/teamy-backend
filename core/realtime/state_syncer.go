@@ -61,6 +61,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 	nextClientID := s.nextClientID
 	s.nextClientID++
 	s.clientIDMut.Unlock()
+	
 	clientNotifier := newClientNotifier(s.dataCollector, conn, nextClientID)
 	userNotifier.registerClientNotifier(nextClientID, clientNotifier)
 	clientNotifier.sentMetadata()
@@ -208,7 +209,7 @@ func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamN
 	return teamNotifier, nil
 }
 
-func (s *StateSyncer) GetClientNotifiersByUserID(ct context.Context, userID uint64) ([]*ClientNotifier, error) {
+func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID uint64) ([]*ClientNotifier, error) {
 	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
