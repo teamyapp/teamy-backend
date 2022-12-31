@@ -141,7 +141,11 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		t.taskDao,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, createTaskMutation)
+	err = realTimeTransaction.ApplyMutation(ct, createTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
@@ -253,7 +257,12 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		t.taskDao,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, updateTaskMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
 	err = t.updateUnusedBandWidth(ct, realTimeTransaction, task.OwningTeamID, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -302,7 +311,11 @@ func (t Task) updateUnusedBandWidth(
 				t.sprintDao,
 				participant,
 			)
-			tx.AddMutation(ct, updateSprintParticipantMutation)
+			err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
+			if err != nil {
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				return err
+			}
 		}
 	}
 
@@ -332,7 +345,11 @@ func (t Task) tryIncreaseBandwidth(
 				t.sprintDao,
 				participant,
 			)
-			tx.AddMutation(ct, updateSprintParticipantMutation)
+			err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
+			if err != nil {
+				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				return err
+			}
 		}
 	}
 
@@ -384,7 +401,11 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		t.taskDao,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, deleteTaskMutation)
+	err = realTimeTransaction.ApplyMutation(ct, deleteTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
 	err = t.threadDao.DeleteThread(ct, task.CommentsThreadID)
 	if err != nil {
@@ -425,7 +446,12 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *realtime.Transaction, t
 		t.taskDao,
 		task,
 	)
-	tx.AddMutation(ct, updateTaskMutation)
+	err = tx.ApplyMutation(ct, updateTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
 	return task, err
 }
 
@@ -453,7 +479,12 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 		t.taskDao,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, updateTaskMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -512,7 +543,11 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			t.taskDao,
 			inProgressTask,
 		)
-		realTimeTransaction.AddMutation(ct, updateTaskMutation)
+		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
 	}
 
 	task.Status = entity.TaskStatusInProgress
@@ -523,7 +558,11 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		t.taskDao,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, updateTaskMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
@@ -552,7 +591,11 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		t.taskDao,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, updateTaskMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
 	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
 	if err != nil {
@@ -630,7 +673,11 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		t.taskDao,
 		taskAwaitForRelation,
 	)
-	realTimeTransaction.AddMutation(ct, createTaskAwaitForRelationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, createTaskAwaitForRelationMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
 	task.Status = entity.TaskStatusAwaiting
 	task.UpdatedAt = &now
@@ -640,7 +687,11 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		t.taskDao,
 		task,
 	)
-	realTimeTransaction.AddMutation(ct, updateTaskMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
@@ -677,7 +728,12 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		task,
 		awaitForTaskId,
 	)
-	realTimeTransaction.AddMutation(ct, deleteTaskAwaitForRelationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
 	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, taskID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -733,7 +789,11 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		t.activityCache,
 		taskActivity,
 	)
-	realTimeTransaction.AddMutation(ct, updateTaskActivityMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTaskActivityMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
 
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -770,7 +830,12 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		t.activityCache,
 		taskActivity,
 	)
-	realTimeTransaction.AddMutation(ct, updateTaskActivityMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateTaskActivityMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})

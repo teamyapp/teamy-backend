@@ -59,8 +59,22 @@ func (t *Transaction) rollback(ct context.Context) error {
 	return nil
 }
 
-func (t *Transaction) AddMutation(ct context.Context, mutation Mutation) {
+func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) error {
+	err := mutation.Execute(ct)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		undoErr := t.rollback(ct)
+		if undoErr != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: undoErr})
+			return undoErr
+		}
+
+		return err
+	}
+
 	t.mutations = append(t.mutations, mutation)
+	t.processedMutationIndex++
+	return nil
 }
 
 func (t *Transaction) Commit(ct context.Context) error {
@@ -68,20 +82,7 @@ func (t *Transaction) Commit(ct context.Context) error {
 	defer t.stateSyncer.EndTransaction()
 
 	clientTransactions := make(map[uint64]*ClientTransaction)
-	for index, mutation := range t.mutations {
-		t.processedMutationIndex = index
-		err := mutation.Execute(ct)
-		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			undoErr := t.rollback(ct)
-			if undoErr != nil {
-				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: undoErr})
-				return undoErr
-			}
-
-			return err
-		}
-
+	for _, mutation := range t.mutations {
 		clientNotifiers, err := mutation.GetClientNotifiers(ct)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})

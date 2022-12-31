@@ -73,7 +73,12 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		invitation)
 
-	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Invitation{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -105,7 +110,12 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		invitation)
 
-	realTimeTransaction.AddMutation(ct, deleteInvitationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, deleteInvitationMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Invitation{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -168,7 +178,12 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		invitation)
 
-	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Invitation{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -245,7 +260,12 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 		m.deps.invitationDao,
 		invitation)
 
-	realTimeTransaction.AddMutation(ct, updateInvitationMutation)
+	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Invitation{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})

@@ -76,7 +76,12 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 		m.deps.teamMemberDao,
 		m.deps.userDao,
 		user)
-	realTimeTransaction.AddMutation(ct, userMutation)
+	err = realTimeTransaction.ApplyMutation(ct, userMutation)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return User{}, err
+	}
+
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
