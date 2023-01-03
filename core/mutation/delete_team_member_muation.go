@@ -18,8 +18,8 @@ type DeleteTeamMemberMutation struct {
 	userID        uint64
 }
 
-func (c *DeleteTeamMemberMutation) GetID() uint64 {
-	return c.id
+func (d *DeleteTeamMemberMutation) GetID() uint64 {
+	return d.id
 }
 
 func (d *DeleteTeamMemberMutation) Execute(ct context.Context) error {

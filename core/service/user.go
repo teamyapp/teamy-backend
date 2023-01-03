@@ -17,10 +17,10 @@ import (
 
 type User struct {
 	dataCollector              obs.DataCollector
-	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	userDao                    dao.User
 	userFileUploadSessionDao   dao.UserFileUploadSession
+	cloudWebAPIExternalBaseURL string
 }
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
@@ -125,16 +125,16 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 
 func NewUser(
 	dataCollector obs.DataCollector,
-	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
+	cloudWebAPIExternalBaseURL string,
 ) User {
 	return User{
 		dataCollector:              dataCollector,
-		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		userDao:                    userDao,
 		userFileUploadSessionDao:   userFileUploadSessionDao,
+		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 	}
 }

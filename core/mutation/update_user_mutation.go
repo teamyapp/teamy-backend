@@ -18,8 +18,8 @@ type UpdateUserMutation struct {
 	user          entity.User
 }
 
-func (c *UpdateUserMutation) GetID() uint64 {
-	return c.id
+func (u *UpdateUserMutation) GetID() uint64 {
+	return u.id
 }
 
 func (u *UpdateUserMutation) Execute(ct context.Context) error {

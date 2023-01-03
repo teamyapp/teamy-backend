@@ -18,8 +18,8 @@ type DeleteTaskAwaitForRelationMutation struct {
 	awaitForTaskID          uint64
 }
 
-func (c *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
-	return c.id
+func (d *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
+	return d.id
 }
 
 func (d *DeleteTaskAwaitForRelationMutation) Execute(ct context.Context) error {

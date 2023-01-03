@@ -18,8 +18,8 @@ type UpdateSprintParticipantMutation struct {
 	sprintParticipant    entity.SprintParticipant
 }
 
-func (c *UpdateSprintParticipantMutation) GetID() uint64 {
-	return c.id
+func (u *UpdateSprintParticipantMutation) GetID() uint64 {
+	return u.id
 }
 
 func (u *UpdateSprintParticipantMutation) Execute(ct context.Context) error {

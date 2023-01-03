@@ -17,8 +17,8 @@ type UpdateTaskActivityMutation struct {
 	taskActivity  entity.TaskActivity
 }
 
-func (c *UpdateTaskActivityMutation) GetID() uint64 {
-	return c.id
+func (u *UpdateTaskActivityMutation) GetID() uint64 {
+	return u.id
 }
 
 func (u *UpdateTaskActivityMutation) Execute(ct context.Context) error {

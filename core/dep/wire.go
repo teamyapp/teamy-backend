@@ -134,17 +134,18 @@ func InitSprintRPCAPI(
 
 func newUserService(
 	dataCollector obs.DataCollector,
-	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 ) service.User {
 	return service.NewUser(
 		dataCollector,
-		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		userDao,
-		userFileUploadSessionDao)
+		userFileUploadSessionDao,
+		string(cloudWebAPIExternalBaseURL),
+	)
 }
 
 func newTeamService(

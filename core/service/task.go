@@ -59,6 +59,7 @@ type Task struct {
 	dataCollector           obs.DataCollector
 	cloudClientRegistry     *cloudAPI.ClientRegistry
 	authorizer              Authorizer
+	stateSyncer             *realtime.StateSyncer
 	activityCache           cache.Activity
 	taskDao                 dao.Task
 	sprintDao               dao.Sprint
@@ -67,7 +68,6 @@ type Task struct {
 	sprintParticipantDao    dao.SprintParticipant
 	sprintTaskRelationDao   dao.SprintTaskRelation
 	threadService           Thread
-	stateSyncer             *realtime.StateSyncer
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, error) {
@@ -848,26 +848,28 @@ func NewTask(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	stateSyncer *realtime.StateSyncer,
 	activityCache cache.Activity,
 	taskDao dao.Task,
 	threadDao dao.Thread,
+	sprintDao dao.Sprint,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	threadService Thread,
-	stateSyncer *realtime.StateSyncer,
 ) Task {
 	return Task{
 		dataCollector:           dataCollector,
 		cloudClientRegistry:     cloudClientRegistry,
 		authorizer:              authorizer,
+		stateSyncer:             stateSyncer,
 		activityCache:           activityCache,
 		taskDao:                 taskDao,
 		threadDao:               threadDao,
+		sprintDao:               sprintDao,
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
 		sprintParticipantDao:    sprintParticipantDao,
 		sprintTaskRelationDao:   sprintTaskRelationDao,
 		threadService:           threadService,
-		stateSyncer:             stateSyncer,
 	}
 }

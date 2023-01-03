@@ -61,7 +61,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 	nextClientID := s.nextClientID
 	s.nextClientID++
 	s.clientIDMut.Unlock()
-	
+
 	clientNotifier := newClientNotifier(s.dataCollector, conn, nextClientID)
 	userNotifier.registerClientNotifier(nextClientID, clientNotifier)
 	clientNotifier.sentMetadata()
