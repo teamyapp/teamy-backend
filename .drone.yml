@@ -3,45 +3,41 @@ type: kubernetes
 name: feature
 
 steps:
-  - name: restore cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      restore: true
+      mode: retrieve
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: run unit tests
     image: golang:1.18
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
     commands:
       - go test ./...
-  - name: refresh cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      refresh: true
+      mode: persist
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -51,40 +47,41 @@ steps:
     when:
       status: [ success, failure ]
 volumes:
-  - name: cache
+  - name: go-mod-cache
     temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - master
     - main
   event:
-    - pull_request
+    - push
 ---
 kind: pipeline
 type: kubernetes
 name: testing
 
 steps:
-  - name: restore cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      restore: true
+      mode: retrieve
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: build app
     image: golang:1.18-alpine
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
     commands:
       - sh ./scripts/build.sh
@@ -106,22 +103,20 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
           "tag": "latest"
         }
-  - name: refresh cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      refresh: true
+      mode: persist
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -131,8 +126,11 @@ steps:
     when:
       status: [ success, failure ]
 volumes:
-  - name: cache
+  - name: go-mod-cache
     temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - testing
@@ -144,26 +142,24 @@ type: kubernetes
 name: staging
 
 steps:
-  - name: restore cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      restore: true
+      mode: retrieve
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: build app
     image: golang:1.18-alpine
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
     commands:
       - sh ./scripts/build.sh
@@ -186,22 +182,20 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
           "tag": "latest"
         }
-  - name: refresh cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      refresh: true
+      mode: persist
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -211,8 +205,11 @@ steps:
     when:
       status: [ success, failure ]
 volumes:
-  - name: cache
+  - name: go-mod-cache
     temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - master
@@ -225,26 +222,24 @@ type: kubernetes
 name: production
 
 steps:
-  - name: restore cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      restore: true
+      mode: retrieve
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: build app
     image: golang:1.18-alpine
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
     commands:
       - sh ./scripts/build.sh
@@ -266,22 +261,20 @@ steps:
           "name": "registry.digitalocean.com/teamyapp/teamy-backend",
           "tag": "latest"
         }
-  - name: refresh cache
-    image: ghcr.io/teamyapp/drone-cache:0.0.9
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
     volumes:
-      - name: cache
+      - name: go-mod-cache
         path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
     settings:
-      s3_endpoint: sfo3.digitaloceanspaces.com
-      s3_access_key_id:
-        from_secret: SPACE_ACCESS_KEY
-      s3_secret:
-        from_secret: SPACE_SECRET
-      s3_bucket: teamyapp
-      remote_root_dir: cache/go
-      refresh: true
+      mode: persist
+      version_file_path: go.sum
       cacheable_absolute_paths:
         - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -291,8 +284,11 @@ steps:
     when:
       status: [ success, failure ]
 volumes:
-  - name: cache
+  - name: go-mod-cache
     temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - production
