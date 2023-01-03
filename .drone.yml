@@ -57,7 +57,7 @@ trigger:
     - master
     - main
   event:
-    - push
+    - pull_request
 ---
 kind: pipeline
 type: kubernetes
