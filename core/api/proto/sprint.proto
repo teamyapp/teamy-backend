@@ -11,14 +11,14 @@ service Sprint {
 }
 
 message GetCurrentSprintRequest {
-    uint64 teamId = 1;
+	uint64 teamId = 1;
 }
 
 message SprintMsg {
 	uint64 id = 1;
 	google.protobuf.Timestamp startAt = 2;
 	google.protobuf.Timestamp endAt = 3;
-    google.protobuf.Timestamp createdAt = 4;
+	google.protobuf.Timestamp createdAt = 4;
 	uint64 owningTeamId = 5;
 }
 

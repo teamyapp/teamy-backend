@@ -17,8 +17,8 @@ type UpdateTeamMutation struct {
 	team          entity.Team
 }
 
-func (c *UpdateTeamMutation) GetID() uint64 {
-	return c.id
+func (u *UpdateTeamMutation) GetID() uint64 {
+	return u.id
 }
 
 func (u *UpdateTeamMutation) Execute(ct context.Context) error {

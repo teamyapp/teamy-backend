@@ -17,8 +17,8 @@ type DeleteTaskMutation struct {
 	task          entity.Task
 }
 
-func (c *DeleteTaskMutation) GetID() uint64 {
-	return c.id
+func (d *DeleteTaskMutation) GetID() uint64 {
+	return d.id
 }
 
 func (d *DeleteTaskMutation) Execute(ct context.Context) error {

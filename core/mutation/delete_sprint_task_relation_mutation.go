@@ -18,8 +18,8 @@ type DeleteSprintTaskRelationMutation struct {
 	task                  entity.Task
 }
 
-func (c *DeleteSprintTaskRelationMutation) GetID() uint64 {
-	return c.id
+func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
+	return d.id
 }
 
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) error {

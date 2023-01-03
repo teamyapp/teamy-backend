@@ -569,7 +569,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
-	
+
 	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false

@@ -18,8 +18,8 @@ type UpdateMessageMutation struct {
 	message       entity.Message
 }
 
-func (c *UpdateMessageMutation) GetID() uint64 {
-	return c.id
+func (u *UpdateMessageMutation) GetID() uint64 {
+	return u.id
 }
 
 func (u *UpdateMessageMutation) Execute(ct context.Context) error {

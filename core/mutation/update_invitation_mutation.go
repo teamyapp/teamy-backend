@@ -17,8 +17,8 @@ type UpdateInvitationMutation struct {
 	invitation    entity.Invitation
 }
 
-func (c *UpdateInvitationMutation) GetID() uint64 {
-	return c.id
+func (d *UpdateInvitationMutation) GetID() uint64 {
+	return d.id
 }
 
 func (u *UpdateInvitationMutation) Execute(ct context.Context) error {

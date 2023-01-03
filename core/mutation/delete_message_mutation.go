@@ -18,8 +18,8 @@ type DeleteMessageMutation struct {
 	taskDao       dao.Task
 }
 
-func (c *DeleteMessageMutation) GetID() uint64 {
-	return c.id
+func (d *DeleteMessageMutation) GetID() uint64 {
+	return d.id
 }
 
 func (d *DeleteMessageMutation) Execute(ct context.Context) error {

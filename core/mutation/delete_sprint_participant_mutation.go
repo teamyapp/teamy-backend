@@ -18,8 +18,8 @@ type DeleteSprintParticipantMutation struct {
 	sprintID             uint64
 }
 
-func (c *DeleteSprintParticipantMutation) GetID() uint64 {
-	return c.id
+func (d *DeleteSprintParticipantMutation) GetID() uint64 {
+	return d.id
 }
 
 func (d *DeleteSprintParticipantMutation) Execute(ct context.Context) error {
