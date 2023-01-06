@@ -389,6 +389,76 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 	}
 
 	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
+	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	for _, sprintID := range sprintIDs {
+		deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.sprintTaskRelationDao,
+			sprintID,
+			task,
+		)
+		err = realTimeTransaction.ApplyMutation(ct, deleteSprintTaskRelationMutation)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+	}
+
+	awaitForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, taskID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	for _, awaitForTaskID := range awaitForTaskIDs {
+		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.taskAwaitForRelationDao,
+			task,
+			awaitForTaskID,
+		)
+
+		err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+	}
+
+	awaitingForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	awaitingForTasks, err := t.taskDao.FindTasksByIDs(ct, awaitingForTaskIDs)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, err
+	}
+
+	for _, awaitingForTask := range awaitingForTasks {
+		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.taskAwaitForRelationDao,
+			awaitingForTask,
+			taskID,
+		)
+		err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Task{}, err
+		}
+	}
+
 	err = t.tryIncreaseBandwidth(ct, realTimeTransaction, task.OwningTeamID, taskID, task.OwnerUserID, task.Effort)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
