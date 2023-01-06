@@ -52,7 +52,7 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 
 	invitation, err := m.deps.invitationService.UpdateInvitation(ct, invitationID, service.UpdateInvitationInput{
 		ReceiverFirstName: args.Input.ReceiverFirstName,
-		ReceiverLastName:  args.Input.ReceiverFirstName,
+		ReceiverLastName:  args.Input.ReceiverLastName,
 		ExpireAt:          args.Input.ExpireAt.Time,
 	})
 	if err != nil {

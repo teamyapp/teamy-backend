@@ -231,7 +231,6 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		i.invitationDao,
 		invitation,
 	)
-
 	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
 	if err != nil {
 		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
