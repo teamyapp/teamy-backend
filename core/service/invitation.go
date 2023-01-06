@@ -27,12 +27,20 @@ type Invitation struct {
 	authorizer          Authorizer
 	stateSyncer         *realtime.StateSyncer
 	invitationDao       dao.Invitation
+	teamMemberDao       dao.TeamMember
+	teamService         Team
 }
 
 type CreateInvitationInput struct {
 	ReceiverFirstName *string
 	ReceiverLastName  *string
 	ReceiverEmail     *string
+	ExpireAt          time.Time
+}
+
+type UpdateInvitationInput struct {
+	ReceiverFirstName *string
+	ReceiverLastName  *string
 	ExpireAt          time.Time
 }
 
@@ -116,12 +124,243 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	return invitation, nil
 }
 
+func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, input UpdateInvitationInput) (entity.Invitation, error) {
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	invitation.ReceiverFirstName = input.ReceiverFirstName
+	invitation.ReceiverLastName = input.ReceiverLastName
+	invitation.ExpireAt = input.ExpireAt
+	now := time.Now()
+	invitation.UpdatedAt = &now
+	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		i.dataCollector,
+		i.stateSyncer,
+		i.invitationDao,
+		invitation,
+	)
+	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	err = realTimeTransaction.Commit(ct)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	return invitation, nil
+}
+
+func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (entity.Invitation, error) {
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	deleteInvitationMutation := mutation.NewDeleteInvitationMutation(
+		i.dataCollector,
+		i.stateSyncer,
+		i.invitationDao,
+		invitation,
+	)
+
+	err = realTimeTransaction.ApplyMutation(ct, deleteInvitationMutation)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	err = realTimeTransaction.Commit(ct)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	return invitation, nil
+}
+
+func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, invitationCode string) (entity.Invitation, error) {
+	receiverUserID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	if invitation.Code != invitationCode {
+		err = errors.New("invalid invitation code")
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID":   invitationID,
+				"InvitationCode": invitationCode,
+			},
+		})
+		return entity.Invitation{}, err
+	}
+
+	err = i.ensureInvitationPending(ct, invitation)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	invitation.Status = entity.InvitationStatusAccepted
+	invitation.ReceiverUserID = &receiverUserID
+	now := time.Now()
+	invitation.UpdatedAt = &now
+	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		i.dataCollector,
+		i.stateSyncer,
+		i.invitationDao,
+		invitation,
+	)
+	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	err = realTimeTransaction.Commit(ct)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	_, err = i.teamMemberDao.FindTeamMember(ct, invitation.TeamID, receiverUserID)
+	if err != nil {
+		if !errors.As(err, &dao.ErrorNotFound) {
+			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Invitation{}, err
+		}
+
+		_, err = i.teamService.AddMemberToTeam(ct, invitation.TeamID, receiverUserID)
+		if err != nil {
+			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return entity.Invitation{}, err
+		}
+	}
+
+	return invitation, nil
+}
+
+func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, invitationCode string) (entity.Invitation, error) {
+	receiverUserID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	if invitation.Code != invitationCode {
+		err = errors.New("invalid invitation code")
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID":   invitationID,
+				"InvitationCode": invitationCode,
+			},
+		})
+		return entity.Invitation{}, err
+	}
+
+	err = i.ensureInvitationPending(ct, invitation)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	invitation.Status = entity.InvitationStatusDeclined
+	invitation.ReceiverUserID = &receiverUserID
+	now := time.Now()
+	invitation.UpdatedAt = &now
+	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		i.dataCollector,
+		i.stateSyncer,
+		i.invitationDao,
+		invitation,
+	)
+
+	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	err = realTimeTransaction.Commit(ct)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Invitation{}, err
+	}
+
+	return invitation, nil
+}
+
+func (i Invitation) ensureInvitationPending(ct context.Context, invitation entity.Invitation) error {
+	switch invitation.Status {
+	case entity.InvitationStatusExpired:
+		err := errors.New("invitation is expired")
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID": invitation.ID,
+			},
+		})
+		return err
+	case entity.InvitationStatusInvoked:
+		err := errors.New("invitation is revoked")
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID": invitation.ID,
+			},
+		})
+		return err
+	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
+		err := errors.New("invitation is already responded")
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
+			obs.CauseProp: err,
+			obs.MessageProp: obs.Props{
+				"InvitationID": invitation.ID,
+			},
+		})
+		return err
+	default:
+		return nil
+	}
+}
+
 func NewInvitation(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
+	teamMemberDao dao.TeamMember,
+	teamService Team,
 ) Invitation {
 	return Invitation{
 		dataCollector:       dataCollector,
@@ -129,5 +368,7 @@ func NewInvitation(
 		authorizer:          authorizer,
 		stateSyncer:         stateSyncer,
 		invitationDao:       invitationDao,
+		teamMemberDao:       teamMemberDao,
+		teamService:         teamService,
 	}
 }
