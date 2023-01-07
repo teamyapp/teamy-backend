@@ -438,18 +438,18 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		return entity.Task{}, err
 	}
 
-	awaitingTaskIDs, err := t.taskDao.FindTasksByIDs(ct, awaitingForTaskIDs)
+	awaitingTasks, err := t.taskDao.FindTasksByIDs(ct, awaitingTaskIDs)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	for _, awaitingForTask := range awaitingForTasks {
+	for _, awaitingTask := range awaitingTasks {
 		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
 			t.dataCollector,
 			t.stateSyncer,
 			t.taskAwaitForRelationDao,
-			awaitingForTask,
+			awaitingTask,
 			taskID,
 		)
 		err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
