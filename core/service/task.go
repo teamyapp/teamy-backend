@@ -432,13 +432,13 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, error)
 		}
 	}
 
-	awaitingForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
+	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	awaitingForTasks, err := t.taskDao.FindTasksByIDs(ct, awaitingForTaskIDs)
+	awaitingTaskIDs, err := t.taskDao.FindTasksByIDs(ct, awaitingForTaskIDs)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
