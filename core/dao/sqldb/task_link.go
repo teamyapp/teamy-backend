@@ -16,9 +16,6 @@ type TaskLink struct {
 
 var _ dao.TaskLink = (*TaskLink)(nil)
 
-// CreateTaskLink(ct context.Context, taskLinkEntity entity.TaskLink) error
-// FindTaskLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, error)
-
 func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity entity.TaskLink) error {
 	_, err := t.db.Exec(`
 		INSERT INTO task_link
