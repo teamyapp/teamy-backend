@@ -153,6 +153,11 @@ func startServiceRunner(
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
+	taskLinkRPCAPI := dep.InitTaskLinkRPCAPI(
+		dataCollector,
+		cloudClientRegistry,
+		sqlDB,
+	)
 	sprintRPCAPI := dep.InitSprintRPCAPI(
 		dataCollector,
 		cloudClientRegistry,
@@ -165,6 +170,7 @@ func startServiceRunner(
 			graphQLAPI,
 			realTimeStateSyncAPI,
 			taskRPCAPI,
+			taskLinkRPCAPI,
 			sprintRPCAPI,
 		})
 	rn.Start()

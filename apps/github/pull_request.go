@@ -57,6 +57,7 @@ type pullRequest struct {
 	Merged             bool             `json:"merged"`
 	Mergeable          *bool            `json:"mergeable"`
 	Rebaseable         *bool            `json:"rebaseable"`
+	Url                string           `json:"url"`
 }
 
 func (p pullRequest) String() string {
