@@ -229,7 +229,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 
 	if bodySignatureHeaderParts[0] != "sha256" {
 		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: "signature header mus start with sha256",
+			obs.MessageProp: "signature header must start with sha256",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -271,7 +271,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	evtType := r.Header.Get("X-GitHub-Event")
 	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
 		obs.MessageProp: obs.Props{
-			"Summary":    "signature header mus start with sha256",
+			"Summary":    "received event",
 			"DeliveryID": deliveryID,
 			"EventType":  evtType,
 		},
