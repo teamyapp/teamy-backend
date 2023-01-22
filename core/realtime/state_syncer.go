@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/teamyapp/cloud/libs/connection"
@@ -18,6 +19,15 @@ import (
 // Client disconnect
 // 1) Remove client for that user
 // 2) Clean up user and team if no subscription
+type ErrTeamNotFound struct {
+	TeamID uint64
+}
+
+var _ error = (*ErrTeamNotFound)(nil)
+
+func (e ErrTeamNotFound) Error() string {
+	return fmt.Sprintf("team not found: teamID=%v", e.TeamID)
+}
 
 type StateSyncer struct {
 	dataCollector           obs.DataCollector
@@ -196,12 +206,11 @@ func (s StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserNo
 func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamNotifier, error) {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
-		err := errors.New("teamNotifier not found")
+		err := ErrTeamNotFound{
+			TeamID: teamID,
+		}
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"TeamID": teamID,
-			},
 		})
 		return nil, err
 	}
@@ -240,6 +249,10 @@ func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID u
 func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, error) {
 	teamNotifier, err := s.GetTeamNotifier(ct, teamID)
 	if err != nil {
+		if _, ok := err.(ErrTeamNotFound); ok {
+			return []*ClientNotifier{}, nil
+		}
+
 		return nil, err
 	}
 
