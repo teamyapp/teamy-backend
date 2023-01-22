@@ -41,15 +41,15 @@ func newClientTransaction(dataCollector obs.DataCollector, clientNotifier *Clien
 }
 
 type Transaction struct {
-	dataCollector          obs.DataCollector
-	stateSyncer            *StateSyncer
-	id                     uint64
-	mutations              []Mutation
-	processedMutationIndex int
+	dataCollector     obs.DataCollector
+	stateSyncer       *StateSyncer
+	id                uint64
+	mutations         []Mutation
+	nextMutationIndex int
 }
 
 func (t *Transaction) rollback(ct context.Context) error {
-	for index := t.processedMutationIndex; index >= 0; index-- {
+	for index := t.nextMutationIndex - 1; index >= 0; index-- {
 		err := t.mutations[index].Undo()
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -73,7 +73,7 @@ func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) error
 	}
 
 	t.mutations = append(t.mutations, mutation)
-	t.processedMutationIndex++
+	t.nextMutationIndex++
 	return nil
 }
 
@@ -129,10 +129,10 @@ func (t *Transaction) Commit(ct context.Context) error {
 
 func NewTransaction(dataCollector obs.DataCollector, stateSyncer *StateSyncer) *Transaction {
 	return &Transaction{
-		dataCollector:          dataCollector,
-		stateSyncer:            stateSyncer,
-		id:                     stateSyncer.NextTransactionID(),
-		mutations:              make([]Mutation, 0),
-		processedMutationIndex: 0,
+		dataCollector:     dataCollector,
+		stateSyncer:       stateSyncer,
+		id:                stateSyncer.NextTransactionID(),
+		mutations:         make([]Mutation, 0),
+		nextMutationIndex: 0,
 	}
 }
