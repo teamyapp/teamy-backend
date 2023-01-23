@@ -145,7 +145,7 @@ func (t Task) Links(ct context.Context) ([]TaskLink, error) {
 		return nil, err
 	}
 
-	return collect.Map(taskLinks, func(taskLink entity.TaskLink, _ int) TaskLink {
+	return collect.Map(links, func(taskLink entity.TaskLink, _ int) TaskLink {
 		return newTaskLink(t.deps, taskLink)
 	}), nil
 }

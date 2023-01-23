@@ -565,8 +565,8 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	})
 
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
-		Title:  "github",
 		TaskId: createTaskRes.TaskId,
+		Title:  prEvt.PullRequest.Title,
 		Url:    prEvt.PullRequest.Url,
 	}
 

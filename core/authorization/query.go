@@ -27,6 +27,15 @@ func NewCreateTaskQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewCreateTaskLinkQuery(userID uint64, taskID uint64) Query {
+	return Query{
+		ResourceType: TaskResourceType,
+		ResourceID:   taskID,
+		Operation:    "CreateTaskLink",
+		UserID:       userID,
+	}
+}
+
 func NewCreateInvitationQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,

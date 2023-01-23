@@ -43,7 +43,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity entity.TaskL
 	return err
 }
 
-func (t TaskLink) FindTaskLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, error) {
+func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, error) {
 	rows, err := t.db.Query(`
 	SELECT
 		id,
