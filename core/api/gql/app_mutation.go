@@ -6,11 +6,14 @@ import (
 	"github.com/graph-gophers/graphql-go"
 )
 
-func (m Mutation) CreateApp(ct context.Context) (App, error) {
+func (m Mutation) CreateApp(ct context.Context, args struct {
+	Name string
+}) (App, error) {
 	panic("implement me")
 }
 
 func (m Mutation) UpdateApp(ct context.Context, args struct {
+	AppID graphql.ID
 	Input struct {
 		ActiveVersionNumber *int32
 	}
@@ -18,7 +21,9 @@ func (m Mutation) UpdateApp(ct context.Context, args struct {
 	panic("implement me")
 }
 
-func (m Mutation) RefreshAppSecret(ct context.Context) (App, error) {
+func (m Mutation) RefreshAppSecret(ct context.Context, args struct {
+	AppID graphql.ID
+}) (App, error) {
 	panic("implement me")
 }
 

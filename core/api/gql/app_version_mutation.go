@@ -13,9 +13,9 @@ func (m Mutation) CreateAppVersion(ct context.Context, args struct {
 }
 
 func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
-	AppID graphql.ID
-	Input struct {
-		VersionNumber             int32
+	AppID         graphql.ID
+	VersionNumber int32
+	Input         struct {
 		Name                      string
 		IconUrl                   *string
 		HasUIExtension            bool

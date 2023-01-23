@@ -63,6 +63,7 @@ type Mutation {
 	createSprint(teamId: ID!, sprint: CreateSprintInput!): Sprint!
 	deleteSprint(sprintId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
+	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
 	moveTasksToSprint(
 		fromSprintId: ID!
 		toSprintId: ID!
@@ -72,21 +73,20 @@ type Mutation {
 		toSprintId: ID!
 		taskIds: [ID!]!
 	): [Task!]!
-	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
 
 	# File
 	createFileUploadSession(teamId: ID!): ID!
-	finishFileUploadSession(teamId: ID!): FileMetadata!
+	finishFileUploadSession(fileUploadSessionId: ID!): FileMetadata!
 	updateFileMetadata(fileId: ID!, input: FileMetadataInput!): FileMetadata!
 	deleteFile(fileId: ID!): FileMetadata!
 
 	# App
-	createApp: App!
-	updateApp(input: UpdateAppInput!): App!
+	createApp(name: String!): App!
+	updateApp(appId: ID!, input: UpdateAppInput!): App!
 	deleteApp(appId: ID!): App!
-	refreshAppSecret: App!
+	refreshAppSecret(appId: ID!): App!
 	createAppVersion(appId: ID!): AppVersion!
-	updateAppVersion(appId: ID!, input: UpdateAppVersionInput!): AppVersion!
+	updateAppVersion(appId: ID!, versionNumber: Int!, input: UpdateAppVersionInput!): AppVersion!
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
 	addVisibleTeamToAppVersion(
 		appId: ID!
@@ -391,7 +391,6 @@ input UpdateAppInput {
 }
 
 input UpdateAppVersionInput {
-	versionNumber: Int!
 	name: String!
 	iconUrl: String
 	hasUiExtension: Boolean!
