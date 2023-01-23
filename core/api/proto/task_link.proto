@@ -14,7 +14,5 @@ message CreateTaskLinkRequest {
 }
 
 message CreateTaskLinkResponse {
-	uint64 taskLinkId = 1;
+	uint64 linkId = 1;
 }
-
-

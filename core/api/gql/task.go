@@ -138,8 +138,8 @@ func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 	}), nil
 }
 
-func (t Task) TaskLinks(ct context.Context) ([]TaskLink, error) {
-	taskLinks, err := t.deps.taskLinkService.FindTaskLinksByTaskID(ct, t.task.ID)
+func (t Task) Links(ct context.Context) ([]TaskLink, error) {
+	links, err := t.deps.taskLinkService.FindLinksByTaskID(ct, t.task.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
