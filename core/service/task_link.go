@@ -19,8 +19,8 @@ import (
 type CreateTaskLinkInput struct {
 	TaskID  uint64
 	Title   string
-	Url     string
-	IconUrl *string
+	URL     string
+	IconURL *string
 }
 
 type TaskLink struct {
@@ -101,7 +101,8 @@ func NewTaskLink(
 	dataCollector obs.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
-	taskLinkDao dao.TaskLink) TaskLink {
+	taskLinkDao dao.TaskLink,
+) TaskLink {
 	return TaskLink{
 		dataCollector:       dataCollector,
 		cloudClientRegistry: cloudClientRegistry,
