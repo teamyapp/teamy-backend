@@ -31,7 +31,7 @@ func NewCreateTaskLinkQuery(userID uint64, taskID uint64) Query {
 	return Query{
 		ResourceType: TaskResourceType,
 		ResourceID:   taskID,
-		Operation:    "CreateTaskLink",
+		Operation:    "CreateLink",
 		UserID:       userID,
 	}
 }
