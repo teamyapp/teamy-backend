@@ -24,12 +24,12 @@ func (t TaskLink) Title() string {
 	return t.taskLink.Title
 }
 
-func (t TaskLink) Url() string {
-	return t.taskLink.Url
+func (t TaskLink) URL() string {
+	return t.taskLink.URL
 }
 
-func (t TaskLink) IconUrl() *string {
-	return t.taskLink.IconUrl
+func (t TaskLink) IconURL() *string {
+	return t.taskLink.IconURL
 }
 
 func (t TaskLink) CreatedAt(ct context.Context) graphql.Time {

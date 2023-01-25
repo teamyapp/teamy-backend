@@ -31,8 +31,8 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity entity.TaskL
 		taskLinkEntity.ID,
 		taskLinkEntity.TaskID,
 		taskLinkEntity.Title,
-		taskLinkEntity.Url,
-		taskLinkEntity.IconUrl,
+		taskLinkEntity.URL,
+		taskLinkEntity.IconURL,
 		taskLinkEntity.CreatedAt,
 	)
 
@@ -69,8 +69,8 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 			&taskLink.ID,
 			&taskLink.TaskID,
 			&taskLink.Title,
-			&taskLink.Url,
-			&taskLink.IconUrl,
+			&taskLink.URL,
+			&taskLink.IconURL,
 			&taskLink.CreatedAt,
 			&taskLink.UpdatedAt,
 		)

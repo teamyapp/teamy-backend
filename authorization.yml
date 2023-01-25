@@ -4,6 +4,13 @@ resourceOperations:
       - Read
       - Update
       - Delete
+      # Link
+      - CreateLink
+  - resourceType: TaskLink
+    operations:
+      - Read
+      - Update
+      - Delete
   - resourceType: Team
     operations:
       # Team
@@ -46,7 +53,7 @@ operationRelations:
       - resourceType: Task
         operation: Delete
       - resourceType: Team
-        operation: ReadTask
+        operation: ReadTask # TODO: confirm whether this is correct        
   - resourceType: Task
     operation: Update
     parents:
@@ -57,6 +64,25 @@ operationRelations:
     parents:
       - resourceType: Team
         operation: DeleteTask
+  - resourceType: TaskLink
+    operation: Read
+    parents:
+      - resourceType: TaskLink
+        operation: Update
+      - resourceType: TaskLink
+        operation: Delete
+      - resourceType: Task
+        operation: Read
+  - resourceType: TaskLink
+    operation: Update
+    parents:
+      - resourceType: Task
+        operation: Update
+  - resourceType: TaskLink
+    operation: Delete
+    parents:
+      - resourceType: Task
+        operation: Delete
   - resourceType: Team
     operation: ReadTask
     parents:

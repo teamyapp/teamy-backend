@@ -31,8 +31,8 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLink
 	input := service.CreateTaskLinkInput{
 		TaskID:  in.TaskId,
 		Title:   in.Title,
-		Url:     in.Url,
-		IconUrl: in.IconUrl,
+		URL:     in.Url,
+		IconURL: in.IconUrl,
 	}
 
 	taskLink, err := t.taskLinkService.CreateTaskLink(ct, input)

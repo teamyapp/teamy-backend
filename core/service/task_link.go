@@ -65,8 +65,8 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		ID:        genTaskLinkIDRes.UniqueNumber,
 		TaskID:    taskLinkEntity.TaskID,
 		Title:     taskLinkEntity.Title,
-		Url:       taskLinkEntity.Url,
-		IconUrl:   taskLinkEntity.IconUrl,
+		URL:       taskLinkEntity.URL,
+		IconURL:   taskLinkEntity.IconURL,
 		CreatedAt: time.Now(),
 	}
 
