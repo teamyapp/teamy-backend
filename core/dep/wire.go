@@ -23,6 +23,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
 	wire.Bind(new(dao.Task), new(sqldb.Task)),
+	wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)),
 	wire.Bind(new(dao.Team), new(sqldb.Team)),
 	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
 	wire.Bind(new(dao.User), new(sqldb.User)),
@@ -36,6 +37,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
+	sqldb.NewTaskLink,
 	sqldb.NewTeam,
 	sqldb.NewTeamMember,
 	sqldb.NewUser,
@@ -51,6 +53,7 @@ var daoSet = wire.NewSet(
 var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
+	service.NewTaskLink,
 	service.NewInvitation,
 	newTeamService,
 	service.NewSprint,
@@ -130,6 +133,19 @@ func InitSprintRPCAPI(
 		api.NewSprintRPC,
 	)
 	return api.SprintRPC{}
+}
+
+func InitTaskLinkRPCAPI(
+	dataCollector obs.DataCollector,
+	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	sqlDB *sql.DB,
+) api.TaskLinkRPC {
+	wire.Build(
+		daoSet,
+		serviceSet,
+		api.NewTaskLinkRPC,
+	)
+	return api.TaskLinkRPC{}
 }
 
 func newUserService(

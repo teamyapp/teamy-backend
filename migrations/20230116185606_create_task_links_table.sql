@@ -1,0 +1,13 @@
+-- +migrate Up
+CREATE TABLE task_link (
+	id BIGINT PRIMARY KEY,
+	task_id BIGINT NOT NULL REFERENCES task (id) ON UPDATE CASCADE ON DELETE CASCADE,
+	title VARCHAR(200) NOT NULL,
+	url VARCHAR(2048) NOT NULL,
+	icon_url VARCHAR(2048),
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP
+);
+
+-- +migrate Down
+DROP TABLE task_link;

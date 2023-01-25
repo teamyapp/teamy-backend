@@ -138,6 +138,18 @@ func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 	}), nil
 }
 
+func (t Task) Links(ct context.Context) ([]TaskLink, error) {
+	links, err := t.deps.taskLinkService.FindLinksByTaskID(ct, t.task.ID)
+	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	return collect.Map(links, func(taskLink entity.TaskLink, _ int) TaskLink {
+		return newTaskLink(t.deps, taskLink)
+	}), nil
+}
+
 func newTask(deps *Dependencies, task entity.Task) Task {
 	return Task{
 		deps: deps,

@@ -22,6 +22,7 @@ type Dependencies struct {
 	activityCache           cache.Activity
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	taskService             service.Task
+	taskLinkService         service.TaskLink
 	teamService             service.Team
 	sprintService           service.Sprint
 	invitationService       service.Invitation
@@ -41,6 +42,7 @@ func NewDependencies(
 	activityCache cache.Activity,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskService service.Task,
+	taskLinkService service.TaskLink,
 	teamService service.Team,
 	sprintService service.Sprint,
 	userService service.User,
@@ -59,6 +61,7 @@ func NewDependencies(
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
 		activityCache:           activityCache,
 		taskService:             taskService,
+		taskLinkService:         taskLinkService,
 		teamService:             teamService,
 		sprintService:           sprintService,
 		userService:             userService,

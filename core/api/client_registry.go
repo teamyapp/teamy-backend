@@ -9,9 +9,10 @@ import (
 )
 
 type ClientRegistry struct {
-	conn         *grpc.ClientConn
-	taskClient   proto.TaskClient
-	sprintClient proto.SprintClient
+	conn           *grpc.ClientConn
+	taskClient     proto.TaskClient
+	taskLinkClient proto.TaskLinkClient
+	sprintClient   proto.SprintClient
 }
 
 func (c *ClientRegistry) TaskClient() proto.TaskClient {
@@ -20,6 +21,14 @@ func (c *ClientRegistry) TaskClient() proto.TaskClient {
 	}
 
 	return c.taskClient
+}
+
+func (c *ClientRegistry) TaskLinkClient() proto.TaskLinkClient {
+	if c.taskLinkClient == nil {
+		c.taskLinkClient = proto.NewTaskLinkClient(c.conn)
+	}
+
+	return c.taskLinkClient
 }
 
 func (c *ClientRegistry) SprintClient() proto.SprintClient {

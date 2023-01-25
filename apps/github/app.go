@@ -563,6 +563,19 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 			"TaskID":            createTaskRes.TaskId,
 		},
 	})
+
+	createTaskLinkReq := &proto.CreateTaskLinkRequest{
+		TaskId: createTaskRes.TaskId,
+		Title:  prEvt.PullRequest.Title,
+		Url:    prEvt.PullRequest.Url,
+	}
+
+	_, err = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
 	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: createTaskRes.TaskId}
 	_, err = a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
 	if err != nil {
