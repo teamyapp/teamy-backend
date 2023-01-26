@@ -41,7 +41,7 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLink
 		return nil, err
 	}
 
-	return &proto.CreateTaskLinkResponse{TaskLinkId: taskLink.ID}, err
+	return &proto.CreateTaskLinkResponse{LinkId: taskLink.ID}, err
 }
 
 func NewTaskLinkRPC(dataCollector obs.DataCollector, taskLinkService service.TaskLink) TaskLinkRPC {
