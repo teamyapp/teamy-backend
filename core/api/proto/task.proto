@@ -7,7 +7,7 @@ import "google/protobuf/empty.proto";
 option go_package = "github.com/teamy-backend/core/api/proto";
 
 service Task {
-	rpc FindTask(GetTaskRequest) returns (TaskMsg);
+	rpc GetTask(GetTaskRequest) returns (TaskMsg);
 	rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
 	rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty);
 	rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty);
