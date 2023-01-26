@@ -29,7 +29,7 @@ func (t TaskRPC) Start(runner *runner.ServiceRunner) error {
 	return nil
 }
 
-func (t TaskRPC) FindTask(ct context.Context, req *proto.GetTaskRequest) (*proto.TaskMsg, error) {
+func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.TaskMsg, error) {
 	task, err := t.taskService.FindTaskByID(ct, req.TaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})

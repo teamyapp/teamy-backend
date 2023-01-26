@@ -8,6 +8,7 @@ package dep
 
 import (
 	"database/sql"
+
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/libs/obs"
