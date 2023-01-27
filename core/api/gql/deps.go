@@ -13,7 +13,7 @@ type Dependencies struct {
 	sprintService     service.Sprint
 	invitationService service.Invitation
 	userService       service.User
-	messageService    service.Message
+	threadService     service.Thread
 }
 
 func NewDependencies(
@@ -24,7 +24,7 @@ func NewDependencies(
 	sprintService service.Sprint,
 	userService service.User,
 	invitationService service.Invitation,
-	messageService service.Message,
+	threadService service.Thread,
 ) *Dependencies {
 	return &Dependencies{
 		dataCollector:     dataCollector,
@@ -34,6 +34,6 @@ func NewDependencies(
 		sprintService:     sprintService,
 		userService:       userService,
 		invitationService: invitationService,
-		messageService:    messageService,
+		threadService:     threadService,
 	}
 }

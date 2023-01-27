@@ -39,28 +39,18 @@ type Sprint struct {
 	taskService           Task
 }
 
-func (s Sprint) FindTasksInSprint(
-	ct context.Context,
-	sprintID uint64,
-	filter *TaskFilter,
-) ([]entity.Task, error) {
-	taskIDs, err := s.sprintTaskRelationDao.FindTaskIDsBySprintID(ct, sprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
-	}
-
-	tasks, err := s.taskDao.FindTasksByIDs(ct, taskIDs)
+func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, error) {
+	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	if filter != nil {
-		tasks = filterTasks(tasks, *filter)
+		sprints = filterSprints(sprints, *filter)
 	}
 
-	return tasks, nil
+	return sprints, nil
 }
 
 func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, error) {

@@ -88,6 +88,44 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 	return tasks, nil
 }
 
+func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, error) {
+	tasks, err := t.taskDao.FindTasksByTeamID(ct, teamID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	if filter != nil {
+		tasks = filterTasks(tasks, *filter)
+	}
+
+	return tasks, nil
+}
+
+func (t Task) FindTasksInSprint(
+	ct context.Context,
+	sprintID uint64,
+	filter *TaskFilter,
+) ([]entity.Task, error) {
+	taskIDs, err := t.sprintTaskRelationDao.FindTaskIDsBySprintID(ct, sprintID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	tasks, err := t.taskDao.FindTasksByIDs(ct, taskIDs)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	if filter != nil {
+		tasks = filterTasks(tasks, *filter)
+	}
+
+	return tasks, nil
+}
+
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, error) {
 	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, awaitingTaskID)
 	if err != nil {
@@ -123,7 +161,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		return entity.Task{}, err
 	}
 
-	threadID, err := t.threadService.createThread(ct)
+	threadID, err := t.threadService.CreateThread(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
