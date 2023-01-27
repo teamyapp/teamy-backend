@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -17,7 +17,7 @@ type TeamMember struct {
 func (t TeamMember) Team(ct context.Context) (Team, error) {
 	team, err := t.deps.teamService.FindTeamByID(ct, t.teamMember.TeamID)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Team{}, err
 	}
 
@@ -27,7 +27,7 @@ func (t TeamMember) Team(ct context.Context) (Team, error) {
 func (t TeamMember) User(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.teamMember.UserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return User{}, err
 	}
 

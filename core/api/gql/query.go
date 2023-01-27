@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -15,7 +15,7 @@ type Query struct {
 func (q Query) Me(ct context.Context) (User, error) {
 	user, err := q.deps.userService.Me(ct)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return User{}, err
 	}
 
@@ -27,13 +27,13 @@ func (q Query) Tasks(ct context.Context, args struct {
 }) ([]Task, error) {
 	filter, err := fromGraphQLTaskFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
 	tasks, err := q.deps.taskService.FindTasks(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -47,13 +47,13 @@ func (q Query) Teams(ct context.Context, args struct {
 }) ([]Team, error) {
 	filter, err := fromGraphQLTeamFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
 	teams, err := q.deps.teamService.FindTeams(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -67,13 +67,13 @@ func (q Query) Invitations(ct context.Context, args struct {
 }) ([]Invitation, error) {
 	filter, err := fromGraphQLInvitationFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
 	invitations, err := q.deps.invitationService.FindInvitations(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -87,13 +87,13 @@ func (q Query) Sprints(ct context.Context, args struct {
 }) ([]Sprint, error) {
 	filter, err := fromGraphQLSprintFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
 	sprints, err := q.deps.sprintService.FindSprints(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 

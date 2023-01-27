@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Team struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -31,7 +31,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 `
 	rows, err := t.db.Query(statement)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 	defer rows.Close()
@@ -49,7 +49,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 			&team.UpdatedAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -84,7 +84,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, erro
 			&team.UpdatedAt,
 		)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return team, err
@@ -109,7 +109,7 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 	WHERE id IN (%s);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -128,7 +128,7 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 				&team.UpdatedAt,
 			)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -157,7 +157,7 @@ func (t Team) CreateTeam(ct context.Context, team entity.Team) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -180,12 +180,12 @@ func (t Team) UpdateTeam(ct context.Context, team entity.Team) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewTeam(dataCollector obs.DataCollector, sqlDB *sql.DB) Team {
+func NewTeam(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Team {
 	return Team{dataCollector: dataCollector, db: sqlDB}
 }

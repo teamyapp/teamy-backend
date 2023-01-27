@@ -3,13 +3,13 @@ package mutation
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteSprintParticipantMutation struct {
-	dataCollector        obs.DataCollector
+	dataCollector        telemetry.DataCollector
 	stateSyncer          *realtime.StateSyncer
 	sprintParticipantDao dao.SprintParticipant
 	sprintDao            dao.Sprint
@@ -25,7 +25,7 @@ func (d *DeleteSprintParticipantMutation) GetID() uint64 {
 func (d *DeleteSprintParticipantMutation) Execute(ct context.Context) error {
 	err := d.sprintParticipantDao.DeleteSprintParticipant(ct, d.sprintID, d.userID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -39,7 +39,7 @@ func (d *DeleteSprintParticipantMutation) Undo() error {
 func (d *DeleteSprintParticipantMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
 	sprint, err := d.sprintDao.FindSprintByID(ct, d.sprintID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return []*realtime.ClientNotifier{}, err
 	}
 
@@ -66,7 +66,7 @@ func (d *DeleteSprintParticipantMutation) CleanUp(ct context.Context) error {
 }
 
 func NewDeleteSprintParticipantMutation(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintDao dao.Sprint,

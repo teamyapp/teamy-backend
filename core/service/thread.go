@@ -8,7 +8,7 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -24,7 +24,7 @@ type UpdateMessageInput struct {
 }
 
 type Thread struct {
-	dataCollector       obs.DataCollector
+	dataCollector       telemetry.DataCollector
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	stateSyncer         *realtime.StateSyncer
 	taskDao             dao.Task
@@ -36,14 +36,14 @@ func (t Thread) CreateThread(ct context.Context) (uint64, error) {
 	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
 	genThreadIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
 	err = t.threadDao.CreateThread(ct, threadID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return threadID, err
@@ -57,14 +57,14 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
 	genMessageIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "messageID"}
 	genMessageIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genMessageIDReq)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
@@ -84,13 +84,13 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 		message)
 	err = realTimeTransaction.ApplyMutation(ct, createMessageMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
@@ -100,7 +100,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input UpdateMessageInput) (entity.Message, error) {
 	message, err := t.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
@@ -116,13 +116,13 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 		message)
 	err = realTimeTransaction.ApplyMutation(ct, updateMessageMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
@@ -132,7 +132,7 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Message, error) {
 	message, err := t.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
@@ -144,13 +144,13 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		message)
 	err = realTimeTransaction.ApplyMutation(ct, deleteMessageMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Message{}, err
 	}
 
@@ -158,7 +158,7 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 }
 
 func NewThread(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,

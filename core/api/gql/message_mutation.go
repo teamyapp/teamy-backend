@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -16,14 +16,14 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 }) (Message, error) {
 	threadID, err := fromGraphQLID(args.ThreadID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Message{}, err
 	}
 
 	input := service.CreateMessageInput{Body: args.Message.Body}
 	message, err := m.deps.threadService.CreateMessage(ct, threadID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -38,14 +38,14 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, err := fromGraphQLID(args.MessageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Message{}, err
 	}
 
 	input := service.UpdateMessageInput{Body: args.Input.Body}
 	message, err := m.deps.threadService.UpdateMessage(ct, messageID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Message{}, err
 	}
 
@@ -57,7 +57,7 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, err := fromGraphQLID(args.MessageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Message{}, err
 	}
 

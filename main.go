@@ -9,12 +9,12 @@ import (
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
-	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/runtime"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDi "github.com/teamyapp/teamy-backend/apps/inject"
@@ -30,18 +30,18 @@ func init() {
 }
 
 func main() {
-	visibleLevel := obs.LogLevel(getEnv("LOG_VISIBLE_SEVERITY", "Info"))
+	visibleLevel := telemetry.LogLevel(getEnv("LOG_VISIBLE_SEVERITY", "Info"))
 	dataCollector := dep.InitDataCollector("teamy/backend", visibleLevel)
-	inject.Injector.BindType(new(obs.DataCollector), func() interface{} {
+	inject.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
 		return dataCollector
 	})
-	appsDi.Injector.BindType(new(obs.DataCollector), func() interface{} {
+	appsDi.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
 		return dataCollector
 	})
 
 	cfg, err := config.FromEnv(dataCollector)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Fatal, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: err})
 		panic(err)
 	}
 
@@ -49,15 +49,15 @@ func main() {
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
-	dataCollector.Logger.Log(obs.Info, obs.Props{
-		obs.MessageProp: map[string]interface{}{
+	dataCollector.Logger.Log(telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: map[string]interface{}{
 			"gitCommitLink": gitCommitLink,
 		},
 	})
 	err = sqldb.Use(dataCollector, cfg.Config, func(sqlDB *sql.DB) error {
 		err = sqldb.MigrateUp(dataCollector, sqlDB, "migrations", 0)
 		if err != nil {
-			dataCollector.Logger.Log(obs.Fatal, obs.Props{obs.CauseProp: err})
+			dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: err})
 			panic(err)
 		}
 
@@ -66,26 +66,26 @@ func main() {
 	})
 
 	if err != nil {
-		dataCollector.Logger.Log(obs.Fatal, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: err})
 		panic(err)
 	}
 }
 
 func startServiceRunner(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cfg config.Config,
 	sqlDB *sql.DB,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) error {
 	runnerConfig, err := runner.ServiceRunnerConfigFromEnv(dataCollector)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
 	githubCfg, err := github.AppConfigFromEnv(dataCollector)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -103,7 +103,7 @@ func startServiceRunner(
 			RequestTimeout: cfg.RequestTimeout,
 		}, maxCountRetry)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -119,7 +119,7 @@ func startServiceRunner(
 			RequestTimeout: cfg.RequestTimeout,
 		}, maxCountRetry)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -130,7 +130,7 @@ func startServiceRunner(
 		githubCfg,
 		sqlDB)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -144,7 +144,7 @@ func startServiceRunner(
 		realTimeStateSyncer,
 		sqlDB)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 

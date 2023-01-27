@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubPullRequest struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -39,7 +39,7 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, i
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return pullRequest, err
@@ -66,7 +66,7 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(ct context.Context, git
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return pullRequest, err
@@ -86,7 +86,7 @@ func (g GithubPullRequest) CreatePullRequest(ct context.Context, pullRequest ent
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -100,7 +100,7 @@ func (g GithubPullRequest) DeletePullRequestByInternalTaskID(ct context.Context,
 		internalTaskID)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -114,12 +114,12 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(ct context.Context, g
 		githubNodeID)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewGithubPullRequest(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubPullRequest {
+func NewGithubPullRequest(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubPullRequest {
 	return GithubPullRequest{dataCollector: dataCollector, db: sqlDB}
 }

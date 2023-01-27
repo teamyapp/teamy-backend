@@ -6,13 +6,13 @@ import (
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 const clientBufferSize = 50
 
 type ClientNotifier struct {
-	dataCollector               obs.DataCollector
+	dataCollector               telemetry.DataCollector
 	clientDisconnectSubscribers []chan bool
 	clientID                    uint64
 	messages                    chan Message
@@ -34,15 +34,15 @@ func (c *ClientNotifier) onInitialStateReady() {
 }
 
 func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
-	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
+	c.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: telemetry.Props{
 			"Summary": "process transaction",
 		},
 	})
 
 	if !c.acceptTransaction {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
+		c.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+			telemetry.MessageProp: telemetry.Props{
 				"Summary": "discard transaction",
 			},
 		})
@@ -66,7 +66,7 @@ func (c *ClientNotifier) sentMetadata() {
 	c.messages <- message
 }
 
-func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
+func newClientNotifier(dataCollector telemetry.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
 	messages := make(chan Message, clientBufferSize)
 	ct := context.Background()
 	ct = ctx.WithClientID(ct, clientID)
@@ -75,12 +75,12 @@ func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connecti
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
 
 			if err != nil {
-				dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 				continue
 			}
 			conn.SendMessage(jsonBuf)
-			dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-				obs.MessageProp: obs.Props{
+			dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+				telemetry.MessageProp: telemetry.Props{
 					"Summary": "notification sent",
 				},
 			})

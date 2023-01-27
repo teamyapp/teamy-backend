@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubAppInstallState struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -43,7 +43,7 @@ func (g GithubAppInstallState) FindStateByID(ct context.Context, stateID uint64)
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return state, err
@@ -67,7 +67,7 @@ func (g GithubAppInstallState) CreateState(ct context.Context, state entity.Gith
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -81,13 +81,13 @@ func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) e
 		stateID)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewGithubAppInstallState(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubAppInstallState {
+func NewGithubAppInstallState(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubAppInstallState {
 	return GithubAppInstallState{
 		dataCollector: dataCollector,
 		db:            sqlDB,

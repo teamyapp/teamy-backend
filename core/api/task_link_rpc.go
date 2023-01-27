@@ -4,15 +4,15 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
 )
 
 type TaskLinkRPC struct {
-	dataCollector   obs.DataCollector
+	dataCollector   telemetry.DataCollector
 	taskLinkService service.TaskLink
 	proto.UnimplementedTaskLinkServer
 }
@@ -37,14 +37,14 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLink
 
 	taskLink, err := t.taskLinkService.CreateTaskLink(ct, input)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
 	return &proto.CreateTaskLinkResponse{LinkId: taskLink.ID}, err
 }
 
-func NewTaskLinkRPC(dataCollector obs.DataCollector, taskLinkService service.TaskLink) TaskLinkRPC {
+func NewTaskLinkRPC(dataCollector telemetry.DataCollector, taskLinkService service.TaskLink) TaskLinkRPC {
 	return TaskLinkRPC{
 		dataCollector:   dataCollector,
 		taskLinkService: taskLinkService,

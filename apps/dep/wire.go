@@ -7,23 +7,23 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	"github.com/teamyapp/teamy-backend/core/api"
 )
 
-func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
+func InitDataCollector(serviceName string, visibleLevel telemetry.LogLevel) telemetry.DataCollector {
 	wire.Build(
 		newLogger,
-		obs.NewDataCollector,
+		telemetry.NewDataCollector,
 	)
-	return obs.DataCollector{}
+	return telemetry.DataCollector{}
 }
 
 func InitGithubApp(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	teamyAPIClientRegistry *api.ClientRegistry,
 	config github.AppConfig,
@@ -46,8 +46,8 @@ func InitGithubApp(
 	return github.App{}, nil
 }
 
-func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
-	return obs.NewServiceLogger(serviceName,
-		obs.NewRequestLogger(
-			obs.NewRawLogger(visibleLevel)))
+func newLogger(serviceName string, visibleLevel telemetry.LogLevel) telemetry.Logger {
+	return telemetry.NewServiceLogger(serviceName,
+		telemetry.NewRequestLogger(
+			telemetry.NewRawLogger(visibleLevel)))
 }

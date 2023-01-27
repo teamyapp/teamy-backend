@@ -5,7 +5,7 @@ import (
 
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 type Config struct {
@@ -25,11 +25,11 @@ type Config struct {
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
 }
 
-func FromEnv(dataCollector obs.DataCollector) (Config, error) {
+func FromEnv(dataCollector telemetry.DataCollector) (Config, error) {
 	cfg := Config{}
 	err := config.FromEnv(dataCollector, &cfg)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Config{}, err
 	}
 	return cfg, nil

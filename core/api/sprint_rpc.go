@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"errors"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"github.com/teamyapp/teamy-backend/core/service"
@@ -17,7 +17,7 @@ import (
 )
 
 type SprintRPC struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	sprintService service.Sprint
 	proto.UnimplementedSprintServer
 }
@@ -39,7 +39,7 @@ func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSpr
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -55,13 +55,13 @@ func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSpr
 func (s SprintRPC) AddTaskToSprint(ct context.Context, req *proto.AddTaskToSprintRequest) (*emptypb.Empty, error) {
 	_, err := s.sprintService.AddTaskToSprint(ct, req.SprintId, req.TaskId)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return &emptypb.Empty{}, err
 }
 
-func NewSprintRPC(dataCollector obs.DataCollector, sprintService service.Sprint) SprintRPC {
+func NewSprintRPC(dataCollector telemetry.DataCollector, sprintService service.Sprint) SprintRPC {
 	return SprintRPC{
 		dataCollector: dataCollector,
 		sprintService: sprintService,

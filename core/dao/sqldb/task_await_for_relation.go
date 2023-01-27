@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TaskAwaitForRelation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -24,7 +24,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 	WHERE await_for_task_id = $1;
 `, waitForTaskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -34,7 +34,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 		var waitingTaskID uint64
 		err = rows.Scan(&waitingTaskID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -52,7 +52,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 	WHERE awaiting_task_id = $1;
 `, waitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -62,7 +62,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 		var waitForTaskID uint64
 		err = rows.Scan(&waitForTaskID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -88,7 +88,7 @@ func (t TaskAwaitForRelation) CreateRelation(ct context.Context, relation entity
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -103,12 +103,12 @@ func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, waitingTaskID u
 		awaitForTaskID)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewTaskAwaitForRelation(dataCollector obs.DataCollector, db *sql.DB) TaskAwaitForRelation {
+func NewTaskAwaitForRelation(dataCollector telemetry.DataCollector, db *sql.DB) TaskAwaitForRelation {
 	return TaskAwaitForRelation{dataCollector: dataCollector, db: db}
 }

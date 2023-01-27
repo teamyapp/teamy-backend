@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type SprintParticipant struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -28,7 +28,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 `,
 		sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -40,7 +40,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 			&participantUserID,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -65,7 +65,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 `,
 		sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -82,7 +82,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 			&sprintParticipant.UpdatedAt,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -122,7 +122,7 @@ func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, 
 	}
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return participant, err
@@ -149,7 +149,7 @@ func (s SprintParticipant) CreateSprintParticipant(ct context.Context, participa
 		participant.UpdatedAt,
 	)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -177,7 +177,7 @@ func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, participa
 	)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -192,13 +192,13 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, sprintID 
 		userID)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewSprintParticipant(dataCollector obs.DataCollector, sqlDB *sql.DB) SprintParticipant {
+func NewSprintParticipant(dataCollector telemetry.DataCollector, sqlDB *sql.DB) SprintParticipant {
 	return SprintParticipant{
 		dataCollector: dataCollector,
 		db:            sqlDB,

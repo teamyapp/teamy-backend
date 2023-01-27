@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Invitation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -59,7 +59,7 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 	}
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return invitation, err
@@ -85,7 +85,7 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 `,
 		teamID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -110,7 +110,7 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 		)
 
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -138,7 +138,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 	FROM invitation;
 `)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -162,7 +162,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 			&invitation.UpdatedAt,
 		)
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -201,7 +201,7 @@ func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invit
 		invitation.CreatedAt,
 	)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -230,7 +230,7 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invit
 	)
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -244,12 +244,12 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) er
 		invitationID)
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewInvitation(dataCollector obs.DataCollector, sqlDB *sql.DB) Invitation {
+func NewInvitation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Invitation {
 	return Invitation{dataCollector: dataCollector, db: sqlDB}
 }

@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubAppInstallation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -37,7 +37,7 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -66,13 +66,13 @@ func (g GithubAppInstallation) FindInstallationByID(ct context.Context, installa
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return installation, err
 }
 
-func NewGithubAppInstallation(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubAppInstallation {
+func NewGithubAppInstallation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubAppInstallation {
 	return GithubAppInstallation{
 		dataCollector: dataCollector,
 		db:            sqlDB,

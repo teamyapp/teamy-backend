@@ -1,12 +1,12 @@
 package gql
 
 import (
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Dependencies struct {
-	dataCollector     obs.DataCollector
+	dataCollector     telemetry.DataCollector
 	taskService       service.Task
 	taskLinkService   service.TaskLink
 	teamService       service.Team
@@ -17,7 +17,7 @@ type Dependencies struct {
 }
 
 func NewDependencies(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	taskService service.Task,
 	taskLinkService service.TaskLink,
 	teamService service.Team,
