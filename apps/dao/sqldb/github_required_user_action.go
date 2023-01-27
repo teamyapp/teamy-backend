@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubRequiredUserAction struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -35,7 +35,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 `,
 		teamID, actionUserID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -54,7 +54,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 			&requiredAction.RequestedByUserID,
 		)
 		if err != nil {
-			g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -88,7 +88,7 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(ct context.Context, r
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -115,12 +115,12 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(ct context.Context, r
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewGithubRequiredUserAction(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubRequiredUserAction {
+func NewGithubRequiredUserAction(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubRequiredUserAction {
 	return GithubRequiredUserAction{dataCollector: dataCollector, db: sqlDB}
 }

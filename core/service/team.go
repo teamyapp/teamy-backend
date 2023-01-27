@@ -10,7 +10,7 @@ import (
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/io"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -35,7 +35,7 @@ type CreateTeamInput struct {
 }
 
 type Team struct {
-	dataCollector              obs.DataCollector
+	dataCollector              telemetry.DataCollector
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	authorizer                 Authorizer
@@ -55,7 +55,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, erro
 func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, error) {
 	teams, err := t.teamDao.FindAllTeams(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, error) {
 	ids, err := t.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -79,7 +79,7 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 
 	teams, err := t.teamDao.FindTeamsByIDs(ct, ids)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -94,14 +94,14 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
 	genTeamIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -123,7 +123,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	)
 	err = realTimeTransaction.ApplyMutation(ct, createTeamMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -140,20 +140,20 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	)
 	err = realTimeTransaction.ApplyMutation(ct, createTeamMemberMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = t.authorizer.registerResource(ct, authorization.TeamResourceType, team.ID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Team{}, err
 		}
 
@@ -184,7 +184,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 			teamAdminOperations,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Team{}, err
 		}
 
@@ -206,7 +206,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 			teamMemberOperations,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Team{}, err
 		}
 	}
@@ -218,7 +218,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -239,7 +239,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 
 	team, err := t.teamDao.FindTeamByID(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -256,13 +256,13 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTeamMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -272,7 +272,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, error) {
 	res, err := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
@@ -285,7 +285,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 	}
 	err = t.teamFileUploadSessionDao.CreateTeamFileUploadSession(ct, fileUploadSession)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
@@ -299,14 +299,14 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		entity.IconTeamFileUploadSessionType,
 		fileUploadSessionID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	if iconUploadSession.IsCompleted {
 		err = fmt.Errorf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
 			teamID, fileUploadSessionID)
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -315,7 +315,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	iconUploadSession.UpdatedAt = &now
 	err = t.teamFileUploadSessionDao.UpdateTeamFileUploadSession(ct, iconUploadSession)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -324,13 +324,13 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	}
 	uploadSession, err := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
 	team, err := t.teamDao.FindTeamByID(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
 	}
 
@@ -361,7 +361,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
@@ -380,14 +380,14 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		)
 		err = realTimeTransaction.ApplyMutation(ct, createSprintParticipantMutation)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.TeamMember{}, err
 		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
@@ -397,7 +397,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, error) {
 	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
@@ -411,13 +411,13 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 	)
 	err = realTimeTransaction.ApplyMutation(ct, deleteTeamMemberMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
@@ -432,14 +432,14 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		)
 		err = realTimeTransaction.ApplyMutation(ct, deleteSprintParticipantMutation)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.TeamMember{}, err
 		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
@@ -453,7 +453,7 @@ func (t Team) UpdateTeamMember(
 ) (entity.TeamMember, error) {
 	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, input.UserID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
@@ -470,20 +470,20 @@ func (t Team) UpdateTeamMember(
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTeamMemberMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
 	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
 	for _, sprint := range currAndFutureSprints {
 		participants, err := t.sprintService.FindParticipantsInSprint(ct, sprint.ID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.TeamMember{}, err
 		}
 
@@ -503,7 +503,7 @@ func (t Team) UpdateTeamMember(
 			)
 			err = realTimeTransaction.ApplyMutation(ct, updateSprintParticipantMutation)
 			if err != nil {
-				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 				return entity.TeamMember{}, err
 			}
 		}
@@ -511,7 +511,7 @@ func (t Team) UpdateTeamMember(
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TeamMember{}, err
 	}
 
@@ -519,7 +519,7 @@ func (t Team) UpdateTeamMember(
 }
 
 func NewTeam(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,

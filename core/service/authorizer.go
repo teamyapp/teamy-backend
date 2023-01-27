@@ -6,12 +6,12 @@ import (
 
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 )
 
 type Authorizer struct {
-	dataCollector       obs.DataCollector
+	dataCollector       telemetry.DataCollector
 	cloudClientRegistry *api.ClientRegistry
 }
 
@@ -24,7 +24,7 @@ func (a Authorizer) hasPermission(ct context.Context, query authorization.Query)
 	}
 	hasPermissionRes, err := a.cloudClientRegistry.AuthorizationClient().HasPermission(ct, hasPermissionReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return false, err
 	}
 
@@ -38,7 +38,7 @@ func (a Authorizer) registerResource(ct context.Context, resourceType authorizat
 	}
 	_, err := a.cloudClientRegistry.AuthorizationClient().RegisterResource(ct, registerResourceReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -59,7 +59,7 @@ func (a Authorizer) assignParentResource(
 	}
 	_, err := a.cloudClientRegistry.AuthorizationClient().AssignParentResource(ct, assignParentResourceReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -73,7 +73,7 @@ func (a Authorizer) addMemberToUserGroup(ct context.Context, userGroupID uint64,
 	}
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddUserGroupMember(ct, addUserGroupMemberReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -88,19 +88,19 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 
 	createUserGroupRes, err := a.cloudClientRegistry.AuthorizationClient().CreateUserGroup(ct, createUserGroupReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
 	// add the group creator to the newly created userGroup
 	err = a.addMemberToUserGroup(ct, createUserGroupRes.UserGroup.GroupId, creatorUserID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info,
-		obs.Props{obs.MessageProp: fmt.Sprintf("UserGroup %s is successfully created", userGroupName)},
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
+		telemetry.Props{telemetry.MessageProp: fmt.Sprintf("UserGroup %s is successfully created", userGroupName)},
 	)
 
 	return createUserGroupRes.UserGroup.GroupId, nil
@@ -119,12 +119,12 @@ func (a Authorizer) assignPermission(
 	}
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddPermission(ct, addPermissionReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info,
-		obs.Props{obs.MessageProp: fmt.Sprintf("Permission %s is successfully assigned", addPermissionReq)},
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
+		telemetry.Props{telemetry.MessageProp: fmt.Sprintf("Permission %s is successfully assigned", addPermissionReq)},
 	)
 
 	return nil
@@ -138,7 +138,7 @@ func (a Authorizer) assignUserGroupPermissions(
 	for _, resourceOperation := range resourceOperations {
 		err := a.assignPermission(ct, resourceOperation, groupID)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return err
 		}
 	}
@@ -155,13 +155,13 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 ) (uint64, error) {
 	userGroupID, err := a.createUserGroup(ct, creatorUserID, userGroupName, description)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
 	err = a.assignUserGroupPermissions(ct, resourceOperations, userGroupID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
@@ -169,7 +169,7 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 }
 
 func NewAuthorizer(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudClientRegistry *api.ClientRegistry,
 ) Authorizer {
 	return Authorizer{

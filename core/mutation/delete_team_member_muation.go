@@ -3,14 +3,14 @@ package mutation
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteTeamMemberMutation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	teamMemberDao dao.TeamMember
 	id            uint64
@@ -25,7 +25,7 @@ func (d *DeleteTeamMemberMutation) GetID() uint64 {
 func (d *DeleteTeamMemberMutation) Execute(ct context.Context) error {
 	err := d.teamMemberDao.DeleteTeamMember(ct, d.teamID, d.userID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -55,7 +55,7 @@ func (d *DeleteTeamMemberMutation) ToMessage() realtime.MutationMessage {
 func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) error {
 	teamNotifier, err := d.stateSyncer.GetTeamNotifier(ct, d.teamID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -64,7 +64,7 @@ func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) error {
 }
 
 func NewDeleteTeamMemberMutation(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
 	teamID uint64,

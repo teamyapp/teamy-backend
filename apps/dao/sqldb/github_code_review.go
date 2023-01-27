@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubCodeReview struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -46,7 +46,7 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(ct context.Context, g
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return codeReview, err
@@ -79,7 +79,7 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(ct context.Context, int
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return codeReview, err
@@ -105,7 +105,7 @@ func (g GithubCodeReview) CreateCodeReview(ct context.Context, codeReview entity
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -131,7 +131,7 @@ func (g GithubCodeReview) UpdateCodeReview(ct context.Context, codeReview entity
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -144,7 +144,7 @@ func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(ct context.Context, i
 		`,
 		internalTaskID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -157,12 +157,12 @@ func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(ct context.Context,
 		`,
 		githubReviewerID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewGithubCodeReview(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubCodeReview {
+func NewGithubCodeReview(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubCodeReview {
 	return GithubCodeReview{dataCollector: dataCollector, db: sqlDB}
 }

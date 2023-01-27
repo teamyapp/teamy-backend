@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/cache"
@@ -61,15 +61,15 @@ var serviceSet = wire.NewSet(
 	service.NewAuthorizer,
 )
 
-func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
+func InitDataCollector(serviceName string, visibleLevel telemetry.LogLevel) telemetry.DataCollector {
 	wire.Build(
 		newLogger,
-		obs.NewDataCollector,
+		telemetry.NewDataCollector,
 	)
-	return obs.DataCollector{}
+	return telemetry.DataCollector{}
 }
 
-func InitRealTimeStateSyncer(dataCollector obs.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
+func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
@@ -78,7 +78,7 @@ func InitRealTimeStateSyncer(dataCollector obs.DataCollector, qlDB *sql.DB) *rea
 }
 
 func InitGraphQLAPI(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
@@ -96,7 +96,7 @@ func InitGraphQLAPI(
 }
 
 func InitRealTimeStateSyncAPI(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) api.RealTimeStateSync {
 	wire.Build(
@@ -106,7 +106,7 @@ func InitRealTimeStateSyncAPI(
 }
 
 func InitTaskRPCAPI(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -121,7 +121,7 @@ func InitTaskRPCAPI(
 }
 
 func InitSprintRPCAPI(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -136,7 +136,7 @@ func InitSprintRPCAPI(
 }
 
 func InitTaskLinkRPCAPI(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	sqlDB *sql.DB,
 ) api.TaskLinkRPC {
@@ -149,7 +149,7 @@ func InitTaskLinkRPCAPI(
 }
 
 func newUserService(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
@@ -169,7 +169,7 @@ func newUserService(
 }
 
 func newTeamService(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer service.Authorizer,
@@ -195,10 +195,10 @@ func newTeamService(
 		sprintService)
 }
 
-func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
-	return obs.NewServiceLogger(serviceName,
-		obs.NewRequestLogger(
-			obs.NewClientLogger(
+func newLogger(serviceName string, visibleLevel telemetry.LogLevel) telemetry.Logger {
+	return telemetry.NewServiceLogger(serviceName,
+		telemetry.NewRequestLogger(
+			telemetry.NewClientLogger(
 				realtime.NewMutationLogger(
-					obs.NewRawLogger(visibleLevel)))))
+					telemetry.NewRawLogger(visibleLevel)))))
 }

@@ -9,7 +9,7 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -22,7 +22,7 @@ import (
 const invitationCodeLen = 20
 
 type Invitation struct {
-	dataCollector       obs.DataCollector
+	dataCollector       telemetry.DataCollector
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	authorizer          Authorizer
 	stateSyncer         *realtime.StateSyncer
@@ -47,7 +47,7 @@ type UpdateInvitationInput struct {
 func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, filter *InvitationFilter) ([]entity.Invitation, error) {
 	invitations, err := i.invitationDao.FindInvitationsByTeamID(ct, teamID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -61,7 +61,7 @@ func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, fil
 func (i Invitation) FindInvitations(ct context.Context, filter *InvitationFilter) ([]entity.Invitation, error) {
 	invitations, err := i.invitationDao.FindAllInvitations(ct)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -76,7 +76,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -84,7 +84,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		query := authorization.NewCreateInvitationQuery(userID, teamID)
 		hasPermission, err := i.authorizer.hasPermission(ct, query)
 		if err != nil {
-			i.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			i.authorizer.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Invitation{}, err
 		}
 
@@ -99,7 +99,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
 	genInvitationIDRes, err := i.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genInvitationIDReq)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -125,26 +125,26 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	)
 	err = transaction.ApplyMutation(ct, createInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	err = transaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = i.authorizer.registerResource(ct, authorization.InvitationResourceType, invitation.ID)
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Invitation{}, err
 		}
 
 		err = i.authorizer.assignParentResource(ct, authorization.InvitationResourceType, invitation.ID, authorization.TeamResourceType, invitation.TeamID)
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Invitation{}, err
 		}
 	}
@@ -155,7 +155,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, input UpdateInvitationInput) (entity.Invitation, error) {
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -173,13 +173,13 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -189,7 +189,7 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (entity.Invitation, error) {
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -203,13 +203,13 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 
 	err = realTimeTransaction.ApplyMutation(ct, deleteInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -220,21 +220,21 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 	receiverUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	if invitation.Code != invitationCode {
 		err = errors.New("invalid invitation code")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"InvitationID":   invitationID,
 				"InvitationCode": invitationCode,
 			},
@@ -244,7 +244,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 
 	err = i.ensureInvitationPending(ct, invitation)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -261,26 +261,26 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	_, err = i.teamMemberDao.FindTeamMember(ct, invitation.TeamID, receiverUserID)
 	if err != nil {
 		if !errors.As(err, &dao.ErrorNotFound) {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Invitation{}, err
 		}
 
 		_, err = i.teamService.AddMemberToTeam(ct, invitation.TeamID, receiverUserID)
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.Invitation{}, err
 		}
 	}
@@ -292,21 +292,21 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 	receiverUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	if invitation.Code != invitationCode {
 		err = errors.New("invalid invitation code")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"InvitationID":   invitationID,
 				"InvitationCode": invitationCode,
 			},
@@ -316,7 +316,7 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 
 	err = i.ensureInvitationPending(ct, invitation)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -334,13 +334,13 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 
 	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Invitation{}, err
 	}
 
@@ -351,27 +351,27 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 	switch invitation.Status {
 	case entity.InvitationStatusExpired:
 		err := errors.New("invitation is expired")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"InvitationID": invitation.ID,
 			},
 		})
 		return err
 	case entity.InvitationStatusInvoked:
 		err := errors.New("invitation is revoked")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"InvitationID": invitation.ID,
 			},
 		})
 		return err
 	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
 		err := errors.New("invitation is already responded")
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"InvitationID": invitation.ID,
 			},
 		})
@@ -382,7 +382,7 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 }
 
 func NewInvitation(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
 	stateSyncer *realtime.StateSyncer,

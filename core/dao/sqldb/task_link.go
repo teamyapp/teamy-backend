@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TaskLink struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -37,7 +37,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity entity.TaskL
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -57,7 +57,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 	WHERE task_id = $1;
 `, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -75,7 +75,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 			&taskLink.UpdatedAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -85,6 +85,6 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 	return taskLinks, nil
 }
 
-func NewTaskLink(dataCollector obs.DataCollector, sqlDB *sql.DB) TaskLink {
+func NewTaskLink(dataCollector telemetry.DataCollector, sqlDB *sql.DB) TaskLink {
 	return TaskLink{dataCollector: dataCollector, db: sqlDB}
 }

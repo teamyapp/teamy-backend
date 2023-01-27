@@ -9,7 +9,7 @@ import (
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/io"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -29,7 +29,7 @@ type UpdateUserInput struct {
 }
 
 type User struct {
-	dataCollector              obs.DataCollector
+	dataCollector              telemetry.DataCollector
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	stateSyncer                *realtime.StateSyncer
@@ -42,7 +42,7 @@ func (u User) Me(ct context.Context) (entity.User, error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -57,7 +57,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -71,7 +71,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 
 	err := u.userDao.CreateUser(ct, user)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -81,7 +81,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, error) {
 	user, err := u.userDao.FindUserByID(ct, userID)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -98,13 +98,13 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 		user)
 	err = realTimeTransaction.ApplyMutation(ct, userMutation)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -115,13 +115,13 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error)
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
 	res, err := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
@@ -134,7 +134,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error)
 	}
 	err = u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, fileUploadSession)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
@@ -145,7 +145,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -155,15 +155,15 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		entity.ProfileUserFileUploadSessionType,
 		fileUploadSessionID)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
 	if profileUploadSession.IsCompleted {
 		err = errors.New("profile upload session is already completed")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"UserID":              userID,
 				"FileUploadSessionID": fileUploadSessionID,
 			},
@@ -176,7 +176,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	profileUploadSession.UpdatedAt = &now
 	err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, profileUploadSession)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -186,13 +186,13 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 
 	uploadSession, err := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
 	user, err := u.userDao.FindUserByID(ct, userID)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.User{}, err
 	}
 
@@ -201,14 +201,14 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	user.UpdatedAt = &now
 	err = u.userDao.UpdateUser(ct, user)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return user, nil
 }
 
 func NewUser(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,

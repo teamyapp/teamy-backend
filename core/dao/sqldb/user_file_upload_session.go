@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type UserFileUploadSession struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -53,7 +53,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 	}
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return userFileUploadSession, err
@@ -83,7 +83,7 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -115,12 +115,12 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewUserFileUploadSession(dataCollector obs.DataCollector, sqlDB *sql.DB) UserFileUploadSession {
+func NewUserFileUploadSession(dataCollector telemetry.DataCollector, sqlDB *sql.DB) UserFileUploadSession {
 	return UserFileUploadSession{dataCollector: dataCollector, db: sqlDB}
 }

@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type SprintTaskRelation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -26,7 +26,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 `,
 		sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -38,7 +38,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 			&taskID,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -58,7 +58,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 `,
 		taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -70,7 +70,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 			&sprintID,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -95,7 +95,7 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, relatio
 	)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -110,12 +110,12 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, sprintI
 		taskID)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewSprintTaskRelation(dataCollector obs.DataCollector, db *sql.DB) SprintTaskRelation {
+func NewSprintTaskRelation(dataCollector telemetry.DataCollector, db *sql.DB) SprintTaskRelation {
 	return SprintTaskRelation{dataCollector: dataCollector, db: db}
 }

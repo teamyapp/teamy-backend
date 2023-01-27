@@ -1,11 +1,11 @@
 package realtime
 
 import (
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 type UserNotifier struct {
-	dataCollector             obs.DataCollector
+	dataCollector             telemetry.DataCollector
 	userID                    uint64
 	userDisconnectCh          chan bool
 	userDisconnectSubscribers []chan bool
@@ -37,7 +37,7 @@ func (u UserNotifier) unregisterClientNotifier(clientID uint64) {
 	}
 }
 
-func newUserNotifier(dataCollector obs.DataCollector, userID uint64) *UserNotifier {
+func newUserNotifier(dataCollector telemetry.DataCollector, userID uint64) *UserNotifier {
 	userNotifier := &UserNotifier{
 		dataCollector:             dataCollector,
 		userID:                    userID,

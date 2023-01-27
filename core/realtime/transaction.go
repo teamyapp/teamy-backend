@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 type ClientTransaction struct {
-	dataCollector  obs.DataCollector
+	dataCollector  telemetry.DataCollector
 	id             uint64
 	mutations      []Mutation
 	clientNotifier *ClientNotifier
@@ -32,7 +32,7 @@ func (c *ClientTransaction) ToMessage() TransactionMessage {
 	}
 }
 
-func newClientTransaction(dataCollector obs.DataCollector, clientNotifier *ClientNotifier, id uint64) *ClientTransaction {
+func newClientTransaction(dataCollector telemetry.DataCollector, clientNotifier *ClientNotifier, id uint64) *ClientTransaction {
 	return &ClientTransaction{
 		dataCollector:  dataCollector,
 		clientNotifier: clientNotifier,
@@ -41,7 +41,7 @@ func newClientTransaction(dataCollector obs.DataCollector, clientNotifier *Clien
 }
 
 type Transaction struct {
-	dataCollector     obs.DataCollector
+	dataCollector     telemetry.DataCollector
 	stateSyncer       *StateSyncer
 	id                uint64
 	mutations         []Mutation
@@ -52,7 +52,7 @@ func (t *Transaction) rollback(ct context.Context) error {
 	for index := t.nextMutationIndex - 1; index >= 0; index-- {
 		err := t.mutations[index].Undo()
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		}
 	}
 
@@ -62,10 +62,10 @@ func (t *Transaction) rollback(ct context.Context) error {
 func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) error {
 	err := mutation.Execute(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		undoErr := t.rollback(ct)
 		if undoErr != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: undoErr})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: undoErr})
 			return undoErr
 		}
 
@@ -85,10 +85,10 @@ func (t *Transaction) Commit(ct context.Context) error {
 	for _, mutation := range t.mutations {
 		clientNotifiers, err := mutation.GetClientNotifiers(ct)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			undoErr := t.rollback(ct)
 			if undoErr != nil {
-				t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: undoErr})
+				t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: undoErr})
 				return undoErr
 			}
 
@@ -119,7 +119,7 @@ func (t *Transaction) Commit(ct context.Context) error {
 	for _, mutation := range t.mutations {
 		err := mutation.CleanUp(ct)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return err
 		}
 	}
@@ -127,7 +127,7 @@ func (t *Transaction) Commit(ct context.Context) error {
 	return nil
 }
 
-func NewTransaction(dataCollector obs.DataCollector, stateSyncer *StateSyncer) *Transaction {
+func NewTransaction(dataCollector telemetry.DataCollector, stateSyncer *StateSyncer) *Transaction {
 	return &Transaction{
 		dataCollector:     dataCollector,
 		stateSyncer:       stateSyncer,

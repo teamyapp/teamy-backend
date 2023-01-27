@@ -3,14 +3,14 @@ package mutation
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteSprintTaskRelationMutation struct {
-	dataCollector         obs.DataCollector
+	dataCollector         telemetry.DataCollector
 	stateSyncer           *realtime.StateSyncer
 	sprintTaskRelationDao dao.SprintTaskRelation
 	id                    uint64
@@ -25,7 +25,7 @@ func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) error {
 	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (d *DeleteSprintTaskRelationMutation) CleanUp(ct context.Context) error {
 }
 
 func NewDeleteSprintTaskRelationMutation(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintID uint64,

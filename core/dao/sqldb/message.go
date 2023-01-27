@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Message struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -47,7 +47,7 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 	}
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return message, err
@@ -67,7 +67,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 `
 	rows, err := m.db.Query(statement, threadID)
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 			&message.UpdatedAt,
 		)
 		if err != nil {
-			m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -114,7 +114,7 @@ func (m Message) CreateMessage(ct context.Context, message entity.Message) error
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -133,7 +133,7 @@ func (m Message) UpdateMessage(ct context.Context, message entity.Message) error
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -147,12 +147,12 @@ func (m Message) DeleteMessage(ct context.Context, messageID uint64) error {
 		messageID)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewMessage(dataCollector obs.DataCollector, sqlDB *sql.DB) Message {
+func NewMessage(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Message {
 	return Message{dataCollector: dataCollector, db: sqlDB}
 }

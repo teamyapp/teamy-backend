@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 type Thread struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	db            *sql.DB
 }
 
@@ -23,7 +23,7 @@ func (t Thread) CreateThread(ct context.Context, threadID uint64) error {
 		threadID)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
@@ -37,12 +37,12 @@ func (t Thread) DeleteThread(ct context.Context, threadID uint64) error {
 		threadID)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
 	return err
 }
 
-func NewThread(dataCollector obs.DataCollector, sqlDB *sql.DB) Thread {
+func NewThread(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Thread {
 	return Thread{dataCollector: dataCollector, db: sqlDB}
 }

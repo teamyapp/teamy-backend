@@ -3,14 +3,14 @@ package mutation
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteTaskAwaitForRelationMutation struct {
-	dataCollector           obs.DataCollector
+	dataCollector           telemetry.DataCollector
 	stateSyncer             *realtime.StateSyncer
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	id                      uint64
@@ -25,7 +25,7 @@ func (d *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
 func (d *DeleteTaskAwaitForRelationMutation) Execute(ct context.Context) error {
 	err := d.taskAwaitForRelationDao.DeleteRelation(ct, d.awaitingTask.ID, d.awaitForTaskID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (d *DeleteTaskAwaitForRelationMutation) CleanUp(ct context.Context) error {
 }
 
 func NewDeleteTaskAwaitForRelationMutation(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	awaitingTask entity.Task,

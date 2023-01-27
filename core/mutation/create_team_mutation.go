@@ -3,14 +3,14 @@ package mutation
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateTeamMutation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	teamDao       dao.Team
 	id            uint64
@@ -24,7 +24,7 @@ func (c *CreateTeamMutation) GetID() uint64 {
 func (c *CreateTeamMutation) Execute(ct context.Context) error {
 	err := c.teamDao.CreateTeam(ct, c.team)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (c *CreateTeamMutation) CleanUp(ct context.Context) error {
 }
 
 func NewCreateTeamMutation(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamDao dao.Team,
 	team entity.Team,

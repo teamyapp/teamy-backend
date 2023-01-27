@@ -3,14 +3,14 @@ package mutation
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteInvitationMutation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	invitationDao dao.Invitation
 	id            uint64
@@ -24,7 +24,7 @@ func (d *DeleteInvitationMutation) GetID() uint64 {
 func (d *DeleteInvitationMutation) Execute(ct context.Context) error {
 	err := d.invitationDao.DeleteInvitation(ct, d.invitation.ID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (d *DeleteInvitationMutation) CleanUp(ct context.Context) error {
 }
 
 func NewDeleteInvitationMutation(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
 	invitation entity.Invitation,

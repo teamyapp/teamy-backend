@@ -3,29 +3,29 @@ package realtime
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 type MutationLogger struct {
-	logger obs.Logger
+	logger telemetry.Logger
 }
 
-var _ obs.Logger = (*MutationLogger)(nil)
+var _ telemetry.Logger = (*MutationLogger)(nil)
 
-func (m MutationLogger) Log(level obs.LogLevel, props obs.Props) {
+func (m MutationLogger) Log(level telemetry.LogLevel, props telemetry.Props) {
 	m.LogAndSkip(level, props, 1)
 }
 
-func (m MutationLogger) LogAndSkip(level obs.LogLevel, props obs.Props, skipCallers int) {
+func (m MutationLogger) LogAndSkip(level telemetry.LogLevel, props telemetry.Props, skipCallers int) {
 	m.logger.LogAndSkip(level, props, skipCallers+1)
 }
 
-func (m MutationLogger) LogWithContext(ct context.Context, level obs.LogLevel, props obs.Props) {
+func (m MutationLogger) LogWithContext(ct context.Context, level telemetry.LogLevel, props telemetry.Props) {
 	m.LogWithContextAndSkip(ct, level, props, 1)
 }
 
-func (m MutationLogger) LogWithContextAndSkip(ct context.Context, level obs.LogLevel, props obs.Props, skipCallers int) {
-	newProps := obs.Props{}
+func (m MutationLogger) LogWithContextAndSkip(ct context.Context, level telemetry.LogLevel, props telemetry.Props, skipCallers int) {
+	newProps := telemetry.Props{}
 	for key, value := range props {
 		newProps[key] = value
 	}
@@ -38,7 +38,7 @@ func (m MutationLogger) LogWithContextAndSkip(ct context.Context, level obs.LogL
 	m.logger.LogWithContextAndSkip(ct, level, newProps, skipCallers+1)
 }
 
-func NewMutationLogger(logger obs.Logger) MutationLogger {
+func NewMutationLogger(logger telemetry.Logger) MutationLogger {
 	return MutationLogger{
 		logger: logger,
 	}

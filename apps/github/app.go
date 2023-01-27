@@ -22,7 +22,7 @@ import (
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/apps/dao"
@@ -40,7 +40,7 @@ const authProvider = "github"
 
 type App struct {
 	config                      AppConfig
-	dataCollector               obs.DataCollector
+	dataCollector               telemetry.DataCollector
 	cloudClientRegistry         *cloudAPI.ClientRegistry
 	teamyClientRegistry         *api.ClientRegistry
 	githubAppInstallStateDao    dao.GithubAppInstallState
@@ -89,8 +89,8 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	teamIDParam := mux.Vars(r)["teamId"]
 	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: "must provide teamId",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+			telemetry.MessageProp: "must provide teamId",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -99,8 +99,8 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	redirectURL := query.Get("redirectUrl")
 	if len(redirectURL) == 0 {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: "must provide redirectUrl",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+			telemetry.MessageProp: "must provide redirectUrl",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -109,9 +109,9 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	genStateIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubInstallationStateID"}
 	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(r.Context(), genStateIDReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to generate state ID",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to generate state ID",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -125,9 +125,9 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	}
 	err = a.githubAppInstallStateDao.CreateState(ct, state)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to create state",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to create state",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -135,9 +135,9 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 
 	installURL, err := a.getInstallGithubAppURL(ct, state.ID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to get Github App install URL",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to get Github App install URL",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -152,9 +152,9 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	stateIDParam := query.Get("state")
 	stateID, err := strconv.ParseUint(stateIDParam, 10, 64)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to parse state ID",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to parse state ID",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -162,9 +162,9 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 
 	state, err := a.githubAppInstallStateDao.FindStateByID(ct, stateID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"Summary": "fail to find state ID",
 				"StateID": stateID,
 			},
@@ -176,8 +176,8 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	expireAt := state.CreatedAt.Add(a.config.InstallationValidDuration)
 	now := time.Now().UTC()
 	if expireAt.Before(now) {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: "install app session expired",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+			telemetry.MessageProp: "install app session expired",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -191,9 +191,9 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	}
 	err = a.githubAppInstallationDao.CreateGithubAppInstallation(ct, ins)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to create Github App installation",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to create Github App installation",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -201,9 +201,9 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 
 	err = a.githubAppInstallStateDao.DeleteState(ct, stateID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"Summary": "ail to delete state",
 				"StateID": stateID,
 			},
@@ -220,16 +220,16 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	bodySignatureHeader := r.Header.Get("X-Hub-Signature-256")
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: "invalid signature format",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+			telemetry.MessageProp: "invalid signature format",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if bodySignatureHeaderParts[0] != "sha256" {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: "signature header must start with sha256",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+			telemetry.MessageProp: "signature header must start with sha256",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -237,9 +237,9 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 
 	buf, err := io.ReadAll(r.Body)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to read request payload",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to read request payload",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -247,18 +247,18 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 
 	signature, err := hex.DecodeString(bodySignatureHeaderParts[1])
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to decode request body signature",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to decode request body signature",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if !validateHMACSignature(buf, []byte(a.config.WebhookSecret), signature) {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"Summary":   "invalid request body signature",
 				"Signature": bodySignatureHeaderParts[1],
 			},
@@ -269,8 +269,8 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 
 	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	evtType := r.Header.Get("X-GitHub-Event")
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: telemetry.Props{
 			"Summary":    "received event",
 			"DeliveryID": deliveryID,
 			"EventType":  evtType,
@@ -278,9 +278,9 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	})
 	err = a.processEvent(ct, eventType(evtType), buf)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to process Github event",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to process Github event",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -294,7 +294,7 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -302,9 +302,9 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 	teamIDParam := mux.Vars(r)["teamId"]
 	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "must provide teamId",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "must provide teamId",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -313,7 +313,7 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 	requiredUserActions, err := a.githubRequiredUserActionDao.
 		FindRequiredUserActionsByActionUserID(ct, teamID, userID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -321,7 +321,7 @@ func (a App) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http
 	// TODO: receive notification from cloud and update required action status
 	requiredUserActions, err = a.refreshRequiredActionsStatus(ct, userID, requiredUserActions)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -337,7 +337,7 @@ func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 	requestSenderID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -345,9 +345,9 @@ func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 	teamIDParam := mux.Vars(r)["teamId"]
 	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "must provide teamId",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "must provide teamId",
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -359,14 +359,14 @@ func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 	}{}
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	err = json.Unmarshal(buf, &body)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -374,9 +374,9 @@ func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 	genActionIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubRequiredActionID"}
 	genActionIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActionIDReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "fail to generate required action ID",
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "fail to generate required action ID",
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -394,7 +394,7 @@ func (a App) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
 
 	err = a.githubRequiredUserActionDao.CreateRequiredUserAction(ct, action)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -416,7 +416,7 @@ func (a App) refreshRequiredActionsStatus(
 
 		refreshedRequiredAction, err := a.refreshRequiredActionStatus(ct, userID, requiredAction)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return nil, err
 		}
 
@@ -436,7 +436,7 @@ func (a App) refreshRequiredActionStatus(
 		listUserLinksReq := &cloudProto.ListUserLinksRequest{InternalUserId: userID}
 		listUserLinksRes, err := a.cloudClientRegistry.IdentityClient().ListUserLinks(ct, listUserLinksReq)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.GithubRequiredUserAction{}, err
 		}
 
@@ -459,13 +459,13 @@ func (a App) processEvent(ct context.Context, evtType eventType, payload []byte)
 	var evt event
 	err := json.Unmarshal(payload, &evt)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
 	ins, err := a.githubAppInstallationDao.FindInstallationByID(ct, evt.Installation.ID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -475,8 +475,8 @@ func (a App) processEvent(ct context.Context, evtType eventType, payload []byte)
 	case pullRequestReviewEventType:
 		return a.processPullRequestReviewEvent(ct, ins.TeamID, evt, payload)
 	default:
-		a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+			telemetry.MessageProp: telemetry.Props{
 				"Summary":   "unknown event",
 				"EventType": evtType,
 			},
@@ -489,9 +489,9 @@ func (a App) processEvent(ct context.Context, evtType eventType, payload []byte)
 func (a App) processPullRequestEvent(ct context.Context, teamID uint64, evt event, payload []byte) error {
 	if evt.Sender.Type == organizationAccountType {
 		err := errors.New("unsupported account type")
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"SenderType": evt.Sender.Type,
 			},
 		})
@@ -502,7 +502,7 @@ func (a App) processPullRequestEvent(ct context.Context, teamID uint64, evt even
 	var prEvt pullRequestEvent
 	err := json.Unmarshal(payload, &prEvt)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -525,7 +525,7 @@ func (a App) processPullRequestEvent(ct context.Context, teamID uint64, evt even
 func (a App) movePullRequestToDelivered(ct context.Context, prEvt pullRequestEvent) error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -539,7 +539,7 @@ func (a App) movePullRequestToDelivered(ct context.Context, prEvt pullRequestEve
 func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) error {
 	prAuthorUserID, err := a.GetInternalUserID(ct, prEvt.PullRequest.User.ID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -551,12 +551,12 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	}
 	createTaskRes, err := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: telemetry.Props{
 			"Summary":           "pull request task created",
 			"Repo":              evt.Repository.Name,
 			"PullRequestNumber": prEvt.Number,
@@ -572,19 +572,19 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 
 	_, err = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
 	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: createTaskRes.TaskId}
 	_, err = a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: telemetry.Props{
 			"Summary": "task moved to in progress",
 			"TaskID":  createTaskRes.TaskId,
 		},
@@ -595,7 +595,7 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	}
 	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -611,24 +611,24 @@ func (a App) processPullRequestReviewEvent(ct context.Context, teamID uint64, ev
 	var prReviewEvt pullRequestReviewEvent
 	err := json.Unmarshal(payload, &prReviewEvt)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
 	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, prReviewEvt.PullRequest.NodeID, prReviewEvt.Review.User.ID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
 	err = a.processGithubCodeReviewFeedback(ct, teamID, codeReview, evt, prReviewEvt)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: telemetry.Props{
 			"Summary": "moved review task to delivered",
 			"TaskID":  codeReview.InternalCodeReviewTaskID,
 		},
@@ -647,13 +647,13 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 		case commentedPullRequestReviewState, changesRequestedPullRequestReviewState:
 			prAuthorUserID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 				return err
 			}
 
 			prReviewerID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 				return err
 			}
 
@@ -670,13 +670,13 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 			}
 			createTaskRes, err := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 				return err
 			}
 
 			addressFeedbackTaskID := createTaskRes.TaskId
-			a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-				obs.MessageProp: obs.Props{
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+				telemetry.MessageProp: telemetry.Props{
 					"Summary":           "address feedback task created",
 					"Repo":              evt.Repository.Name,
 					"PullRequestNumber": prReviewEvt.PullRequest.Number,
@@ -685,7 +685,7 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 			})
 			pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prReviewEvt.PullRequest.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 				return err
 			}
 
@@ -695,12 +695,12 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 			}
 			_, err = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 				return err
 			}
 
-			a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-				obs.MessageProp: obs.Props{
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+				telemetry.MessageProp: telemetry.Props{
 					"Summary":           "pull request is waiting for address feedback task",
 					"Repo":              evt.Repository.Name,
 					"PullRequestNumber": prReviewEvt.PullRequest.Number,
@@ -722,7 +722,7 @@ func (a App) GetInternalUserID(ct context.Context, githubUserID uint64) (uint64,
 	getInternalUserIdReq := &cloudProto.GetInternalUserIdRequest{AuthProvider: "github", ExternalUserId: githubReviewerIDStr}
 	getInternalUserIdRes, err := a.cloudClientRegistry.IdentityClient().GetInternalUserId(ct, getInternalUserIdReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
@@ -732,14 +732,14 @@ func (a App) GetInternalUserID(ct context.Context, githubUserID uint64) (uint64,
 func (a App) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
 	for _, githubReviewer := range prEvt.PullRequest.RequestedReviewers {
 		err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, pr.InternalTaskID, githubReviewer.ID, evt, prEvt)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 	}
@@ -759,7 +759,7 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, githubPullRequestNodeID, githubReviewerID)
 	var errNotFound dao.ErrNotFound
 	if err != nil && !errors.As(err, &errNotFound) {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -777,7 +777,7 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 		}
 		createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, codeReview.Round+1, evt, prEvt)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return err
 		}
 
@@ -786,7 +786,7 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 		codeReview.Round++
 		_, err = a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return err
 		}
 
@@ -795,7 +795,7 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 
 	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, 1, evt, prEvt)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -808,7 +808,7 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 
 	err = a.githubCodeReviewDao.CreateCodeReview(ct, codeReview)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -818,7 +818,7 @@ func (a App) tryCreateTaskForPullRequestReviewer(
 func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerID uint64, round int, evt event, prEvt pullRequestEvent) (uint64, error) {
 	codeReviewerInternalUserID, err := a.GetInternalUserID(ct, githubReviewerID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
@@ -831,12 +831,12 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 	}
 	createTaskRes, err := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: telemetry.Props{
 			"Summary":           "review task created",
 			"Repo":              evt.Repository.Name,
 			"PullRequestNumber": prEvt.PullRequest.Number,
@@ -850,12 +850,12 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 
 	_, err = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: telemetry.Props{
 			"Summary":           "pull request is waiting for review task",
 			"PullRequestTaskID": pullRequestTaskID,
 			"GithubReviewerID":  githubReviewerID,
@@ -874,7 +874,7 @@ func (a App) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, taskID
 			return nil
 		}
 
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -887,7 +887,7 @@ func (a App) getInstallGithubAppURL(ct context.Context, stateID uint64) (string,
 	urlStr := fmt.Sprintf("https://github.com/apps/%s/installations/new", a.config.AppName)
 	installURL, err := url.Parse(urlStr)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return "", err
 	}
 	query := url.Values{}
@@ -898,7 +898,7 @@ func (a App) getInstallGithubAppURL(ct context.Context, stateID uint64) (string,
 
 func NewApp(
 	cfg AppConfig,
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	teamyClientRegistry *api.ClientRegistry,
 	githubAppInstallStateDao dao.GithubAppInstallState,

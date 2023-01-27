@@ -1,11 +1,11 @@
 package realtime
 
 import (
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 type TeamNotifier struct {
-	dataCollector             obs.DataCollector
+	dataCollector             telemetry.DataCollector
 	teamID                    uint64
 	teamDisconnectCh          chan bool
 	teamDisconnectSubscribers []chan bool
@@ -33,7 +33,7 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 	return subscriber
 }
 
-func newTeamNotifier(dataCollector obs.DataCollector, teamID uint64) *TeamNotifier {
+func newTeamNotifier(dataCollector telemetry.DataCollector, teamID uint64) *TeamNotifier {
 	teamNotifier := &TeamNotifier{
 		dataCollector:             dataCollector,
 		teamID:                    teamID,

@@ -1,9 +1,9 @@
 package api
 
 import (
-	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/rpc"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"google.golang.org/grpc"
 )
@@ -39,10 +39,10 @@ func (c *ClientRegistry) SprintClient() proto.SprintClient {
 	return c.sprintClient
 }
 
-func NewClientRegistry(dataCollector obs.DataCollector, connCfg rpc.ConnectionConfig, retry retry.Retry) (*ClientRegistry, error) {
+func NewClientRegistry(dataCollector telemetry.DataCollector, connCfg rpc.ConnectionConfig, retry retry.Retry) (*ClientRegistry, error) {
 	conn, err := rpc.NewClientConnection(dataCollector, connCfg, retry)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 

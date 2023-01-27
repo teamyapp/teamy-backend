@@ -3,14 +3,14 @@ package mutation
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateMessageMutation struct {
-	dataCollector obs.DataCollector
+	dataCollector telemetry.DataCollector
 	stateSyncer   *realtime.StateSyncer
 	messageDao    dao.Message
 	taskDao       dao.Task
@@ -25,7 +25,7 @@ func (c *CreateMessageMutation) GetID() uint64 {
 func (c *CreateMessageMutation) Execute(ct context.Context) error {
 	err := c.messageDao.CreateMessage(ct, c.message)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 
@@ -39,7 +39,7 @@ func (c *CreateMessageMutation) Undo() error {
 func (c *CreateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
 	task, err := c.taskDao.FindTaskByCommentsThreadID(ct, c.message.ThreadID)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return []*realtime.ClientNotifier{}, err
 	}
 
@@ -63,7 +63,7 @@ func NewCreateMessageMutation(
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
 	taskDao dao.Task,
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	message entity.Message,
 ) *CreateMessageMutation {
 	return &CreateMessageMutation{

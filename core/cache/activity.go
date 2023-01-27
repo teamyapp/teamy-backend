@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Activity struct {
-	dataCollector  obs.DataCollector
+	dataCollector  telemetry.DataCollector
 	teamActivities map[uint64]*entity.TeamActivity
 }
 
@@ -47,9 +47,9 @@ func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID u
 	teamActivity, ok := a.teamActivities[teamID]
 	if !ok {
 		err := errors.New("teamActivity not found")
-		a.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: err,
+			telemetry.MessageProp: telemetry.Props{
 				"TeamID": teamID,
 			},
 		})
@@ -60,7 +60,7 @@ func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID u
 	return taskActivity, nil
 }
 
-func NewActivity(dataCollector obs.DataCollector) Activity {
+func NewActivity(dataCollector telemetry.DataCollector) Activity {
 	return Activity{
 		dataCollector:  dataCollector,
 		teamActivities: map[uint64]*entity.TeamActivity{},

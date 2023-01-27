@@ -9,13 +9,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type RealTimeStateSync struct {
-	dataCollector       obs.DataCollector
+	dataCollector       telemetry.DataCollector
 	realTimeStateSyncer *realtime.StateSyncer
 }
 
@@ -42,7 +42,7 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -50,9 +50,9 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 	clientIDParam := mux.Vars(request)["clientID"]
 	clientID, err := strconv.ParseUint(clientIDParam, 10, 64)
 	if err != nil {
-		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp:   err,
-			obs.MessageProp: "must provide teamId",
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: "must provide teamId",
 		})
 		writer.WriteHeader(http.StatusBadRequest)
 		return
@@ -72,14 +72,14 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		err := errors.New("user id not found")
-		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	conn, err := connection.WebSocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
-		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -87,14 +87,14 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 	webSocketConn := connection.NewWebSocket(r.dataCollector, conn)
 	err = r.realTimeStateSyncer.OnClientConnect(userID, webSocketConn)
 	if err != nil {
-		r.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }
 
 func NewRealTimeStateSync(
-	dataCollector obs.DataCollector,
+	dataCollector telemetry.DataCollector,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) RealTimeStateSync {
 	return RealTimeStateSync{
