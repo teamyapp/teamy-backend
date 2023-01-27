@@ -18,7 +18,7 @@ func (i Invitation) ID(ct context.Context) graphql.ID {
 }
 
 func (i Invitation) Sender(ct context.Context) (User, error) {
-	sender, err := i.deps.userDao.FindUserByID(ct, i.invitation.SenderUserID)
+	sender, err := i.deps.userService.FindUserByID(ct, i.invitation.SenderUserID)
 	if err != nil {
 		i.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
@@ -44,7 +44,7 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 		return nil, nil
 	}
 
-	receiver, err := i.deps.userDao.FindUserByID(ct, *i.invitation.ReceiverUserID)
+	receiver, err := i.deps.userService.FindUserByID(ct, *i.invitation.ReceiverUserID)
 	if err != nil {
 		i.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return &User{}, err
@@ -55,7 +55,7 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 }
 
 func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
-	team, err := i.deps.teamDao.FindTeamByID(ct, i.invitation.TeamID)
+	team, err := i.deps.teamService.FindTeamByID(ct, i.invitation.TeamID)
 	if err != nil {
 		i.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err

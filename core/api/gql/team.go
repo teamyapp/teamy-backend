@@ -31,7 +31,7 @@ func (t Team) CreatedAt(ct context.Context) graphql.Time {
 }
 
 func (t Team) Creator(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(ct, t.team.CreatorUserID)
+	user, err := t.deps.userService.FindUserByID(ct, t.team.CreatorUserID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
@@ -41,7 +41,7 @@ func (t Team) Creator(ct context.Context) (User, error) {
 }
 
 func (t Team) Owner(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(ct, t.team.OwnerUserID)
+	user, err := t.deps.userService.FindUserByID(ct, t.team.OwnerUserID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, nil
@@ -51,7 +51,7 @@ func (t Team) Owner(ct context.Context) (User, error) {
 }
 
 func (t Team) Members(ct context.Context) ([]TeamMember, error) {
-	teamMembers, err := t.deps.teamMemberDao.FindTeamMembersByTeamID(ct, t.team.ID)
+	teamMembers, err := t.deps.teamService.FindTeamMembers(ct, t.team.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
@@ -63,13 +63,10 @@ func (t Team) Members(ct context.Context) ([]TeamMember, error) {
 }
 
 func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
-	taskActivities := t.deps.activityCache.FindAllTaskActivitiesByTeamID(t.team.ID)
-	taskActivityItems := make([]TaskActivity, 0)
-	for _, taskActivity := range taskActivities {
-		taskActivityItems = append(taskActivityItems, newTaskActivity(t.deps, *taskActivity))
-	}
-
-	return taskActivityItems, nil
+	taskActivities := t.deps.taskService.FindTaskActivities(ct, t.team.ID)
+	return collect.Map(taskActivities, func(taskActivity entity.TaskActivity, _ int) TaskActivity {
+		return newTaskActivity(t.deps, taskActivity)
+	}), nil
 }
 
 func (t Team) Tasks(ct context.Context, args struct {
@@ -95,19 +92,19 @@ func (t Team) Tasks(ct context.Context, args struct {
 func (t Team) Invitations(ct context.Context, args struct {
 	Filter *InvitationFilter
 }) ([]Invitation, error) {
-	invitationEntities, err := t.deps.invitationDao.FindInvitationsByTeamID(ct, t.team.ID)
+	filter, err := fromGraphQLInvitationFilterPtr(ct, t.deps.dataCollector, args.Filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if args.Filter != nil {
-		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entity.Invitation) bool {
-			return matchInvitation(ct, t.deps.dataCollector, *args.Filter, invitationEntity)
-		})
+	invitations, err := t.deps.invitationService.FindInvitationsInTeam(ct, t.team.ID, filter)
+	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
 	}
 
-	return collect.Map(invitationEntities, func(invitationEntity entity.Invitation, _ int) Invitation {
+	return collect.Map(invitations, func(invitationEntity entity.Invitation, _ int) Invitation {
 		return newInvitation(t.deps, invitationEntity)
 	}), nil
 }

@@ -2,16 +2,11 @@ package gql
 
 import (
 	"context"
-	"errors"
 	"strconv"
-	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
-	"github.com/teamyapp/teamy-backend/core/entity"
-	"github.com/teamyapp/teamy-backend/core/mutation"
-	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 func (m Mutation) CreateUser(ct context.Context, args struct {
@@ -21,22 +16,12 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 		ProfileURL *string
 	}
 }) (User, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
-	}
-
-	user := entity.User{
-		ID:         userID,
-		CreatedAt:  time.Now(),
-		FirstName:  args.User.FirstName,
+	input := service.CreateUserInput{
 		LastName:   args.User.LastName,
+		FirstName:  args.User.FirstName,
 		ProfileURL: args.User.ProfileURL,
 	}
-
-	err := m.deps.userDao.CreateUser(ct, user)
+	user, err := m.deps.userService.CreateUser(ct, input)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
@@ -58,31 +43,11 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 		return User{}, err
 	}
 
-	user, err := m.deps.userDao.FindUserByID(ct, userID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+	input := service.UpdateUserInput{
+		LastName:  args.Input.LastName,
+		FirstName: args.Input.FirstName,
 	}
-
-	user.FirstName = args.Input.FirstName
-	user.LastName = args.Input.LastName
-	updatedAt := time.Now()
-	user.UpdatedAt = &updatedAt
-	// TODO move this to user service
-	realTimeTransaction := realtime.NewTransaction(m.deps.dataCollector, m.deps.stateSyncer)
-	userMutation := mutation.NewUpdateUserMutation(
-		m.deps.dataCollector,
-		m.deps.stateSyncer,
-		m.deps.teamMemberDao,
-		m.deps.userDao,
-		user)
-	err = realTimeTransaction.ApplyMutation(ct, userMutation)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
-	}
-
-	err = realTimeTransaction.Commit(ct)
+	user, err := m.deps.userService.UpdateUser(ct, userID, input)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err

@@ -44,6 +44,34 @@ type UpdateInvitationInput struct {
 	ExpireAt          time.Time
 }
 
+func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, filter *InvitationFilter) ([]entity.Invitation, error) {
+	invitations, err := i.invitationDao.FindInvitationsByTeamID(ct, teamID)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	if filter != nil {
+		invitations = filterInvitations(invitations, *filter)
+	}
+
+	return invitations, nil
+}
+
+func (i Invitation) FindInvitations(ct context.Context, filter *InvitationFilter) ([]entity.Invitation, error) {
+	invitations, err := i.invitationDao.FindAllInvitations(ct)
+	if err != nil {
+		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	if filter != nil {
+		invitations = filterInvitations(invitations, *filter)
+	}
+
+	return invitations, nil
+}
+
 func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input CreateInvitationInput) (entity.Invitation, error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {

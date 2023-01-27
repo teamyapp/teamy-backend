@@ -128,6 +128,39 @@ func fromGraphQLSprintFilterPtr(ct context.Context, dataCollector obs.DataCollec
 	}, nil
 }
 
+func fromGraphQLTeamFilterPtr(ct context.Context, dataCollector obs.DataCollector, teamFilter *TeamFilter) (*service.TeamFilter, error) {
+	if teamFilter == nil {
+		return nil, nil
+	}
+
+	teamID, err := fromGraphQLIDPtr(ct, dataCollector, teamFilter.TeamID)
+	if err != nil {
+		dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	return &service.TeamFilter{
+		TeamID: teamID,
+	}, nil
+}
+
+func fromGraphQLInvitationFilterPtr(ct context.Context, dataCollector obs.DataCollector, filter *InvitationFilter) (*service.InvitationFilter, error) {
+	if filter == nil {
+		return nil, nil
+	}
+
+	invitationID, err := fromGraphQLIDPtr(ct, dataCollector, filter.InvitationID)
+	if err != nil {
+		dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	return &service.InvitationFilter{
+		InvitationID: invitationID,
+		Code:         filter.Code,
+	}, nil
+}
+
 func fromGraphQLDurationPtr(duration *scalar.Duration) *time.Duration {
 	if duration == nil {
 		return nil
