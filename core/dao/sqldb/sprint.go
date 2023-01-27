@@ -1,22 +1,24 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Sprint struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.Sprint = (*Sprint)(nil)
 
-func (s Sprint) FindSprintByID(sprintID uint64) (entity.Sprint, error) {
+func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, error) {
 	sprint := entity.Sprint{}
 	err := s.db.QueryRow(`
 		SELECT
@@ -42,10 +44,14 @@ func (s Sprint) FindSprintByID(sprintID uint64) (entity.Sprint, error) {
 			sprintID))
 	}
 
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return sprint, err
 }
 
-func (s Sprint) FindSprintsByIDs(sprintIDs []uint64) ([]entity.Sprint, error) {
+func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]entity.Sprint, error) {
 	if len(sprintIDs) == 0 {
 		return []entity.Sprint{}, nil
 	}
@@ -62,7 +68,7 @@ func (s Sprint) FindSprintsByIDs(sprintIDs []uint64) ([]entity.Sprint, error) {
 	WHERE id IN (%s);`, idsString)
 	rows, err := s.db.Query(query)
 	if err != nil {
-		log.Println(err)
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -79,7 +85,7 @@ func (s Sprint) FindSprintsByIDs(sprintIDs []uint64) ([]entity.Sprint, error) {
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			log.Println(err)
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -89,7 +95,7 @@ func (s Sprint) FindSprintsByIDs(sprintIDs []uint64) ([]entity.Sprint, error) {
 	return sprints, nil
 }
 
-func (s Sprint) FindSprintsByTeamID(teamID uint64) ([]entity.Sprint, error) {
+func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity.Sprint, error) {
 	rows, err := s.db.Query(
 		`
 	SELECT
@@ -103,7 +109,7 @@ func (s Sprint) FindSprintsByTeamID(teamID uint64) ([]entity.Sprint, error) {
 `,
 		teamID)
 	if err != nil {
-		log.Println(err)
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -120,7 +126,7 @@ func (s Sprint) FindSprintsByTeamID(teamID uint64) ([]entity.Sprint, error) {
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			log.Println(err)
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -130,7 +136,7 @@ func (s Sprint) FindSprintsByTeamID(teamID uint64) ([]entity.Sprint, error) {
 	return sprints, nil
 }
 
-func (s Sprint) FindAllSprints() ([]entity.Sprint, error) {
+func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, error) {
 	rows, err := s.db.Query(`
 	SELECT
 		id,
@@ -141,7 +147,7 @@ func (s Sprint) FindAllSprints() ([]entity.Sprint, error) {
 	FROM sprint;
 `)
 	if err != nil {
-		log.Println(err)
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -158,7 +164,7 @@ func (s Sprint) FindAllSprints() ([]entity.Sprint, error) {
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			log.Println(err)
+			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -168,7 +174,7 @@ func (s Sprint) FindAllSprints() ([]entity.Sprint, error) {
 	return sprints, nil
 }
 
-func (s Sprint) CreateSprint(sprint entity.Sprint) error {
+func (s Sprint) CreateSprint(ct context.Context, sprint entity.Sprint) error {
 	_, err := s.db.Exec(`
 		INSERT INTO sprint
 		(
@@ -185,18 +191,28 @@ func (s Sprint) CreateSprint(sprint entity.Sprint) error {
 		sprint.CreatedAt,
 		sprint.OwningTeamID,
 	)
+
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func (s Sprint) DeleteSprint(sprintID uint64) error {
+func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) error {
 	_, err := s.db.Exec(`
 		DELETE FROM sprint
 		WHERE id = $1;
 		`,
 		sprintID)
+
+	if err != nil {
+		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewSprint(sqlDB *sql.DB) Sprint {
-	return Sprint{db: sqlDB}
+func NewSprint(dataCollector obs.DataCollector, sqlDB *sql.DB) Sprint {
+	return Sprint{dataCollector: dataCollector, db: sqlDB}
 }

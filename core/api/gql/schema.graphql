@@ -9,6 +9,7 @@ type Query {
 	teams(filter: TeamFilter): [Team!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
+	apps(filter: AppFilter): [App!]!
 }
 
 type Mutation {
@@ -22,6 +23,8 @@ type Mutation {
 	moveTaskToBlocked(taskId: ID!, reason: String!): Task!
 	addAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
+	startDraggingTask(taskId: ID!, clientId: ID!): ID!
+	stopDraggingTask(taskId: ID!, clientId: ID!): ID!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
@@ -32,19 +35,26 @@ type Mutation {
 	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
 	createTeamIconUploadSession(teamId: ID!): ID!
-	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): ID!
-	addMemberToTeam(teamId: ID!, memberUserId: ID!): User!
-	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): User!
+	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): Team!
+	addMemberToTeam(teamId: ID!, memberUserId: ID!): TeamMember!
+	updateTeamMember(teamId: ID!, input: UpdateTeamMemberInput!): TeamMember!
+	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): TeamMember!
 
 	# User
 	createUser(user: CreateUserInput!): User!
 	updateUser(userId: ID!, input: UpdateUserInput!): User!
 	createUserProfileUploadSession: ID!
-	finishUserProfileUploadSession(fileUploadSessionId: ID!): ID!
+	finishUserProfileUploadSession(fileUploadSessionId: ID!): User!
 
 	# Invitation
-	createInvitation(teamId: ID!, invitation: CreateInvitationInput!): Invitation!
-	updateInvitation(invitationId: ID!, input: UpdateInvitationInput!): Invitation!
+	createInvitation(
+		teamId: ID!
+		invitation: CreateInvitationInput!
+	): Invitation!
+	updateInvitation(
+		invitationId: ID!
+		input: UpdateInvitationInput!
+	): Invitation!
 	acceptInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	declineInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	deleteInvitation(invitationId: ID!): Invitation!
@@ -54,13 +64,45 @@ type Mutation {
 	deleteSprint(sprintId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
 	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
+	moveTasksToSprint(
+		fromSprintId: ID!
+		toSprintId: ID!
+		taskIds: [ID!]!
+	): [Task!]!
+	copyTasksToSprint(
+		toSprintId: ID!
+		taskIds: [ID!]!
+	): [Task!]!
 
 	# File
 	createFileUploadSession(teamId: ID!): ID!
-	finishFileUploadSession(teamId: ID!): FileMetadata!
+	finishFileUploadSession(fileUploadSessionId: ID!): FileMetadata!
 	updateFileMetadata(fileId: ID!, input: FileMetadataInput!): FileMetadata!
 	deleteFile(fileId: ID!): FileMetadata!
+
+	# App
+	createApp(name: String!): App!
+	updateApp(appId: ID!, input: UpdateAppInput!): App!
+	deleteApp(appId: ID!): App!
+	refreshAppSecret(appId: ID!): App!
+	createAppVersion(appId: ID!): AppVersion!
+	updateAppVersion(appId: ID!, versionNumber: Int!, input: UpdateAppVersionInput!): AppVersion!
+	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
+	addVisibleTeamToAppVersion(
+		appId: ID!
+		versionNumber: Int!
+		teamId: ID!
+	): AppVersion!
+	removeVisibleTeamFromAppVersion(
+		appId: ID!
+		versionNumber: Int!
+		teamId: ID!
+	): AppVersion!
 }
+
+scalar Duration
+
+scalar Time
 
 type Task {
 	id: ID!
@@ -74,8 +116,9 @@ type Task {
 	comments: Thread!
 	createdAt: Time!
 	updatedAt: Time
+	deliveredAt: Time
 	dueAt: Time
-	effort: Int
+	effort: Duration
 	availableActions: [TaskAction!]!
 	awaitForTasks: [Task!]!
 }
@@ -101,6 +144,16 @@ type Sprint {
 	owningTeam: Team!
 	tasks(filter: TaskFilter): [Task!]!
 	createdAt: Time!
+	participants: [SprintParticipant!]!
+}
+
+type SprintParticipant {
+	sprint: Sprint!
+	user: User!
+	totalBandwidth: Duration!
+	unusedBandwidth: Duration!
+	createdAt: Time!
+	updatedAt: Time
 }
 
 type Team {
@@ -110,10 +163,35 @@ type Team {
 	createdAt: Time!
 	creator: User!
 	owner: User!
-	members: [User!]!
+	members: [TeamMember!]!
 	tasks(filter: TaskFilter): [Task!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
+	appInstallations: [AppInstallation!]!
+	taskActivities: [TaskActivity!]!
+}
+
+type TeamMember {
+	team: Team!
+	user: User!
+	weeklyBandwidth: Duration!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type TaskActivity {
+	taskId: ID!
+	dragTaskActivity: DragTaskActivity!
+}
+
+type DragTaskActivity {
+	isDragging: Boolean!
+	client: Client
+}
+
+type Client {
+	id: ID!
+	user: User!
 }
 
 type Invitation {
@@ -155,7 +233,7 @@ enum TaskAction {
 }
 
 enum TaskStatus {
-	UPCOMING
+	TODO
 	IN_PROGRESS
 	PAUSED
 	AWAITING
@@ -173,7 +251,40 @@ type User {
 	teams(filter: TeamFilter): [Team!]!
 }
 
-# Input
+type App {
+	id: ID!
+	apiSecret: String!
+	activeVersion: AppVersion
+	versions: [AppVersion!]!
+	installations: [AppInstallation!]!
+	installationCount: Int!
+	creator: User!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type AppVersion {
+	app: App!
+	versionNumber: Int!
+	appName: String!
+	iconUrl: String
+	hasUiExtension: Boolean!
+	uiExtensionEntrypointPath: String
+	isPublic: Boolean!
+	visibleToTeams: [Team!]!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type AppInstallation {
+	id: ID!
+	app: App!
+	installedTeam: Team!
+	installedBy: User!
+	installedAt: Time!
+}
+
+# Filters
 input TaskFilter {
 	taskId: ID
 	ownerId: ID
@@ -198,6 +309,11 @@ input SprintFilter {
 	countLimit: Int
 }
 
+input AppFilter {
+	isPublic: Boolean
+}
+
+# Inputs
 input CreateTaskInput {
 	goal: String!
 	context: String
@@ -211,7 +327,7 @@ input UpdateTaskInput {
 	context: String
 	ownerUserId: ID
 	owningTeamId: ID!
-	effort: Int
+	effort: Duration
 	dueAt: Time
 }
 
@@ -230,6 +346,11 @@ input CreateTeamInput {
 input UpdateTeamInput {
 	name: String!
 	ownerUserId: ID!
+}
+
+input UpdateTeamMemberInput {
+	userId: ID!
+	weeklyBandwidth: Duration!
 }
 
 input CreateUserInput {
@@ -258,10 +379,21 @@ input UpdateInvitationInput {
 
 input CreateSprintInput {
 	startAt: Time!
+	endAt: Time!
 }
 
 input FileMetadataInput {
 	name: String!
 }
 
-scalar Time
+input UpdateAppInput {
+	activeVersionNumber: Int
+}
+
+input UpdateAppVersionInput {
+	name: String!
+	iconUrl: String
+	hasUiExtension: Boolean!
+	uiExtensionEntryPointPath: String
+	isPublic: Boolean!
+}

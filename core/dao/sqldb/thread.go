@@ -1,35 +1,48 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 type Thread struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.Thread = (*Thread)(nil)
 
-func (t Thread) CreateThread(threadID uint64) error {
+func (t Thread) CreateThread(ct context.Context, threadID uint64) error {
 	_, err := t.db.Exec(`
 		INSERT INTO thread (id)
 		VALUES ($1);
 		`,
 		threadID)
+
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func (t Thread) DeleteThread(threadID uint64) error {
+func (t Thread) DeleteThread(ct context.Context, threadID uint64) error {
 	_, err := t.db.Exec(`
 		DELETE FROM thread
 		WHERE id = $1;
 		`,
 		threadID)
+
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewThread(sqlDB *sql.DB) Thread {
-	return Thread{db: sqlDB}
+func NewThread(dataCollector obs.DataCollector, sqlDB *sql.DB) Thread {
+	return Thread{dataCollector: dataCollector, db: sqlDB}
 }

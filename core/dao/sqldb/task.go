@@ -1,22 +1,24 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Task struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
+func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, error) {
 	task := entity.Task{}
 	err := t.db.QueryRow(`
 		SELECT
@@ -32,7 +34,8 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			comments_thread_id,
 			due_at,
 			created_at,
-			updated_at
+			updated_at,
+			delivered_at
 		FROM task
 		WHERE id = $1;`,
 		taskID).
@@ -50,6 +53,7 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -58,10 +62,14 @@ func (t Task) FindTaskByID(taskID uint64) (entity.Task, error) {
 			taskID))
 	}
 
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return task, err
 }
 
-func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
+func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Task, error) {
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -81,12 +89,13 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 		comments_thread_id,
 		due_at,
 		created_at,
-		updated_at
+		updated_at,
+		delivered_at
 	FROM task
 	WHERE id IN (%s);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -109,9 +118,10 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 				&task.DueAt,
 				&task.CreatedAt,
 				&task.UpdatedAt,
+				&task.DeliveredAt,
 			)
 		if err != nil {
-			log.Println(task.ID, err)
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
@@ -121,7 +131,7 @@ func (t Task) FindTasksByIDs(taskIDs []uint64) ([]entity.Task, error) {
 	return tasks, nil
 }
 
-func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, error) {
+func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uint64) (entity.Task, error) {
 	task := entity.Task{}
 	err := t.db.QueryRow(`
 		SELECT
@@ -137,7 +147,8 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			comments_thread_id,
 			due_at,
 			created_at,
-			updated_at
+			updated_at,
+			delivered_at
 		FROM task
 		WHERE comments_thread_id = $1;`,
 		commentThreadID).
@@ -155,6 +166,7 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -163,10 +175,14 @@ func (t Task) FindTaskByCommentsThreadID(commentThreadID uint64) (entity.Task, e
 			commentThreadID))
 	}
 
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return task, err
 }
 
-func (t Task) FindAllTasks() ([]entity.Task, error) {
+func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
 	rows, err := t.db.Query(`
 	SELECT
 		id,
@@ -181,11 +197,12 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 		comments_thread_id,
 		due_at,
 		created_at,
-		updated_at
+		updated_at,
+		delivered_at
 	FROM task;
 `)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -207,19 +224,20 @@ func (t Task) FindAllTasks() ([]entity.Task, error) {
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	return tasks, err
+	return tasks, nil
 }
 
-func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
+func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, error) {
 	rows, err := t.db.Query(
 		`
 	SELECT
@@ -235,13 +253,14 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 		comments_thread_id,
 		due_at,
 		created_at,
-		updated_at
+		updated_at,
+		delivered_at
 	FROM task
 	WHERE owning_team_id = $1;
 `,
 		teamID)
 	if err != nil {
-		log.Println(err)
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -263,19 +282,20 @@ func (t Task) FindTasksByTeamID(teamID uint64) ([]entity.Task, error) {
 			&task.DueAt,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeliveredAt,
 		)
 		if err != nil {
-			log.Println(err)
+			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	return tasks, err
+	return tasks, nil
 }
 
-func (t Task) CreateTask(task entity.Task) error {
+func (t Task) CreateTask(ct context.Context, task entity.Task) error {
 	_, err := t.db.Exec(`
 		INSERT INTO task
 		(
@@ -306,10 +326,15 @@ func (t Task) CreateTask(task entity.Task) error {
 		task.DueAt,
 		task.CreatedAt,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func (t Task) UpdateTask(task entity.Task) error {
+func (t Task) UpdateTask(ct context.Context, task entity.Task) error {
 	_, err := t.db.Exec(`
 		UPDATE task
 		SET
@@ -321,8 +346,9 @@ func (t Task) UpdateTask(task entity.Task) error {
 			is_planned = $6,
 			effort = $7,
 			due_at = $8,
-			updated_at = $9
-		WHERE id = $10;`,
+			updated_at = $9,
+			delivered_at = $10
+		WHERE id = $11;`,
 		task.Goal,
 		task.Context,
 		task.OwnerUserID,
@@ -332,20 +358,31 @@ func (t Task) UpdateTask(task entity.Task) error {
 		task.Effort,
 		task.DueAt,
 		task.UpdatedAt,
+		task.DeliveredAt,
 		task.ID,
 	)
+
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func (t Task) DeleteTask(taskID uint64) error {
+func (t Task) DeleteTask(ct context.Context, taskID uint64) error {
 	_, err := t.db.Exec(`
 		DELETE FROM task
 		WHERE id = $1;
 		`,
 		taskID)
+
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewTask(sqlDB *sql.DB) Task {
-	return Task{db: sqlDB}
+func NewTask(dataCollector obs.DataCollector, sqlDB *sql.DB) Task {
+	return Task{dataCollector: dataCollector, db: sqlDB}
 }

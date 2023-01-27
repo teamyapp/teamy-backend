@@ -1,14 +1,19 @@
 package realtime
 
 import (
-	"log"
+	"github.com/teamyapp/cloud/libs/obs"
 )
 
 type UserNotifier struct {
+	dataCollector             obs.DataCollector
 	userID                    uint64
 	userDisconnectCh          chan bool
 	userDisconnectSubscribers []chan bool
 	clientNotifiers           map[uint64]*ClientNotifier
+}
+
+func (u *UserNotifier) GetClientNotifiers() map[uint64]*ClientNotifier {
+	return u.clientNotifiers
 }
 
 func (u *UserNotifier) subscribeUserDisconnect() chan bool {
@@ -21,7 +26,6 @@ func (u UserNotifier) registerClientNotifier(clientID uint64, clientNotifier *Cl
 	u.clientNotifiers[clientID] = clientNotifier
 	go func() {
 		<-clientNotifier.subscribeClientDisconnect()
-		log.Printf("client disconnected: clientID=%v\n", clientID)
 		u.unregisterClientNotifier(clientID)
 	}()
 }
@@ -33,18 +37,13 @@ func (u UserNotifier) unregisterClientNotifier(clientID uint64) {
 	}
 }
 
-func (u UserNotifier) processMutation(mutation Mutation) {
-	log.Printf("UserNotifier processing mutation: userID=%v mutationID=%v\n", u.userID, mutation.ID)
-	for _, clientNotifier := range u.clientNotifiers {
-		clientNotifier.processMutation(mutation)
-	}
-}
-
-func newUserNotifier(userID uint64) *UserNotifier {
+func newUserNotifier(dataCollector obs.DataCollector, userID uint64) *UserNotifier {
 	userNotifier := &UserNotifier{
+		dataCollector:             dataCollector,
 		userID:                    userID,
 		clientNotifiers:           map[uint64]*ClientNotifier{},
 		userDisconnectSubscribers: make([]chan bool, 0),
+		userDisconnectCh:          make(chan bool),
 	}
 	go func() {
 		<-userNotifier.userDisconnectCh

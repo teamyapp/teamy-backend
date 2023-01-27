@@ -1,21 +1,25 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type UserFileUploadSession struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.UserFileUploadSession = (*UserFileUploadSession)(nil)
 
 func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
+	ct context.Context,
 	userID uint64,
 	userFileUploadSessionType entity.UserFileUploadSessionType,
 	fileUploadSessionID uint64,
@@ -48,10 +52,17 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 			userFileUploadSessionType))
 	}
 
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return userFileUploadSession, err
 }
 
-func (u UserFileUploadSession) CreateUserFileUploadSession(userFileUploadSession entity.UserFileUploadSession) error {
+func (u UserFileUploadSession) CreateUserFileUploadSession(
+	ct context.Context,
+	userFileUploadSession entity.UserFileUploadSession,
+) error {
 	_, err := u.db.Exec(`
 		INSERT INTO user_file_upload_session
 		(
@@ -70,10 +81,18 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(userFileUploadSession
 		userFileUploadSession.CreatedAt,
 		userFileUploadSession.UpdatedAt,
 	)
+
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func (u UserFileUploadSession) UpdateUserFileUploadSession(userFileUploadSession entity.UserFileUploadSession) error {
+func (u UserFileUploadSession) UpdateUserFileUploadSession(
+	ct context.Context,
+	userFileUploadSession entity.UserFileUploadSession,
+) error {
 	_, err := u.db.Exec(`
 		UPDATE user_file_upload_session
 		SET
@@ -94,11 +113,14 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(userFileUploadSession
 		userFileUploadSession.Type,
 		userFileUploadSession.FileUploadSessionID,
 	)
+
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewUserFileUploadSession(sqlDB *sql.DB) UserFileUploadSession {
-	return UserFileUploadSession{
-		db: sqlDB,
-	}
+func NewUserFileUploadSession(dataCollector obs.DataCollector, sqlDB *sql.DB) UserFileUploadSession {
+	return UserFileUploadSession{dataCollector: dataCollector, db: sqlDB}
 }

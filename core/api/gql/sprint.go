@@ -2,13 +2,11 @@ package gql
 
 import (
 	"context"
-	"fmt"
-	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
-	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Sprint struct {
@@ -35,15 +33,15 @@ func (s Sprint) CreatedAt(ct context.Context) graphql.Time {
 func (s Sprint) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(args.Filter)
+	filter, err := fromGraphQLTaskFilterPtr(ct, s.deps.dataCollector, args.Filter)
 	if err != nil {
-		log.Println(err)
+		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	tasks, err := s.deps.sprintService.FindTasksInSprint(ct, s.sprint.ID, filter)
 	if err != nil {
-		log.Println(err)
+		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -53,18 +51,25 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 }
 
 func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
-	filter := &service.TeamFilter{TeamID: &s.sprint.OwningTeamID}
-	teams, err := s.deps.teamService.FindTeams(ct, filter)
+	team, err := s.deps.teamService.FindTeamByID(ct, s.sprint.OwningTeamID)
 	if err != nil {
-		log.Println(err)
+		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
 
-	if len(teams) == 0 {
-		return Team{}, fmt.Errorf("team not found: teamID=%v", s.sprint.OwningTeamID)
+	return newTeam(s.deps, team), nil
+}
+
+func (s Sprint) Participants(ct context.Context) ([]SprintParticipant, error) {
+	participants, err := s.deps.sprintService.FindParticipantsInSprint(ct, s.sprint.ID)
+	if err != nil {
+		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
 	}
 
-	return newTeam(s.deps, teams[0]), nil
+	return collect.Map(participants, func(participant entity.SprintParticipant, index int) SprintParticipant {
+		return newSprintParticipant(s.deps, participant)
+	}), nil
 }
 
 func newSprint(deps *Dependencies, sprint entity.Sprint) Sprint {

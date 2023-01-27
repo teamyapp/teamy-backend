@@ -2,15 +2,16 @@ package gql
 
 import (
 	"context"
-	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 var availableActions = map[entity.TaskStatus][]entity.TaskAction{
-	entity.TaskStatusUpcoming: {
+	entity.TaskStatusTodo: {
 		entity.TaskActionStart,
 		entity.TaskActionDelete,
 		entity.TaskActionAssignOwner,
@@ -54,8 +55,9 @@ func (t Task) Context(ct context.Context) *string {
 }
 
 func (t Task) Creator(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(t.task.CreatorUserID)
+	user, err := t.deps.userService.FindUserByID(ct, t.task.CreatorUserID)
 	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
 	}
 
@@ -67,8 +69,9 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 		return nil, nil
 	}
 
-	owner, err := t.deps.userDao.FindUserByID(*t.task.OwnerUserID)
+	owner, err := t.deps.userService.FindUserByID(ct, *t.task.OwnerUserID)
 	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -77,8 +80,9 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 }
 
 func (t Task) OwningTeam(ct context.Context) (*Team, error) {
-	team, err := t.deps.teamDao.FindTeamByID(t.task.OwningTeamID)
+	team, err := t.deps.teamService.FindTeamByID(ct, t.task.OwningTeamID)
 	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -106,12 +110,16 @@ func (t Task) UpdatedAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.UpdatedAt)
 }
 
+func (t Task) DeliveredAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(t.task.DeliveredAt)
+}
+
 func (t Task) DueAt(ct context.Context) *graphql.Time {
 	return toGraphQLTimePtr(t.task.DueAt)
 }
 
-func (t Task) Effort(ct context.Context) *int32 {
-	return int32PtrFromIntPtr(t.task.Effort)
+func (t Task) Effort(ct context.Context) *scalar.Duration {
+	return toGraphQLDurationPtr(t.task.Effort)
 }
 
 func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
@@ -121,12 +129,24 @@ func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 	tasks, err := t.deps.taskService.FindAwaitForTasks(ct, t.task.ID)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	return collect.Map(tasks, func(task entity.Task, _ int) Task {
 		return newTask(t.deps, task)
+	}), nil
+}
+
+func (t Task) Links(ct context.Context) ([]TaskLink, error) {
+	links, err := t.deps.taskLinkService.FindLinksByTaskID(ct, t.task.ID)
+	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	return collect.Map(links, func(taskLink entity.TaskLink, _ int) TaskLink {
+		return newTaskLink(t.deps, taskLink)
 	}), nil
 }
 

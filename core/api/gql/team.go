@@ -2,10 +2,10 @@ package gql
 
 import (
 	"context"
-	"log"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -31,51 +31,56 @@ func (t Team) CreatedAt(ct context.Context) graphql.Time {
 }
 
 func (t Team) Creator(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(t.team.CreatorUserID)
+	user, err := t.deps.userService.FindUserByID(ct, t.team.CreatorUserID)
 	if err != nil {
-		return User{}, nil
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return User{}, err
 	}
 
 	return newUser(t.deps, user), nil
 }
 
 func (t Team) Owner(ct context.Context) (User, error) {
-	user, err := t.deps.userDao.FindUserByID(t.team.OwnerUserID)
+	user, err := t.deps.userService.FindUserByID(ct, t.team.OwnerUserID)
 	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, nil
 	}
 
 	return newUser(t.deps, user), nil
 }
 
-func (t Team) Members(ct context.Context) ([]User, error) {
-	teamMemberIDs, err := t.deps.teamMemberDao.FindTeamMemberIDsByTeamID(t.team.ID)
+func (t Team) Members(ct context.Context) ([]TeamMember, error) {
+	teamMembers, err := t.deps.teamService.FindTeamMembers(ct, t.team.ID)
 	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	userEntities, err := t.deps.userDao.FindUsersByIDs(teamMemberIDs)
-	if err != nil {
-		return nil, err
-	}
+	return collect.Map(teamMembers, func(teamMember entity.TeamMember, _ int) TeamMember {
+		return newTeamMember(t.deps, teamMember)
+	}), nil
+}
 
-	return collect.Map(userEntities, func(userEntity entity.User, _ int) User {
-		return newUser(t.deps, userEntity)
+func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
+	taskActivities := t.deps.taskService.FindTaskActivities(ct, t.team.ID)
+	return collect.Map(taskActivities, func(taskActivity entity.TaskActivity, _ int) TaskActivity {
+		return newTaskActivity(t.deps, taskActivity)
 	}), nil
 }
 
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(args.Filter)
+	filter, err := fromGraphQLTaskFilterPtr(ct, t.deps.dataCollector, args.Filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	tasks, err := t.deps.teamService.FindTasksInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
@@ -87,18 +92,19 @@ func (t Team) Tasks(ct context.Context, args struct {
 func (t Team) Invitations(ct context.Context, args struct {
 	Filter *InvitationFilter
 }) ([]Invitation, error) {
-	invitationEntities, err := t.deps.invitationDao.FindInvitationsByTeamID(t.team.ID)
+	filter, err := fromGraphQLInvitationFilterPtr(ct, t.deps.dataCollector, args.Filter)
 	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if args.Filter != nil {
-		invitationEntities = collect.Filter(invitationEntities, func(invitationEntity entity.Invitation) bool {
-			return matchInvitation(*args.Filter, invitationEntity)
-		})
+	invitations, err := t.deps.invitationService.FindInvitationsInTeam(ct, t.team.ID, filter)
+	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
 	}
 
-	return collect.Map(invitationEntities, func(invitationEntity entity.Invitation, _ int) Invitation {
+	return collect.Map(invitations, func(invitationEntity entity.Invitation, _ int) Invitation {
 		return newInvitation(t.deps, invitationEntity)
 	}), nil
 }
@@ -106,21 +112,25 @@ func (t Team) Invitations(ct context.Context, args struct {
 func (t Team) Sprints(ct context.Context, args struct {
 	Filter *SprintFilter
 }) ([]Sprint, error) {
-	filter, err := fromGraphQLSprintFilterPtr(args.Filter)
+	filter, err := fromGraphQLSprintFilterPtr(ct, t.deps.dataCollector, args.Filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	sprints, err := t.deps.teamService.FindSprintsInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		log.Println(err)
+		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	return collect.Map(sprints, func(sprint entity.Sprint, index int) Sprint {
 		return newSprint(t.deps, sprint)
 	}), nil
+}
+
+func (t Team) AppInstallations() ([]AppInstallation, error) {
+	panic("implement me")
 }
 
 func newTeam(deps *Dependencies, team entity.Team) Team {

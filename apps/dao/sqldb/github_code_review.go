@@ -1,22 +1,24 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubCodeReview struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.GithubCodeReview = (*GithubCodeReview)(nil)
 
-func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(githubPullRequestNodeID string, githubReviewerID uint64) (entity.GithubCodeReview, error) {
+func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(ct context.Context, githubPullRequestNodeID string, githubReviewerID uint64) (entity.GithubCodeReview, error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -43,10 +45,14 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(githubPullRequestNode
 			"GithubCodeReview not found: githubReviewerID=%v", githubReviewerID))
 	}
 
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return codeReview, err
 }
 
-func (g GithubCodeReview) FindCodeReviewByInternalTaskID(internalTaskID uint64) (entity.GithubCodeReview, error) {
+func (g GithubCodeReview) FindCodeReviewByInternalTaskID(ct context.Context, internalTaskID uint64) (entity.GithubCodeReview, error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -72,10 +78,14 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(internalTaskID uint64) 
 			"GithubCodeReview not found: internalTaskID=%v", internalTaskID))
 	}
 
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return codeReview, err
 }
 
-func (g GithubCodeReview) CreateCodeReview(codeReview entity.GithubCodeReview) error {
+func (g GithubCodeReview) CreateCodeReview(ct context.Context, codeReview entity.GithubCodeReview) error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_code_review
 	(
@@ -93,14 +103,15 @@ func (g GithubCodeReview) CreateCodeReview(codeReview entity.GithubCodeReview) e
 		codeReview.InternalAddressFeedbackTaskID,
 		codeReview.Round,
 	)
+
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (g GithubCodeReview) UpdateCodeReview(codeReview entity.GithubCodeReview) error {
+func (g GithubCodeReview) UpdateCodeReview(ct context.Context, codeReview entity.GithubCodeReview) error {
 	_, err := g.db.Exec(`
 		UPDATE apps_github_code_review
 		SET
@@ -118,27 +129,40 @@ func (g GithubCodeReview) UpdateCodeReview(codeReview entity.GithubCodeReview) e
 		codeReview.GithubPullRequestNodeID,
 		codeReview.GithubReviewerID,
 	)
+
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(internalTaskID uint64) error {
+func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(ct context.Context, internalTaskID uint64) error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_code_review
 		WHERE internal_task_id = $1;
 		`,
 		internalTaskID)
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(githubReviewerID uint64) error {
+func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(ct context.Context, githubReviewerID uint64) error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_code_review
 		WHERE github_reviewer_id = $1;
 		`,
 		githubReviewerID)
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewGithubCodeReview(sqlDB *sql.DB) GithubCodeReview {
-	return GithubCodeReview{db: sqlDB}
+func NewGithubCodeReview(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubCodeReview {
+	return GithubCodeReview{dataCollector: dataCollector, db: sqlDB}
 }

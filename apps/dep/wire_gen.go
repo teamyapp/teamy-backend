@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	api2 "github.com/teamyapp/teamy-backend/core/api"
@@ -17,11 +18,24 @@ import (
 
 // Injectors from wire.go:
 
-func InitGithubApp(cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, config github.AppConfig, sqlDB *sql.DB) (github.App, error) {
-	githubAppInstallState := sqldb.NewGithubAppInstallState(sqlDB)
-	githubAppInstallation := sqldb.NewGithubAppInstallation(sqlDB)
-	githubPullRequest := sqldb.NewGithubPullRequest(sqlDB)
-	githubCodeReview := sqldb.NewGithubCodeReview(sqlDB)
-	app := github.NewApp(config, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview)
+func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
+	logger := newLogger(serviceName, visibleLevel)
+	dataCollector := obs.NewDataCollector(logger)
+	return dataCollector
+}
+
+func InitGithubApp(dataCollector obs.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, config github.AppConfig, sqlDB *sql.DB) (github.App, error) {
+	githubAppInstallState := sqldb.NewGithubAppInstallState(dataCollector, sqlDB)
+	githubAppInstallation := sqldb.NewGithubAppInstallation(dataCollector, sqlDB)
+	githubPullRequest := sqldb.NewGithubPullRequest(dataCollector, sqlDB)
+	githubCodeReview := sqldb.NewGithubCodeReview(dataCollector, sqlDB)
+	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
+	app := github.NewApp(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction)
 	return app, nil
+}
+
+// wire.go:
+
+func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
+	return obs.NewServiceLogger(serviceName, obs.NewRequestLogger(obs.NewRawLogger(visibleLevel)))
 }

@@ -9,9 +9,10 @@ import (
 	"database/sql"
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	api2 "github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
-	"github.com/teamyapp/teamy-backend/core/collection"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -20,74 +21,149 @@ import (
 
 // Injectors from wire.go:
 
-func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
-	teamMember := sqldb.NewTeamMember(sqlDB)
-	stateSyncer := realtime.NewStateSyncer(teamMember)
+func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
+	logger := newLogger(serviceName, visibleLevel)
+	dataCollector := obs.NewDataCollector(logger)
+	return dataCollector
+}
+
+func InitRealTimeStateSyncer(dataCollector obs.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
+	teamMember := sqldb.NewTeamMember(dataCollector, qlDB)
+	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMember)
 	return stateSyncer
 }
 
-func InitGraphQLAPI(cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (api2.GraphQL, error) {
-	user := sqldb.NewUser(sqlDB)
-	team := sqldb.NewTeam(sqlDB)
-	teamMember := sqldb.NewTeamMember(sqlDB)
-	invitation := sqldb.NewInvitation(sqlDB)
-	message := sqldb.NewMessage(sqlDB)
-	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(sqlDB)
-	userSyncer := collection.NewUserSyncer(realTimeStateSyncer, user, teamMember)
-	teamSyncer := collection.NewTeamSyncer(realTimeStateSyncer, team)
-	teamMemberSyncer := collection.NewTeamMemberSyncer(realTimeStateSyncer, teamMember)
-	invitationSyncer := collection.NewInvitationSyncer(realTimeStateSyncer, invitation)
-	task := sqldb.NewTask(sqlDB)
-	messageSyncer := collection.NewMessageSyncer(realTimeStateSyncer, message, task)
-	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(realTimeStateSyncer, taskAwaitForRelation, task)
-	thread := sqldb.NewThread(sqlDB)
-	taskSyncer := collection.NewTaskSyncer(realTimeStateSyncer, task)
-	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
-	serviceTask := service.NewTask(cloudAPIClientRegistry, task, thread, taskAwaitForRelation, taskSyncer, taskAwaitForRelationSyncer, serviceThread)
-	sprint := sqldb.NewSprint(sqlDB)
-	serviceTeam := service.NewTeam(task, sprint, team)
-	sprintTaskRelation := sqldb.NewSprintTaskRelation(sqlDB)
-	serviceSprint := service.NewSprint(cloudAPIClientRegistry, task, sprint, sprintTaskRelation)
-	userFileUploadSession := sqldb.NewUserFileUploadSession(sqlDB)
-	serviceUser := newUserService(cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, user, userFileUploadSession)
-	dependencies := gql.NewDependencies(cloudAPIClientRegistry, user, team, teamMember, invitation, message, taskAwaitForRelation, userSyncer, teamSyncer, teamMemberSyncer, invitationSyncer, messageSyncer, taskAwaitForRelationSyncer, serviceTask, serviceTeam, serviceSprint, serviceUser)
+func InitGraphQLAPI(dataCollector obs.DataCollector, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (api2.GraphQL, error) {
+	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
+	activity := cache.NewActivity(dataCollector)
+	task := sqldb.NewTask(dataCollector, sqlDB)
+	thread := sqldb.NewThread(dataCollector, sqlDB)
+	sprint := sqldb.NewSprint(dataCollector, sqlDB)
+	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
+	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
+	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, thread)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread)
+	taskLink := sqldb.NewTaskLink(dataCollector, sqlDB)
+	serviceTaskLink := service.NewTaskLink(dataCollector, cloudAPIClientRegistry, authorizer, taskLink)
+	team := sqldb.NewTeam(dataCollector, sqlDB)
+	teamMember := sqldb.NewTeamMember(dataCollector, sqlDB)
+	teamFileUploadSession := sqldb.NewTeamFileUploadSession(dataCollector, sqlDB)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask)
+	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, task, sprint, team, teamMember, teamFileUploadSession, serviceSprint)
+	user := sqldb.NewUser(dataCollector, sqlDB)
+	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
+	serviceUser := newUserService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, realTimeStateSyncer, user, userFileUploadSession, teamMember)
+	invitation := sqldb.NewInvitation(dataCollector, sqlDB)
+	serviceInvitation := service.NewInvitation(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, invitation, teamMember, serviceTeam)
+	message := sqldb.NewMessage(dataCollector, sqlDB)
+	serviceMessage := service.NewMessage(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, message, task)
+	dependencies := gql.NewDependencies(dataCollector, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceMessage)
 	resolver := gql.NewResolver(dependencies)
-	graphQL := api2.NewGraphQL(resolver)
+	graphQL := api2.NewGraphQL(dataCollector, resolver)
 	return graphQL, nil
 }
 
-func InitRealTimeStateSyncAPI(realTimeStateSyncer *realtime.StateSyncer) api2.RealTimeStateSync {
-	realTimeStateSync := api2.NewRealTimeStateSync(realTimeStateSyncer)
+func InitRealTimeStateSyncAPI(dataCollector obs.DataCollector, realTimeStateSyncer *realtime.StateSyncer) api2.RealTimeStateSync {
+	realTimeStateSync := api2.NewRealTimeStateSync(dataCollector, realTimeStateSyncer)
 	return realTimeStateSync
 }
 
-func InitTaskRPCAPI(cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.TaskRPC {
-	task := sqldb.NewTask(sqlDB)
-	thread := sqldb.NewThread(sqlDB)
-	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(sqlDB)
-	taskSyncer := collection.NewTaskSyncer(realTimeStateSyncer, task)
-	taskAwaitForRelationSyncer := collection.NewTaskAwaitForRelationSyncer(realTimeStateSyncer, taskAwaitForRelation, task)
-	serviceThread := service.NewThread(cloudAPIClientRegistry, thread)
-	serviceTask := service.NewTask(cloudAPIClientRegistry, task, thread, taskAwaitForRelation, taskSyncer, taskAwaitForRelationSyncer, serviceThread)
-	taskRPC := api2.NewTaskRPC(serviceTask)
+func InitTaskRPCAPI(dataCollector obs.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.TaskRPC {
+	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
+	activity := cache.NewActivity(dataCollector)
+	task := sqldb.NewTask(dataCollector, sqlDB)
+	thread := sqldb.NewThread(dataCollector, sqlDB)
+	sprint := sqldb.NewSprint(dataCollector, sqlDB)
+	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
+	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
+	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, thread)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread)
+	taskRPC := api2.NewTaskRPC(dataCollector, serviceTask)
 	return taskRPC
+}
+
+func InitSprintRPCAPI(dataCollector obs.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.SprintRPC {
+	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
+	task := sqldb.NewTask(dataCollector, sqlDB)
+	sprint := sqldb.NewSprint(dataCollector, sqlDB)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
+	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
+	teamMember := sqldb.NewTeamMember(dataCollector, sqlDB)
+	activity := cache.NewActivity(dataCollector)
+	thread := sqldb.NewThread(dataCollector, sqlDB)
+	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
+	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, thread)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask)
+	sprintRPC := api2.NewSprintRPC(dataCollector, serviceSprint)
+	return sprintRPC
+}
+
+func InitTaskLinkRPCAPI(dataCollector obs.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, sqlDB *sql.DB) api2.TaskLinkRPC {
+	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
+	taskLink := sqldb.NewTaskLink(dataCollector, sqlDB)
+	serviceTaskLink := service.NewTaskLink(dataCollector, cloudAPIClientRegistry, authorizer, taskLink)
+	taskLinkRPC := api2.NewTaskLinkRPC(dataCollector, serviceTaskLink)
+	return taskLinkRPC
 }
 
 // wire.go:
 
 type CloudWebAPIExternalBaseURL string
 
-var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread, sqldb.NewSprint, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintTaskRelation, sqldb.NewUserFileUploadSession)
+var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread, sqldb.NewSprint, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintTaskRelation, sqldb.NewUserFileUploadSession, sqldb.NewTeamFileUploadSession, sqldb.NewSprintParticipant)
 
-var collectionSyncerSet = wire.NewSet(collection.NewInvitationSyncer, collection.NewMessageSyncer, collection.NewTaskSyncer, collection.NewTaskAwaitForRelationSyncer, collection.NewTeamSyncer, collection.NewTeamMemberSyncer, collection.NewUserSyncer)
-
-var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewTeam, service.NewSprint, newUserService)
+var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewMessage, service.NewAuthorizer)
 
 func newUserService(
+	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *api.ClientRegistry,
+	stateSyncer *realtime.StateSyncer,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
+	teamMemberDao dao.TeamMember,
 ) service.User {
-	return service.NewUser(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
+	return service.NewUser(
+		dataCollector,
+		string(cloudWebAPIExternalBaseURL),
+		cloudClientRegistry,
+		stateSyncer,
+		userDao,
+		userFileUploadSessionDao,
+		teamMemberDao,
+	)
+}
+
+func newTeamService(
+	dataCollector obs.DataCollector,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	cloudClientRegistry *api.ClientRegistry,
+	authorizer service.Authorizer,
+	stateSyncer *realtime.StateSyncer,
+	taskDao dao.Task,
+	sprintDao dao.Sprint,
+	teamDao dao.Team,
+	teamMemberDao dao.TeamMember,
+	teamFileUploadSessionDao dao.TeamFileUploadSession,
+	sprintService service.Sprint,
+) service.Team {
+	return service.NewTeam(
+		dataCollector,
+		string(cloudWebAPIExternalBaseURL),
+		cloudClientRegistry,
+		authorizer,
+		stateSyncer,
+		taskDao,
+		sprintDao,
+		teamDao,
+		teamMemberDao,
+		teamFileUploadSessionDao,
+		sprintService)
+}
+
+func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
+	return obs.NewServiceLogger(serviceName, obs.NewRequestLogger(obs.NewClientLogger(realtime.NewMutationLogger(obs.NewRawLogger(visibleLevel)))))
 }

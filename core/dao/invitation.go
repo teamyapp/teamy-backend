@@ -1,14 +1,16 @@
 package dao
 
 import (
+	"context"
+
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Invitation interface {
-	FindAllInvitations() ([]entity.Invitation, error)
-	FindInvitationByID(invitationID uint64) (entity.Invitation, error)
-	FindInvitationsByTeamID(teamID uint64) ([]entity.Invitation, error)
-	CreateInvitation(invitation entity.Invitation) error
-	UpdateInvitation(invitation entity.Invitation) error
-	DeleteInvitation(invitationID uint64) error
+	FindAllInvitations(ct context.Context) ([]entity.Invitation, error)
+	FindInvitationByID(ct context.Context, invitationID uint64) (entity.Invitation, error)
+	FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, error)
+	CreateInvitation(ct context.Context, invitation entity.Invitation) error
+	UpdateInvitation(ct context.Context, invitation entity.Invitation) error
+	DeleteInvitation(ct context.Context, invitationID uint64) error
 }

@@ -3,10 +3,41 @@ type: kubernetes
 name: feature
 
 steps:
-  - name: Run unit tests
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: retrieve
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
+  - name: run unit tests
     image: golang:1.18
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
     commands:
       - go test ./...
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: persist
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -15,6 +46,12 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: go-mod-cache
+    temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - master
@@ -27,12 +64,27 @@ type: kubernetes
 name: testing
 
 steps:
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: retrieve
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: build app
     image: golang:1.18-alpine
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
     commands:
-      - apk add --no-cache git
-      - go build -o bin/main main.go
-      - sh ./scripts/prepare_env.sh
+      - sh ./scripts/build.sh
   - name: build & publish Docker image
     image: plugins/docker
     settings:
@@ -42,17 +94,29 @@ steps:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend-testing
       registry: registry.digitalocean.com
-      target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-testing
   - name: notify image update
     image: plugins/webhook
     settings:
-      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      urls: http://keel.deploy.svc.cluster.local:9300/v1/webhooks/native
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-testing",
           "tag": "latest"
         }
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: persist
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -61,6 +125,12 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: go-mod-cache
+    temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - testing
@@ -72,12 +142,27 @@ type: kubernetes
 name: staging
 
 steps:
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: retrieve
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: build app
     image: golang:1.18-alpine
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
     commands:
-      - apk add --no-cache git
-      - go build -o bin/main main.go
-      - sh ./scripts/prepare_env.sh
+      - sh ./scripts/build.sh
   - name: build & publish Docker image
     image: plugins/docker
     environment:
@@ -88,17 +173,29 @@ steps:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend-staging
       registry: registry.digitalocean.com
-      target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend-staging
   - name: notify image update
     image: plugins/webhook
     settings:
-      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      urls: http://keel.deploy.svc.cluster.local:9300/v1/webhooks/native
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend-staging",
           "tag": "latest"
         }
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: persist
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -107,6 +204,12 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: go-mod-cache
+    temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - master
@@ -119,12 +222,27 @@ type: kubernetes
 name: production
 
 steps:
+  - name: retrieve cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: retrieve
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: build app
     image: golang:1.18-alpine
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
     commands:
-      - apk add --no-cache git
-      - go build -o bin/main main.go
-      - sh ./scripts/prepare_env.sh
+      - sh ./scripts/build.sh
   - name: build & publish Docker image
     image: plugins/docker
     settings:
@@ -134,17 +252,29 @@ steps:
         from_secret: DOCKER_PASSWORD
       repo: registry.digitalocean.com/teamyapp/teamy-backend
       registry: registry.digitalocean.com
-      target: production
-      cache_from: registry.digitalocean.com/teamyapp/teamy-backend
   - name: notify image update
     image: plugins/webhook
     settings:
-      urls: http://keel.keel.svc.cluster.local:9300/v1/webhooks/native
+      urls: http://keel.deploy.svc.cluster.local:9300/v1/webhooks/native
       template: |
         {
           "name": "registry.digitalocean.com/teamyapp/teamy-backend",
           "tag": "latest"
         }
+  - name: persist cache
+    image: ghcr.io/teamyapp/drone-cache:0.1.9
+    volumes:
+      - name: go-mod-cache
+        path: /go/pkg/mod
+      - name: cache
+        path: /var/lib/cache
+    settings:
+      mode: persist
+      version_file_path: go.sum
+      cacheable_absolute_paths:
+        - /go/pkg/mod
+      storage_type: volume
+      volume_cache_root_dir: /var/lib/cache
   - name: slack
     image: plugins/slack
     settings:
@@ -153,6 +283,12 @@ steps:
       channel: code
     when:
       status: [ success, failure ]
+volumes:
+  - name: go-mod-cache
+    temp: {}
+  - name: cache
+    host:
+      path: /var/lib/cache
 trigger:
   branch:
     - production

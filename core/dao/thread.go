@@ -1,6 +1,10 @@
 package dao
 
+import (
+	"context"
+)
+
 type Thread interface {
-	CreateThread(threadID uint64) error
-	DeleteThread(threadID uint64) error
+	CreateThread(ct context.Context, threadID uint64) error
+	DeleteThread(ct context.Context, threadID uint64) error
 }

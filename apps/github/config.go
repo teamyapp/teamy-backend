@@ -1,10 +1,10 @@
 package github
 
 import (
-	"log"
 	"time"
 
 	"github.com/teamyapp/cloud/app/config"
+	"github.com/teamyapp/cloud/libs/obs"
 )
 
 type AppConfig struct {
@@ -13,11 +13,11 @@ type AppConfig struct {
 	WebhookSecret             string        `envconfig:"APPS_GITHUB_WEBHOOK_SECRET"`
 }
 
-func AppConfigFromEnv() (AppConfig, error) {
+func AppConfigFromEnv(dataCollector obs.DataCollector) (AppConfig, error) {
 	cfg := AppConfig{}
-	err := config.FromEnv(&cfg)
+	err := config.FromEnv(dataCollector, &cfg)
 	if err != nil {
-		log.Println(err)
+		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
 		return AppConfig{}, err
 	}
 

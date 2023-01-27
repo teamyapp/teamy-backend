@@ -7,9 +7,10 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
-	"github.com/teamyapp/teamy-backend/core/collection"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -22,6 +23,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
 	wire.Bind(new(dao.Task), new(sqldb.Task)),
+	wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)),
 	wire.Bind(new(dao.Team), new(sqldb.Team)),
 	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
 	wire.Bind(new(dao.User), new(sqldb.User)),
@@ -30,9 +32,12 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)),
 	wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)),
 	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
+	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
+	wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
+	sqldb.NewTaskLink,
 	sqldb.NewTeam,
 	sqldb.NewTeamMember,
 	sqldb.NewUser,
@@ -41,27 +46,31 @@ var daoSet = wire.NewSet(
 	sqldb.NewTaskAwaitForRelation,
 	sqldb.NewSprintTaskRelation,
 	sqldb.NewUserFileUploadSession,
-)
-
-var collectionSyncerSet = wire.NewSet(
-	collection.NewInvitationSyncer,
-	collection.NewMessageSyncer,
-	collection.NewTaskSyncer,
-	collection.NewTaskAwaitForRelationSyncer,
-	collection.NewTeamSyncer,
-	collection.NewTeamMemberSyncer,
-	collection.NewUserSyncer,
+	sqldb.NewTeamFileUploadSession,
+	sqldb.NewSprintParticipant,
 )
 
 var serviceSet = wire.NewSet(
 	service.NewThread,
 	service.NewTask,
-	service.NewTeam,
+	service.NewTaskLink,
+	service.NewInvitation,
+	newTeamService,
 	service.NewSprint,
 	newUserService,
+	service.NewMessage,
+	service.NewAuthorizer,
 )
 
-func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
+func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
+	wire.Build(
+		newLogger,
+		obs.NewDataCollector,
+	)
+	return obs.DataCollector{}
+}
+
+func InitRealTimeStateSyncer(dataCollector obs.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
@@ -70,6 +79,7 @@ func InitRealTimeStateSyncer(sqlDB *sql.DB) *realtime.StateSyncer {
 }
 
 func InitGraphQLAPI(
+	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
@@ -77,8 +87,8 @@ func InitGraphQLAPI(
 ) (api.GraphQL, error) {
 	wire.Build(
 		daoSet,
-		collectionSyncerSet,
 		serviceSet,
+		cache.NewActivity,
 		gql.NewDependencies,
 		gql.NewResolver,
 		api.NewGraphQL,
@@ -87,6 +97,7 @@ func InitGraphQLAPI(
 }
 
 func InitRealTimeStateSyncAPI(
+	dataCollector obs.DataCollector,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) api.RealTimeStateSync {
 	wire.Build(
@@ -96,24 +107,99 @@ func InitRealTimeStateSyncAPI(
 }
 
 func InitTaskRPCAPI(
+	dataCollector obs.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.TaskRPC {
 	wire.Build(
 		daoSet,
-		collectionSyncerSet,
+		cache.NewActivity,
 		serviceSet,
 		api.NewTaskRPC,
 	)
 	return api.TaskRPC{}
 }
 
+func InitSprintRPCAPI(
+	dataCollector obs.DataCollector,
+	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	sqlDB *sql.DB,
+) api.SprintRPC {
+	wire.Build(
+		daoSet,
+		serviceSet,
+		cache.NewActivity,
+		api.NewSprintRPC,
+	)
+	return api.SprintRPC{}
+}
+
+func InitTaskLinkRPCAPI(
+	dataCollector obs.DataCollector,
+	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	sqlDB *sql.DB,
+) api.TaskLinkRPC {
+	wire.Build(
+		daoSet,
+		serviceSet,
+		api.NewTaskLinkRPC,
+	)
+	return api.TaskLinkRPC{}
+}
+
 func newUserService(
+	dataCollector obs.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	stateSyncer *realtime.StateSyncer,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
+	teamMemberDao dao.TeamMember,
 ) service.User {
-	return service.NewUser(string(cloudWebAPIExternalBaseURL), cloudClientRegistry, userDao, userFileUploadSessionDao)
+	return service.NewUser(
+		dataCollector,
+		string(cloudWebAPIExternalBaseURL),
+		cloudClientRegistry,
+		stateSyncer,
+		userDao,
+		userFileUploadSessionDao,
+		teamMemberDao,
+	)
+}
+
+func newTeamService(
+	dataCollector obs.DataCollector,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	cloudClientRegistry *cloudAPI.ClientRegistry,
+	authorizer service.Authorizer,
+	stateSyncer *realtime.StateSyncer,
+	taskDao dao.Task,
+	sprintDao dao.Sprint,
+	teamDao dao.Team,
+	teamMemberDao dao.TeamMember,
+	teamFileUploadSessionDao dao.TeamFileUploadSession,
+	sprintService service.Sprint,
+) service.Team {
+	return service.NewTeam(
+		dataCollector,
+		string(cloudWebAPIExternalBaseURL),
+		cloudClientRegistry,
+		authorizer,
+		stateSyncer,
+		taskDao,
+		sprintDao,
+		teamDao,
+		teamMemberDao,
+		teamFileUploadSessionDao,
+		sprintService)
+}
+
+func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
+	return obs.NewServiceLogger(serviceName,
+		obs.NewRequestLogger(
+			obs.NewClientLogger(
+				realtime.NewMutationLogger(
+					obs.NewRawLogger(visibleLevel)))))
 }

@@ -1,22 +1,25 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubAppInstallation struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.GithubAppInstallation = (*GithubAppInstallation)(nil)
 
 func (g GithubAppInstallation) CreateGithubAppInstallation(
+	ct context.Context,
 	installation entity.GithubAppInstallation,
 ) error {
 	_, err := g.db.Exec(`
@@ -32,14 +35,15 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 		installation.TeamID,
 		installation.CreatedAt,
 	)
+
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (g GithubAppInstallation) FindInstallationByID(installationID uint64) (entity.GithubAppInstallation, error) {
+func (g GithubAppInstallation) FindInstallationByID(ct context.Context, installationID uint64) (entity.GithubAppInstallation, error) {
 	installation := entity.GithubAppInstallation{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -61,11 +65,16 @@ func (g GithubAppInstallation) FindInstallationByID(installationID uint64) (enti
 			"GithubAppInstallation not found: id=%v", installationID))
 	}
 
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return installation, err
 }
 
-func NewGithubAppInstallation(sqlDB *sql.DB) GithubAppInstallation {
+func NewGithubAppInstallation(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubAppInstallation {
 	return GithubAppInstallation{
-		db: sqlDB,
+		dataCollector: dataCollector,
+		db:            sqlDB,
 	}
 }

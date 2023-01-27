@@ -16,20 +16,20 @@ func (f FileMetadata) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(f.fileMetadata.ID)
 }
 
-func (f FileMetadata) Name(ct context.Context) (string, error) {
-	return f.fileMetadata.Name, nil
+func (f FileMetadata) Name(ct context.Context) string {
+	return f.fileMetadata.Name
 }
 
 func (f FileMetadata) OwningTeam(ct context.Context) (Team, error) {
 	panic("implement me")
 }
 
-func (f FileMetadata) CreatedAt(ct context.Context) (graphql.Time, error) {
-	return graphql.Time{Time: f.fileMetadata.CreatedAt}, nil
+func (f FileMetadata) CreatedAt(ct context.Context) graphql.Time {
+	return graphql.Time{Time: f.fileMetadata.CreatedAt}
 }
 
-func (f FileMetadata) LastModifiedAt(ct context.Context) (*graphql.Time, error) {
-	return toGraphQLTimePtr(f.fileMetadata.LastModifiedAt), nil
+func (f FileMetadata) LastModifiedAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(f.fileMetadata.LastModifiedAt)
 }
 
 func newFileMetadata(deps *Dependencies, fileMetadata entity.FileMetadata) FileMetadata {

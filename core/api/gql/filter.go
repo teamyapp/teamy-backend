@@ -29,36 +29,6 @@ type SprintFilter struct {
 	CountLimit      *int32
 }
 
-func matchTeam(filter TeamFilter, team entity.Team) bool {
-	if filter.TeamID != nil {
-		teamID, err := fromGraphQLIDPtr(filter.TeamID)
-		if err != nil {
-			return false
-		}
-
-		if *teamID != team.ID {
-			return false
-		}
-	}
-
-	return true
-}
-
-func matchInvitation(filter InvitationFilter, invitation entity.Invitation) bool {
-	if filter.InvitationID != nil {
-		invitationID, err := fromGraphQLIDPtr(filter.InvitationID)
-		if err != nil {
-			return false
-		}
-
-		if *invitationID != invitation.ID {
-			return false
-		}
-	}
-
-	if filter.Code != nil && *filter.Code != invitation.Code {
-		return false
-	}
-
-	return true
+type AppFilter struct {
+	IsPublic *bool
 }

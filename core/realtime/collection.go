@@ -11,4 +11,8 @@ const (
 	ThreadCollectionType               CollectionType = "Thread"
 	TeamMemberCollectionType           CollectionType = "TeamMember"
 	TaskAwaitForRelationCollectionType CollectionType = "TaskAwaitForRelation"
+	SprintTaskRelationCollectionType   CollectionType = "SprintTaskRelation"
+	ClientCollectionType               CollectionType = "Client"
+	TaskActivityCollectionType         CollectionType = "TaskActivity"
+	SprintParticipantCollectionType    CollectionType = "SprintParticipant"
 )

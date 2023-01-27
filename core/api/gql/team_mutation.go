@@ -2,13 +2,10 @@ package gql
 
 import (
 	"context"
-	"log"
-	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/app/api/proto"
-	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 func (m Mutation) CreateTeam(ct context.Context, args struct {
@@ -16,35 +13,14 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		Name string
 	}
 }) (Team, error) {
-	userID, err := ctx.UserIDFromContext(ct)
+	createTeamInput := service.CreateTeamInput{
+		Name: args.Team.Name,
+	}
+	team, err := m.deps.teamService.CreateTeam(ct, createTeamInput)
 	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
-
-	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
-	genTeamIDRes, err := m.deps.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
-	if err != nil {
-		log.Println(err)
-		return Team{}, err
-	}
-
-	team := entity.Team{
-		ID:            genTeamIDRes.UniqueNumber,
-		Name:          args.Team.Name,
-		CreatorUserID: userID,
-		OwnerUserID:   userID,
-		CreatedAt:     time.Now(),
-	}
-	err = m.deps.teamSyncer.CreateAndSyncTeam(team)
-	if err != nil {
-		return Team{}, err
-	}
-
-	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(team.ID, userID)
-	if err != nil {
-		return Team{}, err
-	}
-
 	return newTeam(m.deps, team), nil
 }
 
@@ -57,99 +33,68 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 }) (Team, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
 
-	team, err := m.deps.teamDao.FindTeamByID(teamID)
-	if err != nil {
-		return Team{}, err
-	}
-
-	team.Name = args.Input.Name
 	ownerUserID, err := fromGraphQLID(args.Input.OwnerUserID)
 	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
 
-	team.OwnerUserID = ownerUserID
-	updatedAt := time.Now()
-	team.UpdatedAt = &updatedAt
-	err = m.deps.teamSyncer.UpdateAndSyncTeam(team)
+	updateTeamInput := service.UpdateTeamInput{
+		Name:        args.Input.Name,
+		OwnerUserID: ownerUserID,
+	}
+	team, err := m.deps.teamService.UpdateTeam(ct, teamID, updateTeamInput)
 	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return Team{}, err
 	}
 
-	return newTeam(m.deps, team), err
+	return newTeam(m.deps, team), nil
 }
 
 func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 	TeamID graphql.ID
 }) (graphql.ID, error) {
-	// TODO: implement me
-	panic("implement me")
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	uploadSessionID, err := m.deps.teamService.CreateTeamIconUploadSession(ct, teamID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return "", err
+	}
+
+	return toGraphQLID(uploadSessionID), nil
 }
 
 func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 	TeamID              graphql.ID
 	FileUploadSessionID graphql.ID
-}) (graphql.ID, error) {
-	// TODO: implement me
-	panic("implement me")
-}
+}) (Team, error) {
+	fileUploadSessionID, err := fromGraphQLID(args.FileUploadSessionID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Team{}, err
+	}
 
-func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
-	TeamID       graphql.ID
-	MemberUserID graphql.ID
-}) (User, error) {
 	teamID, err := fromGraphQLID(args.TeamID)
 	if err != nil {
-		log.Println(err)
-		return User{}, err
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Team{}, err
 	}
 
-	memberUserID, err := fromGraphQLID(args.MemberUserID)
+	team, err := m.deps.teamService.FinishTeamIconUploadSession(ct, teamID, fileUploadSessionID)
 	if err != nil {
-		log.Println(err)
-		return User{}, err
+		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return Team{}, err
 	}
 
-	err = m.deps.teamMemberSyncer.CreateAndSyncTeamMember(teamID, memberUserID)
-	if err != nil {
-		return User{}, err
-	}
-
-	user, err := m.deps.userDao.FindUserByID(memberUserID)
-	if err != nil {
-		return User{}, err
-	}
-
-	return newUser(m.deps, user), nil
-}
-
-func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
-	TeamID       graphql.ID
-	MemberUserID graphql.ID
-}) (User, error) {
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		return User{}, err
-	}
-
-	memberUserID, err := fromGraphQLID(args.MemberUserID)
-	if err != nil {
-		return User{}, err
-	}
-
-	// TODO: ensure user is inside the team
-	err = m.deps.teamMemberSyncer.DeleteAndSyncTeamMember(teamID, memberUserID)
-	if err != nil {
-		return User{}, err
-	}
-
-	user, err := m.deps.userDao.FindUserByID(memberUserID)
-	if err != nil {
-		return User{}, err
-	}
-
-	return newUser(m.deps, user), nil
+	return newTeam(m.deps, team), nil
 }

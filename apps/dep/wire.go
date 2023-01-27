@@ -7,13 +7,23 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	"github.com/teamyapp/teamy-backend/core/api"
 )
 
+func InitDataCollector(serviceName string, visibleLevel obs.LogLevel) obs.DataCollector {
+	wire.Build(
+		newLogger,
+		obs.NewDataCollector,
+	)
+	return obs.DataCollector{}
+}
+
 func InitGithubApp(
+	dataCollector obs.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	teamyAPIClientRegistry *api.ClientRegistry,
 	config github.AppConfig,
@@ -24,12 +34,20 @@ func InitGithubApp(
 		wire.Bind(new(dao.GithubAppInstallation), new(sqldb.GithubAppInstallation)),
 		wire.Bind(new(dao.GithubPullRequest), new(sqldb.GithubPullRequest)),
 		wire.Bind(new(dao.GithubCodeReview), new(sqldb.GithubCodeReview)),
+		wire.Bind(new(dao.GithubRequiredUserAction), new(sqldb.GithubRequiredUserAction)),
 
 		sqldb.NewGithubAppInstallState,
 		sqldb.NewGithubAppInstallation,
 		sqldb.NewGithubPullRequest,
 		sqldb.NewGithubCodeReview,
+		sqldb.NewGithubRequiredUserAction,
 		github.NewApp,
 	)
 	return github.App{}, nil
+}
+
+func newLogger(serviceName string, visibleLevel obs.LogLevel) obs.Logger {
+	return obs.NewServiceLogger(serviceName,
+		obs.NewRequestLogger(
+			obs.NewRawLogger(visibleLevel)))
 }

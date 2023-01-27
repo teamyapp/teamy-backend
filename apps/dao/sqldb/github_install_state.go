@@ -1,22 +1,24 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubAppInstallState struct {
-	db *sql.DB
+	dataCollector obs.DataCollector
+	db            *sql.DB
 }
 
 var _ dao.GithubAppInstallState = (*GithubAppInstallState)(nil)
 
-func (g GithubAppInstallState) FindStateByID(stateID uint64) (entity.GithubAppInstallState, error) {
+func (g GithubAppInstallState) FindStateByID(ct context.Context, stateID uint64) (entity.GithubAppInstallState, error) {
 	state := entity.GithubAppInstallState{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -40,10 +42,14 @@ func (g GithubAppInstallState) FindStateByID(stateID uint64) (entity.GithubAppIn
 			"GithubAppInstallState not found: id=%v", stateID))
 	}
 
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return state, err
 }
 
-func (g GithubAppInstallState) CreateState(state entity.GithubAppInstallState) error {
+func (g GithubAppInstallState) CreateState(ct context.Context, state entity.GithubAppInstallState) error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_app_install_state
 	(
@@ -59,24 +65,31 @@ func (g GithubAppInstallState) CreateState(state entity.GithubAppInstallState) e
 		state.RedirectURL,
 		state.CreatedAt,
 	)
+
 	if err != nil {
-		log.Println(err)
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 	}
 
 	return err
 }
 
-func (g GithubAppInstallState) DeleteState(stateID uint64) error {
+func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_app_install_state
 		WHERE id = $1;
 		`,
 		stateID)
+
+	if err != nil {
+		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+	}
+
 	return err
 }
 
-func NewGithubAppInstallState(sqlDB *sql.DB) GithubAppInstallState {
+func NewGithubAppInstallState(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubAppInstallState {
 	return GithubAppInstallState{
-		db: sqlDB,
+		dataCollector: dataCollector,
+		db:            sqlDB,
 	}
 }

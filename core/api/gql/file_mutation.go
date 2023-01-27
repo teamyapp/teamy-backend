@@ -14,7 +14,7 @@ func (m Mutation) CreateFileUploadSession(ct context.Context, args struct {
 }
 
 func (m Mutation) FinishFileUploadSession(ct context.Context, args struct {
-	TeamID graphql.ID
+	FileUploadSessionId graphql.ID
 }) (FileMetadata, error) {
 	// TODO: implement me
 	panic("implement me")

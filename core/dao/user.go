@@ -1,12 +1,14 @@
 package dao
 
 import (
+	"context"
+
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type User interface {
-	FindUserByID(userID uint64) (entity.User, error)
-	FindUsersByIDs(userIDs []uint64) ([]entity.User, error)
-	CreateUser(user entity.User) error
-	UpdateUser(user entity.User) error
+	FindUserByID(ct context.Context, userID uint64) (entity.User, error)
+	FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.User, error)
+	CreateUser(ct context.Context, user entity.User) error
+	UpdateUser(ct context.Context, user entity.User) error
 }
