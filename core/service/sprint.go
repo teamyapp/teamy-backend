@@ -103,7 +103,6 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 		return true
 	})
 	if len(sprints) < 1 {
-		err = ErrNotFound("team has no active sprint")
 		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
 			obs.CauseProp: err,
 			obs.MessageProp: obs.Props{

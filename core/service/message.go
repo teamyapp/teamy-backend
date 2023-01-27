@@ -117,7 +117,6 @@ func (m Message) DeleteMessage(ct context.Context, messageID uint64) (entity.Mes
 		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Message{}, err
 	}
-	// TODO move this to message service
 	realTimeTransaction := realtime.NewTransaction(m.dataCollector, m.stateSyncer)
 	deleteMessageMutation := mutation.NewDeleteMessageMutation(
 		m.dataCollector,
