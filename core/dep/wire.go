@@ -58,7 +58,6 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
-	service.NewMessage,
 	service.NewAuthorizer,
 )
 

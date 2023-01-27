@@ -39,7 +39,7 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 		return nil, err
 	}
 
-	tasks, err := s.deps.sprintService.FindTasksInSprint(ct, s.sprint.ID, filter)
+	tasks, err := s.deps.taskService.FindTasksInSprint(ct, s.sprint.ID, filter)
 	if err != nil {
 		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err

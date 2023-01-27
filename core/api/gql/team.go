@@ -78,7 +78,7 @@ func (t Team) Tasks(ct context.Context, args struct {
 		return nil, err
 	}
 
-	tasks, err := t.deps.teamService.FindTasksInTeam(ct, t.team.ID, filter)
+	tasks, err := t.deps.taskService.FindTasksInTeam(ct, t.team.ID, filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
@@ -118,7 +118,7 @@ func (t Team) Sprints(ct context.Context, args struct {
 		return nil, err
 	}
 
-	sprints, err := t.deps.teamService.FindSprintsInTeam(ct, t.team.ID, filter)
+	sprints, err := t.deps.sprintService.FindSprintsInTeam(ct, t.team.ID, filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err

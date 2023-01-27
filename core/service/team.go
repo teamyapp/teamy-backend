@@ -66,7 +66,7 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 	return teams, nil
 }
 
-func (t Team) FindUserTeams(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, error) {
+func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, error) {
 	ids, err := t.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
@@ -88,34 +88,6 @@ func (t Team) FindUserTeams(ct context.Context, userID uint64, filter *TeamFilte
 	}
 
 	return teams, nil
-}
-
-func (t Team) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, error) {
-	tasks, err := t.taskDao.FindTasksByTeamID(ct, teamID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
-	}
-
-	if filter != nil {
-		tasks = filterTasks(tasks, *filter)
-	}
-
-	return tasks, nil
-}
-
-func (t Team) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, error) {
-	sprints, err := t.sprintDao.FindSprintsByTeamID(ct, teamID)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
-	}
-
-	if filter != nil {
-		sprints = filterSprints(sprints, *filter)
-	}
-
-	return sprints, nil
 }
 
 func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team, error) {

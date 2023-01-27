@@ -47,7 +47,7 @@ func (u User) Teams(ct context.Context, args struct {
 		return nil, err
 	}
 
-	teams, err := u.deps.teamService.FindUserTeams(ct, u.user.ID, filter)
+	teams, err := u.deps.teamService.FindTeamsForUser(ct, u.user.ID, filter)
 	if err != nil {
 		u.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
