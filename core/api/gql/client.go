@@ -21,7 +21,6 @@ func (c Client) User(ct context.Context) (User, error) {
 	user, err := c.deps.userService.FindUserByID(ct, c.client.UserID)
 	if err != nil {
 		c.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-
 		return User{}, err
 	}
 
