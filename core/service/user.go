@@ -12,19 +12,103 @@ import (
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/mutation"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+type CreateUserInput struct {
+	LastName   string
+	FirstName  string
+	ProfileURL *string
+}
+
+type UpdateUserInput struct {
+	LastName  string
+	FirstName string
+}
+
 type User struct {
 	dataCollector              obs.DataCollector
+	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
+	stateSyncer                *realtime.StateSyncer
 	userDao                    dao.User
 	userFileUploadSessionDao   dao.UserFileUploadSession
-	cloudWebAPIExternalBaseURL string
+	teamMemberDao              dao.TeamMember
+}
+
+func (u User) Me(ct context.Context) (entity.User, error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.User{}, err
+	}
+
+	return u.userDao.FindUserByID(ct, userID)
 }
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
 	return u.userDao.FindUserByID(ct, userID)
+}
+
+func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		err := errors.New("user id not found")
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.User{}, err
+	}
+
+	user := entity.User{
+		ID:         userID,
+		CreatedAt:  time.Now(),
+		FirstName:  input.FirstName,
+		LastName:   input.LastName,
+		ProfileURL: input.ProfileURL,
+	}
+
+	err := u.userDao.CreateUser(ct, user)
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.User{}, err
+	}
+
+	return user, nil
+}
+
+func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, error) {
+	user, err := u.userDao.FindUserByID(ct, userID)
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.User{}, err
+	}
+
+	user.FirstName = input.FirstName
+	user.LastName = input.LastName
+	updatedAt := time.Now()
+	user.UpdatedAt = &updatedAt
+	realTimeTransaction := realtime.NewTransaction(u.dataCollector, u.stateSyncer)
+	userMutation := mutation.NewUpdateUserMutation(
+		u.dataCollector,
+		u.stateSyncer,
+		u.teamMemberDao,
+		u.userDao,
+		user)
+	err = realTimeTransaction.ApplyMutation(ct, userMutation)
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.User{}, err
+	}
+
+	err = realTimeTransaction.Commit(ct)
+	if err != nil {
+		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.User{}, err
+	}
+
+	return user, nil
 }
 
 func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error) {
@@ -125,16 +209,20 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 
 func NewUser(
 	dataCollector obs.DataCollector,
+	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	stateSyncer *realtime.StateSyncer,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
-	cloudWebAPIExternalBaseURL string,
+	teamMemberDao dao.TeamMember,
 ) User {
 	return User{
 		dataCollector:              dataCollector,
+		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
+		stateSyncer:                stateSyncer,
 		userDao:                    userDao,
 		userFileUploadSessionDao:   userFileUploadSessionDao,
-		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
+		teamMemberDao:              teamMemberDao,
 	}
 }

@@ -28,6 +28,11 @@ type TeamFilter struct {
 	TeamID *uint64
 }
 
+type InvitationFilter struct {
+	InvitationID *uint64
+	Code         *string
+}
+
 func filterTasks(tasks []entity.Task, filter TaskFilter) []entity.Task {
 	return collect.Filter(tasks, func(task entity.Task) bool {
 		if filter.TaskID != nil && *filter.TaskID != task.ID {
@@ -86,6 +91,20 @@ func filterSprints(sprints []entity.Sprint, filter SprintFilter) []entity.Sprint
 func filterTeams(teams []entity.Team, filter TeamFilter) []entity.Team {
 	return collect.Filter(teams, func(team entity.Team) bool {
 		if filter.TeamID != nil && *filter.TeamID != team.ID {
+			return false
+		}
+
+		return true
+	})
+}
+
+func filterInvitations(invitations []entity.Invitation, filter InvitationFilter) []entity.Invitation {
+	return collect.Filter(invitations, func(invitation entity.Invitation) bool {
+		if filter.InvitationID != nil && *filter.InvitationID != invitation.ID {
+			return false
+		}
+
+		if filter.Code != nil && *filter.Code != invitation.Code {
 			return false
 		}
 

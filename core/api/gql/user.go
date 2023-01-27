@@ -41,29 +41,19 @@ func (u User) UpdatedAt(ct context.Context) *graphql.Time {
 func (u User) Teams(ct context.Context, args struct {
 	Filter *TeamFilter
 }) ([]Team, error) {
-	ids, err := u.deps.teamMemberDao.FindTeamIDsByUserID(ct, u.user.ID)
+	filter, err := fromGraphQLTeamFilterPtr(ct, u.deps.dataCollector, args.Filter)
 	if err != nil {
 		u.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if len(ids) < 1 {
-		return []Team{}, nil
-	}
-
-	teamEntities, err := u.deps.teamDao.FindTeamsByIDs(ct, ids)
+	teams, err := u.deps.teamService.FindUserTeams(ct, u.user.ID, filter)
 	if err != nil {
 		u.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if args.Filter != nil {
-		teamEntities = collect.Filter(teamEntities, func(team entity.Team) bool {
-			return matchTeam(ct, u.deps.dataCollector, *args.Filter, team)
-		})
-	}
-
-	return collect.Map(teamEntities, func(team entity.Team, _ int) Team {
+	return collect.Map(teams, func(team entity.Team, _ int) Team {
 		return newTeam(u.deps, team)
 	}), nil
 }

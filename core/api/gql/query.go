@@ -2,10 +2,8 @@ package gql
 
 import (
 	"context"
-	"errors"
 
 	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/obs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -15,14 +13,7 @@ type Query struct {
 }
 
 func (q Query) Me(ct context.Context) (User, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		err := errors.New("user id not found")
-		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
-	}
-
-	user, err := q.deps.userDao.FindUserByID(ct, userID)
+	user, err := q.deps.userService.Me(ct)
 	if err != nil {
 		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return User{}, err
@@ -54,16 +45,16 @@ func (q Query) Tasks(ct context.Context, args struct {
 func (q Query) Teams(ct context.Context, args struct {
 	Filter *TeamFilter
 }) ([]Team, error) {
-	teams, err := q.deps.teamDao.FindAllTeams(ct)
+	filter, err := fromGraphQLTeamFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
 		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if args.Filter != nil {
-		teams = collect.Filter(teams, func(team entity.Team) bool {
-			return matchTeam(ct, q.deps.dataCollector, *args.Filter, team)
-		})
+	teams, err := q.deps.teamService.FindTeams(ct, filter)
+	if err != nil {
+		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
 	}
 
 	return collect.Map(teams, func(team entity.Team, _ int) Team {
@@ -74,16 +65,16 @@ func (q Query) Teams(ct context.Context, args struct {
 func (q Query) Invitations(ct context.Context, args struct {
 	Filter *InvitationFilter
 }) ([]Invitation, error) {
-	invitations, err := q.deps.invitationDao.FindAllInvitations(ct)
+	filter, err := fromGraphQLInvitationFilterPtr(ct, q.deps.dataCollector, args.Filter)
 	if err != nil {
 		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	if args.Filter != nil {
-		invitations = collect.Filter(invitations, func(invitation entity.Invitation) bool {
-			return matchInvitation(ct, q.deps.dataCollector, *args.Filter, invitation)
-		})
+	invitations, err := q.deps.invitationService.FindInvitations(ct, filter)
+	if err != nil {
+		q.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
 	}
 
 	return collect.Map(invitations, func(invitation entity.Invitation, _ int) Invitation {

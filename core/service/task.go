@@ -104,6 +104,16 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	return tasks, nil
 }
 
+func (t Task) FindTaskActivities(ct context.Context, teamID uint64) []entity.TaskActivity {
+	var taskActivities []entity.TaskActivity
+	taskActivityMap := t.activityCache.FindAllTaskActivitiesByTeamID(teamID)
+	for _, taskActivity := range taskActivityMap {
+		taskActivities = append(taskActivities, *taskActivity)
+	}
+
+	return taskActivities
+}
+
 func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTaskInput) (entity.Task, error) {
 	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}

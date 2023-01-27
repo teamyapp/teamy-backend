@@ -66,6 +66,30 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 	return teams, nil
 }
 
+func (t Team) FindUserTeams(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, error) {
+	ids, err := t.teamMemberDao.FindTeamIDsByUserID(ct, userID)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	if len(ids) < 1 {
+		return []entity.Team{}, nil
+	}
+
+	teams, err := t.teamDao.FindTeamsByIDs(ct, ids)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	if filter != nil {
+		teams = filterTeams(teams, *filter)
+	}
+
+	return teams, nil
+}
+
 func (t Team) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, error) {
 	tasks, err := t.taskDao.FindTasksByTeamID(ct, teamID)
 	if err != nil {
@@ -342,6 +366,10 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	team.IconURL = &iconUrl
 	team.UpdatedAt = &now
 	return team, t.teamDao.UpdateTeam(ct, team)
+}
+
+func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamMember, error) {
+	return t.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 }
 
 func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, error) {

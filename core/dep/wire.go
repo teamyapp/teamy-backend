@@ -58,6 +58,7 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
+	service.NewMessage,
 	service.NewAuthorizer,
 )
 
@@ -150,17 +151,21 @@ func InitTaskLinkRPCAPI(
 
 func newUserService(
 	dataCollector obs.DataCollector,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	stateSyncer *realtime.StateSyncer,
 	userDao dao.User,
 	userFileUploadSessionDao dao.UserFileUploadSession,
-	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	teamMemberDao dao.TeamMember,
 ) service.User {
 	return service.NewUser(
 		dataCollector,
+		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
+		stateSyncer,
 		userDao,
 		userFileUploadSessionDao,
-		string(cloudWebAPIExternalBaseURL),
+		teamMemberDao,
 	)
 }
 
