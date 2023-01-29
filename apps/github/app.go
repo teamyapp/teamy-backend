@@ -22,8 +22,8 @@ import (
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
@@ -37,6 +37,8 @@ import (
 const githubAppPathPrefix = "/apps/github"
 const codeReviewMaxWait = 24 * time.Hour
 const authProvider = "github"
+const pullRequestIconURL = "/assets/apps/pull_request_dark_green.svg"
+const pullRequestIconHoverURL = "/assets/apps/pull_request_light_green.svg"
 
 type App struct {
 	config                      AppConfig
@@ -563,11 +565,16 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 			"TaskID":            createTaskRes.TaskId,
 		},
 	})
+	iconURL := pullRequestIconURL
+	iconHoverURL := pullRequestIconHoverURL
+	title := fmt.Sprintf("[%v] %v", evt.Repository.Name, prEvt.PullRequest.Title)
 
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
-		TaskId: createTaskRes.TaskId,
-		Title:  prEvt.PullRequest.Title,
-		Url:    prEvt.PullRequest.HtmlUrl,
+		TaskId:       createTaskRes.TaskId,
+		Title:        title,
+		Url:          prEvt.PullRequest.HtmlURL,
+		IconUrl:      &iconURL,
+		IconHoverUrl: &iconHoverURL,
 	}
 
 	_, err = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
