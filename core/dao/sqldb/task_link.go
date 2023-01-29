@@ -25,14 +25,16 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity entity.TaskL
 			title,
 			url,
 			icon_url,
+			icon_hover_url,
 			created_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6);`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7);`,
 		taskLinkEntity.ID,
 		taskLinkEntity.TaskID,
 		taskLinkEntity.Title,
 		taskLinkEntity.URL,
 		taskLinkEntity.IconURL,
+		taskLinkEntity.IconHoverURL,
 		taskLinkEntity.CreatedAt,
 	)
 
@@ -51,8 +53,9 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 		title,
 		url,
 		icon_url,
+		icon_hover_url,
 		created_at,
-		updated_at,
+		updated_at
 	FROM task_link
 	WHERE task_id = $1;
 `, taskID)
@@ -71,6 +74,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 			&taskLink.Title,
 			&taskLink.URL,
 			&taskLink.IconURL,
+			&taskLink.IconHoverURL,
 			&taskLink.CreatedAt,
 			&taskLink.UpdatedAt,
 		)

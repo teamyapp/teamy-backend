@@ -156,6 +156,7 @@ func startServiceRunner(
 	taskLinkRPCAPI := dep.InitTaskLinkRPCAPI(
 		dataCollector,
 		cloudClientRegistry,
+		realTimeStateSyncer,
 		sqlDB,
 	)
 	sprintRPCAPI := dep.InitSprintRPCAPI(

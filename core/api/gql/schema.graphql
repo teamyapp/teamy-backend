@@ -69,10 +69,7 @@ type Mutation {
 		toSprintId: ID!
 		taskIds: [ID!]!
 	): [Task!]!
-	copyTasksToSprint(
-		toSprintId: ID!
-		taskIds: [ID!]!
-	): [Task!]!
+	copyTasksToSprint(toSprintId: ID!, taskIds: [ID!]!): [Task!]!
 
 	# File
 	createFileUploadSession(teamId: ID!): ID!
@@ -86,7 +83,11 @@ type Mutation {
 	deleteApp(appId: ID!): App!
 	refreshAppSecret(appId: ID!): App!
 	createAppVersion(appId: ID!): AppVersion!
-	updateAppVersion(appId: ID!, versionNumber: Int!, input: UpdateAppVersionInput!): AppVersion!
+	updateAppVersion(
+		appId: ID!
+		versionNumber: Int!
+		input: UpdateAppVersionInput!
+	): AppVersion!
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
 	addVisibleTeamToAppVersion(
 		appId: ID!
@@ -121,6 +122,18 @@ type Task {
 	effort: Duration
 	availableActions: [TaskAction!]!
 	awaitForTasks: [Task!]!
+	links: [TaskLink!]!
+}
+
+type TaskLink {
+	id: ID!
+	taskId: ID!
+	title: String!
+	url: String!
+	iconUrl: String
+	iconHoverUrl: String
+	createdAt: Time!
+	updatedAt: Time
 }
 
 type Message {
@@ -131,6 +144,7 @@ type Message {
 	createdAt: Time!
 	updatedAt: Time
 }
+
 
 type Thread {
 	id: ID!
