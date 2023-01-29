@@ -138,6 +138,7 @@ func InitSprintRPCAPI(
 func InitTaskLinkRPCAPI(
 	dataCollector telemetry.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.TaskLinkRPC {
 	wire.Build(

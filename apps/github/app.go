@@ -567,7 +567,7 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId: createTaskRes.TaskId,
 		Title:  prEvt.PullRequest.Title,
-		Url:    prEvt.PullRequest.Url,
+		Url:    prEvt.PullRequest.HtmlUrl,
 	}
 
 	_, err = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)

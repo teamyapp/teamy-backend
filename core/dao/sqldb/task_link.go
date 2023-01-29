@@ -28,7 +28,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity entity.TaskL
 			icon_hover_url,
 			created_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6);`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7);`,
 		taskLinkEntity.ID,
 		taskLinkEntity.TaskID,
 		taskLinkEntity.Title,

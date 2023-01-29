@@ -4,6 +4,7 @@ type CollectionType string
 
 const (
 	TaskCollectionType                 CollectionType = "Task"
+	TaskLinkCollectionType             CollectionType = "TaskLink"
 	InvitationCollectionType           CollectionType = "Invitation"
 	MessageCollectionType              CollectionType = "Message"
 	TeamCollectionType                 CollectionType = "Team"

@@ -14,6 +14,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateTaskLinkInput struct {
@@ -28,7 +30,9 @@ type TaskLink struct {
 	dataCollector       telemetry.DataCollector
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	authorizer          Authorizer
+	stateSyncer         *realtime.StateSyncer
 	taskLinkDao         dao.TaskLink
+	taskDao             dao.Task
 }
 
 func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLinkInput) (entity.TaskLink, error) {
@@ -71,8 +75,16 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		IconHoverURL: taskLinkEntity.IconHoverURL,
 		CreatedAt:    time.Now(),
 	}
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
+	createTaskLinkMutation := mutation.NewCreateTaskLinkMutation(t.dataCollector, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
 
-	err = t.taskLinkDao.CreateTaskLink(ct, taskLink)
+	err = realTimeTransaction.ApplyMutation(ct, createTaskLinkMutation)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.TaskLink{}, err
+	}
+
+	err = realTimeTransaction.Commit(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.TaskLink{}, err
@@ -103,12 +115,16 @@ func NewTaskLink(
 	dataCollector telemetry.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	stateSyncer *realtime.StateSyncer,
 	taskLinkDao dao.TaskLink,
+	taskDao dao.Task,
 ) TaskLink {
 	return TaskLink{
 		dataCollector:       dataCollector,
 		cloudClientRegistry: cloudClientRegistry,
 		authorizer:          authorizer,
+		stateSyncer:         stateSyncer,
 		taskLinkDao:         taskLinkDao,
+		taskDao:             taskDao,
 	}
 }
