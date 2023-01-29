@@ -29,10 +29,11 @@ func (t TaskLinkRPC) Start(runner *runner.ServiceRunner) error {
 
 func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLinkRequest) (*proto.CreateTaskLinkResponse, error) {
 	input := service.CreateTaskLinkInput{
-		TaskID:  in.TaskId,
-		Title:   in.Title,
-		URL:     in.Url,
-		IconURL: in.IconUrl,
+		TaskID:       in.TaskId,
+		Title:        in.Title,
+		URL:          in.Url,
+		IconURL:      in.IconUrl,
+		IconHoverURL: in.IconHoverUrl,
 	}
 
 	taskLink, err := t.taskLinkService.CreateTaskLink(ct, input)

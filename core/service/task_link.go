@@ -17,10 +17,11 @@ import (
 )
 
 type CreateTaskLinkInput struct {
-	TaskID  uint64
-	Title   string
-	URL     string
-	IconURL *string
+	TaskID       uint64
+	Title        string
+	URL          string
+	IconURL      *string
+	IconHoverURL *string
 }
 
 type TaskLink struct {
@@ -62,12 +63,13 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	}
 
 	taskLink := entity.TaskLink{
-		ID:        genTaskLinkIDRes.UniqueNumber,
-		TaskID:    taskLinkEntity.TaskID,
-		Title:     taskLinkEntity.Title,
-		URL:       taskLinkEntity.URL,
-		IconURL:   taskLinkEntity.IconURL,
-		CreatedAt: time.Now(),
+		ID:           genTaskLinkIDRes.UniqueNumber,
+		TaskID:       taskLinkEntity.TaskID,
+		Title:        taskLinkEntity.Title,
+		URL:          taskLinkEntity.URL,
+		IconURL:      taskLinkEntity.IconURL,
+		IconHoverURL: taskLinkEntity.IconHoverURL,
+		CreatedAt:    time.Now(),
 	}
 
 	err = t.taskLinkDao.CreateTaskLink(ct, taskLink)
