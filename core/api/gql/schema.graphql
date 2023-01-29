@@ -137,7 +137,6 @@ type TaskLink {
 	updatedAt: Time
 }
 
-
 type Message {
 	id: ID!
 	body: String!
@@ -146,7 +145,6 @@ type Message {
 	createdAt: Time!
 	updatedAt: Time
 }
-
 
 
 type Thread {

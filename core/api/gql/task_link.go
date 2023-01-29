@@ -24,15 +24,15 @@ func (t TaskLink) Title() string {
 	return t.taskLink.Title
 }
 
-func (t TaskLink) Url() string {
+func (t TaskLink) URL() string {
 	return t.taskLink.URL
 }
 
-func (t TaskLink) IconUrl() *string {
+func (t TaskLink) IconURL() *string {
 	return t.taskLink.IconURL
 }
 
-func (t TaskLink) IconHoverUrl() *string {
+func (t TaskLink) IconHoverURL() *string {
 	return t.taskLink.IconHoverURL
 }
 
