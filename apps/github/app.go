@@ -511,6 +511,8 @@ func (a App) processPullRequestEvent(ct context.Context, teamID uint64, evt even
 	switch prEvt.Action {
 	case openedPullRequestAction, reopenedPullRequestAction:
 		return a.createTaskForPullRequest(ct, teamID, evt, prEvt)
+	case editedPullRequestAction:
+		return a.updateTaskForPullRequest(ct, teamID, evt, prEvt)
 	case assignedPullRequestAction:
 	case reviewRequestedPullRequestAction:
 		return a.createTaskForRequestedReviewers(ct, teamID, evt, prEvt)
@@ -607,6 +609,29 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	}
 
 	return a.tryAddTaskToCurrentSprint(ct, teamID, createTaskRes.TaskId)
+}
+
+func (a App) updateTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) error {
+	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return err
+	}
+
+	updateTaskReq := &proto.UpdateTaskRequest{
+		TaskId:       pr.InternalTaskID,
+		OwningTeamId: teamID,
+		Goal:         fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
+		Context:      &prEvt.PullRequest.Body,
+	}
+
+	_, err = a.teamyClientRegistry.TaskClient().UpdateTask(ct, updateTaskReq)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return err
+	}
+
+	return nil
 }
 
 func (a App) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt event, payload []byte) error {
