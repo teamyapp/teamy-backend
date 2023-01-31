@@ -46,6 +46,8 @@ spec:
             - containerPort: 9000
             - containerPort: 9001
           env:
+            - name: ENVIRONMENT
+              value: testing
             - name: DB_HOST
               value: postgres.db.svc.cluster.local
             - name: DB_USER
