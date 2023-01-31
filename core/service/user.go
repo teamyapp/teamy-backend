@@ -164,7 +164,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		err = errors.New("profile upload session is already completed")
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp:   err,
-			telemetry.MessageProp: fmt.Sprintf("userID=%v, fileUploadSessionID", userID, fileUploadSessionID),
+			telemetry.MessageProp: fmt.Sprintf("userID=%v, fileUploadSessionID=%v", userID, fileUploadSessionID),
 		})
 		return entity.User{}, err
 	}
