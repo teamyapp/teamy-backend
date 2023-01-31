@@ -209,7 +209,10 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
+	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	ct := r.Context()
+	ct = ctx.NewContextWithRequestID(ct, deliveryID)
+
 	bodySignatureHeader := r.Header.Get("X-Hub-Signature-256")
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
@@ -257,7 +260,6 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	evtType := r.Header.Get("X-GitHub-Event")
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
 		telemetry.MessageProp: fmt.Sprintf("received event: deliveryID=%v EventType=%v", deliveryID, evtType),
