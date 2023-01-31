@@ -61,14 +61,6 @@ var serviceSet = wire.NewSet(
 	service.NewAuthorizer,
 )
 
-func InitDataCollector(serviceName string, visibleLevel telemetry.LogLevel) telemetry.DataCollector {
-	wire.Build(
-		newLogger,
-		telemetry.NewDataCollector,
-	)
-	return telemetry.DataCollector{}
-}
-
 func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
@@ -194,12 +186,4 @@ func newTeamService(
 		teamMemberDao,
 		teamFileUploadSessionDao,
 		sprintService)
-}
-
-func newLogger(serviceName string, visibleLevel telemetry.LogLevel) telemetry.Logger {
-	return telemetry.NewServiceLogger(serviceName,
-		telemetry.NewRequestLogger(
-			telemetry.NewClientLogger(
-				realtime.NewMutationLogger(
-					telemetry.NewRawLogger(visibleLevel)))))
 }

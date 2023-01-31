@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
@@ -162,11 +163,8 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	if profileUploadSession.IsCompleted {
 		err = errors.New("profile upload session is already completed")
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"UserID":              userID,
-				"FileUploadSessionID": fileUploadSessionID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("userID=%v, fileUploadSessionID=%v", userID, fileUploadSessionID),
 		})
 		return entity.User{}, err
 	}

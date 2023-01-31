@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/teamyapp/cloud/app/config"
-	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 type AppConfig struct {
@@ -13,11 +12,10 @@ type AppConfig struct {
 	WebhookSecret             string        `envconfig:"APPS_GITHUB_WEBHOOK_SECRET"`
 }
 
-func AppConfigFromEnv(dataCollector telemetry.DataCollector) (AppConfig, error) {
+func AppConfigFromEnv() (AppConfig, error) {
 	cfg := AppConfig{}
-	err := config.FromEnv(dataCollector, &cfg)
+	err := config.FromEnv(&cfg)
 	if err != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return AppConfig{}, err
 	}
 

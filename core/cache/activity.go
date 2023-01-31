@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -46,12 +46,9 @@ func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) map[uint64]*entit
 func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) (*entity.TaskActivity, error) {
 	teamActivity, ok := a.teamActivities[teamID]
 	if !ok {
-		err := errors.New("teamActivity not found")
+		err := fmt.Errorf("teamActivity not found: teamID=%v", teamID)
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"TeamID": teamID,
-			},
 		})
 		return nil, err
 	}

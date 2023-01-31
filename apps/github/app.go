@@ -91,7 +91,7 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	teamIDParam := mux.Vars(r)["teamId"]
 	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.MessageProp: "must provide teamId",
 		})
 		w.WriteHeader(http.StatusBadRequest)
@@ -101,7 +101,7 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	redirectURL := query.Get("redirectUrl")
 	if len(redirectURL) == 0 {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.MessageProp: "must provide redirectUrl",
 		})
 		w.WriteHeader(http.StatusBadRequest)
@@ -112,8 +112,7 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(r.Context(), genStateIDReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp:   err,
-			telemetry.MessageProp: "fail to generate state ID",
+			telemetry.CauseProp: err,
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -128,8 +127,7 @@ func (a App) webInstall(w http.ResponseWriter, r *http.Request) {
 	err = a.githubAppInstallStateDao.CreateState(ct, state)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp:   err,
-			telemetry.MessageProp: "fail to create state",
+			telemetry.CauseProp: err,
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -165,11 +163,8 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	state, err := a.githubAppInstallStateDao.FindStateByID(ct, stateID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"Summary": "fail to find state ID",
-				"StateID": stateID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("fail to find state ID: stateID=%v", stateID),
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -178,7 +173,7 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	expireAt := state.CreatedAt.Add(a.config.InstallationValidDuration)
 	now := time.Now().UTC()
 	if expireAt.Before(now) {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.MessageProp: "install app session expired",
 		})
 		w.WriteHeader(http.StatusBadRequest)
@@ -194,8 +189,7 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	err = a.githubAppInstallationDao.CreateGithubAppInstallation(ct, ins)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp:   err,
-			telemetry.MessageProp: "fail to create Github App installation",
+			telemetry.CauseProp: err,
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -204,11 +198,8 @@ func (a App) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 	err = a.githubAppInstallStateDao.DeleteState(ct, stateID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"Summary": "ail to delete state",
-				"StateID": stateID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("ail to delete state: stateID=%v", stateID),
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -222,7 +213,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	bodySignatureHeader := r.Header.Get("X-Hub-Signature-256")
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.MessageProp: "invalid signature format",
 		})
 		w.WriteHeader(http.StatusBadRequest)
@@ -230,7 +221,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bodySignatureHeaderParts[0] != "sha256" {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.MessageProp: "signature header must start with sha256",
 		})
 		w.WriteHeader(http.StatusBadRequest)
@@ -259,11 +250,8 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 
 	if !validateHMACSignature(buf, []byte(a.config.WebhookSecret), signature) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"Summary":   "invalid request body signature",
-				"Signature": bodySignatureHeaderParts[1],
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("invalid request body signature: signature=%v", bodySignatureHeaderParts[1]),
 		})
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -272,11 +260,7 @@ func (a App) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	evtType := r.Header.Get("X-GitHub-Event")
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary":    "received event",
-			"DeliveryID": deliveryID,
-			"EventType":  evtType,
-		},
+		telemetry.MessageProp: fmt.Sprintf("received event: deliveryID=%v EventType=%v", deliveryID, evtType),
 	})
 	err = a.processEvent(ct, eventType(evtType), buf)
 	if err != nil {
@@ -478,10 +462,7 @@ func (a App) processEvent(ct context.Context, evtType eventType, payload []byte)
 		return a.processPullRequestReviewEvent(ct, ins.TeamID, evt, payload)
 	default:
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-			telemetry.MessageProp: telemetry.Props{
-				"Summary":   "unknown event",
-				"EventType": evtType,
-			},
+			telemetry.MessageProp: fmt.Sprintf("unknown event: eventType=%v", evtType),
 		})
 	}
 
@@ -492,10 +473,8 @@ func (a App) processPullRequestEvent(ct context.Context, teamID uint64, evt even
 	if evt.Sender.Type == organizationAccountType {
 		err := errors.New("unsupported account type")
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"SenderType": evt.Sender.Type,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("senderType=%v", evt.Sender.Type),
 		})
 		return err
 	}
@@ -558,12 +537,10 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary":           "pull request task created",
-			"Repo":              evt.Repository.Name,
-			"PullRequestNumber": prEvt.Number,
-			"TaskID":            createTaskRes.TaskId,
-		},
+		telemetry.MessageProp: fmt.Sprintf("pull request task created: repo=%v prNumber=%v taskID=%v",
+			evt.Repository.Name,
+			prEvt.Number,
+			createTaskRes.TaskId),
 	})
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
@@ -589,10 +566,7 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary": "task moved to in progress",
-			"TaskID":  createTaskRes.TaskId,
-		},
+		telemetry.MessageProp: fmt.Sprintf("task moved to in progress: taskID=%v", createTaskRes.TaskId),
 	})
 	pr := entity.GithubPullRequest{
 		NodeID:         prEvt.PullRequest.NodeID,
@@ -633,10 +607,7 @@ func (a App) processPullRequestReviewEvent(ct context.Context, teamID uint64, ev
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary": "moved review task to delivered",
-			"TaskID":  codeReview.InternalCodeReviewTaskID,
-		},
+		telemetry.MessageProp: fmt.Sprintf("moved review task to delivered: taskID=%v", codeReview.InternalCodeReviewTaskID),
 	})
 	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
 		TaskId: codeReview.InternalCodeReviewTaskID,
@@ -681,12 +652,10 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 
 			addressFeedbackTaskID := createTaskRes.TaskId
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-				telemetry.MessageProp: telemetry.Props{
-					"Summary":           "address feedback task created",
-					"Repo":              evt.Repository.Name,
-					"PullRequestNumber": prReviewEvt.PullRequest.Number,
-					"TaskID":            createTaskRes.TaskId,
-				},
+				telemetry.MessageProp: fmt.Sprintf("address feedback task created: repo=%v, prNumber=%v, taskID=%v",
+					evt.Repository.Name,
+					prReviewEvt.PullRequest.Number,
+					createTaskRes.TaskId),
 			})
 			pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prReviewEvt.PullRequest.NodeID)
 			if err != nil {
@@ -705,12 +674,10 @@ func (a App) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, 
 			}
 
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-				telemetry.MessageProp: telemetry.Props{
-					"Summary":           "pull request is waiting for address feedback task",
-					"Repo":              evt.Repository.Name,
-					"PullRequestNumber": prReviewEvt.PullRequest.Number,
-					"TaskID":            addressFeedbackTaskID,
-				},
+				telemetry.MessageProp: fmt.Sprintf("pull request is waiting for address feedback task: repo=%v, prNumber=%v, taskID=%v",
+					evt.Repository.Name,
+					prReviewEvt.PullRequest.Number,
+					createTaskRes.TaskId),
 			})
 			codeReview.InternalAddressFeedbackTaskID = &addressFeedbackTaskID
 			return a.githubCodeReviewDao.UpdateCodeReview(ct, codeReview)
@@ -841,12 +808,10 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary":           "review task created",
-			"Repo":              evt.Repository.Name,
-			"PullRequestNumber": prEvt.PullRequest.Number,
-			"TaskID":            createTaskRes.TaskId,
-		},
+		telemetry.MessageProp: fmt.Sprintf("review task created: repo=%v, prNumber=%v, taskID=%v",
+			evt.Repository.Name,
+			prEvt.PullRequest.Number,
+			createTaskRes.TaskId),
 	})
 	addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
 		AwaitingTaskId: pullRequestTaskID,
@@ -860,12 +825,10 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary":           "pull request is waiting for review task",
-			"PullRequestTaskID": pullRequestTaskID,
-			"GithubReviewerID":  githubReviewerID,
-			"ReviewTaskID":      createTaskRes.TaskId,
-		},
+		telemetry.MessageProp: fmt.Sprintf("pull request is waiting for review task: prTaskID=%v, GithubReviewerID=%v, reviewTaskID=%v",
+			pullRequestTaskID,
+			githubReviewerID,
+			createTaskRes.TaskId),
 	})
 	return createTaskRes.TaskId, nil
 }

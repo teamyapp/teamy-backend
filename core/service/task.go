@@ -770,10 +770,8 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	if !awaitableTaskStatuses[task.Status] {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"TaskID": awaitingTaskID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("taskID=%v", awaitingTaskID),
 		})
 		return entity.Task{}, err
 	}
@@ -831,10 +829,8 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	if task.Status != entity.TaskStatusAwaiting {
 		err = errors.New("task must be awaitable")
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"TaskID": taskID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("taskID=%v", taskID),
 		})
 		return entity.Task{}, err
 	}

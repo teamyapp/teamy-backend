@@ -95,11 +95,8 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 	if len(sprints) < 1 {
 		err = ErrNotFound("team has no active sprint")
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"TeamID":      teamID,
-				"CurrentTime": now.UTC(),
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("teamID=%v, currentTime=%v", teamID, now.UTC()),
 		})
 		return entity.Sprint{}, err
 	}
@@ -107,10 +104,8 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 	if len(sprints) > 1 {
 		err = errors.New("team has more than one sprint")
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"TeamID": teamID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("teamID=%v", teamID),
 		})
 		return entity.Sprint{}, err
 	}
@@ -459,11 +454,8 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 	if len(foundSprintIDs) < 1 {
 		err = errors.New("relation not found")
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"SprintID": fromSprintID,
-				"TaskID":   taskID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("sprintID=%v, taskID=%v", fromSprintID, taskID),
 		})
 		return entity.Task{}, err
 	}
@@ -532,11 +524,8 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	if len(foundSprintIDs) < 1 {
 		err = errors.New("relation not found")
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"SprintID": sprintID,
-				"TaskID":   taskID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("sprintID=%v, taskID=%v", sprintID, taskID),
 		})
 		return entity.Task{}, err
 	}
