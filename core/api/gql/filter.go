@@ -30,5 +30,6 @@ type SprintFilter struct {
 }
 
 type AppFilter struct {
-	IsPublic *bool
+	AppID  *graphql.ID
+	TeamID *graphql.ID
 }

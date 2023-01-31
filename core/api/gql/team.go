@@ -129,7 +129,7 @@ func (t Team) Sprints(ct context.Context, args struct {
 	}), nil
 }
 
-func (t Team) AppInstallations() ([]AppInstallation, error) {
+func (t Team) AppInstallations() ([]AppTeamInstallation, error) {
 	panic("implement me")
 }
 

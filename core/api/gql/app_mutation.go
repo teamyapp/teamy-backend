@@ -15,7 +15,9 @@ func (m Mutation) CreateApp(ct context.Context, args struct {
 func (m Mutation) UpdateApp(ct context.Context, args struct {
 	AppID graphql.ID
 	Input struct {
+		AppName             *string
 		ActiveVersionNumber *int32
+		Description         *string
 	}
 }) (App, error) {
 	panic("implement me")

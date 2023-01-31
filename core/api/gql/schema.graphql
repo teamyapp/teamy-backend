@@ -99,6 +99,9 @@ type Mutation {
 		versionNumber: Int!
 		teamId: ID!
 	): AppVersion!
+	createAppTeamInstallation(appId: ID!, versionNumber: Int!, teamId: ID!): AppTeamInstallation!
+	updateAppTeamInstallation(appId: ID!, input: UpdateAppTeamInstallationInput!): AppTeamInstallation!
+	deleteAppTeamInstallation(appId: ID!, teamId: ID!): AppTeamInstallation!
 }
 
 scalar Duration
@@ -181,7 +184,7 @@ type Team {
 	tasks(filter: TaskFilter): [Task!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
-	appInstallations: [AppInstallation!]!
+	appInstallations: [AppTeamInstallation!]!
 	taskActivities: [TaskActivity!]!
 }
 
@@ -269,9 +272,11 @@ type App {
 	id: ID!
 	apiSecret: String!
 	activeVersion: AppVersion
+	appName: String!
 	versions: [AppVersion!]!
-	installations: [AppInstallation!]!
+	teamInstallations: [AppTeamInstallation!]!
 	installationCount: Int!
+	description: String!
 	creator: User!
 	createdAt: Time!
 	updatedAt: Time
@@ -280,21 +285,21 @@ type App {
 type AppVersion {
 	app: App!
 	versionNumber: Int!
-	appName: String!
 	iconUrl: String
 	hasUiExtension: Boolean!
 	uiExtensionEntrypointPath: String
 	isPublic: Boolean!
 	visibleToTeams: [Team!]!
+	changes: String!
 	createdAt: Time!
 	updatedAt: Time
 }
 
-type AppInstallation {
-	id: ID!
+type AppTeamInstallation {
 	app: App!
+	enabledVersion: AppVersion!
 	installedTeam: Team!
-	installedBy: User!
+	installedBy: User
 	installedAt: Time!
 }
 
@@ -324,7 +329,8 @@ input SprintFilter {
 }
 
 input AppFilter {
-	isPublic: Boolean
+	appId: ID
+	teamId: ID
 }
 
 # Inputs
@@ -401,13 +407,19 @@ input FileMetadataInput {
 }
 
 input UpdateAppInput {
+	appName: String
+	description: String
 	activeVersionNumber: Int
 }
 
 input UpdateAppVersionInput {
-	name: String!
 	iconUrl: String
 	hasUiExtension: Boolean!
 	uiExtensionEntryPointPath: String
+	changes: String
 	isPublic: Boolean!
+}
+
+input UpdateAppTeamInstallationInput {
+	enabledVersionNumber: Int
 }
