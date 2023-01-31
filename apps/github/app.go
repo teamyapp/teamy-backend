@@ -567,11 +567,9 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	})
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
-	title := fmt.Sprintf("[%v] %v", evt.Repository.Name, prEvt.PullRequest.Title)
-
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       createTaskRes.TaskId,
-		Title:        title,
+		Title:        "View the pull request on Github",
 		Url:          prEvt.PullRequest.HtmlURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
