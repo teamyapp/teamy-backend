@@ -72,6 +72,33 @@ func NewUpdateTaskQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewCreateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "CreateAppInstallation",
+		UserID:       userID,
+	}
+}
+
+func NewUpdateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "UpdateAppInstallation",
+		UserID:       userID,
+	}
+}
+
+func NewDeleteAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "DeleteAppInstallation",
+		UserID:       userID,
+	}
+}
+
 func (q Query) String() string {
 	return fmt.Sprintf("user %d is not allowed to perform %s on %s %d", q.UserID, q.Operation, q.ResourceType, q.ResourceID)
 }

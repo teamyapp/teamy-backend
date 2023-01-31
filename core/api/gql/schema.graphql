@@ -100,7 +100,7 @@ type Mutation {
 		teamId: ID!
 	): AppVersion!
 	createAppTeamInstallation(appId: ID!, versionNumber: Int!, teamId: ID!): AppTeamInstallation!
-	updateAppTeamInstallation(appId: ID!, input: UpdateAppTeamInstallationInput!): AppTeamInstallation!
+	updateAppTeamInstallation(appId: ID!, teamId: ID!, input: UpdateAppTeamInstallationInput!): AppTeamInstallation!
 	deleteAppTeamInstallation(appId: ID!, teamId: ID!): AppTeamInstallation!
 }
 
@@ -421,5 +421,5 @@ input UpdateAppVersionInput {
 }
 
 input UpdateAppTeamInstallationInput {
-	enabledVersionNumber: Int
+	enabledVersionNumber: Int!
 }

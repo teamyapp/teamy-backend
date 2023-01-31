@@ -34,6 +34,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
 	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
 	wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)),
+	wire.Bind(new(dao.AppTeamInstallation), new(sqldb.AppTeamInstallation)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -48,6 +49,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewUserFileUploadSession,
 	sqldb.NewTeamFileUploadSession,
 	sqldb.NewSprintParticipant,
+	sqldb.NewAppTeamInstallation,
 )
 
 var serviceSet = wire.NewSet(
@@ -59,6 +61,7 @@ var serviceSet = wire.NewSet(
 	service.NewSprint,
 	newUserService,
 	service.NewAuthorizer,
+	service.NewApp,
 )
 
 func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
