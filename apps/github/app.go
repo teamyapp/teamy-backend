@@ -569,7 +569,7 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       createTaskRes.TaskId,
-		Title:        "View the pull request on Github",
+		Title:        "View pull request on Github",
 		Url:          prEvt.PullRequest.HtmlURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
