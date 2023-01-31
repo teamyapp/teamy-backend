@@ -22,9 +22,11 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
+	appsDI "github.com/teamyapp/teamy-backend/apps/inject"
 	"github.com/teamyapp/teamy-backend/config"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/dep"
+	"github.com/teamyapp/teamy-backend/core/inject"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
@@ -64,6 +66,13 @@ func main() {
 	)
 
 	dataCollector := telemetry.NewDataCollector(logger)
+	inject.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
+		return dataCollector
+	})
+	appsDI.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
+		return dataCollector
+	})
+
 	gitCommitLink := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
