@@ -35,16 +35,12 @@ func (c *ClientNotifier) onInitialStateReady() {
 
 func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
 	c.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary": "process transaction",
-		},
+		telemetry.MessageProp: "process transaction",
 	})
 
 	if !c.acceptTransaction {
 		c.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-			telemetry.MessageProp: telemetry.Props{
-				"Summary": "discard transaction",
-			},
+			telemetry.MessageProp: "discard transaction",
 		})
 		return
 	}
@@ -80,9 +76,7 @@ func newClientNotifier(dataCollector telemetry.DataCollector, conn connection.Co
 			}
 			conn.SendMessage(jsonBuf)
 			dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-				telemetry.MessageProp: telemetry.Props{
-					"Summary": "notification sent",
-				},
+				telemetry.MessageProp: "notification sent",
 			})
 		}
 	}()

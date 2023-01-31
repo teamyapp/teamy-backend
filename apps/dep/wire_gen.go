@@ -16,12 +16,6 @@ import (
 
 // Injectors from wire.go:
 
-func InitDataCollector(serviceName string, visibleLevel telemetry.LogLevel) telemetry.DataCollector {
-	logger := newLogger(serviceName, visibleLevel)
-	dataCollector := telemetry.NewDataCollector(logger)
-	return dataCollector
-}
-
 func InitGithubApp(dataCollector telemetry.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, config github.AppConfig, sqlDB *sql.DB) (github.App, error) {
 	githubAppInstallState := sqldb.NewGithubAppInstallState(dataCollector, sqlDB)
 	githubAppInstallation := sqldb.NewGithubAppInstallation(dataCollector, sqlDB)
@@ -30,10 +24,4 @@ func InitGithubApp(dataCollector telemetry.DataCollector, cloudAPIClientRegistry
 	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
 	app := github.NewApp(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction)
 	return app, nil
-}
-
-// wire.go:
-
-func newLogger(serviceName string, visibleLevel telemetry.LogLevel) telemetry.Logger {
-	return telemetry.NewServiceLogger(serviceName, telemetry.NewRequestLogger(telemetry.NewRawLogger(visibleLevel)))
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -39,10 +40,8 @@ func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 	default:
 		err := errors.New("unsupported duration dataType")
 		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"dataType": reflect.TypeOf(input),
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("dataType=%v", reflect.TypeOf(input)),
 		})
 		return err
 	}

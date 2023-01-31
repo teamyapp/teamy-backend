@@ -14,14 +14,6 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api"
 )
 
-func InitDataCollector(serviceName string, visibleLevel telemetry.LogLevel) telemetry.DataCollector {
-	wire.Build(
-		newLogger,
-		telemetry.NewDataCollector,
-	)
-	return telemetry.DataCollector{}
-}
-
 func InitGithubApp(
 	dataCollector telemetry.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
@@ -44,10 +36,4 @@ func InitGithubApp(
 		github.NewApp,
 	)
 	return github.App{}, nil
-}
-
-func newLogger(serviceName string, visibleLevel telemetry.LogLevel) telemetry.Logger {
-	return telemetry.NewServiceLogger(serviceName,
-		telemetry.NewRequestLogger(
-			telemetry.NewRawLogger(visibleLevel)))
 }

@@ -3,12 +3,17 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
+	"github.com/teamyapp/cloud/libs/env"
+	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
@@ -17,42 +22,54 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
-	appsDi "github.com/teamyapp/teamy-backend/apps/inject"
 	"github.com/teamyapp/teamy-backend/config"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/dep"
-	"github.com/teamyapp/teamy-backend/core/inject"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
+
+var serviceLabels = []string{"teamy", "backend"}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
-	visibleLevel := telemetry.LogLevel(getEnv("LOG_VISIBLE_SEVERITY", "Info"))
-	dataCollector := dep.InitDataCollector("teamy/backend", visibleLevel)
-	inject.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
-		return dataCollector
-	})
-	appsDi.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
-		return dataCollector
-	})
-
-	cfg, err := config.FromEnv(dataCollector)
+	cfg, err := config.AppFromEnv()
 	if err != nil {
-		dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: err})
 		panic(err)
 	}
 
+	lineFormatter := newLineFormatter(cfg.Environment)
+	logOutput, err := newLogOutput(cfg.Environment, strings.Join(serviceLabels, "-"))
+	if err != nil {
+		panic(err)
+	}
+
+	defer logOutput.Close()
+
+	serviceLabelsWithEnv := append([]string{}, serviceLabels...)
+	serviceLabelsWithEnv = append(serviceLabelsWithEnv, strings.ToLower(string(cfg.Environment)))
+	logger := telemetry.NewLogger(
+		lineFormatter,
+		logOutput,
+		cfg.LogVisibleLevel,
+		[]telemetry.LogInterceptor{
+			telemetry.NewCommitLogInterceptor(cfg.GitLongCommitHash),
+			telemetry.NewServiceLogInterceptor(strings.Join(serviceLabelsWithEnv, "/")),
+			telemetry.RequestLogInterceptor,
+			realtime.MutationLogInterceptor,
+			telemetry.ClientLogInterceptor,
+		},
+	)
+
+	dataCollector := telemetry.NewDataCollector(logger)
 	gitCommitLink := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
 	dataCollector.Logger.Log(telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: map[string]interface{}{
-			"gitCommitLink": gitCommitLink,
-		},
+		telemetry.MessageProp: gitCommitLink,
 	})
 	err = sqldb.Use(dataCollector, cfg.Config, func(sqlDB *sql.DB) error {
 		err = sqldb.MigrateUp(dataCollector, sqlDB, "migrations", 0)
@@ -83,7 +100,7 @@ func startServiceRunner(
 		return err
 	}
 
-	githubCfg, err := github.AppConfigFromEnv(dataCollector)
+	githubCfg, err := github.AppConfigFromEnv()
 	if err != nil {
 		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
@@ -185,4 +202,50 @@ func getEnv(name string, defaultVal string) string {
 	}
 
 	return defaultVal
+}
+
+func newLineFormatter(environment env.Environment) telemetry.LineFormatter {
+	if environment == env.DevelopmentEnv {
+		return telemetry.NewOrderedColumnLineFormatter([]string{
+			telemetry.HappenAtProp,
+			telemetry.SeverityProp,
+			telemetry.FileNameProp,
+			telemetry.LineNumberProp,
+			telemetry.RequestIDProp,
+			realtime.MutationIDProp,
+			telemetry.ClientIDProp,
+			middleware.ProtocolProp,
+			middleware.StageProp,
+			middleware.HostProp,
+			middleware.MethodProp,
+			middleware.PathProp,
+			middleware.HeadersProp,
+			middleware.MetadataProp,
+			middleware.BodySizeProp,
+			middleware.BodyProp,
+			telemetry.CauseProp,
+			telemetry.MessageProp,
+		})
+	}
+
+	return telemetry.NewJSONLineFormatter()
+}
+
+func newLogOutput(environment env.Environment, serviceName string) (io.WriteCloser, error) {
+	if environment == env.DevelopmentEnv {
+		logFileName := fmt.Sprintf("%v.log", serviceName)
+		logFilePath := getEnv("LOG_OUTPUT_FILE", filepath.Join("..", "logs", logFileName))
+		logDir := filepath.Dir(logFilePath)
+
+		// MkdirAll requires at least 700 permission:
+		// https://github.com/golang/go/issues/22323
+		err := os.MkdirAll(logDir, 0744)
+		if err != nil {
+			return nil, err
+		}
+
+		return os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0640)
+	}
+
+	return os.Stdout, nil
 }

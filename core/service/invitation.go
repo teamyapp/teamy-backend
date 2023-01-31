@@ -9,8 +9,8 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/randgen"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -234,10 +234,9 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		err = errors.New("invalid invitation code")
 		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"InvitationID":   invitationID,
-				"InvitationCode": invitationCode,
-			},
+			telemetry.MessageProp: fmt.Sprintf("invitationID=%v, invitationCode=%v",
+				invitationID,
+				invitationCode),
 		})
 		return entity.Invitation{}, err
 	}
@@ -306,10 +305,9 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 		err = errors.New("invalid invitation code")
 		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"InvitationID":   invitationID,
-				"InvitationCode": invitationCode,
-			},
+			telemetry.MessageProp: fmt.Sprintf("invitationID=%v, invitationCode=%v",
+				invitationID,
+				invitationCode),
 		})
 		return entity.Invitation{}, err
 	}
@@ -353,27 +351,22 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 		err := errors.New("invitation is expired")
 		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"InvitationID": invitation.ID,
-			},
+			telemetry.MessageProp: fmt.Sprintf("invitationID=%v",
+				invitation.ID),
 		})
 		return err
 	case entity.InvitationStatusInvoked:
 		err := errors.New("invitation is revoked")
 		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"InvitationID": invitation.ID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("invitationID=%v", invitation.ID),
 		})
 		return err
 	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
 		err := errors.New("invitation is already responded")
 		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"InvitationID": invitation.ID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("invitationID=%v", invitation.ID),
 		})
 		return err
 	default:

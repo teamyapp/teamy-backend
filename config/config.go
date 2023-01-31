@@ -5,12 +5,12 @@ import (
 
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
-	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 type Config struct {
 	sqldb.Config
 	config.Repo
+	config.Service
 	CloudWebAPIExternalBaseURL  string        `envconfig:"CLOUD_WEB_API_EXTERNAL_BASE_URL" default:"http://localhost:9011"`
 	CloudWebAPIBaseURL          string        `envconfig:"CLOUD_WEB_API_BASE_URL" default:"http://localhost:9011"`
 	CloudGRPCAPIHost            string        `envconfig:"CLOUD_GRPC_API_HOST" default:"localhost"`
@@ -25,12 +25,12 @@ type Config struct {
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
 }
 
-func FromEnv(dataCollector telemetry.DataCollector) (Config, error) {
+func AppFromEnv() (Config, error) {
 	cfg := Config{}
-	err := config.FromEnv(dataCollector, &cfg)
+	err := config.FromEnv(&cfg)
 	if err != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Config{}, err
 	}
+
 	return cfg, nil
 }

@@ -22,12 +22,6 @@ import (
 
 // Injectors from wire.go:
 
-func InitDataCollector(serviceName string, visibleLevel telemetry.LogLevel) telemetry.DataCollector {
-	logger := newLogger(serviceName, visibleLevel)
-	dataCollector := telemetry.NewDataCollector(logger)
-	return dataCollector
-}
-
 func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
 	teamMember := sqldb.NewTeamMember(dataCollector, qlDB)
 	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMember)
@@ -165,8 +159,4 @@ func newTeamService(
 		teamMemberDao,
 		teamFileUploadSessionDao,
 		sprintService)
-}
-
-func newLogger(serviceName string, visibleLevel telemetry.LogLevel) telemetry.Logger {
-	return telemetry.NewServiceLogger(serviceName, telemetry.NewRequestLogger(telemetry.NewClientLogger(realtime.NewMutationLogger(telemetry.NewRawLogger(visibleLevel)))))
 }

@@ -56,10 +56,7 @@ func (s *StateSyncer) EndTransaction() {
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
 	ct := ctx.WithClientID(context.Background(), s.nextClientID)
 	s.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: telemetry.Props{
-			"Summary": "client connected",
-			"UserID":  userID,
-		},
+		telemetry.MessageProp: fmt.Sprintf("client connected: userID=%v", userID),
 	})
 	userNotifier, err := s.GetUserNotifier(ct, userID)
 	if err != nil {
@@ -109,10 +106,8 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 	if !ok {
 		err := errors.New("userNotifier not found")
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"UserID": userID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("userID=%v", userID),
 		})
 		return err
 	}
@@ -121,10 +116,8 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error 
 	if !ok {
 		err := errors.New("clientNotifier not found")
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-			telemetry.MessageProp: telemetry.Props{
-				"ClientID": clientID,
-			},
+			telemetry.CauseProp:   err,
+			telemetry.MessageProp: fmt.Sprintf("clientID=%v", clientID),
 		})
 		return err
 	}
@@ -163,11 +156,9 @@ func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNo
 		}
 
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-			telemetry.MessageProp: telemetry.Props{
-				"Summary": "subscribed to team",
-				"TeamID":  teamID,
-				"UserID":  userID,
-			},
+			telemetry.MessageProp: fmt.Sprintf("subscribed to team: teamID=%v, userID=%v",
+				teamID,
+				userID),
 		})
 		teamNotifier.registerUserNotifier(userID, userNotifier)
 	}

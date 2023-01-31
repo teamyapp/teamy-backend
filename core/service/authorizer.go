@@ -100,7 +100,9 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
-		telemetry.Props{telemetry.MessageProp: fmt.Sprintf("UserGroup %s is successfully created", userGroupName)},
+		telemetry.Props{
+			telemetry.MessageProp: fmt.Sprintf("UserGroup %s is successfully created", userGroupName),
+		},
 	)
 
 	return createUserGroupRes.UserGroup.GroupId, nil
@@ -124,7 +126,9 @@ func (a Authorizer) assignPermission(
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
-		telemetry.Props{telemetry.MessageProp: fmt.Sprintf("Permission %s is successfully assigned", addPermissionReq)},
+		telemetry.Props{
+			telemetry.MessageProp: fmt.Sprintf("Permission %s is successfully assigned", addPermissionReq),
+		},
 	)
 
 	return nil
