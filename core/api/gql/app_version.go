@@ -18,10 +18,6 @@ func (a AppVersion) VersionNumber() int32 {
 	panic("implement me")
 }
 
-func (a AppVersion) AppName() string {
-	panic("implement me")
-}
-
 func (a AppVersion) IconURL() *string {
 	panic("implement me")
 }
@@ -39,6 +35,10 @@ func (a AppVersion) IsPublic() bool {
 }
 
 func (a AppVersion) VisibleToTeams() []Team {
+	panic("implement me")
+}
+
+func (a AppVersion) Changes() string {
 	panic("implement me")
 }
 

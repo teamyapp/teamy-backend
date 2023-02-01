@@ -16,10 +16,10 @@ func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
 	AppID         graphql.ID
 	VersionNumber int32
 	Input         struct {
-		Name                      string
 		IconUrl                   *string
 		HasUIExtension            bool
 		UIExtensionEntrypointPath *string
+		Changes                   *string
 		IsPublic                  bool
 	}
 }) (AppVersion, error) {

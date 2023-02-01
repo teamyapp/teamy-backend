@@ -20,15 +20,23 @@ func (a App) ActiveVersion() (*AppVersion, error) {
 	panic("implement me")
 }
 
+func (a App) AppName() string {
+	panic("implement me")
+}
+
 func (a App) Versions() ([]AppVersion, error) {
 	panic("implement me")
 }
 
-func (a App) Installations() ([]AppInstallation, error) {
+func (a App) TeamInstallations() ([]AppTeamInstallation, error) {
 	panic("implement me")
 }
 
 func (a App) InstallationCount() int32 {
+	panic("implement me")
+}
+
+func (a App) Description() string {
 	panic("implement me")
 }
 
