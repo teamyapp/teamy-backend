@@ -850,7 +850,6 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
 	}
-
 	_, err = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
