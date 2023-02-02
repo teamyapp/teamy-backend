@@ -840,6 +840,23 @@ func (a App) createCodeReviewTask(ct context.Context, teamID uint64, pullRequest
 			prEvt.PullRequest.Number,
 			createTaskRes.TaskId),
 	})
+
+	iconURL := pullRequestIconURL
+	iconHoverURL := pullRequestIconHoverURL
+	createTaskLinkReq := &proto.CreateTaskLinkRequest{
+		TaskId:       createTaskRes.TaskId,
+		Title:        "View pull request on Github",
+		Url:          prEvt.PullRequest.HtmlURL,
+		IconUrl:      &iconURL,
+		IconHoverUrl: &iconHoverURL,
+	}
+
+	_, err = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return 0, err
+	}
+
 	addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
 		AwaitingTaskId: pullRequestTaskID,
 		AwaitForTaskId: createTaskRes.TaskId,
