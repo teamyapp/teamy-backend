@@ -13,6 +13,7 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/env"
+	tmio "github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
@@ -253,7 +254,12 @@ func newLogOutput(environment env.Environment, serviceName string) (io.WriteClos
 			return nil, err
 		}
 
-		return os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0640)
+		file, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0640)
+		if err != nil {
+			return nil, err
+		}
+
+		return tmio.NewMultiWriteCloser(file, os.Stdout), nil
 	}
 
 	return os.Stdout, nil
