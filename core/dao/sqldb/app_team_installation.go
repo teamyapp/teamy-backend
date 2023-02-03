@@ -108,8 +108,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.
 	    enabled_version_number,
 	    installed_at
 	FROM app_team_installation
-	WHERE app_id = $1
-	AND installed_team_id = $2;
+	WHERE app_id = $1 AND installed_team_id = $2;
 `,
 		appID,
 		teamID).
@@ -163,8 +162,7 @@ func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, appTe
 		UPDATE app_team_installation
 		SET
 			enabled_version_number = $1
-		WHERE app_id = $2
-		AND installed_team_id = $3;`,
+		WHERE app_id = $2 AND installed_team_id = $3;`,
 		appTeamInstallation.EnabledVersionNumber,
 		appTeamInstallation.AppID,
 		appTeamInstallation.InstalledTeamID,
@@ -184,7 +182,6 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID
 		`,
 		appID,
 		teamID)
-
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}

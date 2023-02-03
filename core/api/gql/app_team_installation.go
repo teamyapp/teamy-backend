@@ -39,7 +39,7 @@ func (a AppTeamInstallation) InstalledBy(ct context.Context) (*User, error) {
 	user, err := a.deps.userService.FindUserByID(ct, *a.appTeamInstallation.InstalledByUserID)
 	if err != nil {
 		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return &User{}, err
+		return nil, err
 	}
 
 	appUser := newUser(a.deps, user)

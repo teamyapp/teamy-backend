@@ -53,7 +53,9 @@ func (m Mutation) UpdateAppTeamInstallation(ct context.Context, args struct {
 		return AppTeamInstallation{}, err
 	}
 
-	input := service.UpdateAppTeamInstallationInput{EnabledVersionNumber: args.Input.EnabledVersionNumber}
+	input := service.UpdateAppTeamInstallationInput{
+	    EnabledVersionNumber: args.Input.EnabledVersionNumber,
+	}
 	appTeamInstallation, err := m.deps.appService.UpdateAppInstallation(ct, appID, teamID, input)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
