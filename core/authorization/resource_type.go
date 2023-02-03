@@ -9,4 +9,5 @@ const (
 	SprintResourceType     ResourceType = "Sprint"
 	ProjectResourceType    ResourceType = "Project"
 	InvitationResourceType ResourceType = "Invitation"
+	AppResourceType        ResourceType = "App"
 )

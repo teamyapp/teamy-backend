@@ -4,12 +4,26 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 func (m Mutation) CreateAppVersion(ct context.Context, args struct {
 	AppID graphql.ID
 }) (AppVersion, error) {
-	panic("implement me")
+	appID, err := fromGraphQLID(args.AppID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	appVersion, err := m.deps.appService.CreateAppVersion(ct, appID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	return newAppVersion(m.deps, appVersion), nil
 }
 
 func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
@@ -23,28 +37,107 @@ func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
 		IsPublic                  bool
 	}
 }) (AppVersion, error) {
-	panic("implement me")
+	appID, err := fromGraphQLID(args.AppID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	input := service.UpdateAppVersionInput{
+		IconUrl:                   args.Input.IconUrl,
+		HasUiExtension:            args.Input.HasUIExtension,
+		UiExtensionEntryPointPath: args.Input.UIExtensionEntrypointPath,
+		Changes:                   args.Input.Changes,
+		IsPublic:                  args.Input.IsPublic,
+	}
+	appVersion, err := m.deps.appService.UpdateAppVersion(ct, appID, args.VersionNumber, input)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	return newAppVersion(m.deps, appVersion), nil
 }
 
 func (m Mutation) DeleteAppVersion(ct context.Context, args struct {
 	AppID         graphql.ID
 	VersionNumber int32
 }) (AppVersion, error) {
-	panic("implement me")
+	appID, err := fromGraphQLID(args.AppID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	appVersion, err := m.deps.appService.DeleteAppVersion(ct, appID, args.VersionNumber)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	return newAppVersion(m.deps, appVersion), nil
 }
 
 func (m Mutation) AddVisibleTeamToAppVersion(ct context.Context, args struct {
 	AppID         graphql.ID
 	VersionNumber int32
-	TeamID        uint64
+	TeamID        graphql.ID
 }) (AppVersion, error) {
-	panic("implement me")
+	appID, err := fromGraphQLID(args.AppID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	appVersionVisibleTeam, err := m.deps.appService.CreateAppVersionVisibleTeam(ct, appID, args.VersionNumber, teamID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	appVersion, err := m.deps.appService.FindAppVersionByAppIdAndVersionNumber(ct, appVersionVisibleTeam.AppID, appVersionVisibleTeam.VersionNumber)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	return newAppVersion(m.deps, appVersion), nil
 }
 
 func (m Mutation) RemoveVisibleTeamFromAppVersion(ct context.Context, args struct {
 	AppID         graphql.ID
 	VersionNumber int32
-	TeamID        uint64
+	TeamID        graphql.ID
 }) (AppVersion, error) {
-	panic("implement me")
+	appID, err := fromGraphQLID(args.AppID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	teamID, err := fromGraphQLID(args.TeamID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	appVersionVisibleTeam, err := m.deps.appService.DeleteAppVersionVisibleTeam(ct, appID, args.VersionNumber, teamID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	appVersion, err := m.deps.appService.FindAppVersionByAppIdAndVersionNumber(ct, appVersionVisibleTeam.AppID, appVersionVisibleTeam.VersionNumber)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, err
+	}
+
+	return newAppVersion(m.deps, appVersion), nil
 }

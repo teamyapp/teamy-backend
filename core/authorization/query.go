@@ -81,6 +81,15 @@ func NewCreateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewCreateAppVersionQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "ManageApp",
+		UserID:       userID,
+	}
+}
+
 func NewUpdateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
