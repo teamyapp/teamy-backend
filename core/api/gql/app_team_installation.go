@@ -1,11 +1,16 @@
 package gql
 
 import (
+	"context"
+
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type AppTeamInstallation struct {
-	deps Dependencies
+	deps                *Dependencies
+	appTeamInstallation entity.AppTeamInstallation
 }
 
 func (a AppTeamInstallation) App() (App, error) {
@@ -16,18 +21,38 @@ func (a AppTeamInstallation) EnabledVersion() (AppVersion, error) {
 	panic("implement me")
 }
 
-func (a AppTeamInstallation) InstalledTeam() (Team, error) {
-	panic("implement me")
+func (a AppTeamInstallation) InstalledTeam(ct context.Context) (Team, error) {
+	team, err := a.deps.teamService.FindTeamByID(ct, a.appTeamInstallation.InstalledTeamID)
+	if err != nil {
+		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return Team{}, err
+	}
+
+	return newTeam(a.deps, team), nil
 }
 
-func (a AppTeamInstallation) InstalledBy() (*User, error) {
-	panic("implement me")
+func (a AppTeamInstallation) InstalledBy(ct context.Context) (*User, error) {
+	if a.appTeamInstallation.InstalledByUserID == nil {
+		return nil, nil
+	}
+
+	user, err := a.deps.userService.FindUserByID(ct, *a.appTeamInstallation.InstalledByUserID)
+	if err != nil {
+		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, err
+	}
+
+	appUser := newUser(a.deps, user)
+	return &appUser, nil
 }
 
 func (a AppTeamInstallation) InstalledAt() graphql.Time {
-	panic("implement me")
+	return toGraphQLTime(a.appTeamInstallation.InstalledAt)
 }
 
-func newAppTeamInstallation(deps Dependencies) AppTeamInstallation {
-	return AppTeamInstallation{deps: deps}
+func newAppTeamInstallation(deps *Dependencies, appTeamInstallation entity.AppTeamInstallation) AppTeamInstallation {
+	return AppTeamInstallation{
+		deps:                deps,
+		appTeamInstallation: appTeamInstallation,
+	}
 }

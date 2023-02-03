@@ -129,8 +129,16 @@ func (t Team) Sprints(ct context.Context, args struct {
 	}), nil
 }
 
-func (t Team) AppInstallations() ([]AppTeamInstallation, error) {
-	panic("implement me")
+func (t Team) AppInstallations(ct context.Context) ([]AppTeamInstallation, error) {
+	appInstallations, err := t.deps.appService.FindAppInstallationsByTeamId(ct, t.team.ID)
+	if err != nil {
+		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, err
+	}
+
+	return collect.Map(appInstallations, func(appInstallation entity.AppTeamInstallation, _ int) AppTeamInstallation {
+		return newAppTeamInstallation(t.deps, appInstallation)
+	}), nil
 }
 
 func newTeam(deps *Dependencies, team entity.Team) Team {
