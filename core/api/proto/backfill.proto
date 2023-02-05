@@ -10,7 +10,7 @@ service Backfill {
 }
 
 message BackfillPullRequestLinksRequest {
-	uint64 teamId = 1;
+	optional uint64 teamId = 1;
 }
 
 message BackfillParticipantsBandwidthRequest {
