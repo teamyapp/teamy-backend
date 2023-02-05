@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/core/api/proto";
+
+service Backfill {
+	rpc BackfillPullRequestLinks(BackfillPullRequestLinksRequest) returns (google.protobuf.Empty);
+	rpc BackfillParticipantsBandwidth(BackfillParticipantsBandwidthRequest) returns (google.protobuf.Empty);
+}
+
+message BackfillPullRequestLinksRequest {
+	uint64 teamId = 1;
+}
+
+message BackfillParticipantsBandwidthRequest {
+	uint64 teamId = 1;
+	uint64 springId = 2;
+}
