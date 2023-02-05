@@ -29,6 +29,7 @@ func (b BackfillRPC) Start(runner *runner.ServiceRunner) error {
 }
 
 func (b BackfillRPC) BackfillPullRequestLinks(ct context.Context, in *proto.BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
+        panic("implement me")
 	return &emptypb.Empty{}, nil
 }
 
