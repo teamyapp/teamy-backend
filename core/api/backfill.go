@@ -34,6 +34,7 @@ func (b BackfillRPC) BackfillPullRequestLinks(ct context.Context, in *proto.Back
 }
 
 func (b BackfillRPC) BackfillParticipantsBandwidth(ct context.Context, in *proto.BackfillParticipantsBandwidthRequest) (*emptypb.Empty, error) {
+        panic("implement me")
 	return &emptypb.Empty{}, nil
 }
 
