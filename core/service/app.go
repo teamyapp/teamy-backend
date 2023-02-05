@@ -37,6 +37,14 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
+func (a App) FindAppTeamInstallationsByAppId(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, error) {
+	return a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
+}
+
+func (a App) FindAppInstallationsByTeamId(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, error) {
+	return a.appTeamInstallationDao.FindAppTeamInstallationsByTeamID(ct, teamID)
+}
+
 func (a App) FindAppVersionByAppId(ct context.Context, appID uint64) ([]entity.AppVersion, error) {
 	return a.appVersionDao.FindAppVersionsByAppID(ct, appID)
 }
