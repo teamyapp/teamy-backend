@@ -15,5 +15,5 @@ message BackfillPullRequestLinksRequest {
 
 message BackfillParticipantsBandwidthRequest {
 	uint64 teamId = 1;
-	uint64 springId = 2;
+	uint64 sprintId = 2;
 }
