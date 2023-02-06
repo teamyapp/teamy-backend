@@ -94,10 +94,10 @@ func (g GithubPullRequest) CreatePullRequest(ct context.Context, pullRequest ent
 	(
 	    internal_task_id,
 	    github_pull_request_node_id,
-	 	github_pull_request_number,
-	    github_pull_request_url,
+	 	github_repository_owner,
 	    github_repository_name,
-	    github_repository_owner
+	    github_pull_request_number,
+	    github_pull_request_url,
 	)
 	VALUES ($1, $2, $3, $4, $5, $6);
 `,
