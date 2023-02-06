@@ -575,10 +575,10 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 	pr := entity.GithubPullRequest{
 		NodeID:          prEvt.PullRequest.NodeID,
 		InternalTaskID:  createTaskRes.TaskId,
+		RepositoryOwner: evt.Repository.Owner.Login,
+		RepositoryName:  evt.Repository.Name,
 		Number:          prEvt.Number,
 		URL:             prEvt.PullRequest.HtmlURL,
-		RepositoryName:  evt.Repository.Name,
-		RepositoryOwner: evt.Repository.Owner.Login,
 	}
 	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
