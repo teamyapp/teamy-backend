@@ -1,9 +1,9 @@
 -- +migrate Up
 ALTER TABLE apps_github_pull_request
-	ADD github_pull_request_number integer,
+    ADD github_repository_owner VARCHAR(39);
+    ADD github_repository_name VARCHAR(100),
+    ADD github_pull_request_number INTEGER,
     ADD github_pull_request_url VARCHAR(2048),
-    ADD github_repository_name VARCHAR(20),
-    ADD github_repository_owner VARCHAR(20);
 
 -- +migrate Down
 ALTER TABLE apps_github_pull_request
