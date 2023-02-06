@@ -103,10 +103,10 @@ func (g GithubPullRequest) CreatePullRequest(ct context.Context, pullRequest ent
 `,
 		pullRequest.InternalTaskID,
 		pullRequest.NodeID,
+		pullRequest.RepositoryOwner,
+		pullRequest.RepositoryName,
 		pullRequest.Number,
 		pullRequest.URL,
-		pullRequest.RepositoryName,
-		pullRequest.RepositoryOwner,
 	)
 
 	if err != nil {
