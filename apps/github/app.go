@@ -596,11 +596,21 @@ func (a App) updateTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 		return err
 	}
 
+	getTaskReq := &proto.GetTaskRequest{TaskId: pr.InternalTaskID}
+	task, err := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return err
+	}
+
 	updateTaskReq := &proto.UpdateTaskRequest{
 		TaskId:       pr.InternalTaskID,
-		OwningTeamId: teamID,
 		Goal:         fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
 		Context:      &prEvt.PullRequest.Body,
+		OwningTeamId: teamID,
+		OwnerUserId:  task.OwnerUserId,
+		Effort:       task.Effort,
+		DueAt:        task.DueAt,
 	}
 
 	_, err = a.teamyClientRegistry.TaskClient().UpdateTask(ct, updateTaskReq)

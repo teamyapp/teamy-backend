@@ -27,7 +27,7 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, i
 	    github_repository_owner,
 	    github_repository_name,
 	    github_pull_request_number,
-	    github_pull_request_url,
+	    github_pull_request_url
 	FROM apps_github_pull_request
 	WHERE internal_task_id = $1;
 `,
@@ -62,7 +62,7 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(ct context.Context, git
 	    github_repository_owner,
 	    github_repository_name,
 	    github_pull_request_number,
-	    github_pull_request_url,
+	    github_pull_request_url
 	FROM apps_github_pull_request
 	WHERE github_pull_request_node_id = $1;
 `,
