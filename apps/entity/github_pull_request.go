@@ -5,6 +5,6 @@ type GithubPullRequest struct {
 	InternalTaskID  uint64
 	RepositoryOwner string
 	RepositoryName  string
-	Number                 int
-	URL                       string
+	Number          int
+	URL             string
 }
