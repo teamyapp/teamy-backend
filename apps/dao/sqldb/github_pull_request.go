@@ -35,10 +35,10 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, i
 		Scan(
 			&pullRequest.InternalTaskID,
 			&pullRequest.NodeID,
+			&pullRequest.RepositoryOwner,
+			&pullRequest.RepositoryName,
 			&pullRequest.Number,
 			&pullRequest.URL,
-			&pullRequest.RepositoryName,
-			&pullRequest.RepositoryOwner,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
