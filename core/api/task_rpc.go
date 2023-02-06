@@ -4,8 +4,8 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
@@ -75,7 +75,7 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 		OwnerUserID:  req.OwnerUserId,
 		OwningTeamID: req.OwningTeamId,
 		Effort:       fromProtoDurationPtr(req.Effort),
-		DueAt:        nil,
+		DueAt:        fromProtoTimePtr(req.DueAt),
 	}
 	_, err := t.taskService.UpdateTask(ct, req.TaskId, input)
 	if err != nil {
