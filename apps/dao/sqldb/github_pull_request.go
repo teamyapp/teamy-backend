@@ -23,7 +23,11 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, i
 	err := g.db.QueryRow(`
 	SELECT
 	    internal_task_id,
-	    github_pull_request_node_id
+	    github_pull_request_node_id,
+	    github_repository_owner,
+	    github_repository_name,
+	    github_pull_request_number,
+	    github_pull_request_url,
 	FROM apps_github_pull_request
 	WHERE internal_task_id = $1;
 `,
@@ -31,6 +35,10 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, i
 		Scan(
 			&pullRequest.InternalTaskID,
 			&pullRequest.NodeID,
+			&pullRequest.RepositoryOwner,
+			&pullRequest.RepositoryName,
+			&pullRequest.Number,
+			&pullRequest.URL,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -50,7 +58,11 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(ct context.Context, git
 	err := g.db.QueryRow(`
 	SELECT
 	    internal_task_id,
-	    github_pull_request_node_id
+	    github_pull_request_node_id,
+	    github_repository_owner,
+	    github_repository_name,
+	    github_pull_request_number,
+	    github_pull_request_url,
 	FROM apps_github_pull_request
 	WHERE github_pull_request_node_id = $1;
 `,
@@ -58,6 +70,10 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(ct context.Context, git
 		Scan(
 			&pullRequest.InternalTaskID,
 			&pullRequest.NodeID,
+			&pullRequest.RepositoryOwner,
+			&pullRequest.RepositoryName,
+			&pullRequest.Number,
+			&pullRequest.URL,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -77,12 +93,20 @@ func (g GithubPullRequest) CreatePullRequest(ct context.Context, pullRequest ent
 	INSERT INTO apps_github_pull_request
 	(
 	    internal_task_id,
-	    github_pull_request_node_id
+	    github_pull_request_node_id,
+	 	github_repository_owner,
+	    github_repository_name,
+	    github_pull_request_number,
+	    github_pull_request_url
 	)
-	VALUES ($1, $2);
+	VALUES ($1, $2, $3, $4, $5, $6);
 `,
 		pullRequest.InternalTaskID,
 		pullRequest.NodeID,
+		pullRequest.RepositoryOwner,
+		pullRequest.RepositoryName,
+		pullRequest.Number,
+		pullRequest.URL,
 	)
 
 	if err != nil {
