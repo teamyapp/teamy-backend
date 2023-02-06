@@ -573,8 +573,12 @@ func (a App) createTaskForPullRequest(ct context.Context, teamID uint64, evt eve
 		telemetry.MessageProp: fmt.Sprintf("task moved to in progress: taskID=%v", createTaskRes.TaskId),
 	})
 	pr := entity.GithubPullRequest{
-		NodeID:         prEvt.PullRequest.NodeID,
-		InternalTaskID: createTaskRes.TaskId,
+		NodeID:          prEvt.PullRequest.NodeID,
+		InternalTaskID:  createTaskRes.TaskId,
+		Number:          prEvt.Number,
+		URL:             prEvt.PullRequest.HtmlURL,
+		RepositoryName:  evt.Repository.Name,
+		RepositoryOwner: evt.Repository.Owner.Login,
 	}
 	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
