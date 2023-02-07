@@ -75,7 +75,7 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 		created_at,
 		owning_team_id
 	FROM sprint
-	WHERE id IN (%S);`, idsString)
+	WHERE id IN (%v);`, idsString)
 	rows, err := s.db.Query(query)
 	if err != nil {
 		internalErr := &errs.Error{

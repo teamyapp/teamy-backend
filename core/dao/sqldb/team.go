@@ -125,7 +125,7 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 		created_at,
 		updated_at
 	FROM team
-	WHERE id IN (%S);`, idsString)
+	WHERE id IN (%v);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
 		internalErr := &errs.Error{

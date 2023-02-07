@@ -91,7 +91,7 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 		updated_at,
 		delivered_at
 	FROM task
-	WHERE id IN (%S);`, idsString)
+	WHERE id IN (%v);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
 		internalErr := &errs.Error{

@@ -77,7 +77,7 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 		created_at,
 		updated_at
 	FROM "user"
-	WHERE id IN (%S)`, idsString)
+	WHERE id IN (%v)`, idsString)
 	rows, err := u.db.Query(query)
 	if err != nil {
 		internalErr := &errs.Error{
