@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type User struct {
 
 var _ dao.User = (*User)(nil)
 
-func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
+func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -40,23 +41,30 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, erro
 			&user.CreatedAt,
 			&user.UpdatedAt,
 		)
-
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.User{}, dao.ErrNotFound(fmt.Sprintf(
-			"user not found: id=%v",
-			userID))
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("user not found: userID=%v", userID),
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.User{}, internalErr
 	}
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.User{}, internalErr
 	}
 
-	return user, err
+	return user, nil
 }
 
-func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.User, error) {
+func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.User, *errs.Error) {
 	if len(userIDs) == 0 {
-		return []entity.User{}, nil
+		return nil, nil
 	}
 
 	idsString := toIDsString(userIDs)
@@ -69,12 +77,17 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 		created_at,
 		updated_at
 	FROM "user"
-	WHERE id IN (%s)`, idsString)
+	WHERE id IN (%S)`, idsString)
 	rows, err := u.db.Query(query)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
+
 	defer rows.Close()
 
 	var users []entity.User
@@ -90,17 +103,25 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 				&user.UpdatedAt,
 			)
 		if err != nil {
-			u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		users = append(users, user)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return users, nil
 }
 
-func (u User) CreateUser(ct context.Context, user entity.User) error {
+func (u User) CreateUser(ct context.Context, user entity.User) *errs.Error {
 	_, err := u.db.Exec(`
 		INSERT INTO "user"
 		(
@@ -119,13 +140,18 @@ func (u User) CreateUser(ct context.Context, user entity.User) error {
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (u User) UpdateUser(ct context.Context, user entity.User) error {
+func (u User) UpdateUser(ct context.Context, user entity.User) *errs.Error {
 	_, err := u.db.Exec(`
 		UPDATE "user"
 		SET
@@ -142,10 +168,15 @@ func (u User) UpdateUser(ct context.Context, user entity.User) error {
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewUser(dataCollector telemetry.DataCollector, sqlDB *sql.DB) User {

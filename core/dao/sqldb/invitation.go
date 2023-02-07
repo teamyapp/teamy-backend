@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type Invitation struct {
 
 var _ dao.Invitation = (*Invitation)(nil)
 
-func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) (entity.Invitation, error) {
+func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) (entity.Invitation, *errs.Error) {
 	invitation := entity.Invitation{}
 	err := i.db.QueryRow(`
 	SELECT
@@ -54,18 +55,27 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Invitation{}, dao.ErrNotFound(fmt.Sprintf(
-			"invitation not found: id=%v", invitationID))
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("invitation not found: invitationID=%v", invitationID),
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Invitation{}, internalErr
 	}
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Invitation{}, internalErr
 	}
 
-	return invitation, err
+	return invitation, nil
 }
 
-func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, error) {
+func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, *errs.Error) {
 	rows, err := i.db.Query(`
 	SELECT
 		id,
@@ -85,8 +95,12 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 `,
 		teamID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -110,17 +124,25 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 		)
 
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		invitations = append(invitations, invitation)
 	}
 
-	return invitations, err
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	return invitations, nil
 }
 
-func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, error) {
+func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, *errs.Error) {
 	rows, err := i.db.Query(`
 	SELECT
 		id,
@@ -138,8 +160,12 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 	FROM invitation;
 `)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -162,17 +188,25 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 			&invitation.UpdatedAt,
 		)
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		invitations = append(invitations, invitation)
 	}
 
-	return invitations, err
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	return invitations, nil
 }
 
-func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invitation) error {
+func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invitation) *errs.Error {
 	_, err := i.db.Exec(`
 	INSERT INTO invitation
 	(
@@ -201,13 +235,18 @@ func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invit
 		invitation.CreatedAt,
 	)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invitation) error {
+func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invitation) *errs.Error {
 	_, err := i.db.Exec(`
 		UPDATE invitation
 		SET
@@ -230,13 +269,18 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invit
 	)
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) error {
+func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) *errs.Error {
 	_, err := i.db.Exec(`
 		DELETE FROM invitation
 		WHERE id = $1;
@@ -244,10 +288,15 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) er
 		invitationID)
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewInvitation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Invitation {

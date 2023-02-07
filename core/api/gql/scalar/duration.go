@@ -10,6 +10,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go/decode"
 	"github.com/teamyapp/cloud/libs/duration"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/inject"
 )
@@ -30,7 +31,7 @@ func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 	ct := context.Background()
 	switch input.(type) {
 	case string:
-		var err error
+		var err *errs.Error
 		d.Duration, err = duration.Parse(ct, dataCollector, input.(string))
 		if err != nil {
 			dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})

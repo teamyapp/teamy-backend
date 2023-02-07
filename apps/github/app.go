@@ -22,6 +22,7 @@ import (
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/web"
@@ -54,7 +55,7 @@ type App struct {
 
 var _ runner.Service = (*App)(nil)
 
-func (a App) Start(rn *runner.ServiceRunner) error {
+func (a App) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
 			Path:        path.Join(githubAppPathPrefix, "teams", "{teamId}", "install"),

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -21,7 +22,7 @@ func (c Client) User(ct context.Context) (User, error) {
 	user, err := c.deps.userService.FindUserByID(ct, c.client.UserID)
 	if err != nil {
 		c.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return User{}, err
+		return User{}, errs.ToResolverErr(err)
 	}
 
 	return newUser(c.deps, user), nil

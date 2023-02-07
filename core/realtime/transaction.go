@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
@@ -48,7 +49,7 @@ type Transaction struct {
 	nextMutationIndex int
 }
 
-func (t *Transaction) rollback(ct context.Context) error {
+func (t *Transaction) rollback(ct context.Context) *errs.Error {
 	for index := t.nextMutationIndex - 1; index >= 0; index-- {
 		err := t.mutations[index].Undo()
 		if err != nil {
@@ -59,7 +60,7 @@ func (t *Transaction) rollback(ct context.Context) error {
 	return nil
 }
 
-func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) error {
+func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) *errs.Error {
 	err := mutation.Execute(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -77,7 +78,7 @@ func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) error
 	return nil
 }
 
-func (t *Transaction) Commit(ct context.Context) error {
+func (t *Transaction) Commit(ct context.Context) *errs.Error {
 	t.stateSyncer.BeginTransaction()
 	defer t.stateSyncer.EndTransaction()
 

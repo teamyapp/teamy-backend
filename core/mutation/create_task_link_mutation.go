@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,7 +23,7 @@ func (c *CreateTaskLinkMutation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTaskLinkMutation) Execute(ct context.Context) error {
+func (c *CreateTaskLinkMutation) Execute(ct context.Context) *errs.Error {
 	err := c.taskLinkDao.CreateTaskLink(ct, c.taskLink)
 	if err != nil {
 		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -32,11 +33,11 @@ func (c *CreateTaskLinkMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (c *CreateTaskLinkMutation) Undo() error {
+func (c *CreateTaskLinkMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByID(ct, c.taskLink.TaskID)
 	if err != nil {
 		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -55,7 +56,7 @@ func (c *CreateTaskLinkMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (c *CreateTaskLinkMutation) CleanUp(ct context.Context) error {
+func (c *CreateTaskLinkMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

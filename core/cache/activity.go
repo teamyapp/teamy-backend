@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -43,13 +44,14 @@ func (a Activity) FindAllTaskActivitiesByTeamID(teamID uint64) map[uint64]*entit
 	return teamActivity.TaskActivities
 }
 
-func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) (*entity.TaskActivity, error) {
+func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID uint64, taskActivity *entity.TaskActivity) (*entity.TaskActivity, *errs.Error) {
 	teamActivity, ok := a.teamActivities[teamID]
 	if !ok {
-		err := fmt.Errorf("teamActivity not found: teamID=%v", teamID)
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: err,
-		})
+		err := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("teamActivity not found: teamID=%v", teamID),
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 

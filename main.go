@@ -104,10 +104,10 @@ func startServiceRunner(
 	sqlDB *sql.DB,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) error {
-	runnerConfig, err := runner.ServiceRunnerConfigFromEnv(dataCollector)
-	if err != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+	runnerConfig, internalErr := runner.ServiceRunnerConfigFromEnv(dataCollector)
+	if internalErr != nil {
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
 	githubCfg, err := github.AppConfigFromEnv()
@@ -134,7 +134,7 @@ func startServiceRunner(
 		return err
 	}
 
-	teamyClientRegistry, err := api.NewClientRegistry(
+	teamyClientRegistry, internalErr := api.NewClientRegistry(
 		dataCollector,
 		rpc.ConnectionConfig{
 			Host:          cfg.TeamyAPIHost,
@@ -145,9 +145,9 @@ func startServiceRunner(
 			},
 			RequestTimeout: cfg.RequestTimeout,
 		}, maxCountRetry)
-	if err != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+	if internalErr != nil {
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
 	githubApp, err := appsDep.InitGithubApp(

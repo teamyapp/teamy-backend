@@ -2,13 +2,13 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -39,27 +39,33 @@ type User struct {
 	teamMemberDao              dao.TeamMember
 }
 
-func (u User) Me(ct context.Context) (entity.User, error) {
+func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.User{}, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.User{}, internalErr
 	}
 
 	return u.userDao.FindUserByID(ct, userID)
 }
 
-func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
+func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
 	return u.userDao.FindUserByID(ct, userID)
 }
 
-func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, error) {
+func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.User{}, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.User{}, internalErr
 	}
 
 	user := entity.User{
@@ -79,7 +85,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 	return user, nil
 }
 
-func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, error) {
+func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, *errs.Error) {
 	user, err := u.userDao.FindUserByID(ct, userID)
 	if err != nil {
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -112,18 +118,22 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 	return user, nil
 }
 
-func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error) {
+func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return 0, internalErr
 	}
 
-	res, err := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
+	res, rpcErr := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return 0, internalErr
 	}
 
 	fileUploadSession := entity.UserFileUploadSession{
@@ -133,7 +143,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error)
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	err = u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, fileUploadSession)
+	err := u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, fileUploadSession)
 	if err != nil {
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
@@ -142,12 +152,15 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error)
 	return res.UploadSessionId, err
 }
 
-func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (entity.User, error) {
+func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.User{}, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.User{}, internalErr
 	}
 
 	profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserID(
@@ -161,12 +174,16 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	}
 
 	if profileUploadSession.IsCompleted {
-		err = errors.New("profile upload session is already completed")
+		internalErr := &errs.Error{
+			Code: errs.InvalidOperation,
+			Message: fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
+				userID,
+				fileUploadSessionID),
+		}
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp:   err,
-			telemetry.MessageProp: fmt.Sprintf("userID=%v, fileUploadSessionID=%v", userID, fileUploadSessionID),
+			telemetry.CauseProp: internalErr,
 		})
-		return entity.User{}, err
+		return entity.User{}, internalErr
 	}
 
 	now := time.Now()
@@ -182,10 +199,11 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		UploadSessionId: fileUploadSessionID,
 	}
 
-	uploadSession, err := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.User{}, err
+	uploadSession, rpcErr := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.User{}, internalErr
 	}
 
 	user, err := u.userDao.FindUserByID(ct, userID)

@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,7 +23,7 @@ func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) error {
+func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -32,11 +33,11 @@ func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (d *DeleteSprintTaskRelationMutation) Undo() error {
+func (d *DeleteSprintTaskRelationMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (d *DeleteSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 }
 
@@ -55,7 +56,7 @@ func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 	}
 }
 
-func (d *DeleteSprintTaskRelationMutation) CleanUp(ct context.Context) error {
+func (d *DeleteSprintTaskRelationMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

@@ -2,13 +2,13 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/authorization"
@@ -48,11 +48,11 @@ type Team struct {
 	sprintService              Sprint
 }
 
-func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
+func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
 	return t.teamDao.FindTeamByID(ct, teamID)
 }
 
-func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, error) {
+func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, *errs.Error) {
 	teams, err := t.teamDao.FindAllTeams(ct)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -66,7 +66,7 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 	return teams, nil
 }
 
-func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, error) {
+func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, *errs.Error) {
 	ids, err := t.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -90,19 +90,23 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 	return teams, nil
 }
 
-func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team, error) {
+func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.Team{}, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Team{}, internalErr
 	}
 
 	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
-	genTeamIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.Team{}, err
+	genTeamIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Team{}, internalErr
 	}
 
 	team := entity.Team{
@@ -121,7 +125,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		t.teamDao,
 		team,
 	)
-	err = realTimeTransaction.ApplyMutation(ct, createTeamMutation)
+	err := realTimeTransaction.ApplyMutation(ct, createTeamMutation)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.Team{}, err
@@ -214,12 +218,15 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	return team, nil
 }
 
-func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInput) (entity.Team, error) {
+func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInput) (entity.Team, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.Team{}, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Team{}, internalErr
 	}
 
 	if feature.EnableAuthorization {
@@ -230,10 +237,12 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		}
 
 		if !hasPermission {
-			return entity.Team{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.Team{}, internalErr
 		}
 	}
 
@@ -269,11 +278,12 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	return team, nil
 }
 
-func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, error) {
-	res, err := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
+func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, *errs.Error) {
+	res, rpcErr := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return 0, internalErr
 	}
 
 	fileUploadSession := entity.TeamFileUploadSession{
@@ -283,7 +293,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	err = t.teamFileUploadSessionDao.CreateTeamFileUploadSession(ct, fileUploadSession)
+	err := t.teamFileUploadSessionDao.CreateTeamFileUploadSession(ct, fileUploadSession)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return 0, err
@@ -292,7 +302,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 	return res.UploadSessionId, err
 }
 
-func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fileUploadSessionID uint64) (entity.Team, error) {
+func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fileUploadSessionID uint64) (entity.Team, *errs.Error) {
 	iconUploadSession, err := t.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamID(
 		ct,
 		teamID,
@@ -304,10 +314,16 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	}
 
 	if iconUploadSession.IsCompleted {
-		err = fmt.Errorf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
-			teamID, fileUploadSessionID)
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.Team{}, err
+		internalErr := &errs.Error{
+			Code: errs.InvalidOperation,
+			Message: fmt.Sprintf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
+				teamID,
+				fileUploadSessionID),
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: internalErr,
+		})
+		return entity.Team{}, internalErr
 	}
 
 	now := time.Now()
@@ -322,10 +338,11 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	findUploadSessionReq := proto.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
-	uploadSession, err := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.Team{}, err
+	uploadSession, rpcErr := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Team{}, internalErr
 	}
 
 	team, err := t.teamDao.FindTeamByID(ct, teamID)
@@ -340,11 +357,11 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	return team, t.teamDao.UpdateTeam(ct, team)
 }
 
-func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamMember, error) {
+func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamMember, *errs.Error) {
 	return t.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 }
 
-func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, error) {
+func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
 	teamMember := entity.TeamMember{
 		TeamID:    teamID,
 		UserID:    memberUserID,
@@ -394,7 +411,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 	return teamMember, nil
 }
 
-func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, error) {
+func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
 	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -450,7 +467,7 @@ func (t Team) UpdateTeamMember(
 	ct context.Context,
 	teamID uint64,
 	input UpdateTeamMemberInput,
-) (entity.TeamMember, error) {
+) (entity.TeamMember, *errs.Error) {
 	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, input.UserID)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})

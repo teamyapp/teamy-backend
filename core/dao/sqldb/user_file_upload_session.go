@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -23,7 +24,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 	userID uint64,
 	userFileUploadSessionType entity.UserFileUploadSessionType,
 	fileUploadSessionID uint64,
-) (entity.UserFileUploadSession, error) {
+) (entity.UserFileUploadSession, *errs.Error) {
 	userFileUploadSession := entity.UserFileUploadSession{}
 	err := u.db.QueryRow(`
 		SELECT
@@ -46,23 +47,32 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.UserFileUploadSession{}, dao.ErrNotFound(fmt.Sprintf(
-			"UserFileUploadSession not found: userID=%v, type=%v",
-			userID,
-			userFileUploadSessionType))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf("UserFileUploadSession not found: userID=%v, userFileUploadSessionType=%v",
+				userID,
+				userFileUploadSessionType),
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.UserFileUploadSession{}, internalErr
 	}
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.UserFileUploadSession{}, internalErr
 	}
 
-	return userFileUploadSession, err
+	return userFileUploadSession, nil
 }
 
 func (u UserFileUploadSession) CreateUserFileUploadSession(
 	ct context.Context,
 	userFileUploadSession entity.UserFileUploadSession,
-) error {
+) *errs.Error {
 	_, err := u.db.Exec(`
 		INSERT INTO user_file_upload_session
 		(
@@ -83,16 +93,21 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func (u UserFileUploadSession) UpdateUserFileUploadSession(
 	ct context.Context,
 	userFileUploadSession entity.UserFileUploadSession,
-) error {
+) *errs.Error {
 	_, err := u.db.Exec(`
 		UPDATE user_file_upload_session
 		SET
@@ -115,10 +130,15 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewUserFileUploadSession(dataCollector telemetry.DataCollector, sqlDB *sql.DB) UserFileUploadSession {

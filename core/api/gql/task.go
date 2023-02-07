@@ -5,6 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -58,7 +59,7 @@ func (t Task) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.task.CreatorUserID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return User{}, err
+		return User{}, errs.ToResolverErr(err)
 	}
 
 	return newUser(t.deps, user), nil
@@ -72,7 +73,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 	owner, err := t.deps.userService.FindUserByID(ct, *t.task.OwnerUserID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	gqlUser := newUser(t.deps, owner)
@@ -83,7 +84,7 @@ func (t Task) OwningTeam(ct context.Context) (*Team, error) {
 	team, err := t.deps.teamService.FindTeamByID(ct, t.task.OwningTeamID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	gqlTeam := newTeam(t.deps, team)
@@ -130,7 +131,7 @@ func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 	tasks, err := t.deps.taskService.FindAwaitForTasks(ct, t.task.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(tasks, func(task entity.Task, _ int) Task {
@@ -142,7 +143,7 @@ func (t Task) Links(ct context.Context) ([]TaskLink, error) {
 	links, err := t.deps.taskLinkService.FindLinksByTaskID(ct, t.task.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(links, func(taskLink entity.TaskLink, _ int) TaskLink {

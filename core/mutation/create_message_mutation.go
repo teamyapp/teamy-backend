@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,7 +23,7 @@ func (c *CreateMessageMutation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateMessageMutation) Execute(ct context.Context) error {
+func (c *CreateMessageMutation) Execute(ct context.Context) *errs.Error {
 	err := c.messageDao.CreateMessage(ct, c.message)
 	if err != nil {
 		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -32,11 +33,11 @@ func (c *CreateMessageMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (c *CreateMessageMutation) Undo() error {
+func (c *CreateMessageMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (c *CreateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByCommentsThreadID(ct, c.message.ThreadID)
 	if err != nil {
 		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -55,7 +56,7 @@ func (c *CreateMessageMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (c *CreateMessageMutation) CleanUp(ct context.Context) error {
+func (c *CreateMessageMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

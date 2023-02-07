@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
@@ -20,7 +21,7 @@ type TaskLinkRPC struct {
 var _ runner.Service = (*TaskLinkRPC)(nil)
 var _ proto.TaskLinkServer = (*TaskLinkRPC)(nil)
 
-func (t TaskLinkRPC) Start(runner *runner.ServiceRunner) error {
+func (t TaskLinkRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
 		proto.RegisterTaskLinkServer(server, t)
 	})
@@ -39,10 +40,10 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLink
 	taskLink, err := t.taskLinkService.CreateTaskLink(ct, input)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &proto.CreateTaskLinkResponse{LinkId: taskLink.ID}, err
+	return &proto.CreateTaskLinkResponse{LinkId: taskLink.ID}, nil
 }
 
 func NewTaskLinkRPC(dataCollector telemetry.DataCollector, taskLinkService service.TaskLink) TaskLinkRPC {
