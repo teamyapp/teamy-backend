@@ -5,6 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -22,7 +23,7 @@ func (t Thread) Messages(ct context.Context) ([]Message, error) {
 	messages, err := t.deps.threadService.FindMessages(ct, t.threadID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(messages, func(message entity.Message, _ int) Message {

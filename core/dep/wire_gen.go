@@ -10,9 +10,10 @@ import (
 	"database/sql"
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	api2 "github.com/teamyapp/teamy-backend/core/api"
-	"github.com/teamyapp/teamy-backend/core/api/gql"
+	gql2 "github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
@@ -28,7 +29,7 @@ func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB
 	return stateSyncer
 }
 
-func InitGraphQLAPI(dataCollector telemetry.DataCollector, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (api2.GraphQL, error) {
+func InitGraphQLAPI(dataCollector telemetry.DataCollector, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
 	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
 	activity := cache.NewActivity(dataCollector)
 	task := sqldb.NewTask(dataCollector, sqlDB)
@@ -54,10 +55,10 @@ func InitGraphQLAPI(dataCollector telemetry.DataCollector, cloudWebAPIExternalBa
 	serviceInvitation := service.NewInvitation(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, invitation, teamMember, serviceTeam)
 	appTeamInstallation := sqldb.NewAppTeamInstallation(dataCollector, sqlDB)
 	app := service.NewApp(dataCollector, cloudAPIClientRegistry, authorizer, appTeamInstallation)
-	dependencies := gql.NewDependencies(dataCollector, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceThread, app)
-	resolver := gql.NewResolver(dependencies)
-	graphQL := api2.NewGraphQL(dataCollector, resolver)
-	return graphQL, nil
+	dependencies := gql2.NewDependencies(dataCollector, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceThread, app)
+	resolver := gql2.NewResolver(dependencies)
+	gqlService := api2.NewGraphQL(dataCollector, resolver)
+	return gqlService, nil
 }
 
 func InitRealTimeStateSyncAPI(dataCollector telemetry.DataCollector, realTimeStateSyncer *realtime.StateSyncer) api2.RealTimeStateSync {

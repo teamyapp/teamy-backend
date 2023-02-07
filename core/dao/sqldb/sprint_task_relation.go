@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -16,7 +17,7 @@ type SprintTaskRelation struct {
 
 var _ dao.SprintTaskRelation = (*SprintTaskRelation)(nil)
 
-func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, error) {
+func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, *errs.Error) {
 	rows, err := s.db.Query(
 		`
 	SELECT
@@ -26,8 +27,12 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 `,
 		sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -38,17 +43,25 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 			&taskID,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		taskIDs = append(taskIDs, taskID)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return taskIDs, nil
 }
 
-func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uint64) ([]uint64, error) {
+func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uint64) ([]uint64, *errs.Error) {
 	rows, err := s.db.Query(
 		`
 	SELECT
@@ -58,8 +71,12 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 `,
 		taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -70,17 +87,25 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 			&sprintID,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		sprintIDs = append(sprintIDs, sprintID)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return sprintIDs, nil
 }
 
-func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, relation entity.SprintTaskRelation) error {
+func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, relation entity.SprintTaskRelation) *errs.Error {
 	_, err := s.db.Exec(`
 		INSERT INTO sprint_task_relation
 		(
@@ -95,13 +120,18 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, relatio
 	)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, sprintID uint64, taskID uint64) error {
+func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, sprintID uint64, taskID uint64) *errs.Error {
 	_, err := s.db.Exec(`
 		DELETE FROM sprint_task_relation
 		WHERE sprint_id = $1 AND task_id = $2;
@@ -110,10 +140,15 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, sprintI
 		taskID)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewSprintTaskRelation(dataCollector telemetry.DataCollector, db *sql.DB) SprintTaskRelation {

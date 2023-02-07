@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -21,7 +22,7 @@ func (i Invitation) Sender(ct context.Context) (User, error) {
 	sender, err := i.deps.userService.FindUserByID(ct, i.invitation.SenderUserID)
 	if err != nil {
 		i.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return User{}, err
+		return User{}, errs.ToResolverErr(err)
 	}
 
 	return newUser(i.deps, sender), nil
@@ -47,7 +48,7 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 	receiver, err := i.deps.userService.FindUserByID(ct, *i.invitation.ReceiverUserID)
 	if err != nil {
 		i.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return &User{}, err
+		return &User{}, errs.ToResolverErr(err)
 	}
 
 	gqlUser := newUser(i.deps, receiver)
@@ -58,7 +59,7 @@ func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
 	team, err := i.deps.teamService.FindTeamByID(ct, i.invitation.TeamID)
 	if err != nil {
 		i.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+		return Team{}, errs.ToResolverErr(err)
 	}
 
 	return newTeam(i.deps, team), nil

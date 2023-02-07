@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -21,7 +22,7 @@ func (u *UpdateTaskActivityMutation) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTaskActivityMutation) Execute(ct context.Context) error {
+func (u *UpdateTaskActivityMutation) Execute(ct context.Context) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -31,11 +32,11 @@ func (u *UpdateTaskActivityMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (u *UpdateTaskActivityMutation) Undo() error {
+func (u *UpdateTaskActivityMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateTaskActivityMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (u *UpdateTaskActivityMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 }
 
@@ -48,7 +49,7 @@ func (u *UpdateTaskActivityMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (u *UpdateTaskActivityMutation) CleanUp(ct context.Context) error {
+func (u *UpdateTaskActivityMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

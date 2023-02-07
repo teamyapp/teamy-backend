@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
@@ -21,7 +22,7 @@ type BackfillRPC struct {
 var _ runner.Service = (*BackfillRPC)(nil)
 var _ proto.BackfillServer = (*BackfillRPC)(nil)
 
-func (b BackfillRPC) Start(runner *runner.ServiceRunner) error {
+func (b BackfillRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
 		proto.RegisterBackfillServer(server, b)
 	})
@@ -29,12 +30,12 @@ func (b BackfillRPC) Start(runner *runner.ServiceRunner) error {
 }
 
 func (b BackfillRPC) BackfillPullRequestLinks(ct context.Context, in *proto.BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
-        panic("implement me")
+	panic("implement me")
 	return &emptypb.Empty{}, nil
 }
 
 func (b BackfillRPC) BackfillParticipantsBandwidth(ct context.Context, in *proto.BackfillParticipantsBandwidthRequest) (*emptypb.Empty, error) {
-        panic("implement me")
+	panic("implement me")
 	return &emptypb.Empty{}, nil
 }
 

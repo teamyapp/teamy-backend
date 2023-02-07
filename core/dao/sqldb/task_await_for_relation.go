@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -16,7 +17,7 @@ type TaskAwaitForRelation struct {
 
 var _ dao.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
 
-func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTaskID uint64) ([]uint64, error) {
+func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTaskID uint64) ([]uint64, *errs.Error) {
 	rows, err := t.db.Query(`
 	SELECT
 		awaiting_task_id
@@ -24,8 +25,12 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 	WHERE await_for_task_id = $1;
 `, waitForTaskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -34,17 +39,25 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 		var waitingTaskID uint64
 		err = rows.Scan(&waitingTaskID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		waitingTaskIDs = append(waitingTaskIDs, waitingTaskID)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return waitingTaskIDs, nil
 }
 
-func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTaskID uint64) ([]uint64, error) {
+func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTaskID uint64) ([]uint64, *errs.Error) {
 	rows, err := t.db.Query(`
 	SELECT
 		await_for_task_id
@@ -52,8 +65,12 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 	WHERE awaiting_task_id = $1;
 `, waitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -62,17 +79,25 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 		var waitForTaskID uint64
 		err = rows.Scan(&waitForTaskID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		waitForTaskIDs = append(waitForTaskIDs, waitForTaskID)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return waitForTaskIDs, nil
 }
 
-func (t TaskAwaitForRelation) CreateRelation(ct context.Context, relation entity.TaskAwaitForRelation) error {
+func (t TaskAwaitForRelation) CreateRelation(ct context.Context, relation entity.TaskAwaitForRelation) *errs.Error {
 	_, err := t.db.Exec(`
 	INSERT INTO task_await_for_relation
 	(
@@ -88,13 +113,18 @@ func (t TaskAwaitForRelation) CreateRelation(ct context.Context, relation entity
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, waitingTaskID uint64, awaitForTaskID uint64) error {
+func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, waitingTaskID uint64, awaitForTaskID uint64) *errs.Error {
 	_, err := t.db.Exec(`
 		DELETE FROM task_await_for_relation
 		WHERE awaiting_task_id = $1 AND await_for_task_id = $2;
@@ -103,10 +133,15 @@ func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, waitingTaskID u
 		awaitForTaskID)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewTaskAwaitForRelation(dataCollector telemetry.DataCollector, db *sql.DB) TaskAwaitForRelation {

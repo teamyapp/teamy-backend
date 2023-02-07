@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type TeamMember struct {
 
 var _ dao.TeamMember = (*TeamMember)(nil)
 
-func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]uint64, error) {
+func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]uint64, *errs.Error) {
 	statement := `
 	SELECT
 		team_id
@@ -27,8 +28,12 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 `
 	rows, err := t.db.Query(statement, int64(userID))
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -39,17 +44,25 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 			&teamID,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		teamIDs = append(teamIDs, teamID)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return teamIDs, nil
 }
 
-func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64) ([]uint64, error) {
+func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64) ([]uint64, *errs.Error) {
 	statement := `
 	SELECT
 		user_id
@@ -58,8 +71,12 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 `
 	rows, err := t.db.Query(statement, int64(teamID))
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -70,17 +87,25 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 			&teamMemberID,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		teamMemberIDs = append(teamMemberIDs, teamMemberID)
 	}
 
-	return teamMemberIDs, err
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	return teamMemberIDs, nil
 }
 
-func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) ([]entity.TeamMember, error) {
+func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) ([]entity.TeamMember, *errs.Error) {
 	rows, err := t.db.Query(`
 	SELECT
 		team_id,
@@ -92,8 +117,12 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 	WHERE team_id = $1;
 `, teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -108,17 +137,25 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 			&teamMember.UpdatedAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		teamMembers = append(teamMembers, teamMember)
 	}
 
-	return teamMembers, err
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	return teamMembers, nil
 }
 
-func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uint64) (entity.TeamMember, error) {
+func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
 	teamMember := entity.TeamMember{}
 	err := t.db.QueryRow(
 		`
@@ -142,20 +179,28 @@ func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uin
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.TeamMember{}, dao.ErrNotFound(fmt.Sprintf(
-			"team member not found: teamID=%v, userID=%v",
-			teamMember.TeamID,
-			teamMember.UserID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"team member not found: teamID=%v, userID=%v", teamID, userID),
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.TeamMember{}, internalErr
 	}
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.TeamMember{}, internalErr
 	}
 
-	return teamMember, err
+	return teamMember, nil
 }
 
-func (t TeamMember) CreateTeamMember(ct context.Context, teamMember entity.TeamMember) error {
+func (t TeamMember) CreateTeamMember(ct context.Context, teamMember entity.TeamMember) *errs.Error {
 	_, err := t.db.Exec(`
 		INSERT INTO team_member
 		(
@@ -174,13 +219,18 @@ func (t TeamMember) CreateTeamMember(ct context.Context, teamMember entity.TeamM
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (t TeamMember) UpdateTeamMember(ct context.Context, teamMember entity.TeamMember) error {
+func (t TeamMember) UpdateTeamMember(ct context.Context, teamMember entity.TeamMember) *errs.Error {
 	_, err := t.db.Exec(`
 		UPDATE team_member
 		SET
@@ -194,13 +244,18 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, teamMember entity.TeamM
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (t TeamMember) DeleteTeamMember(ct context.Context, teamID uint64, userID uint64) error {
+func (t TeamMember) DeleteTeamMember(ct context.Context, teamID uint64, userID uint64) *errs.Error {
 	_, err := t.db.Exec(`
 		DELETE FROM team_member
 		WHERE team_id = $1 AND user_id = $2;
@@ -208,10 +263,15 @@ func (t TeamMember) DeleteTeamMember(ct context.Context, teamID uint64, userID u
 		teamID, userID)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewTeamMember(dataCollector telemetry.DataCollector, sqlDB *sql.DB) TeamMember {

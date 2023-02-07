@@ -6,6 +6,7 @@ import (
 
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 )
@@ -15,7 +16,7 @@ type Authorizer struct {
 	cloudClientRegistry *api.ClientRegistry
 }
 
-func (a Authorizer) hasPermission(ct context.Context, query authorization.Query) (bool, error) {
+func (a Authorizer) hasPermission(ct context.Context, query authorization.Query) (bool, *errs.Error) {
 	hasPermissionReq := &proto.HasPermissionRequest{
 		ResourceType: string(query.ResourceType),
 		ResourceId:   query.ResourceID,
@@ -25,13 +26,13 @@ func (a Authorizer) hasPermission(ct context.Context, query authorization.Query)
 	hasPermissionRes, err := a.cloudClientRegistry.AuthorizationClient().HasPermission(ct, hasPermissionReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return false, err
+		return false, errs.FromGRPCErr(err)
 	}
 
 	return hasPermissionRes.HasPermission, nil
 }
 
-func (a Authorizer) registerResource(ct context.Context, resourceType authorization.ResourceType, resourceID uint64) error {
+func (a Authorizer) registerResource(ct context.Context, resourceType authorization.ResourceType, resourceID uint64) *errs.Error {
 	registerResourceReq := &proto.RegisterResourceRequest{
 		ResourceType: string(resourceType),
 		ResourceId:   resourceID,
@@ -39,7 +40,7 @@ func (a Authorizer) registerResource(ct context.Context, resourceType authorizat
 	_, err := a.cloudClientRegistry.AuthorizationClient().RegisterResource(ct, registerResourceReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+		return errs.FromGRPCErr(err)
 	}
 
 	return nil
@@ -50,7 +51,7 @@ func (a Authorizer) assignParentResource(
 	childResourceType authorization.ResourceType,
 	childResourceID uint64,
 	parentResourceType authorization.ResourceType,
-	parentResourceID uint64) error {
+	parentResourceID uint64) *errs.Error {
 	assignParentResourceReq := &proto.AssignParentResourceRequest{
 		ChildResourceType:  string(childResourceType),
 		ChildResourceId:    childResourceID,
@@ -60,13 +61,13 @@ func (a Authorizer) assignParentResource(
 	_, err := a.cloudClientRegistry.AuthorizationClient().AssignParentResource(ct, assignParentResourceReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+		return errs.FromGRPCErr(err)
 	}
 
 	return nil
 }
 
-func (a Authorizer) addMemberToUserGroup(ct context.Context, userGroupID uint64, memberID uint64) error {
+func (a Authorizer) addMemberToUserGroup(ct context.Context, userGroupID uint64, memberID uint64) *errs.Error {
 	addUserGroupMemberReq := &proto.AddUserGroupMemberRequest{
 		GroupId: userGroupID,
 		UserId:  memberID,
@@ -74,13 +75,13 @@ func (a Authorizer) addMemberToUserGroup(ct context.Context, userGroupID uint64,
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddUserGroupMember(ct, addUserGroupMemberReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+		return errs.FromGRPCErr(err)
 	}
 
 	return nil
 }
 
-func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, userGroupName string, description *string) (uint64, error) {
+func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, userGroupName string, description *string) (uint64, *errs.Error) {
 	createUserGroupReq := &proto.CreateUserGroupRequest{
 		Name:        userGroupName,
 		Description: description,
@@ -89,14 +90,14 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 	createUserGroupRes, err := a.cloudClientRegistry.AuthorizationClient().CreateUserGroup(ct, createUserGroupReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
+		return 0, errs.FromGRPCErr(err)
 	}
 
 	// add the group creator to the newly created userGroup
 	err = a.addMemberToUserGroup(ct, createUserGroupRes.UserGroup.GroupId, creatorUserID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
+		return 0, errs.FromGRPCErr(err)
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
@@ -112,7 +113,7 @@ func (a Authorizer) assignPermission(
 	ct context.Context,
 	resourceOperation authorization.ResourceOperation,
 	userGroupID uint64,
-) error {
+) *errs.Error {
 	addPermissionReq := &proto.AddPermissionRequest{
 		ResourceType: string(resourceOperation.ResourceType),
 		ResourceId:   resourceOperation.ResourceID,
@@ -122,7 +123,7 @@ func (a Authorizer) assignPermission(
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddPermission(ct, addPermissionReq)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+		return errs.FromGRPCErr(err)
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
@@ -138,7 +139,7 @@ func (a Authorizer) assignUserGroupPermissions(
 	ct context.Context,
 	resourceOperations []authorization.ResourceOperation,
 	groupID uint64,
-) error {
+) *errs.Error {
 	for _, resourceOperation := range resourceOperations {
 		err := a.assignPermission(ct, resourceOperation, groupID)
 		if err != nil {
@@ -156,7 +157,7 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 	userGroupName string,
 	description *string,
 	resourceOperations []authorization.ResourceOperation,
-) (uint64, error) {
+) (uint64, *errs.Error) {
 	userGroupID, err := a.createUserGroup(ct, creatorUserID, userGroupName, description)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})

@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,7 +23,7 @@ func (d *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTaskAwaitForRelationMutation) Execute(ct context.Context) error {
+func (d *DeleteTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := d.taskAwaitForRelationDao.DeleteRelation(ct, d.awaitingTask.ID, d.awaitForTaskID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -32,11 +33,11 @@ func (d *DeleteTaskAwaitForRelationMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (d *DeleteTaskAwaitForRelationMutation) Undo() error {
+func (d *DeleteTaskAwaitForRelationMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (d *DeleteTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.awaitingTask.OwningTeamID)
 }
 
@@ -55,7 +56,7 @@ func (d *DeleteTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 	}
 }
 
-func (d *DeleteTaskAwaitForRelationMutation) CleanUp(ct context.Context) error {
+func (d *DeleteTaskAwaitForRelationMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type AppTeamInstallation struct {
 
 var _ dao.AppTeamInstallation = (*AppTeamInstallation)(nil)
 
-func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, error) {
+func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	rows, err := a.db.Query(`
 	SELECT
 		app_id,
@@ -31,8 +32,12 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 `,
 		appID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -48,17 +53,25 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	return appTeamInstallations, err
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	return appTeamInstallations, nil
 }
 
-func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, error) {
+func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	rows, err := a.db.Query(`
 	SELECT
 		app_id,
@@ -71,8 +84,12 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 `,
 		teamID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -88,17 +105,25 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	return appTeamInstallations, err
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	return appTeamInstallations, nil
 }
 
-func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.Context, appID uint64, teamID uint64) (entity.AppTeamInstallation, error) {
+func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.Context, appID uint64, teamID uint64) (entity.AppTeamInstallation, *errs.Error) {
 	appTeamInstallation := entity.AppTeamInstallation{}
 	err := a.db.QueryRow(`
 	SELECT
@@ -121,18 +146,27 @@ func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.AppTeamInstallation{}, dao.ErrNotFound(fmt.Sprintf(
-			"app team installation not found: appId=%v, teamId=%v", appID, teamID))
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("app installation not found: appID=%v, teamID=%v", appID, teamID),
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.AppTeamInstallation{}, internalErr
 	}
 
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.AppTeamInstallation{}, internalErr
 	}
 
-	return appTeamInstallation, err
+	return appTeamInstallation, nil
 }
 
-func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, appTeamInstallation entity.AppTeamInstallation) error {
+func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, appTeamInstallation entity.AppTeamInstallation) *errs.Error {
 	_, err := a.db.Exec(`
 	INSERT INTO app_team_installation
 	(
@@ -150,14 +184,20 @@ func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, appTe
 		appTeamInstallation.EnabledVersionNumber,
 		appTeamInstallation.InstalledAt,
 	)
+
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, appTeamInstallation entity.AppTeamInstallation) error {
+func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, appTeamInstallation entity.AppTeamInstallation) *errs.Error {
 	_, err := a.db.Exec(`
 		UPDATE app_team_installation
 		SET
@@ -167,14 +207,20 @@ func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, appTe
 		appTeamInstallation.AppID,
 		appTeamInstallation.InstalledTeamID,
 	)
+
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID uint64, teamID uint64) error {
+func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID uint64, teamID uint64) *errs.Error {
 	_, err := a.db.Exec(`
 		DELETE FROM app_team_installation
 		WHERE app_id = $1
@@ -183,10 +229,15 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID
 		appID,
 		teamID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewAppTeamInstallation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) AppTeamInstallation {

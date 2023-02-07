@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -21,7 +22,7 @@ func (u *UpdateTaskMutation) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTaskMutation) Execute(ct context.Context) error {
+func (u *UpdateTaskMutation) Execute(ct context.Context) *errs.Error {
 	err := u.taskDao.UpdateTask(ct, u.task)
 	if err != nil {
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -31,11 +32,11 @@ func (u *UpdateTaskMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (u *UpdateTaskMutation) Undo() error {
+func (u *UpdateTaskMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateTaskMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (u *UpdateTaskMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.task.OwningTeamID)
 }
 
@@ -48,7 +49,7 @@ func (u *UpdateTaskMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (u *UpdateTaskMutation) CleanUp(ct context.Context) error {
+func (u *UpdateTaskMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

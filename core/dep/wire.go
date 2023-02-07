@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/wire"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	cloudGQL "github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
@@ -78,7 +79,7 @@ func InitGraphQLAPI(
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
-) (api.GraphQL, error) {
+) (cloudGQL.Service[gql.Resolver], error) {
 	wire.Build(
 		daoSet,
 		serviceSet,
@@ -87,7 +88,7 @@ func InitGraphQLAPI(
 		gql.NewResolver,
 		api.NewGraphQL,
 	)
-	return api.GraphQL{}, nil
+	return cloudGQL.Service[gql.Resolver]{}, nil
 }
 
 func InitRealTimeStateSyncAPI(

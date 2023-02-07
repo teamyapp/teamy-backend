@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,7 +23,7 @@ func (d *DeleteTeamMemberMutation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTeamMemberMutation) Execute(ct context.Context) error {
+func (d *DeleteTeamMemberMutation) Execute(ct context.Context) *errs.Error {
 	err := d.teamMemberDao.DeleteTeamMember(ct, d.teamID, d.userID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -32,11 +33,11 @@ func (d *DeleteTeamMemberMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (d *DeleteTeamMemberMutation) Undo() error {
+func (d *DeleteTeamMemberMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteTeamMemberMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (d *DeleteTeamMemberMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
 }
 
@@ -52,7 +53,7 @@ func (d *DeleteTeamMemberMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) error {
+func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) *errs.Error {
 	teamNotifier, err := d.stateSyncer.GetTeamNotifier(ct, d.teamID)
 	if err != nil {
 		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})

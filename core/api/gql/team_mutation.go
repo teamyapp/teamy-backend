@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -19,7 +20,7 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 	team, err := m.deps.teamService.CreateTeam(ct, createTeamInput)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+		return Team{}, errs.ToResolverErr(err)
 	}
 	return newTeam(m.deps, team), nil
 }
@@ -31,16 +32,24 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 		OwnerUserID graphql.ID
 	}
 }) (Team, error) {
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Team{}, errs.ToResolverErr(internalErr)
 	}
 
-	ownerUserID, err := fromGraphQLID(args.Input.OwnerUserID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+	ownerUserID, argErr := fromGraphQLID(args.Input.OwnerUserID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Team{}, errs.ToResolverErr(internalErr)
 	}
 
 	updateTeamInput := service.UpdateTeamInput{
@@ -50,7 +59,7 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	team, err := m.deps.teamService.UpdateTeam(ct, teamID, updateTeamInput)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+		return Team{}, errs.ToResolverErr(err)
 	}
 
 	return newTeam(m.deps, team), nil
@@ -59,16 +68,20 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 	TeamID graphql.ID
 }) (graphql.ID, error) {
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return "", errs.ToResolverErr(internalErr)
 	}
 
 	uploadSessionID, err := m.deps.teamService.CreateTeamIconUploadSession(ct, teamID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+		return "", errs.ToResolverErr(err)
 	}
 
 	return toGraphQLID(uploadSessionID), nil
@@ -78,22 +91,30 @@ func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 	TeamID              graphql.ID
 	FileUploadSessionID graphql.ID
 }) (Team, error) {
-	fileUploadSessionID, err := fromGraphQLID(args.FileUploadSessionID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+	fileUploadSessionID, argErr := fromGraphQLID(args.FileUploadSessionID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Team{}, errs.ToResolverErr(internalErr)
 	}
 
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Team{}, errs.ToResolverErr(internalErr)
 	}
 
 	team, err := m.deps.teamService.FinishTeamIconUploadSession(ct, teamID, fileUploadSessionID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+		return Team{}, errs.ToResolverErr(err)
 	}
 
 	return newTeam(m.deps, team), nil

@@ -5,8 +5,8 @@ go 1.18
 require (
 	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
-	github.com/graph-gophers/graphql-go v1.4.0
-	github.com/teamyapp/cloud v0.0.0-20230202044612-2f2c9d405c78
+	github.com/graph-gophers/graphql-go v1.5.0
+	github.com/teamyapp/cloud v0.0.0-20230207093728-982122263b68
 	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 )

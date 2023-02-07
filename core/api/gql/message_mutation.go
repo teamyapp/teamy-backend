@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -14,17 +15,21 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 		Body string
 	}
 }) (Message, error) {
-	threadID, err := fromGraphQLID(args.ThreadID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Message{}, err
+	threadID, argErr := fromGraphQLID(args.ThreadID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Message{}, errs.ToResolverErr(internalErr)
 	}
 
 	input := service.CreateMessageInput{Body: args.Message.Body}
 	message, err := m.deps.threadService.CreateMessage(ct, threadID, input)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Message{}, err
+		return Message{}, errs.ToResolverErr(err)
 	}
 
 	return newMessage(m.deps, message), nil
@@ -36,17 +41,21 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 		Body string
 	}
 }) (Message, error) {
-	messageID, err := fromGraphQLID(args.MessageID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Message{}, err
+	messageID, argErr := fromGraphQLID(args.MessageID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Message{}, errs.ToResolverErr(internalErr)
 	}
 
 	input := service.UpdateMessageInput{Body: args.Input.Body}
 	message, err := m.deps.threadService.UpdateMessage(ct, messageID, input)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Message{}, err
+		return Message{}, errs.ToResolverErr(err)
 	}
 
 	return newMessage(m.deps, message), nil
@@ -55,12 +64,21 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 func (m Mutation) DeleteMessage(ct context.Context, args struct {
 	MessageID graphql.ID
 }) (Message, error) {
-	messageID, err := fromGraphQLID(args.MessageID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Message{}, err
+	messageID, argErr := fromGraphQLID(args.MessageID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Message{}, errs.ToResolverErr(internalErr)
 	}
 
 	message, err := m.deps.threadService.DeleteMessage(ct, messageID)
+	if err != nil {
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return Message{}, errs.ToResolverErr(err)
+	}
+
 	return newMessage(m.deps, message), nil
 }

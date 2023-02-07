@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/service"
@@ -19,16 +20,24 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		IsPlanned   *bool
 	}
 }) (Task, error) {
-	owningTeamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	owningTeamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	ownerUserID, err := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Task.OwnerUserID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	ownerUserID, argErr := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Task.OwnerUserID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.CreateTask(ct, owningTeamID, service.CreateTaskInput{
@@ -40,7 +49,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 	})
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -57,22 +66,34 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		DueAt        *graphql.Time
 	}
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	ownerUserID, err := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Input.OwnerUserID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	ownerUserID, argErr := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Input.OwnerUserID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	owningTeamID, err := fromGraphQLID(args.Input.OwningTeamID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	owningTeamID, argErr := fromGraphQLID(args.Input.OwningTeamID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.UpdateTask(ct, taskID, service.UpdateTaskInput{
@@ -85,7 +106,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 	})
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -94,16 +115,20 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 func (m Mutation) DeleteTask(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.DeleteTask(ct, taskID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -112,16 +137,20 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID, true)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -130,16 +159,20 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToInProgress(ct, taskID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -148,16 +181,20 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 	TaskID graphql.ID
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToDelivered(ct, taskID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -167,16 +204,20 @@ func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 	TaskID graphql.ID
 	Reason string
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToBlocked(ct, taskID, args.Reason)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -186,22 +227,30 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 	TaskID         graphql.ID
 	AwaitForTaskId graphql.ID
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	awaitForTaskId, argErr := fromGraphQLID(args.AwaitForTaskId)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.AddAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -211,22 +260,30 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 	TaskID         graphql.ID
 	AwaitForTaskId graphql.ID
 }) (Task, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	awaitForTaskId, err := fromGraphQLID(args.AwaitForTaskId)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+	awaitForTaskId, argErr := fromGraphQLID(args.AwaitForTaskId)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.RemoveAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Task{}, err
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -236,22 +293,30 @@ func (m Mutation) StartDraggingTask(ct context.Context, args struct {
 	TaskID   graphql.ID
 	ClientID graphql.ID
 }) (graphql.ID, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return "", errs.ToResolverErr(internalErr)
 	}
 
-	clientID, err := fromGraphQLID(args.ClientID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+	clientID, argErr := fromGraphQLID(args.ClientID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return "", errs.ToResolverErr(internalErr)
 	}
 
-	err = m.deps.taskService.StartDraggingTask(ct, taskID, clientID)
+	err := m.deps.taskService.StartDraggingTask(ct, taskID, clientID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+		return "", errs.ToResolverErr(err)
 	}
 
 	return args.TaskID, nil
@@ -261,22 +326,30 @@ func (m Mutation) StopDraggingTask(ct context.Context, args struct {
 	TaskID   graphql.ID
 	ClientID graphql.ID
 }) (graphql.ID, error) {
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return "", errs.ToResolverErr(internalErr)
 	}
 
-	clientID, err := fromGraphQLID(args.ClientID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+	clientID, argErr := fromGraphQLID(args.ClientID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return "", errs.ToResolverErr(internalErr)
 	}
 
-	err = m.deps.taskService.StopDraggingTask(ct, taskID, clientID)
+	err := m.deps.taskService.StopDraggingTask(ct, taskID, clientID)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return "", err
+		return "", errs.ToResolverErr(err)
 	}
 
 	return args.TaskID, nil

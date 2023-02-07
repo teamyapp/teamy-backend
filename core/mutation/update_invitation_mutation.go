@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -21,7 +22,7 @@ func (d *UpdateInvitationMutation) GetID() uint64 {
 	return d.id
 }
 
-func (u *UpdateInvitationMutation) Execute(ct context.Context) error {
+func (u *UpdateInvitationMutation) Execute(ct context.Context) *errs.Error {
 	err := u.invitationDao.UpdateInvitation(ct, u.invitation)
 	if err != nil {
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -31,11 +32,11 @@ func (u *UpdateInvitationMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (u *UpdateInvitationMutation) Undo() error {
+func (u *UpdateInvitationMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateInvitationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (u *UpdateInvitationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.invitation.TeamID)
 }
 
@@ -48,7 +49,7 @@ func (u *UpdateInvitationMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (u *UpdateInvitationMutation) CleanUp(ct context.Context) error {
+func (u *UpdateInvitationMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

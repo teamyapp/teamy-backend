@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
@@ -22,7 +23,7 @@ type TaskRPC struct {
 var _ runner.Service = (*TaskRPC)(nil)
 var _ proto.TaskServer = (*TaskRPC)(nil)
 
-func (t TaskRPC) Start(runner *runner.ServiceRunner) error {
+func (t TaskRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
 		proto.RegisterTaskServer(server, t)
 	})
@@ -33,7 +34,7 @@ func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.
 	task, err := t.taskService.FindTaskByID(ct, req.TaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
 	return &proto.TaskMsg{
@@ -62,10 +63,10 @@ func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*
 	task, err := t.taskService.CreateTask(ct, req.TeamId, input)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &proto.CreateTaskResponse{TaskId: task.ID}, err
+	return &proto.CreateTaskResponse{TaskId: task.ID}, nil
 }
 
 func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*emptypb.Empty, error) {
@@ -80,80 +81,80 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 	_, err := t.taskService.UpdateTask(ct, req.TaskId, input)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) DeleteTask(ct context.Context, req *proto.DeleteTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.DeleteTask(ct, req.TaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *proto.MoveTaskToUpcomingRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToUpcoming(ct, req.TaskId, true)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToInProgress(ct context.Context, req *proto.MoveTaskToInProgressRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToInProgress(ct, req.TaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToDelivered(ct context.Context, req *proto.MoveTaskToDeliveredRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToDelivered(ct, req.TaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *proto.MoveTaskToBlockedRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToBlocked(ct, req.TaskId, req.Reason)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) AddAwaitForTask(ct context.Context, req *proto.AddAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.AddAwaitForTask(ct, req.AwaitingTaskId, req.AwaitForTaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *proto.RemoveAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.RemoveAwaitForTask(ct, req.AwaitForTaskId, req.AwaitForTaskId)
 	if err != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func NewTaskRPC(dataCollector telemetry.DataCollector, taskService service.Task) TaskRPC {

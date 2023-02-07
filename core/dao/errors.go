@@ -1,9 +1,7 @@
 package dao
 
-type ErrNotFound string
+import (
+	"github.com/teamyapp/cloud/libs/errs"
+)
 
-var ErrorNotFound ErrNotFound = ""
-
-func (e ErrNotFound) Error() string {
-	return string(e)
-}
+const DBError errs.ErrorCode = "DBError"

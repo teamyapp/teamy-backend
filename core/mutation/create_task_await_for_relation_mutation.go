@@ -3,6 +3,7 @@ package mutation
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,7 +23,7 @@ func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) error {
+func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := c.taskAwaitForRelationDao.CreateRelation(ct, c.taskAwaitForRelation)
 	if err != nil {
 		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -32,11 +33,11 @@ func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) error {
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelationMutation) Undo() error {
+func (c *CreateTaskAwaitForRelationMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, error) {
+func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByID(ct, c.taskAwaitForRelation.AwaitForTaskID)
 	if err != nil {
 		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -55,7 +56,7 @@ func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 	}
 }
 
-func (c *CreateTaskAwaitForRelationMutation) CleanUp(ct context.Context) error {
+func (c *CreateTaskAwaitForRelationMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

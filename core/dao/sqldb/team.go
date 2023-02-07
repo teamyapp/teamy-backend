@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -17,7 +18,7 @@ type Team struct {
 
 var _ dao.Team = (*Team)(nil)
 
-func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
+func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -31,9 +32,14 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 `
 	rows, err := t.db.Query(statement)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
+
 	defer rows.Close()
 
 	teams := make([]entity.Team, 0)
@@ -49,17 +55,25 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 			&team.UpdatedAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		teams = append(teams, team)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return teams, nil
 }
 
-func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
+func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -84,13 +98,18 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, erro
 			&team.UpdatedAt,
 		)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Team{}, internalErr
 	}
 
-	return team, err
+	return team, nil
 }
 
-func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Team, error) {
+func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Team, *errs.Error) {
 	if len(teamIDs) == 0 {
 		return []entity.Team{}, nil
 	}
@@ -106,11 +125,15 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 		created_at,
 		updated_at
 	FROM team
-	WHERE id IN (%s);`, idsString)
+	WHERE id IN (%v);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -128,17 +151,25 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 				&team.UpdatedAt,
 			)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		teams = append(teams, team)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return teams, nil
 }
 
-func (t Team) CreateTeam(ct context.Context, team entity.Team) error {
+func (t Team) CreateTeam(ct context.Context, team entity.Team) *errs.Error {
 	_, err := t.db.Exec(`
 		INSERT INTO team
 		    (
@@ -157,13 +188,18 @@ func (t Team) CreateTeam(ct context.Context, team entity.Team) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (t Team) UpdateTeam(ct context.Context, team entity.Team) error {
+func (t Team) UpdateTeam(ct context.Context, team entity.Team) *errs.Error {
 	_, err := t.db.Exec(`
 		UPDATE team
 		SET
@@ -180,10 +216,15 @@ func (t Team) UpdateTeam(ct context.Context, team entity.Team) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewTeam(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Team {

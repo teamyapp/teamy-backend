@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type SprintParticipant struct {
 
 var _ dao.SprintParticipant = (*SprintParticipant)(nil)
 
-func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, error) {
+func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, *errs.Error) {
 	rows, err := s.db.Query(
 		`
 	SELECT
@@ -28,8 +29,12 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 `,
 		sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -40,7 +45,6 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 			&participantUserID,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
@@ -50,7 +54,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 	return participantUserIDs, nil
 }
 
-func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, error) {
+func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	rows, err := s.db.Query(
 		`
 	SELECT
@@ -65,8 +69,12 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 `,
 		sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -82,17 +90,25 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 			&sprintParticipant.UpdatedAt,
 		)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		sprintParticipants = append(sprintParticipants, sprintParticipant)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return sprintParticipants, nil
 }
 
-func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, error) {
+func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
 	participant := entity.SprintParticipant{}
 	err := s.db.QueryRow(`
 	SELECT
@@ -117,18 +133,28 @@ func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, 
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.SprintParticipant{}, dao.ErrNotFound(fmt.Sprintf(
-			"participant not found: sprintID=%v", sprintID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"participant not found: sprintID=%v, participantUserID=%v", sprintID, participantUserID),
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.SprintParticipant{}, internalErr
 	}
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.SprintParticipant{}, internalErr
 	}
 
-	return participant, err
+	return participant, nil
 }
 
-func (s SprintParticipant) CreateSprintParticipant(ct context.Context, participant entity.SprintParticipant) error {
+func (s SprintParticipant) CreateSprintParticipant(ct context.Context, participant entity.SprintParticipant) *errs.Error {
 	_, err := s.db.Exec(`
 	INSERT INTO sprint_participant
 	(
@@ -149,13 +175,18 @@ func (s SprintParticipant) CreateSprintParticipant(ct context.Context, participa
 		participant.UpdatedAt,
 	)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, participant entity.SprintParticipant) error {
+func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, participant entity.SprintParticipant) *errs.Error {
 	_, err := s.db.Exec(`
 		UPDATE sprint_participant
 		SET
@@ -177,25 +208,34 @@ func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, participa
 	)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, sprintID uint64, userID uint64) error {
+func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, sprintID uint64, userID uint64) *errs.Error {
 	_, err := s.db.Exec(`
 		DELETE FROM sprint_participant
 		WHERE sprint_id = $1 AND user_id = $2;
 		`,
 		sprintID,
 		userID)
-
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewSprintParticipant(dataCollector telemetry.DataCollector, sqlDB *sql.DB) SprintParticipant {

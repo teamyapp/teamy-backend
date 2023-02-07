@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -26,35 +26,40 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
-func (a App) FindAppTeamInstallationsByAppId(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, error) {
+func (a App) FindAppTeamInstallationsByAppId(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	return a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
 }
 
-func (a App) FindAppInstallationsByTeamId(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, error) {
+func (a App) FindAppInstallationsByTeamId(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	return a.appTeamInstallationDao.FindAppTeamInstallationsByTeamID(ct, teamID)
 }
 
-func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint64, versionNumber int32) (entity.AppTeamInstallation, error) {
+func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint64, versionNumber int32) (entity.AppTeamInstallation, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.AppTeamInstallation{}, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.AppTeamInstallation{}, internalErr
 	}
 
 	if feature.EnableAuthorization {
 		query := authorization.NewCreateAppTeamInstallationQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.AppTeamInstallation{}, err
 		}
 
 		if !hasPermission {
-			return entity.AppTeamInstallation{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppTeamInstallation{}, internalErr
 		}
 	}
 
@@ -75,27 +80,32 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 	return ai, nil
 }
 
-func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint64, input UpdateAppTeamInstallationInput) (entity.AppTeamInstallation, error) {
+func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint64, input UpdateAppTeamInstallationInput) (entity.AppTeamInstallation, *errs.Error) {
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			err := errors.New("user id not found")
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppTeamInstallation{}, err
+			internalErr := &errs.Error{
+				Code:    errs.NotFound,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppTeamInstallation{}, internalErr
 		}
 
 		query := authorization.NewUpdateAppTeamInstallationQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.AppTeamInstallation{}, err
 		}
 
 		if !hasPermission {
-			return entity.AppTeamInstallation{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppTeamInstallation{}, internalErr
 		}
 	}
 
@@ -115,27 +125,32 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 	return ai, nil
 }
 
-func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint64) (entity.AppTeamInstallation, error) {
+func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint64) (entity.AppTeamInstallation, *errs.Error) {
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			err := errors.New("user id not found")
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppTeamInstallation{}, err
+			internalErr := &errs.Error{
+				Code:    errs.NotFound,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppTeamInstallation{}, internalErr
 		}
 
 		query := authorization.NewDeleteAppTeamInstallationQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return entity.AppTeamInstallation{}, err
 		}
 
 		if !hasPermission {
-			return entity.AppTeamInstallation{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppTeamInstallation{}, internalErr
 		}
 	}
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type Message struct {
 
 var _ dao.Message = (*Message)(nil)
 
-func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.Message, error) {
+func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.Message, *errs.Error) {
 	message := entity.Message{}
 	err := m.db.QueryRow(`
 		SELECT
@@ -39,21 +40,29 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 			&message.CreatedAt,
 			&message.UpdatedAt,
 		)
-
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Message{}, dao.ErrNotFound(fmt.Sprintf(
-			"message not found: id=%v",
-			messageID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"message not found: messageID=%v", messageID),
+		}
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Message{}, internalErr
 	}
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Message{}, internalErr
 	}
 
-	return message, err
+	return message, nil
 }
 
-func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]entity.Message, error) {
+func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]entity.Message, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -67,8 +76,12 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 `
 	rows, err := m.db.Query(statement, threadID)
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -85,17 +98,25 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 			&message.UpdatedAt,
 		)
 		if err != nil {
-			m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		messages = append(messages, message)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return messages, nil
 }
 
-func (m Message) CreateMessage(ct context.Context, message entity.Message) error {
+func (m Message) CreateMessage(ct context.Context, message entity.Message) *errs.Error {
 	_, err := m.db.Exec(`
 		INSERT INTO message
 		(
@@ -114,13 +135,18 @@ func (m Message) CreateMessage(ct context.Context, message entity.Message) error
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (m Message) UpdateMessage(ct context.Context, message entity.Message) error {
+func (m Message) UpdateMessage(ct context.Context, message entity.Message) *errs.Error {
 	_, err := m.db.Exec(`
 		UPDATE message
 		SET
@@ -133,13 +159,18 @@ func (m Message) UpdateMessage(ct context.Context, message entity.Message) error
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (m Message) DeleteMessage(ct context.Context, messageID uint64) error {
+func (m Message) DeleteMessage(ct context.Context, messageID uint64) *errs.Error {
 	_, err := m.db.Exec(`
 		DELETE FROM message
 		WHERE id = $1;
@@ -147,10 +178,15 @@ func (m Message) DeleteMessage(ct context.Context, messageID uint64) error {
 		messageID)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewMessage(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Message {

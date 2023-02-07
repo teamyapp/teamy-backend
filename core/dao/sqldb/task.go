@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type Task struct {
 
 var _ dao.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, error) {
+func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
 	err := t.db.QueryRow(`
 		SELECT
@@ -55,21 +56,19 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, erro
 			&task.UpdatedAt,
 			&task.DeliveredAt,
 		)
-
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Task{}, dao.ErrNotFound(fmt.Sprintf(
-			"task not found: id=%v",
-			taskID))
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("task not found: taskID=%v", taskID),
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Task{}, internalErr
 	}
 
-	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-	}
-
-	return task, err
+	return task, nil
 }
 
-func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Task, error) {
+func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Task, *errs.Error) {
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -92,11 +91,15 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 		updated_at,
 		delivered_at
 	FROM task
-	WHERE id IN (%s);`, idsString)
+	WHERE id IN (%v);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -121,17 +124,25 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 				&task.DeliveredAt,
 			)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return tasks, nil
 }
 
-func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uint64) (entity.Task, error) {
+func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
 	err := t.db.QueryRow(`
 		SELECT
@@ -168,21 +179,28 @@ func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uin
 			&task.UpdatedAt,
 			&task.DeliveredAt,
 		)
-
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Task{}, dao.ErrNotFound(fmt.Sprintf(
-			"task not found: commentsThreadID=%v",
-			commentThreadID))
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID),
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Task{}, internalErr
 	}
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Task{}, internalErr
 	}
 
-	return task, err
+	return task, nil
 }
 
-func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
+func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 	rows, err := t.db.Query(`
 	SELECT
 		id,
@@ -202,8 +220,12 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
 	FROM task;
 `)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -227,17 +249,25 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return tasks, nil
 }
 
-func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, error) {
+func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
 	rows, err := t.db.Query(
 		`
 	SELECT
@@ -260,8 +290,12 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 `,
 		teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -285,17 +319,25 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return tasks, nil
 }
 
-func (t Task) CreateTask(ct context.Context, task entity.Task) error {
+func (t Task) CreateTask(ct context.Context, task entity.Task) *errs.Error {
 	_, err := t.db.Exec(`
 		INSERT INTO task
 		(
@@ -328,13 +370,18 @@ func (t Task) CreateTask(ct context.Context, task entity.Task) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (t Task) UpdateTask(ct context.Context, task entity.Task) error {
+func (t Task) UpdateTask(ct context.Context, task entity.Task) *errs.Error {
 	_, err := t.db.Exec(`
 		UPDATE task
 		SET
@@ -363,24 +410,33 @@ func (t Task) UpdateTask(ct context.Context, task entity.Task) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (t Task) DeleteTask(ct context.Context, taskID uint64) error {
+func (t Task) DeleteTask(ct context.Context, taskID uint64) *errs.Error {
 	_, err := t.db.Exec(`
 		DELETE FROM task
 		WHERE id = $1;
 		`,
 		taskID)
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     dao.DBError,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewTask(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Task {

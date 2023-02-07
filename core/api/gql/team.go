@@ -5,6 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -34,7 +35,7 @@ func (t Team) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.team.CreatorUserID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return User{}, err
+		return User{}, errs.ToResolverErr(err)
 	}
 
 	return newUser(t.deps, user), nil
@@ -54,7 +55,7 @@ func (t Team) Members(ct context.Context) ([]TeamMember, error) {
 	teamMembers, err := t.deps.teamService.FindTeamMembers(ct, t.team.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(teamMembers, func(teamMember entity.TeamMember, _ int) TeamMember {
@@ -72,16 +73,20 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(ct, t.deps.dataCollector, args.Filter)
-	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+	filter, argErr := fromGraphQLTaskFilterPtr(ct, t.deps.dataCollector, args.Filter)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	tasks, err := t.deps.taskService.FindTasksInTeam(ct, t.team.ID, filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(tasks, func(task entity.Task, _ int) Task {
@@ -92,16 +97,20 @@ func (t Team) Tasks(ct context.Context, args struct {
 func (t Team) Invitations(ct context.Context, args struct {
 	Filter *InvitationFilter
 }) ([]Invitation, error) {
-	filter, err := fromGraphQLInvitationFilterPtr(ct, t.deps.dataCollector, args.Filter)
-	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+	filter, argErr := fromGraphQLInvitationFilterPtr(ct, t.deps.dataCollector, args.Filter)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	invitations, err := t.deps.invitationService.FindInvitationsInTeam(ct, t.team.ID, filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(invitations, func(invitationEntity entity.Invitation, _ int) Invitation {
@@ -112,16 +121,20 @@ func (t Team) Invitations(ct context.Context, args struct {
 func (t Team) Sprints(ct context.Context, args struct {
 	Filter *SprintFilter
 }) ([]Sprint, error) {
-	filter, err := fromGraphQLSprintFilterPtr(ct, t.deps.dataCollector, args.Filter)
-	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+	filter, argErr := fromGraphQLSprintFilterPtr(ct, t.deps.dataCollector, args.Filter)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	sprints, err := t.deps.sprintService.FindSprintsInTeam(ct, t.team.ID, filter)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(sprints, func(sprint entity.Sprint, index int) Sprint {
@@ -133,7 +146,7 @@ func (t Team) AppInstallations(ct context.Context) ([]AppTeamInstallation, error
 	appInstallations, err := t.deps.appService.FindAppInstallationsByTeamId(ct, t.team.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(appInstallations, func(appInstallation entity.AppTeamInstallation, _ int) AppTeamInstallation {

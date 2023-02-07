@@ -2,6 +2,8 @@ package realtime
 
 import (
 	"context"
+
+	"github.com/teamyapp/cloud/libs/errs"
 )
 
 type MutationType string
@@ -14,9 +16,9 @@ const (
 
 type Mutation interface {
 	GetID() uint64
-	Execute(ct context.Context) error
-	Undo() error
-	CleanUp(ct context.Context) error
-	GetClientNotifiers(ct context.Context) ([]*ClientNotifier, error)
+	Execute(ct context.Context) *errs.Error
+	Undo() *errs.Error
+	CleanUp(ct context.Context) *errs.Error
+	GetClientNotifiers(ct context.Context) ([]*ClientNotifier, *errs.Error)
 	ToMessage() MutationMessage
 }

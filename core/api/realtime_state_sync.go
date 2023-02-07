@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -21,7 +22,7 @@ type RealTimeStateSync struct {
 
 var _ runner.Service = (*RealTimeStateSync)(nil)
 
-func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) error {
+func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
 			Path:        path.Join(realTimeStateSyncPrefix, "clients", "connect"),

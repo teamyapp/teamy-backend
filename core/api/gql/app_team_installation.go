@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -25,7 +26,7 @@ func (a AppTeamInstallation) InstalledTeam(ct context.Context) (Team, error) {
 	team, err := a.deps.teamService.FindTeamByID(ct, a.appTeamInstallation.InstalledTeamID)
 	if err != nil {
 		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return Team{}, err
+		return Team{}, errs.ToResolverErr(err)
 	}
 
 	return newTeam(a.deps, team), nil
@@ -39,7 +40,7 @@ func (a AppTeamInstallation) InstalledBy(ct context.Context) (*User, error) {
 	user, err := a.deps.userService.FindUserByID(ct, *a.appTeamInstallation.InstalledByUserID)
 	if err != nil {
 		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		return nil, errs.ToResolverErr(err)
 	}
 
 	appUser := newUser(a.deps, user)
