@@ -11,7 +11,7 @@ require (
 	google.golang.org/protobuf v1.28.1
 )
 
-replace github.com/teamyapp/cloud => ../cloud
+//replace github.com/teamyapp/cloud => ../cloud
 
 require (
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
