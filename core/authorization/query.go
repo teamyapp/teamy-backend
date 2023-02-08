@@ -81,15 +81,6 @@ func NewCreateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
-func NewCreateAppVersionQuery(userID uint64, appID uint64) Query {
-	return Query{
-		ResourceType: AppResourceType,
-		ResourceID:   appID,
-		Operation:    "ManageApp",
-		UserID:       userID,
-	}
-}
-
 func NewUpdateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
@@ -104,6 +95,51 @@ func NewDeleteAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
 		Operation:    "DeleteAppInstallation",
+		UserID:       userID,
+	}
+}
+
+func NewCreateAppVersionQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "CreateAppVersion",
+		UserID:       userID,
+	}
+}
+
+func NewUpdateAppVersionQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "UpdateAppVersion",
+		UserID:       userID,
+	}
+}
+
+func NewDeleteAppVersionQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "DeleteAppVersion",
+		UserID:       userID,
+	}
+}
+
+func NewCreateAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "CreateAppVersionVisibleTeam",
+		UserID:       userID,
+	}
+}
+
+func NewDeleteAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "DeleteAppVersionVisibleTeam",
 		UserID:       userID,
 	}
 }

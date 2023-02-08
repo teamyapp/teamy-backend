@@ -30,7 +30,7 @@ func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
 	AppID         graphql.ID
 	VersionNumber int32
 	Input         struct {
-		IconUrl                   *string
+		IconURL                   *string
 		HasUIExtension            bool
 		UIExtensionEntrypointPath *string
 		Changes                   *string
@@ -44,9 +44,9 @@ func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
 	}
 
 	input := service.UpdateAppVersionInput{
-		IconUrl:                   args.Input.IconUrl,
-		HasUiExtension:            args.Input.HasUIExtension,
-		UiExtensionEntryPointPath: args.Input.UIExtensionEntrypointPath,
+		IconURL:                   args.Input.IconURL,
+		HasUIExtension:            args.Input.HasUIExtension,
+		UIExtensionEntryPointPath: args.Input.UIExtensionEntrypointPath,
 		Changes:                   args.Input.Changes,
 		IsPublic:                  args.Input.IsPublic,
 	}
@@ -101,7 +101,7 @@ func (m Mutation) AddVisibleTeamToAppVersion(ct context.Context, args struct {
 		return AppVersion{}, err
 	}
 
-	appVersion, err := m.deps.appService.FindAppVersionByAppIdAndVersionNumber(ct, appVersionVisibleTeam.AppID, appVersionVisibleTeam.VersionNumber)
+	appVersion, err := m.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, appVersionVisibleTeam.AppID, appVersionVisibleTeam.VersionNumber)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return AppVersion{}, err
@@ -133,7 +133,7 @@ func (m Mutation) RemoveVisibleTeamFromAppVersion(ct context.Context, args struc
 		return AppVersion{}, err
 	}
 
-	appVersion, err := m.deps.appService.FindAppVersionByAppIdAndVersionNumber(ct, appVersionVisibleTeam.AppID, appVersionVisibleTeam.VersionNumber)
+	appVersion, err := m.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, appVersionVisibleTeam.AppID, appVersionVisibleTeam.VersionNumber)
 	if err != nil {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return AppVersion{}, err

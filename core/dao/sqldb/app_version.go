@@ -40,9 +40,9 @@ func (a AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, ap
 		Scan(
 			&appVersion.AppID,
 			&appVersion.VersionNumber,
-			&appVersion.IconUrl,
-			&appVersion.HasUiExtension,
-			&appVersion.UiExtensionEntrypointPath,
+			&appVersion.IconURL,
+			&appVersion.HasUIExtension,
+			&appVersion.UIExtensionEntrypointPath,
 			&appVersion.IsPublic,
 			&appVersion.CreatedAt,
 			&appVersion.UpdateAt,
@@ -103,9 +103,9 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 		err = rows.Scan(
 			&appVersion.AppID,
 			&appVersion.VersionNumber,
-			&appVersion.IconUrl,
-			&appVersion.HasUiExtension,
-			&appVersion.UiExtensionEntrypointPath,
+			&appVersion.IconURL,
+			&appVersion.HasUIExtension,
+			&appVersion.UIExtensionEntrypointPath,
 			&appVersion.IsPublic,
 			&appVersion.CreatedAt,
 			&appVersion.UpdateAt,
@@ -150,7 +150,7 @@ func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVe
 	// The uniqueness of version number is guaranteed by the primary key constraint of app_version table.
 	// if try to insert into a new app version with the same version number, one should fail since db doesn't allow duplicate primary key
 	// client could see according error and should retry
-	_, err = tx.Exec(`
+	_, err := a.db.Exec(`
 	INSERT INTO app_version
 	(
 	 	app_id,
@@ -166,10 +166,10 @@ func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVe
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `,
 		appVersion.AppID,
-		maxVersion+1,
-		appVersion.IconUrl,
-		appVersion.HasUiExtension,
-		appVersion.UiExtensionEntrypointPath,
+		appVersion.VersionNumber,
+		appVersion.IconURL,
+		appVersion.HasUIExtension,
+		appVersion.UIExtensionEntrypointPath,
 		appVersion.IsPublic,
 		appVersion.CreatedAt,
 		appVersion.UpdateAt,
@@ -177,16 +177,10 @@ func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVe
 	)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
+		return err
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
-	}
-
-	return maxVersion + 1, err
+	return err
 }
 
 func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVersion) *errs.Error {
@@ -200,9 +194,9 @@ func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVe
 			changes = $5,
 			updated_at = $6
 		WHERE app_id = $7 AND version_number = $8;`,
-		appVersion.IconUrl,
-		appVersion.HasUiExtension,
-		appVersion.UiExtensionEntrypointPath,
+		appVersion.IconURL,
+		appVersion.HasUIExtension,
+		appVersion.UIExtensionEntrypointPath,
 		appVersion.IsPublic,
 		appVersion.Changes,
 		appVersion.UpdateAt,
@@ -216,50 +210,46 @@ func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVe
 	return err
 }
 
+<<<<<<< HEAD
 func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) *errs.Error {
 	tx, err := a.db.BeginTx(ct, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+=======
+func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int32, error) {
+	var maxVersion int32
+	err := a.db.QueryRow(`
+	SELECT max(version_number)
+	FROM app_version
+	WHERE app_id = $1
+`,
+		appID,
+	).Scan(&maxVersion)
+>>>>>>> b0a3efa (Update according to comment)
 
-	_, err = tx.Exec(`
+	if errors.Is(err, sql.ErrNoRows) {
+		// no version exists, start from 1
+		return 0, nil
+	}
+
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return 0, err
+	}
+
+	return maxVersion, nil
+}
+
+func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) error {
+	_, err := a.db.Exec(`
 		DELETE FROM app_version
 		WHERE app_id = $1
 		AND version_number = $2;
 		`,
 		appID,
 		versionNumber)
-	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
-	}
-
-	_, err = tx.Exec(`
-		DELETE FROM app_team_installation
-		WHERE app_id = $1
-		AND enabled_version_number = $2;
-		`,
-		appID,
-		versionNumber)
-	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
-	}
-
-	_, err = tx.Exec(`
-		DELETE FROM app_version_visible_team
-		WHERE app_id = $1
-		AND version_number = $2
-    	`,
-		appID,
-		versionNumber)
-	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
-	}
-
-	err = tx.Commit()
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err

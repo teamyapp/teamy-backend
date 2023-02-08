@@ -23,15 +23,15 @@ func (a AppVersion) VersionNumber() int32 {
 }
 
 func (a AppVersion) IconURL() *string {
-	return a.appVersion.IconUrl
+	return a.appVersion.IconURL
 }
 
 func (a AppVersion) HasUIExtension() bool {
-	return a.appVersion.HasUiExtension
+	return a.appVersion.HasUIExtension
 }
 
 func (a AppVersion) UIExtensionEntrypointPath() *string {
-	return a.appVersion.UiExtensionEntrypointPath
+	return a.appVersion.UIExtensionEntrypointPath
 }
 
 func (a AppVersion) IsPublic() bool {

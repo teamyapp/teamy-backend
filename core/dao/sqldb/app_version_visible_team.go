@@ -160,6 +160,21 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeam(ct context.Context, a
 	return err
 }
 
+func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) error {
+	_, err := a.db.Exec(`
+		DELETE FROM app_version_visible_team
+		WHERE app_id = $1
+		AND version_number = $2;
+		`,
+		appID,
+		versionNumber)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+	}
+
+	return err
+}
+
 func NewAppVersionVisibleTeam(dataCollector telemetry.DataCollector, sqlDB *sql.DB) AppVersionVisibleTeam {
 	return AppVersionVisibleTeam{dataCollector: dataCollector, db: sqlDB}
 }

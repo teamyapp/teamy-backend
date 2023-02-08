@@ -243,8 +243,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID
 func (a AppTeamInstallation) DeleteAppTeamInstallationByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) error {
 	_, err := a.db.Exec(`
 		DELETE FROM app_team_installation
-		WHERE app_id = $1
-		AND enabled_version_number = $2;
+		WHERE app_id = $1 AND enabled_version_number = $2;
 		`,
 		appID,
 		versionNumber)
