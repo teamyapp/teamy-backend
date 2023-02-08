@@ -27,11 +27,11 @@ func (a AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, ap
 	    version_number,
 	    icon_url,
 	    has_ui_extension,
-	   	ui_extension_entrypoint_path,
-	   	is_public,
-	   	created_at,
-	   	updated_at,
-	   	changes
+	    ui_extension_entrypoint_path,
+	    is_public,
+	    created_at,
+	    updated_at,
+	    changes
 	FROM app_version
 	WHERE app_id = $1 AND version_number = $2;
 `,
@@ -77,11 +77,11 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 	    version_number,
 	    icon_url,
 	    has_ui_extension,
-	   	ui_extension_entrypoint_path,
-	   	is_public,
-	   	created_at,
-	   	updated_at,
-	   	changes
+	    ui_extension_entrypoint_path,
+	    is_public,
+	    created_at,
+	    updated_at,
+	    changes
 	FROM app_version
 	WHERE app_id = $1;
 `,

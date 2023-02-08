@@ -85,7 +85,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		AppID:          appID,
 		HasUIExtension: false,
 		IsPublic:       false,
-		CreatedAt:      time.Now(),
+		CreatedAt:      time.Now().UTC(),
 	}
 	versionNum, err := a.appVersionDao.FindMaxVersionNumber(ct, appID)
 	if err != nil {
@@ -99,7 +99,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.AppVersion{}, err
 	}
-
+	
 	return av, nil
 }
 
@@ -144,7 +144,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 	if input.UIExtensionEntryPointPath != nil {
 		av.UIExtensionEntrypointPath = input.UIExtensionEntryPointPath
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	av.UpdateAt = &now
 	err = a.appVersionDao.UpdateAppVersion(ct, av)
 	if err != nil {

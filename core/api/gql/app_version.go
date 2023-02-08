@@ -50,8 +50,8 @@ func (a AppVersion) VisibleToTeams(ct context.Context) []Team {
 	})
 
 	var teams []entity.Team
-	for _, teamId := range teamIDs {
-		team, err := a.deps.teamService.FindTeamByID(ct, teamId)
+	for _, teamID := range teamIDs {
+		team, err := a.deps.teamService.FindTeamByID(ct, teamID)
 		if err != nil {
 			a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			continue
