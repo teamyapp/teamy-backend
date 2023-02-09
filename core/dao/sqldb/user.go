@@ -90,6 +90,7 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 
 	defer rows.Close()
 
+	var internalErr *errs.Error
 	var users []entity.User
 	for rows.Next() {
 		var user entity.User
@@ -103,17 +104,20 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 				&user.UpdatedAt,
 			)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		users = append(users, user)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}

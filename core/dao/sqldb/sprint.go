@@ -87,6 +87,8 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 	}
 
 	defer rows.Close()
+
+	var internalErr *errs.Error
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -99,17 +101,20 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		sprints = append(sprints, sprint)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
@@ -140,6 +145,8 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 	}
 
 	defer rows.Close()
+
+	var internalErr *errs.Error
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -152,17 +159,20 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		sprints = append(sprints, sprint)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
@@ -190,6 +200,8 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error
 	}
 
 	defer rows.Close()
+
+	var internalErr *errs.Error
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -202,17 +214,20 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		sprints = append(sprints, sprint)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}

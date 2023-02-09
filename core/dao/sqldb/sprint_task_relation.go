@@ -36,6 +36,8 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 	}
 
 	defer rows.Close()
+
+	var internalErr *errs.Error
 	taskIDs := make([]uint64, 0)
 	for rows.Next() {
 		var taskID uint64
@@ -43,17 +45,20 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 			&taskID,
 		)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		taskIDs = append(taskIDs, taskID)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
@@ -80,6 +85,8 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 	}
 
 	defer rows.Close()
+
+	var internalErr *errs.Error
 	sprintIDs := make([]uint64, 0)
 	for rows.Next() {
 		var sprintID uint64
@@ -87,17 +94,20 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 			&sprintID,
 		)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		sprintIDs = append(sprintIDs, sprintID)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}

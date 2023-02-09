@@ -86,6 +86,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 
 	defer rows.Close()
 
+	var internalErr *errs.Error
 	messages := make([]entity.Message, 0)
 	for rows.Next() {
 		message := entity.Message{}
@@ -98,17 +99,20 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 			&message.UpdatedAt,
 		)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		messages = append(messages, message)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
