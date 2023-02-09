@@ -155,7 +155,7 @@ func startServiceRunner(
 		return internalErr
 	}
 
-	githubApp, err := appsDep.InitGithubApp(
+	githubAppAPI, err := appsDep.InitGithubAppAPI(
 		dataCollector,
 		cloudClientRegistry,
 		teamyClientRegistry,
@@ -207,7 +207,7 @@ func startServiceRunner(
 	rn := runner.NewServiceRunner(
 		dataCollector,
 		runnerConfig, []runner.Service{
-			githubApp,
+			githubAppAPI,
 			graphQLAPI,
 			realTimeStateSyncAPI,
 			taskRPCAPI,

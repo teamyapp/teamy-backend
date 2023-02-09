@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
@@ -18,7 +19,10 @@ type GithubPullRequest struct {
 
 var _ dao.GithubPullRequest = (*GithubPullRequest)(nil)
 
-func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, internalTaskID uint64) (entity.GithubPullRequest, error) {
+func (g GithubPullRequest) FindPullRequestByInternalTaskID(
+	ct context.Context,
+	internalTaskID uint64,
+) (entity.GithubPullRequest, *errs.Error) {
 	pullRequest := entity.GithubPullRequest{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -42,18 +46,31 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(ct context.Context, i
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubPullRequest{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubPullRequest not found: internalTaskID=%v", internalTaskID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"GithubPullRequest not found: internalTaskID=%v", internalTaskID),
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubPullRequest{}, internalErr
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubPullRequest{}, internalErr
 	}
 
-	return pullRequest, err
+	return pullRequest, nil
 }
 
-func (g GithubPullRequest) FindPullRequestByGithubNodeID(ct context.Context, githubNodeID string) (entity.GithubPullRequest, error) {
+func (g GithubPullRequest) FindPullRequestByGithubNodeID(
+	ct context.Context,
+	githubNodeID string,
+) (entity.GithubPullRequest, *errs.Error) {
 	pullRequest := entity.GithubPullRequest{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -77,18 +94,32 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(ct context.Context, git
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubPullRequest{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubPullRequest not found: githubNodeID=%v", githubNodeID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(fmt.Sprintf(
+				"GithubPullRequest not found: githubNodeID=%v",
+				githubNodeID)),
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubPullRequest{}, internalErr
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubPullRequest{}, internalErr
 	}
 
-	return pullRequest, err
+	return pullRequest, nil
 }
 
-func (g GithubPullRequest) CreatePullRequest(ct context.Context, pullRequest entity.GithubPullRequest) error {
+func (g GithubPullRequest) CreatePullRequest(
+	ct context.Context,
+	pullRequest entity.GithubPullRequest,
+) *errs.Error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_pull_request
 	(
@@ -110,13 +141,21 @@ func (g GithubPullRequest) CreatePullRequest(ct context.Context, pullRequest ent
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubPullRequest) DeletePullRequestByInternalTaskID(ct context.Context, internalTaskID uint64) error {
+func (g GithubPullRequest) DeletePullRequestByInternalTaskID(
+	ct context.Context,
+	internalTaskID uint64,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_pull_request
 		WHERE internal_task_id = $1;
@@ -124,13 +163,21 @@ func (g GithubPullRequest) DeletePullRequestByInternalTaskID(ct context.Context,
 		internalTaskID)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubPullRequest) DeletePullRequestByGithubNodeID(ct context.Context, githubNodeID string) error {
+func (g GithubPullRequest) DeletePullRequestByGithubNodeID(
+	ct context.Context,
+	githubNodeID string,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_pull_request
 		WHERE github_pull_request_node_id = $1;
@@ -138,10 +185,15 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(ct context.Context, g
 		githubNodeID)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewGithubPullRequest(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubPullRequest {

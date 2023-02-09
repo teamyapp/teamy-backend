@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
@@ -21,7 +22,7 @@ var _ dao.GithubAppInstallation = (*GithubAppInstallation)(nil)
 func (g GithubAppInstallation) CreateGithubAppInstallation(
 	ct context.Context,
 	installation entity.GithubAppInstallation,
-) error {
+) *errs.Error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_app_installation
 	(
@@ -37,13 +38,21 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubAppInstallation) FindInstallationByID(ct context.Context, installationID uint64) (entity.GithubAppInstallation, error) {
+func (g GithubAppInstallation) FindInstallationByID(
+	ct context.Context,
+	installationID uint64,
+) (entity.GithubAppInstallation, *errs.Error) {
 	installation := entity.GithubAppInstallation{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -61,15 +70,25 @@ func (g GithubAppInstallation) FindInstallationByID(ct context.Context, installa
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubAppInstallation{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubAppInstallation not found: id=%v", installationID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"GithubAppInstallation not found: id=%v", installationID),
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubAppInstallation{}, internalErr
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubAppInstallation{}, internalErr
 	}
 
-	return installation, err
+	return installation, nil
 }
 
 func NewGithubAppInstallation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubAppInstallation {

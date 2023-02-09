@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
@@ -11,7 +12,7 @@ type GithubRequiredUserAction interface {
 		ct context.Context,
 		teamID uint64,
 		actionUserID uint64,
-	) ([]entity.GithubRequiredUserAction, error)
-	CreateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) error
-	UpdateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) error
+	) ([]entity.GithubRequiredUserAction, *errs.Error)
+	CreateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) *errs.Error
+	UpdateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) *errs.Error
 }
