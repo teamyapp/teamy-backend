@@ -54,25 +54,23 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	if internalErr != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return appTeamInstallations, nil
+	return appTeamInstallations, internalErr
 }
 
 func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
@@ -110,25 +108,23 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	if internalErr != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return appTeamInstallations, nil
+	return appTeamInstallations, internalErr
 }
 
 func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.Context, appID uint64, teamID uint64) (entity.AppTeamInstallation, *errs.Error) {

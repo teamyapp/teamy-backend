@@ -41,22 +41,20 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 		var waitingTaskID uint64
 		err = rows.Scan(&waitingTaskID)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		waitingTaskIDs = append(waitingTaskIDs, waitingTaskID)
-	}
-
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
 	}
 
 	return waitingTaskIDs, nil
@@ -86,22 +84,20 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 		var waitForTaskID uint64
 		err = rows.Scan(&waitForTaskID)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		waitForTaskIDs = append(waitForTaskIDs, waitForTaskID)
-	}
-
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
 	}
 
 	return waitForTaskIDs, nil

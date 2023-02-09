@@ -123,27 +123,24 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 			&invitation.CreatedAt,
 			&invitation.UpdatedAt,
 		)
-
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		invitations = append(invitations, invitation)
 	}
 
-	if internalErr != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return invitations, nil
+	return invitations, internalErr
 }
 
 func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, *errs.Error) {
@@ -193,25 +190,23 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 			&invitation.UpdatedAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		invitations = append(invitations, invitation)
 	}
 
-	if internalErr != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return invitations, nil
+	return invitations, internalErr
 }
 
 func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invitation) *errs.Error {

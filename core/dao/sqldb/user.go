@@ -104,25 +104,23 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 				&user.UpdatedAt,
 			)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		users = append(users, user)
 	}
 
-	if internalErr != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return users, nil
+	return users, internalErr
 }
 
 func (u User) CreateUser(ct context.Context, user entity.User) *errs.Error {
