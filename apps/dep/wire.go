@@ -14,13 +14,13 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api"
 )
 
-func InitGithubApp(
+func InitGithubAppAPI(
 	dataCollector telemetry.DataCollector,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	teamyAPIClientRegistry *api.ClientRegistry,
 	config github.AppConfig,
 	sqlDB *sql.DB,
-) (github.App, error) {
+) (github.AppAPI, error) {
 	wire.Build(
 		wire.Bind(new(dao.GithubAppInstallState), new(sqldb.GithubAppInstallState)),
 		wire.Bind(new(dao.GithubAppInstallation), new(sqldb.GithubAppInstallation)),
@@ -33,7 +33,7 @@ func InitGithubApp(
 		sqldb.NewGithubPullRequest,
 		sqldb.NewGithubCodeReview,
 		sqldb.NewGithubRequiredUserAction,
-		github.NewApp,
+		github.NewAppAPI,
 	)
-	return github.App{}, nil
+	return github.AppAPI{}, nil
 }

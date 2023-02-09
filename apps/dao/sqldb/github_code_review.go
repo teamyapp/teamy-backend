@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
@@ -18,7 +19,11 @@ type GithubCodeReview struct {
 
 var _ dao.GithubCodeReview = (*GithubCodeReview)(nil)
 
-func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(ct context.Context, githubPullRequestNodeID string, githubReviewerID uint64) (entity.GithubCodeReview, error) {
+func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
+	ct context.Context,
+	githubPullRequestNodeID string,
+	githubReviewerID uint64,
+) (entity.GithubCodeReview, *errs.Error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -41,18 +46,32 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(ct context.Context, g
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubCodeReview{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubCodeReview not found: githubReviewerID=%v", githubReviewerID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"GithubCodeReview not found: githubReviewerID=%v",
+				githubReviewerID),
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubCodeReview{}, internalErr
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubCodeReview{}, internalErr
 	}
 
-	return codeReview, err
+	return codeReview, nil
 }
 
-func (g GithubCodeReview) FindCodeReviewByInternalTaskID(ct context.Context, internalTaskID uint64) (entity.GithubCodeReview, error) {
+func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
+	ct context.Context,
+	internalTaskID uint64,
+) (entity.GithubCodeReview, *errs.Error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -72,20 +91,33 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(ct context.Context, int
 			&codeReview.InternalAddressFeedbackTaskID,
 			&codeReview.Round,
 		)
-
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubCodeReview{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubCodeReview not found: internalTaskID=%v", internalTaskID))
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"GithubCodeReview not found: internalTaskID=%v",
+				internalTaskID),
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubCodeReview{}, internalErr
 	}
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.GithubCodeReview{}, internalErr
 	}
 
-	return codeReview, err
+	return codeReview, nil
 }
 
-func (g GithubCodeReview) CreateCodeReview(ct context.Context, codeReview entity.GithubCodeReview) error {
+func (g GithubCodeReview) CreateCodeReview(
+	ct context.Context,
+	codeReview entity.GithubCodeReview,
+) *errs.Error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_code_review
 	(
@@ -105,13 +137,21 @@ func (g GithubCodeReview) CreateCodeReview(ct context.Context, codeReview entity
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubCodeReview) UpdateCodeReview(ct context.Context, codeReview entity.GithubCodeReview) error {
+func (g GithubCodeReview) UpdateCodeReview(
+	ct context.Context,
+	codeReview entity.GithubCodeReview,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		UPDATE apps_github_code_review
 		SET
@@ -131,36 +171,57 @@ func (g GithubCodeReview) UpdateCodeReview(ct context.Context, codeReview entity
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(ct context.Context, internalTaskID uint64) error {
+func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(
+	ct context.Context,
+	internalTaskID uint64,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_code_review
 		WHERE internal_task_id = $1;
 		`,
 		internalTaskID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(ct context.Context, githubReviewerID uint64) error {
+func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(
+	ct context.Context,
+	githubReviewerID uint64,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_code_review
 		WHERE github_reviewer_id = $1;
 		`,
 		githubReviewerID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewGithubCodeReview(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubCodeReview {

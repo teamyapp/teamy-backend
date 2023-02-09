@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
@@ -20,7 +21,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 	ct context.Context,
 	teamID uint64,
 	actionUserID uint64,
-) ([]entity.GithubRequiredUserAction, error) {
+) ([]entity.GithubRequiredUserAction, *errs.Error) {
 	rows, err := g.db.Query(`
 	SELECT
 		id,
@@ -35,12 +36,17 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 `,
 		teamID, actionUserID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
 
+	var internalErr *errs.Error
 	requiredActions := make([]entity.GithubRequiredUserAction, 0)
 	for rows.Next() {
 		requiredAction := entity.GithubRequiredUserAction{}
@@ -54,17 +60,29 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 			&requiredAction.RequestedByUserID,
 		)
 		if err != nil {
-			g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 			continue
 		}
 
 		requiredActions = append(requiredActions, requiredAction)
 	}
 
+	if internalErr != nil {
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
 	return requiredActions, nil
 }
 
-func (g GithubRequiredUserAction) CreateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) error {
+func (g GithubRequiredUserAction) CreateRequiredUserAction(
+	ct context.Context,
+	requiredUserAction entity.GithubRequiredUserAction,
+) *errs.Error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_required_user_action
 	(
@@ -88,13 +106,21 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(ct context.Context, r
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubRequiredUserAction) UpdateRequiredUserAction(ct context.Context, requiredUserAction entity.GithubRequiredUserAction) error {
+func (g GithubRequiredUserAction) UpdateRequiredUserAction(
+	ct context.Context,
+	requiredUserAction entity.GithubRequiredUserAction,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		UPDATE apps_github_required_user_action
 		SET
@@ -115,10 +141,15 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(ct context.Context, r
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewGithubRequiredUserAction(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubRequiredUserAction {
