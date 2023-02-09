@@ -46,25 +46,23 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 			&teamID,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		teamIDs = append(teamIDs, teamID)
 	}
 
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return teamIDs, nil
+	return teamIDs, internalErr
 }
 
 func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64) ([]uint64, *errs.Error) {
@@ -94,23 +92,23 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 			&teamMemberID,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		teamMemberIDs = append(teamMemberIDs, teamMemberID)
 	}
 
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return teamMemberIDs, nil
+	return teamMemberIDs, internalErr
 }
 
 func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) ([]entity.TeamMember, *errs.Error) {
@@ -146,25 +144,23 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 			&teamMember.UpdatedAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		teamMembers = append(teamMembers, teamMember)
 	}
 
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return teamMembers, nil
+	return teamMembers, internalErr
 }
 
 func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {

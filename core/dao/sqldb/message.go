@@ -99,25 +99,23 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 			&message.UpdatedAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		messages = append(messages, message)
 	}
 
-	if internalErr != nil {
-		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return messages, nil
+	return messages, internalErr
 }
 
 func (m Message) CreateMessage(ct context.Context, message entity.Message) *errs.Error {

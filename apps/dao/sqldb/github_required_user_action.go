@@ -60,23 +60,23 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 			&requiredAction.RequestedByUserID,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		requiredActions = append(requiredActions, requiredAction)
 	}
 
-	if internalErr != nil {
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return requiredActions, nil
+	return requiredActions, internalErr
 }
 
 func (g GithubRequiredUserAction) CreateRequiredUserAction(

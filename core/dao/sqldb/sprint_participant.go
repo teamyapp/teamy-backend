@@ -47,25 +47,23 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 			&participantUserID,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		participantUserIDs = append(participantUserIDs, participantUserID)
 	}
 
-	if internalErr != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return participantUserIDs, nil
+	return participantUserIDs, internalErr
 }
 
 func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
@@ -106,25 +104,23 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 			&sprintParticipant.UpdatedAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		sprintParticipants = append(sprintParticipants, sprintParticipant)
 	}
 
-	if internalErr != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return sprintParticipants, nil
+	return sprintParticipants, internalErr
 }
 
 func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {

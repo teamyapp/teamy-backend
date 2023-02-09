@@ -126,25 +126,23 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 				&task.DeliveredAt,
 			)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return tasks, nil
+	return tasks, internalErr
 }
 
 func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uint64) (entity.Task, *errs.Error) {
@@ -256,25 +254,23 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
-	}
-
-	return tasks, nil
+	return tasks, internalErr
 }
 
 func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
@@ -331,22 +327,20 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		tasks = append(tasks, task)
-	}
-
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
 	}
 
 	return tasks, nil

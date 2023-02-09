@@ -91,22 +91,20 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 			&taskLink.UpdatedAt,
 		)
 		if err != nil {
-			internalErr = &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
 		taskLinks = append(taskLinks, taskLink)
-	}
-
-	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return nil, internalErr
 	}
 
 	return taskLinks, nil
