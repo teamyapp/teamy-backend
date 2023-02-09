@@ -240,7 +240,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID
 	return nil
 }
 
-func (a AppTeamInstallation) DeleteAppTeamInstallationByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) error {
+func (a AppTeamInstallation) DeleteAppTeamInstallationByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) *errs.Error {
 	_, err := a.db.Exec(`
 		DELETE FROM app_team_installation
 		WHERE app_id = $1 AND enabled_version_number = $2;
@@ -248,10 +248,15 @@ func (a AppTeamInstallation) DeleteAppTeamInstallationByAppIDAndVersionNumber(ct
 		appID,
 		versionNumber)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewAppTeamInstallation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) AppTeamInstallation {

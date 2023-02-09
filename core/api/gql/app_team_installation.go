@@ -22,7 +22,7 @@ func (a AppTeamInstallation) EnabledVersion(ct context.Context) (AppVersion, err
 	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, a.appTeamInstallation.AppID, a.appTeamInstallation.EnabledVersionNumber)
 	if err != nil {
 		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return AppVersion{}, err
+		return AppVersion{}, errs.ToResolverErr(err)
 	}
 
 	return newAppVersion(a.deps, appVersion), nil

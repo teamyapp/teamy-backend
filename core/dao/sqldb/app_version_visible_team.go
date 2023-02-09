@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -18,7 +19,7 @@ type AppVersionVisibleTeam struct {
 	db            *sql.DB
 }
 
-func (a AppVersionVisibleTeam) FindAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersionVisibleTeam, error) {
+func (a AppVersionVisibleTeam) FindAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersionVisibleTeam, *errs.Error) {
 	appVersionVisibleTeam := entity.AppVersionVisibleTeam{}
 	err := a.db.QueryRow(`
 	SELECT
@@ -38,18 +39,27 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeam(ct context.Context, app
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.AppVersionVisibleTeam{}, dao.ErrNotFound(fmt.Sprintf(
-			"app version visible team not found: appId=%v, versionNumber=%v, teamId=%v", appID, versionNumber, teamID))
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("app version visible team not found: appID=%v, versionNum=%v, teamID=%v", appID, versionNumber, teamID),
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.AppVersionVisibleTeam{}, internalErr
 	}
 
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.AppVersionVisibleTeam{}, internalErr
 	}
 
-	return appVersionVisibleTeam, err
+	return appVersionVisibleTeam, nil
 }
 
-func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) ([]entity.AppVersionVisibleTeam, error) {
+func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) ([]entity.AppVersionVisibleTeam, *errs.Error) {
 	rows, err := a.db.Query(`
 	SELECT
 	    app_id,
@@ -61,8 +71,12 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 		appID,
 		versionNumber)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -76,17 +90,21 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 			&appVersionVisibleTeam.TeamID,
 		)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			internalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 			continue
 		}
 
 		appVersionVisibleTeams = append(appVersionVisibleTeams, appVersionVisibleTeam)
 	}
 
-	return appVersionVisibleTeams, err
+	return appVersionVisibleTeams, nil
 }
 
-func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Context, teamID uint64) ([]entity.AppVersionVisibleTeam, error) {
+func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Context, teamID uint64) ([]entity.AppVersionVisibleTeam, *errs.Error) {
 	rows, err := a.db.Query(`
 	SELECT
 	    app_id,
@@ -97,8 +115,12 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 `,
 		teamID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, err
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -112,17 +134,21 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 			&appVersionVisibleTeam.TeamID,
 		)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			internalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 			continue
 		}
 
 		appVersionVisibleTeams = append(appVersionVisibleTeams, appVersionVisibleTeam)
 	}
 
-	return appVersionVisibleTeams, err
+	return appVersionVisibleTeams, nil
 }
 
-func (a AppVersionVisibleTeam) CreateAppVersionVisibleTeam(ct context.Context, appVersionVisibleTeam entity.AppVersionVisibleTeam) error {
+func (a AppVersionVisibleTeam) CreateAppVersionVisibleTeam(ct context.Context, appVersionVisibleTeam entity.AppVersionVisibleTeam) *errs.Error {
 	_, err := a.db.Exec(`
 	INSERT INTO app_version_visible_team
 	(
@@ -137,13 +163,18 @@ func (a AppVersionVisibleTeam) CreateAppVersionVisibleTeam(ct context.Context, a
 		appVersionVisibleTeam.TeamID,
 	)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) error {
+func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) *errs.Error {
 	_, err := a.db.Exec(`
 		DELETE FROM app_version_visible_team
 		WHERE app_id = $1
@@ -154,13 +185,18 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeam(ct context.Context, a
 		versionNumber,
 		teamID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) error {
+func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) *errs.Error {
 	_, err := a.db.Exec(`
 		DELETE FROM app_version_visible_team
 		WHERE app_id = $1
@@ -169,10 +205,15 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamByAppIDAndVersionNumbe
 		appID,
 		versionNumber)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewAppVersionVisibleTeam(dataCollector telemetry.DataCollector, sqlDB *sql.DB) AppVersionVisibleTeam {

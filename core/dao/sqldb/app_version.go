@@ -126,27 +126,7 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 	return appVersions, nil
 }
 
-func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVersion) (int32, *errs.Error) {
-	tx, err := a.db.BeginTx(ct, nil)
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	var maxVersion int32
-	err = tx.QueryRow(`
-	SELECT max(version_number)
-	FROM app_version
-	WHERE app_id = $1
-`,
-		appVersion.AppID,
-	).Scan(&maxVersion)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		// no version exists, start from 1
-		maxVersion = 0
-	}
-
+func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVersion) *errs.Error {
 	// The uniqueness of version number is guaranteed by the primary key constraint of app_version table.
 	// if try to insert into a new app version with the same version number, one should fail since db doesn't allow duplicate primary key
 	// client could see according error and should retry
@@ -176,11 +156,15 @@ func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVe
 		appVersion.Changes,
 	)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVersion) *errs.Error {
@@ -204,21 +188,18 @@ func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVe
 		appVersion.VersionNumber,
 	)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
-<<<<<<< HEAD
-func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) *errs.Error {
-	tx, err := a.db.BeginTx(ct, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-=======
-func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int32, error) {
+func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int32, *errs.Error) {
 	var maxVersion int32
 	err := a.db.QueryRow(`
 	SELECT max(version_number)
@@ -227,7 +208,6 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 `,
 		appID,
 	).Scan(&maxVersion)
->>>>>>> b0a3efa (Update according to comment)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		// no version exists, start from 1
@@ -235,14 +215,18 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 	}
 
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, err
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return 0, internalErr
 	}
 
 	return maxVersion, nil
 }
 
-func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) error {
+func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) *errs.Error {
 	_, err := a.db.Exec(`
 		DELETE FROM app_version
 		WHERE app_id = $1
@@ -251,11 +235,15 @@ func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNu
 		appID,
 		versionNumber)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return err
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
 	}
 
-	return err
+	return nil
 }
 
 func NewAppVersion(dataCollector telemetry.DataCollector, sqlDB *sql.DB) AppVersion {

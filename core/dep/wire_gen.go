@@ -57,10 +57,10 @@ func InitGraphQLAPI(dataCollector telemetry.DataCollector, cloudWebAPIExternalBa
 	appTeamInstallation := sqldb.NewAppTeamInstallation(dataCollector, sqlDB)
 	appVersionVisibleTeam := sqldb.NewAppVersionVisibleTeam(dataCollector, sqlDB)
 	app := service.NewApp(dataCollector, cloudAPIClientRegistry, authorizer, appVersion, appTeamInstallation, appVersionVisibleTeam)
-	dependencies := gql.NewDependencies(dataCollector, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceThread, app)
-	resolver := gql.NewResolver(dependencies)
-	graphQL := api2.NewGraphQL(dataCollector, resolver)
-	return graphQL, nil
+	dependencies := gql2.NewDependencies(dataCollector, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceThread, app)
+	resolver := gql2.NewResolver(dependencies)
+	gqlService := api2.NewGraphQL(dataCollector, resolver)
+	return gqlService, nil
 }
 
 func InitRealTimeStateSyncAPI(dataCollector telemetry.DataCollector, realTimeStateSyncer *realtime.StateSyncer) api2.RealTimeStateSync {

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -37,32 +36,35 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
-func (a App) FindAppTeamInstallationsByAppId(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, error) {
+func (a App) FindAppTeamInstallationsByAppId(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	return a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
 }
 
-func (a App) FindAppInstallationsByTeamId(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, error) {
+func (a App) FindAppInstallationsByTeamId(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	return a.appTeamInstallationDao.FindAppTeamInstallationsByTeamID(ct, teamID)
 }
 
-func (a App) FindAppVersionByAppId(ct context.Context, appID uint64) ([]entity.AppVersion, error) {
+func (a App) FindAppVersionByAppId(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
 	return a.appVersionDao.FindAppVersionsByAppID(ct, appID)
 }
 
-func (a App) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, error) {
+func (a App) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, *errs.Error) {
 	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
-func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versionNumber int32) ([]entity.AppVersionVisibleTeam, error) {
+func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versionNumber int32) ([]entity.AppVersionVisibleTeam, *errs.Error) {
 	return a.appVersionVisibleTeamDao.FindAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
-func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersion, error) {
+func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersion, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.AppVersion{}, err
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.AppVersion{}, internalErr
 	}
 
 	if feature.EnableAuthorization {
@@ -74,10 +76,12 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		}
 
 		if !hasPermission {
-			return entity.AppVersion{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersion{}, internalErr
 		}
 	}
 
@@ -99,17 +103,20 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.AppVersion{}, err
 	}
-	
+
 	return av, nil
 }
 
-func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber int32, input UpdateAppVersionInput) (entity.AppVersion, error) {
+func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber int32, input UpdateAppVersionInput) (entity.AppVersion, *errs.Error) {
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			err := errors.New("user id not found")
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppVersion{}, err
+			internalErr := &errs.Error{
+				Code:    errs.NotFound,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersion{}, internalErr
 		}
 
 		query := authorization.NewUpdateAppVersionQuery(userID, appID)
@@ -120,10 +127,12 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		}
 
 		if !hasPermission {
-			return entity.AppVersion{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersion{}, internalErr
 		}
 	}
 
@@ -155,13 +164,16 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 	return av, nil
 }
 
-func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, error) {
+func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, *errs.Error) {
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			err := errors.New("user id not found")
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppVersion{}, err
+			internalErr := &errs.Error{
+				Code:    errs.NotFound,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersion{}, internalErr
 		}
 
 		query := authorization.NewDeleteAppVersionQuery(userID, appID)
@@ -172,10 +184,12 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		}
 
 		if !hasPermission {
-			return entity.AppVersion{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersion{}, internalErr
 		}
 	}
 
@@ -213,9 +227,12 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			err := errors.New("user id not found")
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppVersionVisibleTeam{}, err
+			internalErr := &errs.Error{
+				Code:    errs.NotFound,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersionVisibleTeam{}, internalErr
 		}
 
 		query := authorization.NewCreateAppVersionVisibleTeamQuery(userID, appID)
@@ -249,13 +266,16 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 	return av, nil
 }
 
-func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersionVisibleTeam, error) {
+func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersionVisibleTeam, *errs.Error) {
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			err := errors.New("user id not found")
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppVersionVisibleTeam{}, err
+			internalErr := &errs.Error{
+				Code:    errs.NotFound,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersionVisibleTeam{}, internalErr
 		}
 
 		query := authorization.NewDeleteAppVersionVisibleTeamQuery(userID, appID)
@@ -266,10 +286,12 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		}
 
 		if !hasPermission {
-			return entity.AppVersionVisibleTeam{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
 			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.AppVersionVisibleTeam{}, internalErr
 		}
 	}
 
