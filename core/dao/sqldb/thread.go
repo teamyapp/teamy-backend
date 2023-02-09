@@ -24,7 +24,7 @@ func (t Thread) CreateThread(ct context.Context, threadID uint64) *errs.Error {
 		threadID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -42,7 +42,7 @@ func (t Thread) DeleteThread(ct context.Context, threadID uint64) *errs.Error {
 		threadID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})

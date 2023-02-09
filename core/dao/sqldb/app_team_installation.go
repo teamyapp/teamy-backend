@@ -33,7 +33,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 		appID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -61,7 +61,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -85,7 +85,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 		teamID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -113,7 +113,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -156,7 +156,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -187,7 +187,7 @@ func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, appTe
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -210,7 +210,7 @@ func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, appTe
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -230,7 +230,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID
 		teamID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})

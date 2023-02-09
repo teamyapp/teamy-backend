@@ -52,7 +52,7 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -77,7 +77,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 	rows, err := m.db.Query(statement, threadID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -106,7 +106,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -136,7 +136,7 @@ func (m Message) CreateMessage(ct context.Context, message entity.Message) *errs
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -160,7 +160,7 @@ func (m Message) UpdateMessage(ct context.Context, message entity.Message) *errs
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -179,7 +179,7 @@ func (m Message) DeleteMessage(ct context.Context, messageID uint64) *errs.Error
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		m.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})

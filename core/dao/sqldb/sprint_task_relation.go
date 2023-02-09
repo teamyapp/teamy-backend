@@ -28,7 +28,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 		sprintID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -51,7 +51,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, sprintID u
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -72,7 +72,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 		taskID)
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -95,7 +95,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, taskID uin
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -121,7 +121,7 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, relatio
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -141,7 +141,7 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, sprintI
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})

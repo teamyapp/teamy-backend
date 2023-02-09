@@ -59,7 +59,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -94,7 +94,7 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -131,7 +131,7 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 
 	if err != nil {
 		internalErr := &errs.Error{
-			Code:     dao.DBError,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})

@@ -171,7 +171,7 @@ func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	return teamNotifier
 }
 
-func (s StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserNotifier, *errs.Error) {
+func (s *StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserNotifier, *errs.Error) {
 	userNotifier, ok := s.userNotifiers[userID]
 	var err *errs.Error
 	if !ok {
@@ -229,8 +229,12 @@ func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID u
 
 func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, *errs.Error) {
 	teamNotifier, err := s.GetTeamNotifier(ct, teamID)
-	if err != nil && err.Code == errs.NotFound {
-		return nil, err
+	if err != nil {
+		if err.Code != errs.NotFound {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 
 	// There can be only 1 user client for a given team on a given device.

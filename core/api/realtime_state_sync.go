@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 	"path"
 	"strconv"
@@ -42,26 +41,31 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 	ct := request.Context()
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		writer.WriteHeader(http.StatusUnauthorized)
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "userID not found",
+		}
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	clientIDParam := mux.Vars(request)["clientID"]
 	clientID, err := strconv.ParseUint(clientIDParam, 10, 64)
 	if err != nil {
-		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp:   err,
-			telemetry.MessageProp: "must provide teamId",
-		})
-		writer.WriteHeader(http.StatusBadRequest)
+		internalErr := &errs.Error{
+			Code:    errs.InvalidArgument,
+			Message: "must provide teamId",
+		}
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	err = r.realTimeStateSyncer.OnInitialStateReady(userID, clientID)
-	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
+	internalErr := r.realTimeStateSyncer.OnInitialStateReady(userID, clientID)
+	if internalErr != nil {
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -72,24 +76,30 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 	ct := request.Context()
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		writer.WriteHeader(http.StatusUnauthorized)
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "userID not found",
+		}
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	conn, err := connection.WebSocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
-		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		writer.WriteHeader(http.StatusInternalServerError)
+		internalErr := &errs.Error{
+			Code: connection.ConnErr,
+		}
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	webSocketConn := connection.NewWebSocket(r.dataCollector, conn)
-	err = r.realTimeStateSyncer.OnClientConnect(userID, webSocketConn)
-	if err != nil {
-		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		writer.WriteHeader(http.StatusInternalServerError)
+	internalErr := r.realTimeStateSyncer.OnClientConnect(userID, webSocketConn)
+	if internalErr != nil {
+		r.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 }

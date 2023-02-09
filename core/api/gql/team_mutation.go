@@ -22,6 +22,7 @@ func (m Mutation) CreateTeam(ct context.Context, args struct {
 		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return Team{}, errs.ToResolverErr(err)
 	}
+
 	return newTeam(m.deps, team), nil
 }
 
