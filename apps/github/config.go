@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/teamyapp/cloud/app/config"
+	"github.com/teamyapp/cloud/libs/errs"
 )
 
 type AppConfig struct {
@@ -12,11 +13,14 @@ type AppConfig struct {
 	WebhookSecret             string        `envconfig:"APPS_GITHUB_WEBHOOK_SECRET"`
 }
 
-func AppConfigFromEnv() (AppConfig, error) {
+func AppConfigFromEnv() (AppConfig, *errs.Error) {
 	cfg := AppConfig{}
 	err := config.FromEnv(&cfg)
 	if err != nil {
-		return AppConfig{}, err
+		return AppConfig{}, &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
 	}
 
 	return cfg, nil

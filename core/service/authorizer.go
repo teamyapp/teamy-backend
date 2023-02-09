@@ -94,10 +94,10 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 	}
 
 	// add the group creator to the newly created userGroup
-	err = a.addMemberToUserGroup(ct, createUserGroupRes.UserGroup.GroupId, creatorUserID)
+	internalErr := a.addMemberToUserGroup(ct, createUserGroupRes.UserGroup.GroupId, creatorUserID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return 0, errs.FromGRPCErr(err)
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return 0, internalErr
 	}
 
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,

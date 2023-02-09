@@ -35,7 +35,7 @@ func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 		d.Duration, err = duration.Parse(ct, dataCollector, input.(string))
 		if err != nil {
 			dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return err
+			return err.ToError()
 		}
 
 	default:

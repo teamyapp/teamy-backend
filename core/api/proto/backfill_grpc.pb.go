@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.21.12
-// source: proto/backfill.proto
+// source: core/api/proto/backfill.proto
 
 package proto
 
@@ -138,5 +138,5 @@ var Backfill_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/backfill.proto",
+	Metadata: "core/api/proto/backfill.proto",
 }

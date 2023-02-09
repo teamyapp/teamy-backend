@@ -5,9 +5,10 @@ import (
 
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
+	"github.com/teamyapp/cloud/libs/errs"
 )
 
-type Config struct {
+type App struct {
 	sqldb.Config
 	config.Repo
 	config.Service
@@ -25,11 +26,14 @@ type Config struct {
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
 }
 
-func AppFromEnv() (Config, error) {
-	cfg := Config{}
+func AppFromEnv() (App, *errs.Error) {
+	cfg := App{}
 	err := config.FromEnv(&cfg)
 	if err != nil {
-		return Config{}, err
+		return App{}, &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
 	}
 
 	return cfg, nil
