@@ -42,6 +42,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 
 	defer rows.Close()
 
+	var internalErr *errs.Error
 	appTeamInstallations := make([]entity.AppTeamInstallation, 0)
 	for rows.Next() {
 		appTeamInstallation := entity.AppTeamInstallation{}
@@ -53,17 +54,20 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
@@ -94,6 +98,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 
 	defer rows.Close()
 
+	var internalErr *errs.Error
 	appTeamInstallations := make([]entity.AppTeamInstallation, 0)
 	for rows.Next() {
 		appTeamInstallation := entity.AppTeamInstallation{}
@@ -105,17 +110,20 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}

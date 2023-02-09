@@ -42,6 +42,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 
 	defer rows.Close()
 
+	var internalErr *errs.Error
 	teams := make([]entity.Team, 0)
 	for rows.Next() {
 		team := entity.Team{}
@@ -55,17 +56,20 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 			&team.UpdatedAt,
 		)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		teams = append(teams, team)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
@@ -137,6 +141,8 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 	}
 
 	defer rows.Close()
+
+	var internalErr *errs.Error
 	var teams []entity.Team
 	for rows.Next() {
 		var team entity.Team
@@ -151,17 +157,20 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 				&team.UpdatedAt,
 			)
 		if err != nil {
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
 			continue
 		}
 
 		teams = append(teams, team)
 	}
 
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+	if internalErr != nil {
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
