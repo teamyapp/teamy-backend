@@ -18,8 +18,14 @@ func (a AppTeamInstallation) App() (App, error) {
 	panic("implement me")
 }
 
-func (a AppTeamInstallation) EnabledVersion() (AppVersion, error) {
-	panic("implement me")
+func (a AppTeamInstallation) EnabledVersion(ct context.Context) (AppVersion, error) {
+	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, a.appTeamInstallation.AppID, a.appTeamInstallation.EnabledVersionNumber)
+	if err != nil {
+		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return AppVersion{}, errs.ToResolverErr(err)
+	}
+
+	return newAppVersion(a.deps, appVersion), nil
 }
 
 func (a AppTeamInstallation) InstalledTeam(ct context.Context) (Team, error) {

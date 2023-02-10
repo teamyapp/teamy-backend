@@ -99,6 +99,51 @@ func NewDeleteAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewCreateAppVersionQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "CreateAppVersion",
+		UserID:       userID,
+	}
+}
+
+func NewUpdateAppVersionQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "UpdateAppVersion",
+		UserID:       userID,
+	}
+}
+
+func NewDeleteAppVersionQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "DeleteAppVersion",
+		UserID:       userID,
+	}
+}
+
+func NewCreateAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "CreateAppVersionVisibleTeam",
+		UserID:       userID,
+	}
+}
+
+func NewDeleteAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "DeleteAppVersionVisibleTeam",
+		UserID:       userID,
+	}
+}
+
 func (q Query) String() string {
 	return fmt.Sprintf("user %d is not allowed to perform %s on %s %d", q.UserID, q.Operation, q.ResourceType, q.ResourceID)
 }

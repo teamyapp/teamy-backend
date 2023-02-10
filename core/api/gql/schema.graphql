@@ -290,7 +290,7 @@ type AppVersion {
 	uiExtensionEntrypointPath: String
 	isPublic: Boolean!
 	visibleToTeams: [Team!]!
-	changes: String!
+	changes: String
 	createdAt: Time!
 	updatedAt: Time
 }

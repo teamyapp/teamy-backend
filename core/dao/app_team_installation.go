@@ -14,4 +14,5 @@ type AppTeamInstallation interface {
 	CreateAppTeamInstallation(ct context.Context, appTeamInstallation entity.AppTeamInstallation) *errs.Error
 	UpdateAppTeamInstallation(ct context.Context, appTeamInstallation entity.AppTeamInstallation) *errs.Error
 	DeleteAppTeamInstallation(ct context.Context, appID uint64, teamID uint64) *errs.Error
+	DeleteAppTeamInstallationsByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) *errs.Error
 }
