@@ -46,7 +46,7 @@ func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
@@ -64,7 +64,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
@@ -78,7 +78,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 
 	err := u.userDao.CreateUser(ct, user)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.User{}, err
 	}
 
@@ -88,7 +88,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, *errs.Error) {
 	user, err := u.userDao.FindUserByID(ct, userID)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.User{}, err
 	}
 
@@ -105,13 +105,13 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 		user)
 	err = realTimeTransaction.ApplyMutation(ct, userMutation)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.User{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.User{}, err
 	}
 
@@ -125,14 +125,14 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
 	res, rpcErr := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -145,7 +145,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 	}
 	err := u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, fileUploadSession)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return 0, err
 	}
 
@@ -159,7 +159,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
@@ -169,7 +169,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		entity.ProfileUserFileUploadSessionType,
 		fileUploadSessionID)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.User{}, err
 	}
 
@@ -191,7 +191,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	profileUploadSession.UpdatedAt = &now
 	err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, profileUploadSession)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.User{}, err
 	}
 
@@ -202,13 +202,13 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	uploadSession, rpcErr := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
 	user, err := u.userDao.FindUserByID(ct, userID)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.User{}, err
 	}
 
@@ -217,7 +217,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	user.UpdatedAt = &now
 	err = u.userDao.UpdateUser(ct, user)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 	}
 
 	return user, nil

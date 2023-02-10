@@ -25,7 +25,7 @@ func (d *UpdateInvitationMutation) GetID() uint64 {
 func (u *UpdateInvitationMutation) Execute(ct context.Context) *errs.Error {
 	err := u.invitationDao.UpdateInvitation(ct, u.invitation)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

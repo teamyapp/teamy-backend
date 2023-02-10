@@ -26,7 +26,7 @@ func (u *UpdateUserMutation) GetID() uint64 {
 func (u *UpdateUserMutation) Execute(ct context.Context) *errs.Error {
 	err := u.userDao.UpdateUser(ct, u.user)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

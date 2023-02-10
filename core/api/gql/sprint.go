@@ -6,7 +6,6 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -34,19 +33,19 @@ func (s Sprint) CreatedAt(ct context.Context) graphql.Time {
 func (s Sprint) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, argErr := fromGraphQLTaskFilterPtr(ct, s.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		s.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		s.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	tasks, err := s.deps.taskService.FindTasksInSprint(ct, s.sprint.ID, filter)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -58,7 +57,7 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 	team, err := s.deps.teamService.FindTeamByID(ct, s.sprint.OwningTeamID)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Team{}, errs.ToResolverErr(err)
 	}
 
@@ -68,7 +67,7 @@ func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 func (s Sprint) Participants(ct context.Context) ([]SprintParticipant, error) {
 	participants, err := s.deps.sprintService.FindParticipantsInSprint(ct, s.sprint.ID)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

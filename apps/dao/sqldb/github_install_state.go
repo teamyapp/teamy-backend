@@ -47,7 +47,7 @@ func (g GithubAppInstallState) FindStateByID(
 			Message: fmt.Sprintf(
 				"GithubAppInstallState not found: stateID=%v", stateID),
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubAppInstallState{}, internalErr
 	}
 
@@ -56,7 +56,7 @@ func (g GithubAppInstallState) FindStateByID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubAppInstallState{}, internalErr
 	}
 
@@ -88,7 +88,7 @@ func (g GithubAppInstallState) CreateState(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -107,7 +107,7 @@ func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) *
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

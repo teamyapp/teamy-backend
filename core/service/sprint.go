@@ -46,7 +46,7 @@ type Sprint struct {
 func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
 	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -60,7 +60,7 @@ func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *Spr
 func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	participants, err := s.sprintParticipantDao.FindParticipantsBySprintID(ct, sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -70,7 +70,7 @@ func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([
 func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
 	sprints, err := s.sprintDao.FindAllSprints(ct)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -84,7 +84,7 @@ func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.
 func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Sprint, *errs.Error) {
 	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
@@ -101,7 +101,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("team has no active sprint: teamID=%v, currentTime=%v", teamID, now.UTC()),
 		}
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Sprint{}, internalErr
 	}
 
@@ -110,7 +110,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 			Code:    TooManySprints,
 			Message: fmt.Sprintf("team has more than one current sprint: teamID=%v, currentTime=%v", teamID, now.UTC()),
 		}
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Sprint{}, internalErr
 	}
 
@@ -120,7 +120,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
 	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -146,14 +146,14 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 				Code:    errs.NotFound,
 				Message: "user ID not found",
 			}
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Sprint{}, internalErr
 		}
 
 		query := authorization.NewCreateSprintQuery(userID, teamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Sprint{}, err
 		}
 
@@ -162,7 +162,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Sprint{}, internalErr
 		}
 	}
@@ -171,7 +171,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 	genSprintIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSprintIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Sprint{}, internalErr
 	}
 
@@ -184,27 +184,27 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 	}
 	err := s.sprintDao.CreateSprint(ct, sp)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = s.authorizer.registerResource(ct, authorization.SprintResourceType, sp.ID)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Sprint{}, err
 		}
 
 		err = s.authorizer.assignParentResource(ct, authorization.SprintResourceType, sp.ID, authorization.TeamResourceType, sp.OwningTeamID)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Sprint{}, err
 		}
 	}
 
 	teamMembers, err := s.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
@@ -230,14 +230,14 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 			participant)
 		err = realTimeTransaction.ApplyMutation(ct, createSprintParticipantMutation)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Sprint{}, err
 		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
@@ -247,27 +247,27 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
 	taskIds, err := s.sprintTaskRelationDao.FindTaskIDsBySprintID(ct, sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
 	for _, taskId := range taskIds {
 		_, err = s.RemoveTaskFromSprint(ct, sprintID, taskId)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Sprint{}, err
 		}
 	}
 
 	participantUserIDs, err := s.sprintParticipantDao.FindParticipantIDsBySprintID(ct, sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
 	sprint, err := s.sprintDao.FindSprintByID(ct, sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
@@ -282,14 +282,14 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 			sprintID)
 		err = realTimeTransaction.ApplyMutation(ct, deleteSprintParticipantMutation)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Sprint{}, err
 		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Sprint{}, err
 	}
 
@@ -299,13 +299,13 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
 	task, err := s.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	sprint, err := s.sprintDao.FindSprintByID(ct, sprintID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -334,7 +334,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		relation)
 	err = realTimeTransaction.ApplyMutation(ct, createSprintTaskRelationMutation)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -347,20 +347,20 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			task)
 		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
 	err = s.tryReduceBandwidth(ct, realTimeTransaction, sprintID, task)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -375,20 +375,20 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 				Code:    errs.NotFound,
 				Message: "user ID not found",
 			}
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return nil, internalErr
 		}
 
 		sprint, err := s.sprintDao.FindSprintByID(ct, toSprintID)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 
 		query := authorization.NewCloneTaskQuery(userID, sprint.OwningTeamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 
@@ -397,7 +397,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return []entity.Task{}, internalErr
 		}
 	}
@@ -406,7 +406,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 	for _, taskID := range taskIDs {
 		task, err := s.copyTaskToSprint(ct, toSprintID, taskID)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			continue
 		}
 
@@ -422,7 +422,7 @@ func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSpr
 		task, err := s.moveTaskToSprint(ct, fromSprintID, toSprintID, taskID)
 
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			continue
 		}
 
@@ -435,7 +435,7 @@ func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSpr
 func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
 	task, err := s.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -452,13 +452,13 @@ func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID u
 	}
 	createdTask, err := s.taskService.createTask(ct, task.OwningTeamID, cloneTask)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	_, err = s.AddTaskToSprint(ct, toSprintID, createdTask.ID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -468,7 +468,7 @@ func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID u
 func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
 	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -480,13 +480,13 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", fromSprintID, taskID),
 		}
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
 	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, fromSprintID, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -498,32 +498,32 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 
 	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(ct, relation)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	task, err := s.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
 	err = s.tryIncreaseBandwidth(ct, realTimeTransaction, fromSprintID, task)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = s.tryReduceBandwidth(ct, realTimeTransaction, toSprintID, task)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -533,7 +533,7 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
 	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -545,13 +545,13 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", sprintID, taskID),
 		}
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
 	task, err := s.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -565,7 +565,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	)
 	err = realTimeTransaction.ApplyMutation(ct, deleteSprintTaskRelationMutation)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -579,20 +579,20 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 			task)
 		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
 	err = s.tryIncreaseBandwidth(ct, realTimeTransaction, sprintID, task)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -608,7 +608,7 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction,
 				return nil
 			}
 
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -621,7 +621,7 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction,
 			newSprintParticipant)
 		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -638,7 +638,7 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 				return nil
 			}
 
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -651,7 +651,7 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 			oldSprintParticipant)
 		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}

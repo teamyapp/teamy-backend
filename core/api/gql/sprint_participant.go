@@ -5,7 +5,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -18,7 +17,7 @@ type SprintParticipant struct {
 func (s SprintParticipant) Sprint(ct context.Context) (Sprint, error) {
 	sprint, err := s.deps.sprintService.FindSprintByID(ct, s.participant.SprintID)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Sprint{}, errs.ToResolverErr(err)
 	}
 
@@ -28,7 +27,7 @@ func (s SprintParticipant) Sprint(ct context.Context) (Sprint, error) {
 func (s SprintParticipant) User(ct context.Context) (User, error) {
 	user, err := s.deps.userService.FindUserByID(ct, s.participant.UserID)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 

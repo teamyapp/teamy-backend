@@ -611,7 +611,7 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt e
 func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt pullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -633,7 +633,7 @@ func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt pullRequest
 func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {
 	prAuthorUserID, err := a.GetInternalUserID(ct, prEvt.PullRequest.User.ID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -700,7 +700,7 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 	}
 	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -710,7 +710,7 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -774,13 +774,13 @@ func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64,
 
 	codeReview, internalErr := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, prReviewEvt.PullRequest.NodeID, prReviewEvt.Review.User.ID)
 	if internalErr != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	internalErr = a.processGithubCodeReviewFeedback(ct, teamID, codeReview, evt, prReviewEvt)
 	if internalErr != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -809,13 +809,13 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 		case commentedPullRequestReviewState, changesRequestedPullRequestReviewState:
 			prAuthorUserID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
 			prReviewerID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -848,7 +848,7 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 			})
 			pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prReviewEvt.PullRequest.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -899,14 +899,14 @@ func (a AppAPI) GetInternalUserID(ct context.Context, githubUserID uint64) (uint
 func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	for _, githubReviewer := range prEvt.PullRequest.RequestedReviewers {
 		err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, pr.InternalTaskID, githubReviewer.ID, evt, prEvt)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			continue
 		}
 	}
@@ -925,7 +925,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 ) *errs.Error {
 	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, githubPullRequestNodeID, githubReviewerID)
 	if err != nil && err.Code != errs.NotFound {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -943,7 +943,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 		}
 		createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, codeReview.Round+1, evt, prEvt)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -964,7 +964,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 
 	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, 1, evt, prEvt)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -977,7 +977,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 
 	err = a.githubCodeReviewDao.CreateCodeReview(ct, codeReview)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -987,7 +987,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerID uint64, round int, evt event, prEvt pullRequestEvent) (uint64, *errs.Error) {
 	codeReviewerInternalUserID, err := a.GetInternalUserID(ct, githubReviewerID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return 0, err
 	}
 
@@ -1064,7 +1064,7 @@ func (a AppAPI) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, tas
 			return nil
 		}
 
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

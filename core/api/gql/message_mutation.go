@@ -5,7 +5,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -21,14 +20,14 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Message{}, errs.ToResolverErr(internalErr)
 	}
 
 	input := service.CreateMessageInput{Body: args.Message.Body}
 	message, err := m.deps.threadService.CreateMessage(ct, threadID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Message{}, errs.ToResolverErr(err)
 	}
 
@@ -47,14 +46,14 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Message{}, errs.ToResolverErr(internalErr)
 	}
 
 	input := service.UpdateMessageInput{Body: args.Input.Body}
 	message, err := m.deps.threadService.UpdateMessage(ct, messageID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Message{}, errs.ToResolverErr(err)
 	}
 
@@ -70,13 +69,13 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Message{}, errs.ToResolverErr(internalErr)
 	}
 
 	message, err := m.deps.threadService.DeleteMessage(ct, messageID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Message{}, errs.ToResolverErr(err)
 	}
 

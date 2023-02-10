@@ -6,7 +6,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -24,7 +23,7 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 	}
 	user, err := m.deps.userService.CreateUser(ct, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -44,7 +43,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return User{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -54,7 +53,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	}
 	user, err := m.deps.userService.UpdateUser(ct, userID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -64,7 +63,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 func (m Mutation) CreateUserProfileUploadSession(ct context.Context) (graphql.ID, error) {
 	uploadSessionID, err := m.deps.userService.CreateUserProfileUploadSession(ct)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return "", errs.ToResolverErr(err)
 	}
 
@@ -80,13 +79,13 @@ func (m Mutation) FinishUserProfileUploadSession(ct context.Context, args struct
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return User{}, errs.ToResolverErr(internalErr)
 	}
 
 	user, err := m.deps.userService.FinishUserProfileUploadSession(ct, fileUploadSessionID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 

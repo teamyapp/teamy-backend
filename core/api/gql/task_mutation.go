@@ -5,7 +5,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -26,17 +25,17 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	ownerUserID, argErr := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Task.OwnerUserID)
+	ownerUserID, argErr := fromGraphQLIDPtr(args.Task.OwnerUserID)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -48,7 +47,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		IsPlanned:   args.Task.IsPlanned,
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -72,17 +71,17 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	ownerUserID, argErr := fromGraphQLIDPtr(ct, m.deps.dataCollector, args.Input.OwnerUserID)
+	ownerUserID, argErr := fromGraphQLIDPtr(args.Input.OwnerUserID)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -92,7 +91,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -105,7 +104,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		DueAt:        fromGraphQLTimePtr(args.Input.DueAt),
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -121,13 +120,13 @@ func (m Mutation) DeleteTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.DeleteTask(ct, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -143,13 +142,13 @@ func (m Mutation) MoveTaskToUpcoming(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToUpcoming(ct, taskID, true)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -165,13 +164,13 @@ func (m Mutation) MoveTaskToInProgress(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToInProgress(ct, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -187,13 +186,13 @@ func (m Mutation) MoveTaskToDelivered(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToDelivered(ct, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -210,13 +209,13 @@ func (m Mutation) MoveTaskToBlocked(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.MoveTaskToBlocked(ct, taskID, args.Reason)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -233,7 +232,7 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -243,13 +242,13 @@ func (m Mutation) AddAwaitForTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.AddAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -266,7 +265,7 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -276,13 +275,13 @@ func (m Mutation) RemoveAwaitForTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.taskService.RemoveAwaitForTask(ct, taskID, awaitForTaskId)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -299,7 +298,7 @@ func (m Mutation) StartDraggingTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", errs.ToResolverErr(internalErr)
 	}
 
@@ -309,13 +308,13 @@ func (m Mutation) StartDraggingTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", errs.ToResolverErr(internalErr)
 	}
 
 	err := m.deps.taskService.StartDraggingTask(ct, taskID, clientID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return "", errs.ToResolverErr(err)
 	}
 
@@ -332,7 +331,7 @@ func (m Mutation) StopDraggingTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", errs.ToResolverErr(internalErr)
 	}
 
@@ -342,13 +341,13 @@ func (m Mutation) StopDraggingTask(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", errs.ToResolverErr(internalErr)
 	}
 
 	err := m.deps.taskService.StopDraggingTask(ct, taskID, clientID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return "", errs.ToResolverErr(err)
 	}
 

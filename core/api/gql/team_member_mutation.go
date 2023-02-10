@@ -5,7 +5,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -20,7 +19,7 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -30,13 +29,13 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamMember, err := m.deps.teamService.AddMemberToTeam(ct, teamID, memberUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return TeamMember{}, errs.ToResolverErr(err)
 	}
 
@@ -56,7 +55,7 @@ func (m Mutation) UpdateTeamMember(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -66,7 +65,7 @@ func (m Mutation) UpdateTeamMember(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -76,7 +75,7 @@ func (m Mutation) UpdateTeamMember(ct context.Context, args struct {
 	}
 	teamMember, err := m.deps.teamService.UpdateTeamMember(ct, teamID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return TeamMember{}, errs.ToResolverErr(err)
 	}
 
@@ -93,7 +92,7 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -103,13 +102,13 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamMember, err := m.deps.teamService.RemoveMemberFromTeam(ct, teamID, memberUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return TeamMember{}, errs.ToResolverErr(err)
 	}
 

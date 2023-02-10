@@ -36,7 +36,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -63,7 +63,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 				internalErr = newInternalErr
 			}
 
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -90,7 +90,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -117,7 +117,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 				internalErr = newInternalErr
 			}
 
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -154,7 +154,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("app installation not found: appID=%v, teamID=%v", appID, teamID),
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.AppTeamInstallation{}, internalErr
 	}
 
@@ -163,7 +163,7 @@ func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.AppTeamInstallation{}, internalErr
 	}
 
@@ -194,7 +194,7 @@ func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, appTe
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -217,7 +217,7 @@ func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, appTe
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -237,7 +237,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -256,7 +256,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallationsByAppIDAndVersionNumber(c
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

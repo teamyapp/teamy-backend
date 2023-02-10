@@ -59,7 +59,7 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("invitation not found: invitationID=%v", invitationID),
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
@@ -68,7 +68,7 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
@@ -99,7 +99,7 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -133,7 +133,7 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 				internalErr = newInternalErr
 			}
 
-			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			i.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -165,7 +165,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -199,7 +199,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 				internalErr = newInternalErr
 			}
 
-			i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			i.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -242,7 +242,7 @@ func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invit
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -276,7 +276,7 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invit
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -295,7 +295,7 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) *e
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

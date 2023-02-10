@@ -37,14 +37,14 @@ func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
 	genThreadIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
 	err := t.threadDao.CreateThread(ct, threadID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 	}
 
 	return threadID, err
@@ -61,7 +61,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Message{}, internalErr
 	}
 
@@ -69,7 +69,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 	genMessageIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genMessageIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Message{}, internalErr
 	}
 
@@ -89,13 +89,13 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 		message)
 	err := realTimeTransaction.ApplyMutation(ct, createMessageMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 
@@ -105,7 +105,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input UpdateMessageInput) (entity.Message, *errs.Error) {
 	message, err := t.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 
@@ -121,13 +121,13 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 		message)
 	err = realTimeTransaction.ApplyMutation(ct, updateMessageMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 
@@ -137,7 +137,7 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Message, *errs.Error) {
 	message, err := t.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
@@ -149,13 +149,13 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		message)
 	err = realTimeTransaction.ApplyMutation(ct, deleteMessageMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Message{}, err
 	}
 

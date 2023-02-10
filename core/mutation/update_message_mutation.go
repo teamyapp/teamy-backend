@@ -26,7 +26,7 @@ func (u *UpdateMessageMutation) GetID() uint64 {
 func (u *UpdateMessageMutation) Execute(ct context.Context) *errs.Error {
 	err := u.messageDao.UpdateMessage(ct, u.message)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (u *UpdateMessageMutation) Undo() *errs.Error {
 func (u *UpdateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := u.taskDao.FindTaskByCommentsThreadID(ct, u.message.ThreadID)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 

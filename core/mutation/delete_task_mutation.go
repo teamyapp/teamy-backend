@@ -25,7 +25,7 @@ func (d *DeleteTaskMutation) GetID() uint64 {
 func (d *DeleteTaskMutation) Execute(ct context.Context) *errs.Error {
 	err := d.taskDao.DeleteTask(ct, d.task.ID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

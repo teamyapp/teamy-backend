@@ -26,7 +26,7 @@ func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
 func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := c.taskAwaitForRelationDao.CreateRelation(ct, c.taskAwaitForRelation)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (c *CreateTaskAwaitForRelationMutation) Undo() *errs.Error {
 func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByID(ct, c.taskAwaitForRelation.AwaitForTaskID)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 
