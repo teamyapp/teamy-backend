@@ -42,7 +42,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.TaskLink{}, internalErr
 	}
 
@@ -50,7 +50,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		query := authorization.NewCreateTaskLinkQuery(userID, taskLinkEntity.TaskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.TaskLink{}, err
 		}
 
@@ -59,7 +59,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.TaskLink{}, internalErr
 		}
 	}
@@ -68,7 +68,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	genTaskLinkIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskLinkIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.TaskLink{}, internalErr
 	}
 
@@ -86,26 +86,26 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 
 	err := realTimeTransaction.ApplyMutation(ct, createTaskLinkMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.TaskLink{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.TaskLink{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = t.authorizer.registerResource(ct, authorization.TaskLinkResourceType, taskLink.ID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.TaskLink{}, err
 		}
 
 		err = t.authorizer.assignParentResource(ct, authorization.TaskLinkResourceType, taskLink.ID, authorization.TaskResourceType, taskLink.TaskID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.TaskLink{}, err
 		}
 	}

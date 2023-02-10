@@ -54,7 +54,7 @@ func (a AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, ap
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("app version not found: appID=%v, versionNum=%v", appID, versionNumber),
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersion{}, internalErr
 	}
 
@@ -63,7 +63,7 @@ func (a AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, ap
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersion{}, internalErr
 	}
 
@@ -91,7 +91,7 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -122,7 +122,7 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 				internalErr = newInternalErr
 			}
 
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -166,7 +166,7 @@ func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVe
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -198,7 +198,7 @@ func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVe
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -220,7 +220,7 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("max VersionNumber not found: appID=%v", appID),
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -229,7 +229,7 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -249,7 +249,7 @@ func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNu
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

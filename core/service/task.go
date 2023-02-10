@@ -77,7 +77,7 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, *errs.Error) {
 	tasks, err := t.taskDao.FindAllTasks(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -91,7 +91,7 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, *errs.Error) {
 	tasks, err := t.taskDao.FindTasksByTeamID(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -109,13 +109,13 @@ func (t Task) FindTasksInSprint(
 ) ([]entity.Task, *errs.Error) {
 	taskIDs, err := t.sprintTaskRelationDao.FindTaskIDsBySprintID(ct, sprintID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
 	tasks, err := t.taskDao.FindTasksByIDs(ct, taskIDs)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -129,13 +129,13 @@ func (t Task) FindTasksInSprint(
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, *errs.Error) {
 	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, awaitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
 	tasks, err := t.taskDao.FindTasksByIDs(ct, awaitForTaskIds)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -158,13 +158,13 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	genTaskIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
 	threadID, err := t.threadService.CreateThread(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -192,26 +192,26 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	)
 	err = realTimeTransaction.ApplyMutation(ct, createTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = t.authorizer.registerResource(ct, authorization.TaskResourceType, task.ID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 
 		err = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, teamID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
@@ -226,7 +226,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
@@ -234,7 +234,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		query := authorization.NewCreateTaskQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 
@@ -243,7 +243,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Task{}, internalErr
 		}
 	}
@@ -271,7 +271,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
@@ -279,7 +279,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		query := authorization.NewUpdateTaskQuery(userID, taskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 
@@ -288,14 +288,14 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Task{}, internalErr
 		}
 	}
 
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -318,19 +318,19 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = t.updateUnusedBandWidth(ct, realTimeTransaction, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -348,14 +348,14 @@ func (t Task) updateUnusedBandWidth(
 ) *errs.Error {
 	err := t.tryIncreaseBandwidth(ct, tx, taskID, oldOwnerID, oldEffort)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	if newOwnerID != nil && newEffort != nil {
 		participants, err := t.findTaskOwnerInSprints(ct, taskID, *newOwnerID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -370,7 +370,7 @@ func (t Task) updateUnusedBandWidth(
 			)
 			err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
 			if err != nil {
-				t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 		}
@@ -388,7 +388,7 @@ func (t Task) tryIncreaseBandwidth(
 	if oldOwnerID != nil && oldEffort != nil {
 		participants, err := t.findTaskOwnerInSprints(ct, taskID, *oldOwnerID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -403,7 +403,7 @@ func (t Task) tryIncreaseBandwidth(
 			)
 			err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
 			if err != nil {
-				t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 		}
@@ -415,7 +415,7 @@ func (t Task) tryIncreaseBandwidth(
 func (t Task) findTaskOwnerInSprints(ct context.Context, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -424,7 +424,7 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, taskID uint64, taskOwne
 		participant, err := t.sprintParticipantDao.FindParticipant(ct, sprintID, taskOwnerUserID)
 		if err != nil {
 			if err.Code != errs.NotFound {
-				t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return nil, err
 			}
 			continue
@@ -439,14 +439,14 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, taskID uint64, taskOwne
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -460,14 +460,14 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		)
 		err = realTimeTransaction.ApplyMutation(ct, deleteSprintTaskRelationMutation)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
 	awaitForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -482,20 +482,20 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 
 		err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
 	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	awaitingTasks, err := t.taskDao.FindTasksByIDs(ct, awaitingTaskIDs)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -509,14 +509,14 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		)
 		err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
 	err = t.tryIncreaseBandwidth(ct, realTimeTransaction, taskID, task.OwnerUserID, task.Effort)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -528,19 +528,19 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 	)
 	err = realTimeTransaction.ApplyMutation(ct, deleteTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = t.threadDao.DeleteThread(ct, task.CommentsThreadID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -550,7 +550,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 func (t Task) moveTaskToUpcoming(ct context.Context, tx *realtime.Transaction, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -573,7 +573,7 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *realtime.Transaction, t
 	)
 	err = tx.ApplyMutation(ct, updateTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -583,7 +583,7 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *realtime.Transaction, t
 func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -606,13 +606,13 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -626,19 +626,19 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	tasks, err := t.taskDao.FindTasksByTeamID(ct, task.OwningTeamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -673,7 +673,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		)
 		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
@@ -688,13 +688,13 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -704,7 +704,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -721,26 +721,26 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	for _, awaitingTaskID := range awaitingTaskIDs {
 		awaitForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, awaitingTaskID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 
 		awaitForTasks, err := t.taskDao.FindTasksByIDs(ct, awaitForTaskIDs)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 
@@ -750,7 +750,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		if len(awaitForTasks) == 0 {
 			_, err = t.moveTaskToUpcoming(ct, realTimeTransaction, awaitingTaskID, false)
 			if err != nil {
-				t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return entity.Task{}, err
 			}
 		}
@@ -758,7 +758,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -772,7 +772,7 @@ func (t Task) MoveTaskToBlocked(ct context.Context, taskID uint64, reason string
 func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitForTaskId uint64) (entity.Task, *errs.Error) {
 	task, err := t.taskDao.FindTaskByID(ct, awaitingTaskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -782,7 +782,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("task must be awaitable: taskID=%v", awaitingTaskID),
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
@@ -801,7 +801,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	)
 	err = realTimeTransaction.ApplyMutation(ct, createTaskAwaitForRelationMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -815,13 +815,13 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -831,7 +831,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTaskId uint64) (entity.Task, *errs.Error) {
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -841,7 +841,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("task must be awaitable: taskID=%v", taskID),
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
@@ -854,27 +854,27 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	)
 	err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	awaitForTaskIds, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
 	if len(awaitForTaskIds) == 0 {
 		task, err = t.moveTaskToUpcoming(ct, realTimeTransaction, taskID, false)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -888,13 +888,13 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 			Code:    errs.NotFound,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -918,18 +918,18 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskActivityMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 	return nil
@@ -938,7 +938,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) *errs.Error {
 	task, err := t.taskDao.FindTaskByID(ct, taskID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -959,13 +959,13 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskActivityMutation)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 	return nil

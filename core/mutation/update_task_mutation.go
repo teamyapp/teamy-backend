@@ -25,7 +25,7 @@ func (u *UpdateTaskMutation) GetID() uint64 {
 func (u *UpdateTaskMutation) Execute(ct context.Context) *errs.Error {
 	err := u.taskDao.UpdateTask(ct, u.task)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

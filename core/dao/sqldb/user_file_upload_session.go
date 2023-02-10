@@ -53,7 +53,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 				userID,
 				userFileUploadSessionType),
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.UserFileUploadSession{}, internalErr
 	}
 
@@ -62,7 +62,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.UserFileUploadSession{}, internalErr
 	}
 
@@ -97,7 +97,7 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -134,7 +134,7 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

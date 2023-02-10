@@ -6,6 +6,7 @@ import (
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
@@ -34,14 +35,10 @@ func (c *ClientNotifier) onInitialStateReady() {
 }
 
 func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
-	c.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: "process transaction",
-	})
+	c.dataCollector.Logger.InfoWithContext(ct, "process transaction")
 
 	if !c.acceptTransaction {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-			telemetry.MessageProp: "discard transaction",
-		})
+		c.dataCollector.Logger.InfoWithContext(ct, "discard transaction")
 		return
 	}
 
@@ -69,15 +66,16 @@ func newClientNotifier(dataCollector telemetry.DataCollector, conn connection.Co
 	go func() {
 		for message := range messages {
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
-
 			if err != nil {
-				dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				dataCollector.Logger.ErrorWithContext(ct, &errs.Error{
+					Code:     errs.Serialization,
+					EmbedErr: err,
+				})
 				continue
 			}
+
 			conn.SendMessage(jsonBuf)
-			dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
-				telemetry.MessageProp: "notification sent",
-			})
+			dataCollector.Logger.InfoWithContext(ct, "notification sent")
 		}
 	}()
 	clientNotifier := &ClientNotifier{

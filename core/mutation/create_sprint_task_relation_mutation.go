@@ -26,7 +26,7 @@ func (c *CreateSprintTaskRelationMutation) GetID() uint64 {
 func (c *CreateSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := c.sprintTaskRelationDao.CreateSprintTaskRelation(ct, c.sprintTaskRelation)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (c *CreateSprintTaskRelationMutation) Undo() *errs.Error {
 func (c *CreateSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 

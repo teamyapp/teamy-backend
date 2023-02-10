@@ -25,18 +25,18 @@ func (c *CreateTeamMemberMutation) GetID() uint64 {
 func (c *CreateTeamMemberMutation) Execute(ct context.Context) *errs.Error {
 	err := c.teamMemberDao.CreateTeamMember(ct, c.teamMember)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	userNotifier, err := c.stateSyncer.GetUserNotifier(ct, c.teamMember.UserID)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	} else {
 		err = c.stateSyncer.SubscribeToTeams(ct, c.teamMember.UserID, userNotifier)
 		if err != nil {
-			c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			c.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}

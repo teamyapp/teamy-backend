@@ -3,7 +3,6 @@ package scalar
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -34,17 +33,17 @@ func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 		var err *errs.Error
 		d.Duration, err = duration.Parse(ct, dataCollector, input.(string))
 		if err != nil {
-			dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			dataCollector.Logger.ErrorWithContext(ct, err)
 			return err.ToError()
 		}
 
 	default:
-		err := errors.New("unsupported duration dataType")
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{
-			telemetry.CauseProp:   err,
-			telemetry.MessageProp: fmt.Sprintf("dataType=%v", reflect.TypeOf(input)),
-		})
-		return err
+		err := &errs.Error{
+			Code:    errs.InvalidArgument,
+			Message: fmt.Sprintf("unsupported duration dataType: dataType=%v", reflect.TypeOf(input)),
+		}
+		dataCollector.Logger.ErrorWithContext(ct, err)
+		return err.ToError()
 	}
 
 	return nil

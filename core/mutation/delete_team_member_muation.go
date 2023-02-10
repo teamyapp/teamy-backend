@@ -26,7 +26,7 @@ func (d *DeleteTeamMemberMutation) GetID() uint64 {
 func (d *DeleteTeamMemberMutation) Execute(ct context.Context) *errs.Error {
 	err := d.teamMemberDao.DeleteTeamMember(ct, d.teamID, d.userID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -56,7 +56,7 @@ func (d *DeleteTeamMemberMutation) ToMessage() realtime.MutationMessage {
 func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) *errs.Error {
 	teamNotifier, err := d.stateSyncer.GetTeamNotifier(ct, d.teamID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

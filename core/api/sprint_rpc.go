@@ -33,7 +33,7 @@ func (s SprintRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSprintRequest) (*proto.SprintMsg, error) {
 	sprint, err := s.sprintService.FindCurrentSprint(ct, req.TeamId)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
@@ -49,7 +49,7 @@ func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSpr
 func (s SprintRPC) AddTaskToSprint(ct context.Context, req *proto.AddTaskToSprintRequest) (*emptypb.Empty, error) {
 	_, err := s.sprintService.AddTaskToSprint(ct, req.SprintId, req.TaskId)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 

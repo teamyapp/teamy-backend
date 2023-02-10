@@ -51,7 +51,7 @@ func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID u
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("teamActivity not found: teamID=%v", teamID),
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 

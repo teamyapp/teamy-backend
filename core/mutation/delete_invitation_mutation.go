@@ -25,7 +25,7 @@ func (d *DeleteInvitationMutation) GetID() uint64 {
 func (d *DeleteInvitationMutation) Execute(ct context.Context) *errs.Error {
 	err := d.invitationDao.DeleteInvitation(ct, d.invitation.ID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

@@ -25,7 +25,7 @@ func (u *UpdateTeamMutation) GetID() uint64 {
 func (u *UpdateTeamMutation) Execute(ct context.Context) *errs.Error {
 	err := u.teamDao.UpdateTeam(ct, u.team)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

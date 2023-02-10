@@ -51,7 +51,7 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(
 			Message: fmt.Sprintf(
 				"GithubPullRequest not found: internalTaskID=%v", internalTaskID),
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubPullRequest{}, internalErr
 	}
 
@@ -60,7 +60,7 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubPullRequest{}, internalErr
 	}
 
@@ -100,7 +100,7 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 				"GithubPullRequest not found: githubNodeID=%v",
 				githubNodeID)),
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubPullRequest{}, internalErr
 	}
 
@@ -109,7 +109,7 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubPullRequest{}, internalErr
 	}
 
@@ -145,7 +145,7 @@ func (g GithubPullRequest) CreatePullRequest(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -167,7 +167,7 @@ func (g GithubPullRequest) DeletePullRequestByInternalTaskID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -189,7 +189,7 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

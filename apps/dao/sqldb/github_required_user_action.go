@@ -40,7 +40,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -69,7 +69,7 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 				internalErr = newInternalErr
 			}
 
-			g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			g.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -110,7 +110,7 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -145,7 +145,7 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

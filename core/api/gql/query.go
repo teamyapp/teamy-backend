@@ -5,7 +5,6 @@ import (
 
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -16,7 +15,7 @@ type Query struct {
 func (q Query) Me(ct context.Context) (User, error) {
 	user, err := q.deps.userService.Me(ct)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -26,19 +25,19 @@ func (q Query) Me(ct context.Context) (User, error) {
 func (q Query) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, argErr := fromGraphQLTaskFilterPtr(ct, q.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	tasks, err := q.deps.taskService.FindTasks(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -50,19 +49,19 @@ func (q Query) Tasks(ct context.Context, args struct {
 func (q Query) Teams(ct context.Context, args struct {
 	Filter *TeamFilter
 }) ([]Team, error) {
-	filter, argErr := fromGraphQLTeamFilterPtr(ct, q.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLTeamFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	teams, err := q.deps.teamService.FindTeams(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -74,19 +73,19 @@ func (q Query) Teams(ct context.Context, args struct {
 func (q Query) Invitations(ct context.Context, args struct {
 	Filter *InvitationFilter
 }) ([]Invitation, error) {
-	filter, argErr := fromGraphQLInvitationFilterPtr(ct, q.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLInvitationFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	invitations, err := q.deps.invitationService.FindInvitations(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -98,19 +97,19 @@ func (q Query) Invitations(ct context.Context, args struct {
 func (q Query) Sprints(ct context.Context, args struct {
 	Filter *SprintFilter
 }) ([]Sprint, error) {
-	filter, argErr := fromGraphQLSprintFilterPtr(ct, q.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLSprintFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	sprints, err := q.deps.sprintService.FindSprints(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

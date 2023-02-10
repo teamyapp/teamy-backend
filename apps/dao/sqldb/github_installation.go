@@ -42,7 +42,7 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -75,7 +75,7 @@ func (g GithubAppInstallation) FindInstallationByID(
 			Message: fmt.Sprintf(
 				"GithubAppInstallation not found: id=%v", installationID),
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubAppInstallation{}, internalErr
 	}
 
@@ -84,7 +84,7 @@ func (g GithubAppInstallation) FindInstallationByID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubAppInstallation{}, internalErr
 	}
 

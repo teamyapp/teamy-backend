@@ -26,7 +26,7 @@ func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

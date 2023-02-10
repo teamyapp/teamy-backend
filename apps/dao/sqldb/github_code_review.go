@@ -52,7 +52,7 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 				"GithubCodeReview not found: githubReviewerID=%v",
 				githubReviewerID),
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubCodeReview{}, internalErr
 	}
 
@@ -61,7 +61,7 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubCodeReview{}, internalErr
 	}
 
@@ -98,7 +98,7 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
 				"GithubCodeReview not found: internalTaskID=%v",
 				internalTaskID),
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubCodeReview{}, internalErr
 	}
 
@@ -107,7 +107,7 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.GithubCodeReview{}, internalErr
 	}
 
@@ -141,7 +141,7 @@ func (g GithubCodeReview) CreateCodeReview(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -175,7 +175,7 @@ func (g GithubCodeReview) UpdateCodeReview(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -196,7 +196,7 @@ func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -217,7 +217,7 @@ func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		g.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

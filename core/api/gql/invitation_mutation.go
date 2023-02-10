@@ -5,7 +5,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -24,7 +23,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -35,7 +34,7 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		ExpireAt:          args.Invitation.ExpireAt.Time,
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Invitation{}, errs.ToResolverErr(err)
 	}
 
@@ -56,7 +55,7 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -66,7 +65,7 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 		ExpireAt:          args.Input.ExpireAt.Time,
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Invitation{}, errs.ToResolverErr(err)
 	}
 
@@ -82,13 +81,13 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.DeleteInvitation(ct, invitationID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Invitation{}, errs.ToResolverErr(err)
 	}
 
@@ -105,13 +104,13 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.AcceptInvitation(ct, invitationID, args.InvitationCode)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Invitation{}, errs.ToResolverErr(err)
 	}
 
@@ -128,13 +127,13 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.DeclineInvitation(ct, invitationID, args.InvitationCode)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Invitation{}, errs.ToResolverErr(err)
 	}
 

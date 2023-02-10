@@ -26,7 +26,7 @@ func (c *CreateSprintParticipantMutation) GetID() uint64 {
 func (c *CreateSprintParticipantMutation) Execute(ct context.Context) *errs.Error {
 	err := c.sprintParticipantDao.CreateSprintParticipant(ct, c.sprintParticipant)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (c *CreateSprintParticipantMutation) Undo() *errs.Error {
 func (c *CreateSprintParticipantMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintParticipant.SprintID)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 

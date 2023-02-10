@@ -26,7 +26,7 @@ func (c *CreateTaskLinkMutation) GetID() uint64 {
 func (c *CreateTaskLinkMutation) Execute(ct context.Context) *errs.Error {
 	err := c.taskLinkDao.CreateTaskLink(ct, c.taskLink)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (c *CreateTaskLinkMutation) Undo() *errs.Error {
 func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByID(ct, c.taskLink.TaskID)
 	if err != nil {
-		c.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -21,7 +20,7 @@ func (a AppTeamInstallation) App() (App, error) {
 func (a AppTeamInstallation) EnabledVersion(ct context.Context) (AppVersion, error) {
 	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, a.appTeamInstallation.AppID, a.appTeamInstallation.EnabledVersionNumber)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return AppVersion{}, errs.ToResolverErr(err)
 	}
 
@@ -31,7 +30,7 @@ func (a AppTeamInstallation) EnabledVersion(ct context.Context) (AppVersion, err
 func (a AppTeamInstallation) InstalledTeam(ct context.Context) (Team, error) {
 	team, err := a.deps.teamService.FindTeamByID(ct, a.appTeamInstallation.InstalledTeamID)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return Team{}, errs.ToResolverErr(err)
 	}
 
@@ -45,7 +44,7 @@ func (a AppTeamInstallation) InstalledBy(ct context.Context) (*User, error) {
 
 	user, err := a.deps.userService.FindUserByID(ct, *a.appTeamInstallation.InstalledByUserID)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

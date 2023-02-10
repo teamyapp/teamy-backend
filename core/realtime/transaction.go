@@ -53,7 +53,7 @@ func (t *Transaction) rollback(ct context.Context) *errs.Error {
 	for index := t.nextMutationIndex - 1; index >= 0; index-- {
 		err := t.mutations[index].Undo()
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 		}
 	}
 
@@ -63,10 +63,10 @@ func (t *Transaction) rollback(ct context.Context) *errs.Error {
 func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) *errs.Error {
 	err := mutation.Execute(ct)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		undoErr := t.rollback(ct)
 		if undoErr != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: undoErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, undoErr)
 			return undoErr
 		}
 
@@ -86,10 +86,10 @@ func (t *Transaction) Commit(ct context.Context) *errs.Error {
 	for _, mutation := range t.mutations {
 		clientNotifiers, err := mutation.GetClientNotifiers(ct)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			undoErr := t.rollback(ct)
 			if undoErr != nil {
-				t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: undoErr})
+				t.dataCollector.Logger.ErrorWithContext(ct, undoErr)
 				return undoErr
 			}
 
@@ -120,7 +120,7 @@ func (t *Transaction) Commit(ct context.Context) *errs.Error {
 	for _, mutation := range t.mutations {
 		err := mutation.CleanUp(ct)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}

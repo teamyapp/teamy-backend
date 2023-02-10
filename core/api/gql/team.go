@@ -6,7 +6,6 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -34,7 +33,7 @@ func (t Team) CreatedAt(ct context.Context) graphql.Time {
 func (t Team) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.team.CreatorUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -44,7 +43,7 @@ func (t Team) Creator(ct context.Context) (User, error) {
 func (t Team) Owner(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.team.OwnerUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, nil
 	}
 
@@ -54,7 +53,7 @@ func (t Team) Owner(ct context.Context) (User, error) {
 func (t Team) Members(ct context.Context) ([]TeamMember, error) {
 	teamMembers, err := t.deps.teamService.FindTeamMembers(ct, t.team.ID)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -73,19 +72,19 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, argErr := fromGraphQLTaskFilterPtr(ct, t.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	tasks, err := t.deps.taskService.FindTasksInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -97,19 +96,19 @@ func (t Team) Tasks(ct context.Context, args struct {
 func (t Team) Invitations(ct context.Context, args struct {
 	Filter *InvitationFilter
 }) ([]Invitation, error) {
-	filter, argErr := fromGraphQLInvitationFilterPtr(ct, t.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLInvitationFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	invitations, err := t.deps.invitationService.FindInvitationsInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -121,19 +120,19 @@ func (t Team) Invitations(ct context.Context, args struct {
 func (t Team) Sprints(ct context.Context, args struct {
 	Filter *SprintFilter
 }) ([]Sprint, error) {
-	filter, argErr := fromGraphQLSprintFilterPtr(ct, t.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLSprintFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	sprints, err := t.deps.sprintService.FindSprintsInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -145,7 +144,7 @@ func (t Team) Sprints(ct context.Context, args struct {
 func (t Team) AppInstallations(ct context.Context) ([]AppTeamInstallation, error) {
 	appInstallations, err := t.deps.appService.FindAppInstallationsByTeamId(ct, t.team.ID)
 	if err != nil {
-		t.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

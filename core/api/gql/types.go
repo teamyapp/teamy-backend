@@ -1,12 +1,10 @@
 package gql
 
 import (
-	"context"
 	"strconv"
 	"time"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -47,14 +45,13 @@ func toGraphQLDurationPtr(du *time.Duration) *scalar.Duration {
 	return &scalar.Duration{Duration: *du}
 }
 
-func fromGraphQLIDPtr(ct context.Context, dataCollector telemetry.DataCollector, graphqlID *graphql.ID) (*uint64, error) {
+func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	if graphqlID == nil {
 		return nil, nil
 	}
 
 	id, err := fromGraphQLID(*graphqlID)
 	if err != nil {
-		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -83,20 +80,18 @@ func fromGraphQLID(graphqlID graphql.ID) (uint64, error) {
 	return strconv.ParseUint(string(graphqlID), 10, 64)
 }
 
-func fromGraphQLTaskFilterPtr(ct context.Context, dataCollector telemetry.DataCollector, gqlTaskFilter *TaskFilter) (*service.TaskFilter, error) {
+func fromGraphQLTaskFilterPtr(gqlTaskFilter *TaskFilter) (*service.TaskFilter, error) {
 	if gqlTaskFilter == nil {
 		return nil, nil
 	}
 
-	taskID, err := fromGraphQLIDPtr(ct, dataCollector, gqlTaskFilter.TaskID)
+	taskID, err := fromGraphQLIDPtr(gqlTaskFilter.TaskID)
 	if err != nil {
-		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
-	ownerID, err := fromGraphQLIDPtr(ct, dataCollector, gqlTaskFilter.OwnerID)
+	ownerID, err := fromGraphQLIDPtr(gqlTaskFilter.OwnerID)
 	if err != nil {
-		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -109,14 +104,13 @@ func fromGraphQLTaskFilterPtr(ct context.Context, dataCollector telemetry.DataCo
 	}, nil
 }
 
-func fromGraphQLSprintFilterPtr(ct context.Context, dataCollector telemetry.DataCollector, gqlSprintFilter *SprintFilter) (*service.SprintFilter, error) {
+func fromGraphQLSprintFilterPtr(gqlSprintFilter *SprintFilter) (*service.SprintFilter, error) {
 	if gqlSprintFilter == nil {
 		return nil, nil
 	}
 
-	sprintID, err := fromGraphQLIDPtr(ct, dataCollector, gqlSprintFilter.SprintID)
+	sprintID, err := fromGraphQLIDPtr(gqlSprintFilter.SprintID)
 	if err != nil {
-		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -128,14 +122,13 @@ func fromGraphQLSprintFilterPtr(ct context.Context, dataCollector telemetry.Data
 	}, nil
 }
 
-func fromGraphQLTeamFilterPtr(ct context.Context, dataCollector telemetry.DataCollector, teamFilter *TeamFilter) (*service.TeamFilter, error) {
+func fromGraphQLTeamFilterPtr(teamFilter *TeamFilter) (*service.TeamFilter, error) {
 	if teamFilter == nil {
 		return nil, nil
 	}
 
-	teamID, err := fromGraphQLIDPtr(ct, dataCollector, teamFilter.TeamID)
+	teamID, err := fromGraphQLIDPtr(teamFilter.TeamID)
 	if err != nil {
-		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
@@ -144,14 +137,13 @@ func fromGraphQLTeamFilterPtr(ct context.Context, dataCollector telemetry.DataCo
 	}, nil
 }
 
-func fromGraphQLInvitationFilterPtr(ct context.Context, dataCollector telemetry.DataCollector, filter *InvitationFilter) (*service.InvitationFilter, error) {
+func fromGraphQLInvitationFilterPtr(filter *InvitationFilter) (*service.InvitationFilter, error) {
 	if filter == nil {
 		return nil, nil
 	}
 
-	invitationID, err := fromGraphQLIDPtr(ct, dataCollector, filter.InvitationID)
+	invitationID, err := fromGraphQLIDPtr(filter.InvitationID)
 	if err != nil {
-		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
 
