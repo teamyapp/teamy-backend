@@ -38,11 +38,11 @@ func (a AppVersion) IsPublic() bool {
 	return a.appVersion.IsPublic
 }
 
-func (a AppVersion) VisibleToTeams(ct context.Context) []Team {
+func (a AppVersion) VisibleToTeams(ct context.Context) ([]Team, error) {
 	appVersionVisibleTeams, err := a.deps.appService.FindAppVersionVisibleTeams(ct, a.appVersion.AppID, a.appVersion.VersionNumber)
 	if err != nil {
 		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil
+		return nil, err
 	}
 
 	teamIDs := collect.Map(appVersionVisibleTeams, func(appVersionVisibleTeam entity.AppVersionVisibleTeam, _ int) uint64 {

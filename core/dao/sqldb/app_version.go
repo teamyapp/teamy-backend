@@ -97,6 +97,7 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 
 	defer rows.Close()
 
+        var internalErr *errs.Error
 	appVersions := make([]entity.AppVersion, 0)
 	for rows.Next() {
 		appVersion := entity.AppVersion{}
@@ -112,11 +113,16 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 			&appVersion.Changes,
 		)
 		if err != nil {
-			internalErr := &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
@@ -210,8 +216,12 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 	).Scan(&maxVersion)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		// no version exists, start from 1
-		return 0, nil
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("max VersionNumber not found: appID=%v", appID),
+		}
+		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return 0, internalErr
 	}
 
 	if err != nil {

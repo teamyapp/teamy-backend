@@ -60,7 +60,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -91,13 +91,13 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		IsPublic:       false,
 		CreatedAt:      time.Now().UTC(),
 	}
-	versionNum, err := a.appVersionDao.FindMaxVersionNumber(ct, appID)
+	maxVersion, err := a.appVersionDao.FindMaxVersionNumber(ct, appID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.AppVersion{}, err
 	}
-	av.VersionNumber = versionNum + 1
-
+	
+	av.VersionNumber = maxVersion + 1
 	err = a.appVersionDao.CreateAppVersion(ct, av)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
@@ -112,7 +112,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs. Unauthenticated,
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -144,15 +144,9 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 
 	av.HasUIExtension = input.HasUIExtension
 	av.IsPublic = input.IsPublic
-	if input.IconURL != nil {
-		av.IconURL = input.IconURL
-	}
-	if input.Changes != nil {
-		av.Changes = input.Changes
-	}
-	if input.UIExtensionEntryPointPath != nil {
-		av.UIExtensionEntrypointPath = input.UIExtensionEntryPointPath
-	}
+	av.IconURL = input.IconURL
+	av.Changes = input.Changes
+	av.UIExtensionEntrypointPath = input.UIExtensionEntryPointPath
 	now := time.Now().UTC()
 	av.UpdateAt = &now
 	err = a.appVersionDao.UpdateAppVersion(ct, av)
@@ -169,7 +163,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -201,7 +195,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 
 	// TODO(yuhang): check if version to delete is the active version of the app after implementing app APIs
 
-	// TODO(yumiao): Below operations should be atomic by wrapping in one txn. We'll implement that after adding our
+	// TODO(yuhang): below operations should be atomic by wrapping in one txn. We'll implement that after adding our
 	// own transaction library.
 	err = a.appVersionDao.DeleteAppVersion(ct, appID, versionNumber)
 	if err != nil {
@@ -228,7 +222,7 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -271,7 +265,7 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})

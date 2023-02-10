@@ -14,8 +14,12 @@ func (m Mutation) CreateAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: argErr})
-		return AppVersion{}, argErr
+        internalErr := &errs.Error {
+            Code: errs.InvalidArgument,
+            EmbedErr: argErr,
+        }
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	appVersion, err := m.deps.appService.CreateAppVersion(ct, appID)
@@ -40,8 +44,12 @@ func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: argErr})
-		return AppVersion{}, argErr
+		internalErr := &errs.Error {
+            Code: errs.InvalidArgument,
+            EmbedErr: argErr,
+        }
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	input := service.UpdateAppVersionInput{
@@ -66,8 +74,12 @@ func (m Mutation) DeleteAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: argErr})
-		return AppVersion{}, argErr
+		internalErr := &errs.Error {
+            Code: errs.InvalidArgument,
+            EmbedErr: argErr,
+        }
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	appVersion, err := m.deps.appService.DeleteAppVersion(ct, appID, args.VersionNumber)
@@ -86,14 +98,22 @@ func (m Mutation) AddVisibleTeamToAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: argErr})
-		return AppVersion{}, argErr
+		internalErr := &errs.Error {
+            Code: errs.InvalidArgument,
+            EmbedErr: argErr,
+        }
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: argErr})
-		return AppVersion{}, argErr
+		internalErr := &errs.Error {
+            Code: errs.InvalidArgument,
+            EmbedErr: argErr,
+        }
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	appVersionVisibleTeam, err := m.deps.appService.CreateAppVersionVisibleTeam(ct, appID, args.VersionNumber, teamID)
@@ -118,14 +138,22 @@ func (m Mutation) RemoveVisibleTeamFromAppVersion(ct context.Context, args struc
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: argErr})
-		return AppVersion{}, argErr
+		internalErr := &errs.Error {
+            Code: errs.InvalidArgument,
+            EmbedErr: argErr,
+        }
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: argErr})
-		return AppVersion{}, argErr
+		internalErr := &errs.Error {
+            Code: errs.InvalidArgument,
+            EmbedErr: argErr,
+        }
+		m.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	appVersionVisibleTeam, err := m.deps.appService.DeleteAppVersionVisibleTeam(ct, appID, args.VersionNumber, teamID)

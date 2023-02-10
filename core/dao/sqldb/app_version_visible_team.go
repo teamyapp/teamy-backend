@@ -81,6 +81,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 
 	defer rows.Close()
 
+        var internalErr *errs.Error
 	appVersionVisibleTeams := make([]entity.AppVersionVisibleTeam, 0)
 	for rows.Next() {
 		appVersionVisibleTeam := entity.AppVersionVisibleTeam{}
@@ -90,11 +91,16 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 			&appVersionVisibleTeam.TeamID,
 		)
 		if err != nil {
-			internalErr := &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
@@ -125,6 +131,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 
 	defer rows.Close()
 
+        var internalErr *errs.Error
 	appVersionVisibleTeams := make([]entity.AppVersionVisibleTeam, 0)
 	for rows.Next() {
 		appVersionVisibleTeam := entity.AppVersionVisibleTeam{}
@@ -134,11 +141,16 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 			&appVersionVisibleTeam.TeamID,
 		)
 		if err != nil {
-			internalErr := &errs.Error{
+			newInternalErr := &errs.Error{
 				Code:     errs.Unknown,
 				EmbedErr: err,
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
