@@ -6,6 +6,7 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -38,10 +39,11 @@ func (a AppVersion) IsPublic() bool {
 	return a.appVersion.IsPublic
 }
 
-func (a AppVersion) VisibleToTeams(ct context.Context) ([]Team, *errs.Error) {
+func (a AppVersion) VisibleToTeams(ct context.Context) ([]Team, error) {
 	teams, err := a.deps.appService.FindAppVersionVisibleTeams(ct, a.appVersion.AppID, a.appVersion.VersionNumber)
 	if err != nil {
-		return nil, err
+		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(teams, func(team entity.Team, _ int) Team {
