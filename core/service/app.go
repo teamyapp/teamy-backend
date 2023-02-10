@@ -69,6 +69,7 @@ func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versio
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
 	}
+	
 	return teams, nil
 }
 
