@@ -56,7 +56,7 @@ func InitGraphQLAPI(dataCollector telemetry.DataCollector, cloudWebAPIExternalBa
 	appVersion := sqldb.NewAppVersion(dataCollector, sqlDB)
 	appTeamInstallation := sqldb.NewAppTeamInstallation(dataCollector, sqlDB)
 	appVersionVisibleTeam := sqldb.NewAppVersionVisibleTeam(dataCollector, sqlDB)
-	app := service.NewApp(dataCollector, cloudAPIClientRegistry, authorizer, appVersion, appTeamInstallation, appVersionVisibleTeam)
+	app := service.NewApp(dataCollector, cloudAPIClientRegistry, authorizer, appVersion, appTeamInstallation, appVersionVisibleTeam, team)
 	dependencies := gql2.NewDependencies(dataCollector, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceThread, app)
 	resolver := gql2.NewResolver(dependencies)
 	gqlService := api2.NewGraphQL(dataCollector, resolver)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -22,6 +23,7 @@ type App struct {
 	appVersionDao            dao.AppVersion
 	appTeamInstallationDao   dao.AppTeamInstallation
 	appVersionVisibleTeamDao dao.AppVersionVisibleTeam
+	teamDao                  dao.Team
 }
 
 type UpdateAppVersionInput struct {
@@ -52,8 +54,22 @@ func (a App) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uin
 	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
-func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versionNumber int32) ([]entity.AppVersionVisibleTeam, *errs.Error) {
-	return a.appVersionVisibleTeamDao.FindAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, appID, versionNumber)
+func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versionNumber int32) ([]entity.Team, *errs.Error) {
+	appVersionVisibleTeams, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, err
+	}
+
+	teamIDs := collect.Map(appVersionVisibleTeams, func(appVersionVisibleTeam entity.AppVersionVisibleTeam, _ int) uint64 {
+		return appVersionVisibleTeam.TeamID
+	})
+	teams, err := a.teamDao.FindTeamsByIDs(ct, teamIDs)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, err
+	}
+	return teams, nil
 }
 
 func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersion, *errs.Error) {
@@ -93,10 +109,15 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 	}
 	maxVersion, err := a.appVersionDao.FindMaxVersionNumber(ct, appID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.AppVersion{}, err
+		if err.Code == errs.NotFound {
+			// no version exists, start from 0
+			maxVersion = 0
+		} else {
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			return entity.AppVersion{}, err
+		}
 	}
-	
+
 	av.VersionNumber = maxVersion + 1
 	err = a.appVersionDao.CreateAppVersion(ct, av)
 	if err != nil {
@@ -112,7 +133,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs. Unauthenticated,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
@@ -202,13 +223,13 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 	}
 
-	err = a.appTeamInstallationDao.DeleteAppTeamInstallationByAppIDAndVersionNumber(ct, appID, versionNumber)
+	err = a.appTeamInstallationDao.DeleteAppTeamInstallationsByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.AppVersion{}, err
 	}
 
-	err = a.appVersionVisibleTeamDao.DeleteAppVersionVisibleTeamByAppIDAndVersionNumber(ct, appID, versionNumber)
+	err = a.appVersionVisibleTeamDao.DeleteAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.AppVersion{}, err
@@ -217,7 +238,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 	return av, nil
 }
 
-func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersionVisibleTeam, *errs.Error) {
+func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersion, *errs.Error) {
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
@@ -226,14 +247,14 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-			return entity.AppVersionVisibleTeam{}, internalErr
+			return entity.AppVersion{}, internalErr
 		}
 
 		query := authorization.NewCreateAppVersionVisibleTeamQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			a.authorizer.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppVersionVisibleTeam{}, err
+			return entity.AppVersion{}, err
 		}
 
 		if !hasPermission {
@@ -242,7 +263,7 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-			return entity.AppVersionVisibleTeam{}, internalErr
+			return entity.AppVersion{}, internalErr
 		}
 	}
 
@@ -254,13 +275,19 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 	err := a.appVersionVisibleTeamDao.CreateAppVersionVisibleTeam(ct, av)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.AppVersionVisibleTeam{}, err
+		return entity.AppVersion{}, err
 	}
 
-	return av, nil
+	appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return entity.AppVersion{}, err
+	}
+
+	return appVersion, nil
 }
 
-func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersionVisibleTeam, *errs.Error) {
+func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersion, *errs.Error) {
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
@@ -269,14 +296,14 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-			return entity.AppVersionVisibleTeam{}, internalErr
+			return entity.AppVersion{}, internalErr
 		}
 
 		query := authorization.NewDeleteAppVersionVisibleTeamQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			a.authorizer.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return entity.AppVersionVisibleTeam{}, err
+			return entity.AppVersion{}, err
 		}
 
 		if !hasPermission {
@@ -285,23 +312,46 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
 			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-			return entity.AppVersionVisibleTeam{}, internalErr
+			return entity.AppVersion{}, internalErr
 		}
 	}
 
 	av, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeam(ct, appID, versionNumber, teamID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.AppVersionVisibleTeam{}, err
+		return entity.AppVersion{}, err
 	}
 
 	err = a.appVersionVisibleTeamDao.DeleteAppVersionVisibleTeam(ct, appID, versionNumber, teamID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return entity.AppVersionVisibleTeam{}, err
+		return entity.AppVersion{}, err
 	}
 
-	return av, nil
+	// if team has installed the version, delete installation as well
+	appTeamInstallation, err := a.appTeamInstallationDao.FindAppTeamInstallationByAppIDAndTeamID(ct, appID, teamID)
+	if err != nil {
+		if err.Code != errs.NotFound {
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			return entity.AppVersion{}, err
+		}
+	} else {
+		if appTeamInstallation.EnabledVersionNumber == versionNumber {
+			err = a.appTeamInstallationDao.DeleteAppTeamInstallation(ct, appID, teamID)
+			if err != nil {
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				return entity.AppVersion{}, err
+			}
+		}
+	}
+
+	appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, av.AppID, av.VersionNumber)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return entity.AppVersion{}, err
+	}
+
+	return appVersion, nil
 }
 
 func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint64, versionNumber int32) (entity.AppTeamInstallation, *errs.Error) {
@@ -446,6 +496,7 @@ func NewApp(
 	appVersionDao dao.AppVersion,
 	appTeamInstallationDao dao.AppTeamInstallation,
 	appVersionVisibleTeamDao dao.AppVersionVisibleTeam,
+	teamDao dao.Team,
 ) App {
 	return App{
 		dataCollector,
@@ -454,5 +505,6 @@ func NewApp(
 		appVersionDao,
 		appTeamInstallationDao,
 		appVersionVisibleTeamDao,
+		teamDao,
 	}
 }

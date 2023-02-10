@@ -81,7 +81,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 
 	defer rows.Close()
 
-        var internalErr *errs.Error
+	var internalErr *errs.Error
 	appVersionVisibleTeams := make([]entity.AppVersionVisibleTeam, 0)
 	for rows.Next() {
 		appVersionVisibleTeam := entity.AppVersionVisibleTeam{}
@@ -100,7 +100,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
@@ -131,7 +131,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 
 	defer rows.Close()
 
-        var internalErr *errs.Error
+	var internalErr *errs.Error
 	appVersionVisibleTeams := make([]entity.AppVersionVisibleTeam, 0)
 	for rows.Next() {
 		appVersionVisibleTeam := entity.AppVersionVisibleTeam{}
@@ -150,7 +150,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
 			continue
 		}
 
@@ -208,7 +208,7 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeam(ct context.Context, a
 	return nil
 }
 
-func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) *errs.Error {
+func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamsByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) *errs.Error {
 	_, err := a.db.Exec(`
 		DELETE FROM app_version_visible_team
 		WHERE app_id = $1

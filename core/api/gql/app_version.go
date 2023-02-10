@@ -5,7 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -38,31 +38,15 @@ func (a AppVersion) IsPublic() bool {
 	return a.appVersion.IsPublic
 }
 
-func (a AppVersion) VisibleToTeams(ct context.Context) ([]Team, error) {
-	appVersionVisibleTeams, err := a.deps.appService.FindAppVersionVisibleTeams(ct, a.appVersion.AppID, a.appVersion.VersionNumber)
+func (a AppVersion) VisibleToTeams(ct context.Context) ([]Team, *errs.Error) {
+	teams, err := a.deps.appService.FindAppVersionVisibleTeams(ct, a.appVersion.AppID, a.appVersion.VersionNumber)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, err
-	}
-
-	teamIDs := collect.Map(appVersionVisibleTeams, func(appVersionVisibleTeam entity.AppVersionVisibleTeam, _ int) uint64 {
-		return appVersionVisibleTeam.TeamID
-	})
-
-	var teams []entity.Team
-	for _, teamID := range teamIDs {
-		team, err := a.deps.teamService.FindTeamByID(ct, teamID)
-		if err != nil {
-			a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			continue
-		}
-
-		teams = append(teams, team)
 	}
 
 	return collect.Map(teams, func(team entity.Team, _ int) Team {
 		return newTeam(a.deps, team)
-	})
+	}), nil
 }
 
 func (a AppVersion) Changes() *string {
