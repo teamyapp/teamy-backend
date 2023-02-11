@@ -22,7 +22,7 @@ func NewDeleteTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
-		Operation:    "DeleteTeam",  // TODO(cwu)
+		Operation:    "Delete",
 		UserID:       userID,
 	}
 }

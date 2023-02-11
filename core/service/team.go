@@ -279,18 +279,18 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 }
 
 func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: "user ID not found",
+	if feature.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			internalErr := &errs.Error{
+				Code:    errs.Unauthenticated,
+				Message: "user ID not found",
+			}
+
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.Team{}, internalErr
 		}
 
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
-	}
-
-	if feature.EnableAuthorization {  // TODO(cwu)
 		query := authorization.NewDeleteTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {

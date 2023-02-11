@@ -3,6 +3,7 @@ package sqldb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
@@ -99,6 +100,17 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 			&team.CreatedAt,
 			&team.UpdatedAt,
 		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"team not found: teamID=%v", teamID),
+		}
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.Team{}, internalErr
+	}
+
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
@@ -191,7 +203,6 @@ func (t Team) CreateTeam(ct context.Context, team entity.Team) *errs.Error {
 		team.OwnerUserID,
 		team.CreatedAt,
 	)
-
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
@@ -219,7 +230,6 @@ func (t Team) UpdateTeam(ct context.Context, team entity.Team) *errs.Error {
 		team.UpdatedAt,
 		team.ID,
 	)
-
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
@@ -238,14 +248,13 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) *errs.Error {
 		WHERE id = $1;`,
 		teamID,
 	)
-
 	if err != nil {
 		internalErr := &errs.Error{
-			Code: errs.Unknown,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return	internalErr;
+		return internalErr
 	}
 
 	return nil
