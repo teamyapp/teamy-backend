@@ -232,6 +232,25 @@ func (t Team) UpdateTeam(ct context.Context, team entity.Team) *errs.Error {
 	return nil
 }
 
+func (t Team) DeleteTeam(ct context.Context, teamID uint64) *errs.Error {
+	_, err := t.db.Exec(`
+		DELETE FROM team
+		WHERE id = $1;`,
+		teamID,
+	)
+
+	if err != nil {
+		internalErr := &errs.Error{
+			Code: errs.Unknown,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return	internalErr;
+	}
+
+	return nil
+}
+
 func NewTeam(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Team {
 	return Team{dataCollector: dataCollector, db: sqlDB}
 }

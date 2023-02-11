@@ -278,6 +278,63 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	return team, nil
 }
 
+func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.Team{}, internalErr
+	}
+
+	if feature.EnableAuthorization {  // TODO(cwu)
+		query := authorization.NewDeleteTeamQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
+			}
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.Team{}, internalErr
+		}
+	}
+
+	team, err := t.teamDao.FindTeamByID(ct, teamID)
+	if err != nil {
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.Team{}, err
+	}
+
+	deleteTeamMutation := mutation.NewDeleteTeamMutation(
+		t.dataCollector,
+		t.stateSyncer,
+		t.teamDao,
+		teamID,
+	)
+	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
+	err = realTimeTransaction.ApplyMutation(ct, deleteTeamMutation)
+	if err != nil {
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.Team{}, err
+	}
+
+	err = realTimeTransaction.Commit(ct)
+	if err != nil {
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.Team{}, err
+	}
+
+	return team, nil
+}
+
 func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, *errs.Error) {
 	res, rpcErr := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if rpcErr != nil {
