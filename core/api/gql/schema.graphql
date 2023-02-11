@@ -39,6 +39,7 @@ type Mutation {
 	addMemberToTeam(teamId: ID!, memberUserId: ID!): TeamMember!
 	updateTeamMember(teamId: ID!, input: UpdateTeamMemberInput!): TeamMember!
 	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): TeamMember!
+	deleteTeam(teamId: ID!): Team!
 
 	# User
 	createUser(user: CreateUserInput!): User!

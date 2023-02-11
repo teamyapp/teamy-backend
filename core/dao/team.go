@@ -13,4 +13,5 @@ type Team interface {
 	FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Team, *errs.Error)
 	CreateTeam(ct context.Context, team entity.Team) *errs.Error
 	UpdateTeam(ct context.Context, team entity.Team) *errs.Error
+	DeleteTeam(ct context.Context, teamID uint64) *errs.Error
 }

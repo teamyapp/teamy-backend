@@ -65,6 +65,28 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	return newTeam(m.deps, team), nil
 }
 
+func (m Mutation) DeleteTeam(ct context.Context, args struct {
+	TeamID graphql.ID
+}) (Team, error) {
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code: errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return Team{}, errs.ToResolverErr(internalErr)
+	}
+
+	team, err := m.deps.teamService.DeleteTeam(ct, teamID)
+	if err != nil {
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		return Team{}, errs.ToResolverErr(err)
+	}
+
+	return newTeam(m.deps, team), nil
+}
+
 func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 	TeamID graphql.ID
 }) (graphql.ID, error) {
