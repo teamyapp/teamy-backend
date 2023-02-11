@@ -17,6 +17,8 @@ type DeleteTeamMutation struct {
 	teamID        uint64
 }
 
+var _ realtime.Mutation = (*DeleteTeamMutation)(nil)
+
 func (u *DeleteTeamMutation) GetID() uint64 {
 	return u.id
 }

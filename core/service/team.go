@@ -294,6 +294,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 		query := authorization.NewDeleteTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Team{}, err
 		}
 
