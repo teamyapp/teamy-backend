@@ -95,7 +95,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppVersion{}, internalErr
@@ -151,7 +151,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppVersion{}, internalErr
@@ -202,7 +202,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppVersion{}, internalErr
@@ -261,7 +261,7 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppVersion{}, internalErr
@@ -310,7 +310,7 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppVersion{}, internalErr
@@ -359,7 +359,7 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -377,7 +377,7 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppTeamInstallation{}, internalErr
@@ -406,7 +406,7 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -423,7 +423,7 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppTeamInstallation{}, internalErr
@@ -451,7 +451,7 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -468,7 +468,7 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.AppTeamInstallation{}, internalErr

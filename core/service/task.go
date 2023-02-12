@@ -223,7 +223,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -231,7 +231,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewCreateTaskQuery(userID, teamID)
+		query := authorization.NewTeamCreateTaskQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -241,7 +241,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Task{}, internalErr
@@ -268,7 +268,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -276,7 +276,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewUpdateTaskQuery(userID, taskID)
+		query := authorization.NewTeamUpdateTaskQuery(userID, taskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -286,7 +286,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Task{}, internalErr
@@ -623,7 +623,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -885,7 +885,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)

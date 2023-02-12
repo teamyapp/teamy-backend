@@ -42,7 +42,7 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "userID not found",
 		}
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)

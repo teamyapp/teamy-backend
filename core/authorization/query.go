@@ -9,7 +9,16 @@ type Query struct {
 	UserID       uint64
 }
 
-func NewUpdateTeamSettingsQuery(userID uint64, teamID uint64) Query {
+func NewReadTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "Read",
+		UserID:       userID,
+	}
+}
+
+func NewTeamUpdateSettingsQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -27,7 +36,43 @@ func NewDeleteTeamQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
-func NewCreateTaskQuery(userID uint64, teamID uint64) Query {
+func NewTeamAddMemberToQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "AddMemberTo",
+		UserID:       userID,
+	}
+}
+
+func NewTeamRemoveMemberFromQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "RemoveMemberFrom",
+		UserID:       userID,
+	}
+}
+
+func NewTeamUpdateMemberQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "UpdateMember",
+		UserID:       userID,
+	}
+}
+
+func NewTeamReadMemberQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "ReadMember",
+		UserID:       userID,
+	}
+}
+
+func NewTeamCreateTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -45,7 +90,7 @@ func NewCreateTaskLinkQuery(userID uint64, taskID uint64) Query {
 	}
 }
 
-func NewCreateInvitationQuery(userID uint64, teamID uint64) Query {
+func NewTeamCreateInvitationQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -54,7 +99,7 @@ func NewCreateInvitationQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
-func NewCreateSprintQuery(userID uint64, teamID uint64) Query {
+func NewTeamCreateSprintQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -63,7 +108,16 @@ func NewCreateSprintQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
-func NewCloneTaskQuery(userID uint64, teamID uint64) Query {
+func NewTeamReadSprintQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "ReadSprint",
+		UserID:       userID,
+	}
+}
+
+func NewTeamCloneTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -72,7 +126,7 @@ func NewCloneTaskQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
-func NewUpdateTaskQuery(userID uint64, teamID uint64) Query {
+func NewTeamUpdateTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TaskResourceType,
 		ResourceID:   teamID,
@@ -154,5 +208,5 @@ func NewDeleteAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
 }
 
 func (q Query) String() string {
-	return fmt.Sprintf("user %d is not allowed to perform %s on %s %d", q.UserID, q.Operation, q.ResourceType, q.ResourceID)
+	return fmt.Sprintf("[Query UserID=%v Operation=%v ResourceType=%v ResourceID=%v]", q.UserID, q.Operation, q.ResourceType, q.ResourceID)
 }

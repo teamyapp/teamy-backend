@@ -98,7 +98,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 	})
 	if len(sprints) < 1 {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: fmt.Sprintf("team has no active sprint: teamID=%v, currentTime=%v", teamID, now.UTC()),
 		}
 		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -143,14 +143,14 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Sprint{}, internalErr
 		}
 
-		query := authorization.NewCreateSprintQuery(userID, teamID)
+		query := authorization.NewTeamCreateSprintQuery(userID, teamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -160,7 +160,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSpr
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Sprint{}, internalErr
@@ -372,7 +372,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			internalErr := &errs.Error{
-				Code:    errs.NotFound,
+				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
 			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -385,7 +385,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 			return nil, err
 		}
 
-		query := authorization.NewCloneTaskQuery(userID, sprint.OwningTeamID)
+		query := authorization.NewTeamCloneTaskQuery(userID, sprint.OwningTeamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -395,7 +395,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return []entity.Task{}, internalErr

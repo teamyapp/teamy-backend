@@ -27,6 +27,10 @@ var (
 		ResourceType: TeamResourceType,
 		Operation:    "RemoveMemberFrom",
 	}
+	UpdateMemberTeam = ResourceTypeOperation{
+		ResourceType: TeamResourceType,
+		Operation:    "UpdateMember",
+	}
 	ReadInvitationUnderTeam = ResourceTypeOperation{
 		ResourceType: TeamResourceType,
 		Operation:    "ReadInvitation",
@@ -75,6 +79,22 @@ var (
 		ResourceType: TeamResourceType,
 		Operation:    "DeleteTask",
 	}
+	CloneTaskUnderTeam = ResourceTypeOperation{
+		ResourceType: TeamResourceType,
+		Operation:    "CloneTask",
+	}
+	CreateAppInstallationUnderTeam = ResourceTypeOperation{
+		ResourceType: TeamResourceType,
+		Operation:    "CreateAppInstallation",
+	}
+	UpdateAppInstallationUnderTeam = ResourceTypeOperation{
+		ResourceType: TeamResourceType,
+		Operation:    "UpdateAppInstallation",
+	}
+	DeleteAppInstallationUnderTeam = ResourceTypeOperation{
+		ResourceType: TeamResourceType,
+		Operation:    "DeleteAppInstallation",
+	}
 )
 
 // Operations for Sprint
@@ -107,6 +127,10 @@ var (
 		ResourceType: TaskResourceType,
 		Operation:    "Delete",
 	}
+	CreateLink = ResourceTypeOperation{
+		ResourceType: TaskResourceType,
+		Operation:    "CreateLink",
+	}
 )
 
 // Operations for Invitation
@@ -125,15 +149,21 @@ var (
 	}
 )
 
+// TODO: add Team AssignAdmin operation
+
 var TeamAdminResourceTypeOperations = []ResourceTypeOperation{
 	AddMemberToTeam,
 	RemoveMemberFromTeam,
+	UpdateMemberTeam,
 	UpdateSettingsTeam,
 	DeleteTeam,
 	ReadInvitationUnderTeam,
 	CreateInvitationUnderTeam,
 	DeleteInvitationUnderTeam,
 	UpdateInvitationUnderTeam,
+	CreateAppInstallationUnderTeam,
+	UpdateAppInstallationUnderTeam,
+	DeleteAppInstallationUnderTeam,
 }
 
 var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
@@ -146,4 +176,5 @@ var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
 	ReadTaskUnderTeam,
 	UpdateSprint,
 	UpdateTaskUnderTeam,
+	CloneTaskUnderTeam,
 }
