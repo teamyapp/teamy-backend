@@ -204,7 +204,7 @@ func startServiceRunner(
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
-	rn := runner.NewServiceRunner(
+	rn := runner.NewServiceRunnerBuilder(
 		dataCollector,
 		runnerConfig, []runner.Service{
 			githubAppAPI,
@@ -213,7 +213,8 @@ func startServiceRunner(
 			taskRPCAPI,
 			taskLinkRPCAPI,
 			sprintRPCAPI,
-		})
+		}).
+		Build()
 	rn.Start()
 	return nil
 }
