@@ -121,7 +121,25 @@ func (q Query) Sprints(ct context.Context, args struct {
 func (q Query) Apps(ct context.Context, args struct {
 	Filter *AppFilter
 }) ([]App, error) {
-	panic("implement me")
+	filter, argErr := fromGraphQLAppFilterPtr(ct, q.deps.dataCollector, args.Filter)
+	if argErr != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: argErr,
+		}
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	apps, err := q.deps.appService.FindApps(ct, filter)
+	if err != nil {
+		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(apps, func(app entity.App, _ int) App {
+		return newApp(q.deps, app)
+	}), nil
 }
 
 func NewQuery(deps *Dependencies) Query {

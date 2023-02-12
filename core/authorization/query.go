@@ -162,6 +162,33 @@ func NewDeleteAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewUpdateAppQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "UpdateApp",
+		UserID:       userID,
+	}
+}
+
+func NewRefreshAppSecretQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "RefreshAppSecret",
+		UserID:       userID,
+	}
+}
+
+func NewDeleteAppQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "DeleteApp",
+		UserID:       userID,
+	}
+}
+
 func NewCreateAppVersionQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,

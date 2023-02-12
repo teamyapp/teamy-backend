@@ -150,6 +150,45 @@ var (
 )
 
 // TODO: add Team AssignAdmin operation
+// Operations for App
+var (
+	ReadApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "Read",
+	}
+	UpdateApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "UpdateApp",
+	}
+	RefreshAppSecret = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "RefreshAppSecret",
+	}
+	DeleteApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "Delete",
+	}
+	CreateAppVersionUnderApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "CreateAppVersion",
+	}
+	UpdateAppVersionUnderApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "UpdateAppVersion",
+	}
+	DeleteAppVersionUnderApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "DeleteAppVersion",
+	}
+	AddAppVersionVisibleTeamUnderApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "AddAppVersionVisibleTeam",
+	}
+	DeleteAppVersionVisibleTeamUnderApp = ResourceTypeOperation{
+		ResourceType: AppResourceType,
+		Operation:    "DeleteAppVersionVisibleTeam",
+	}
+)
 
 var TeamAdminResourceTypeOperations = []ResourceTypeOperation{
 	AddMemberToTeam,
@@ -177,4 +216,19 @@ var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
 	UpdateSprint,
 	UpdateTaskUnderTeam,
 	CloneTaskUnderTeam,
+}
+
+var AppAdminResourceTypeOperations = []ResourceTypeOperation{
+	UpdateApp,
+	RefreshAppSecret,
+	DeleteApp,
+}
+
+var AppMemberResourceTypeOperations = []ResourceTypeOperation{
+	ReadApp,
+	CreateAppVersionUnderApp,
+	UpdateAppVersionUnderApp,
+	DeleteAppVersionUnderApp,
+	AddAppVersionVisibleTeamUnderApp,
+	DeleteAppVersionVisibleTeamUnderApp,
 }

@@ -15,7 +15,13 @@ type AppVersion struct {
 }
 
 func (a AppVersion) App(ct context.Context) (App, error) {
-	panic("implement me")
+	app, err := a.deps.appService.FindAppByAppId(ct, a.appVersion.AppID)
+	if err != nil {
+		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return App{}, errs.ToResolverErr(err)
+	}
+
+	return newApp(a.deps, app), nil
 }
 
 func (a AppVersion) VersionNumber() int32 {

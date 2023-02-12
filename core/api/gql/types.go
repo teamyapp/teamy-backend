@@ -153,6 +153,29 @@ func fromGraphQLInvitationFilterPtr(filter *InvitationFilter) (*service.Invitati
 	}, nil
 }
 
+func fromGraphQLAppFilterPtr(ct context.Context, dataCollector telemetry.DataCollector, gqlAppFilter *AppFilter) (*service.AppFilter, error) {
+	if gqlAppFilter == nil {
+		return nil, nil
+	}
+
+	appID, err := fromGraphQLIDPtr(ct, dataCollector, gqlAppFilter.AppID)
+	if err != nil {
+		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, err
+	}
+
+	teamID, err := fromGraphQLIDPtr(ct, dataCollector, gqlAppFilter.TeamID)
+	if err != nil {
+		dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, err
+	}
+
+	return &service.AppFilter{
+		AppID:  appID,
+		TeamID: teamID,
+	}, nil
+}
+
 func fromGraphQLDurationPtr(duration *scalar.Duration) *time.Duration {
 	if duration == nil {
 		return nil
