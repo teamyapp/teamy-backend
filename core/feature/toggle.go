@@ -1,3 +1,3 @@
 package feature
 
-var EnableAuthorization bool = true
+var EnableAuthorization bool = false

@@ -63,6 +63,15 @@ func NewTeamUpdateMemberQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
+func NewTeamReadMemberQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "ReadMember",
+		UserID:       userID,
+	}
+}
+
 func NewTeamCreateTaskQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,

@@ -519,7 +519,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewReadTeamQuery(userID, teamID)
+		query := authorization.NewTeamReadMemberQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
