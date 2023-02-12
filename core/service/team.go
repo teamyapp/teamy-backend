@@ -620,7 +620,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
