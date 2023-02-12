@@ -49,6 +49,33 @@ type Team struct {
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Team{}, internalErr
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewReadTeamQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.Team{}, internalErr
+		}
+	}
+
 	return t.teamDao.FindTeamByID(ct, teamID)
 }
 
@@ -77,6 +104,16 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 		return []entity.Team{}, nil
 	}
 
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, err
+	}
+
 	teams, err := t.teamDao.FindTeamsByIDs(ct, ids)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -87,6 +124,7 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 		teams = filterTeams(teams, *filter)
 	}
 
+	// TODO: authorization - need to check permission for each team, and return list of errors
 	return teams, nil
 }
 
@@ -94,7 +132,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -222,7 +260,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -230,7 +268,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewUpdateTeamSettingsQuery(userID, teamID)
+		query := authorization.NewTeamUpdateSettingsQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
@@ -239,7 +277,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Team{}, internalErr
@@ -337,6 +375,33 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 }
 
 func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return 0, internalErr
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewTeamUpdateSettingsQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return 0, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return 0, internalErr
+		}
+	}
+
 	res, rpcErr := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -361,6 +426,33 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 }
 
 func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fileUploadSessionID uint64) (entity.Team, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.Team{}, internalErr
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewTeamUpdateSettingsQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.Team{}, internalErr
+		}
+	}
+
 	iconUploadSession, err := t.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamID(
 		ct,
 		teamID,
@@ -416,10 +508,65 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 }
 
 func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamMember, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewReadTeamQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			return nil, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return nil, internalErr
+		}
+	}
+
 	return t.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 }
 
 func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.TeamMember{}, internalErr
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewTeamAddMemberToQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.TeamMember{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.TeamMember{}, internalErr
+		}
+	}
+
 	teamMember := entity.TeamMember{
 		TeamID:    teamID,
 		UserID:    memberUserID,
@@ -470,6 +617,33 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 }
 
 func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.TeamMember{}, internalErr
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewTeamRemoveMemberFromQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.TeamMember{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.TeamMember{}, internalErr
+		}
+	}
+
 	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -526,6 +700,33 @@ func (t Team) UpdateTeamMember(
 	teamID uint64,
 	input UpdateTeamMemberInput,
 ) (entity.TeamMember, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return entity.TeamMember{}, internalErr
+	}
+
+	if feature.EnableAuthorization {
+		query := authorization.NewTeamUpdateMemberQuery(userID, teamID)
+		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.TeamMember{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
+			}
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			return entity.TeamMember{}, internalErr
+		}
+	}
+
 	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, input.UserID)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)

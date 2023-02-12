@@ -39,7 +39,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -57,7 +57,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.TaskLink{}, internalErr

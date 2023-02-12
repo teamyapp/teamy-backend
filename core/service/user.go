@@ -43,7 +43,7 @@ func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -61,7 +61,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -122,7 +122,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -156,7 +156,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)

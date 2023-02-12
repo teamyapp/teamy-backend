@@ -76,7 +76,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -84,7 +84,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewCreateInvitationQuery(userID, teamID)
+		query := authorization.NewTeamCreateInvitationQuery(userID, teamID)
 		hasPermission, err := i.authorizer.hasPermission(ct, query)
 		if err != nil {
 			i.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -94,7 +94,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		if !hasPermission {
 			internalErr := &errs.Error{
 				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
+				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
 			i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Invitation{}, internalErr
@@ -226,7 +226,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 	receiverUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -303,7 +303,7 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 	receiverUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)

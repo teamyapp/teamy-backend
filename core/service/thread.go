@@ -58,7 +58,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
-			Code:    errs.NotFound,
+			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
 		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
