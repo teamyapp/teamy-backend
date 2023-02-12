@@ -121,19 +121,19 @@ func (q Query) Sprints(ct context.Context, args struct {
 func (q Query) Apps(ct context.Context, args struct {
 	Filter *AppFilter
 }) ([]App, error) {
-	filter, argErr := fromGraphQLAppFilterPtr(ct, q.deps.dataCollector, args.Filter)
+	filter, argErr := fromGraphQLAppFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	apps, err := q.deps.appService.FindApps(ct, filter)
 	if err != nil {
-		q.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		q.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

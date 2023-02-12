@@ -16,7 +16,7 @@ type AppTeamInstallation struct {
 func (a AppTeamInstallation) App(ct context.Context) (App, error) {
 	app, err := a.deps.appService.FindAppByAppId(ct, a.appTeamInstallation.AppID)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 
