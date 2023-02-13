@@ -5,9 +5,9 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"github.com/golang-jwt/jwt"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 )
