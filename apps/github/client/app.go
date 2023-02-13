@@ -60,7 +60,7 @@ func (a *App) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error) {
 			Code:     errs.Serialization,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
@@ -71,7 +71,7 @@ func (a *App) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error) {
 			Code:     errs.Deserialization,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
@@ -82,13 +82,13 @@ func (a *App) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error) {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
 	a.jwt = &signedStr
 	a.jwtExpireAt = &expireAt
-	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{telemetry.MessageProp: fmt.Sprintf("Refreshed app JWT token expiring at %v", a.jwtExpireAt)})
+	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("Refreshed app JWT token expiring at %v", a.jwtExpireAt))
 	return signedStr, nil
 }
 
@@ -99,7 +99,7 @@ func NewApp(dataCollector telemetry.DataCollector, appID string, privateKeyPEM [
 			Code:     errs.InvalidArgument,
 			EmbedErr: err,
 		}
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		dataCollector.Logger.Error(internalErr)
 		return nil, internalErr
 	}
 

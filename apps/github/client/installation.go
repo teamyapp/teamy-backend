@@ -34,7 +34,7 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 
 	appJWT, internalErr := i.app.getOrRefreshAppJWT(ct)
 	if internalErr != nil {
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
@@ -45,7 +45,7 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
@@ -61,7 +61,7 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
@@ -90,7 +90,7 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 			Code:     errs.IO,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
@@ -117,13 +117,13 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 			Code:     errs.Deserialization,
 			EmbedErr: err,
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
 	i.accessToken = &body.Token
 	i.expireAt = &body.ExpiresAt
-	i.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{telemetry.MessageProp: fmt.Sprintf("Refreshed access token expiring at %v", i.expireAt)})
+	i.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("Refreshed access token expiring at %v", i.expireAt))
 	return body.Token, nil
 }
 
