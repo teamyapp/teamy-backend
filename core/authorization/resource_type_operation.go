@@ -154,7 +154,7 @@ var (
 var (
 	ReadApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
-		Operation:    "Read",
+		Operation:    "ReadApp",
 	}
 	UpdateApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
@@ -166,7 +166,7 @@ var (
 	}
 	DeleteApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
-		Operation:    "Delete",
+		Operation:    "DeleteApp",
 	}
 	CreateAppVersionUnderApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
@@ -182,7 +182,7 @@ var (
 	}
 	AddAppVersionVisibleTeamUnderApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
-		Operation:    "AddAppVersionVisibleTeam",
+		Operation:    "CreateAppVersionVisibleTeam",
 	}
 	DeleteAppVersionVisibleTeamUnderApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
