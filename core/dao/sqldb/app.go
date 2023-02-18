@@ -62,14 +62,14 @@ func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Er
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 
 	return app, nil
 }
 
-func (a App) FindApps(ct context.Context) ([]entity.App, *errs.Error) {
+func (a App) FindAllApps(ct context.Context) ([]entity.App, *errs.Error) {
 	rows, err := a.db.Query(`
 	SELECT
 	    id,
@@ -88,7 +88,7 @@ func (a App) FindApps(ct context.Context) ([]entity.App, *errs.Error) {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -100,14 +100,14 @@ func (a App) FindApps(ct context.Context) ([]entity.App, *errs.Error) {
 		app := entity.App{}
 		err = rows.Scan(
 			&app.ID,
+			&app.Name,
+			&app.Description,
 			&app.APISecret,
 			&app.ActiveVersionNumber,
 			&app.InstallationCount,
 			&app.CreatorUserID,
 			&app.CreatedAt,
 			&app.UpdatedAt,
-			&app.Description,
-			&app.AppName,
 		)
 		if err != nil {
 			newInternalErr := &errs.Error{
@@ -119,7 +119,7 @@ func (a App) FindApps(ct context.Context) ([]entity.App, *errs.Error) {
 				internalErr = newInternalErr
 			}
 
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: newInternalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -160,7 +160,7 @@ func (a App) CreateApp(ct context.Context, app entity.App) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -180,22 +180,22 @@ func (a App) UpdateApp(ct context.Context, app entity.App) *errs.Error {
 		    description = $7,
 		    app_name = $8
 		WHERE id = $9;`,
+		app.ID,
+		app.Name,
+		app.Description,
 		app.APISecret,
 		app.ActiveVersionNumber,
 		app.InstallationCount,
 		app.CreatorUserID,
 		app.CreatedAt,
 		app.UpdatedAt,
-		app.Description,
-		app.AppName,
-		app.ID,
 	)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -213,7 +213,7 @@ func (a App) DeleteApp(ct context.Context, appID uint64) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
