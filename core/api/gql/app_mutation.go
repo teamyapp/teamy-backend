@@ -23,7 +23,7 @@ func (m Mutation) CreateApp(ct context.Context, args struct {
 func (m Mutation) UpdateApp(ct context.Context, args struct {
 	AppID graphql.ID
 	Input struct {
-		AppName             *string
+		Name                *string
 		ActiveVersionNumber *int32
 		Description         *string
 	}
@@ -39,7 +39,7 @@ func (m Mutation) UpdateApp(ct context.Context, args struct {
 	}
 
 	input := service.UpdateAppInput{
-		AppName:             args.Input.AppName,
+		Name:                args.Input.Name,
 		Description:         args.Input.Description,
 		ActiveVersionNumber: args.Input.ActiveVersionNumber,
 	}

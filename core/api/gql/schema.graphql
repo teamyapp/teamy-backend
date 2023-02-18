@@ -408,7 +408,7 @@ input FileMetadataInput {
 }
 
 input UpdateAppInput {
-	appName: String
+	Name: String
 	description: String
 	activeVersionNumber: Int
 }

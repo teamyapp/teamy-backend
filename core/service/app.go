@@ -34,7 +34,7 @@ type AppFilter struct {
 }
 
 type UpdateAppInput struct {
-	AppName             *string
+	Name                *string
 	Description         *string
 	ActiveVersionNumber *int32
 }
@@ -194,7 +194,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 	}
 	err := a.appDao.CreateApp(ct, app)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -297,8 +297,8 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 		return entity.App{}, err
 	}
 
-	if input.AppName != nil {
-		app.Name = *input.AppName
+	if input.Name != nil {
+		app.Name = *input.Name
 	}
 	if input.Description != nil {
 		app.Description = *input.Description
