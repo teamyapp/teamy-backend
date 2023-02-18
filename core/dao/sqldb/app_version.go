@@ -207,15 +207,15 @@ func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVe
 
 func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int32, *errs.Error) {
 	var maxVersion int32
-	err := a.db.QueryRow(`
+	row := a.db.QueryRow(`
 	SELECT max(version_number)
 	FROM app_version
 	WHERE app_id = $1
 `,
 		appID,
-	).Scan(&maxVersion)
+	)
 
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(row.Err(), sql.ErrNoRows) {
 		internalErr := &errs.Error{
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("max VersionNumber not found: appID=%v", appID),
@@ -224,13 +224,18 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 		return 0, internalErr
 	}
 
-	if err != nil {
+	if row.Err() != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
-			EmbedErr: err,
+			EmbedErr: row.Err(),
 		}
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
+	}
+
+	err := row.Scan(&maxVersion)
+	if err != nil {
+		return 0, nil
 	}
 
 	return maxVersion, nil

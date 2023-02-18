@@ -37,9 +37,9 @@ func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Er
 `,
 		appID).
 		Scan(
-			&app.Name,
-                         &app.Description,
 			&app.ID,
+			&app.Name,
+			&app.Description,
 			&app.APISecret,
 			&app.ActiveVersionNumber,
 			&app.InstallationCount,
@@ -73,14 +73,14 @@ func (a App) FindAllApps(ct context.Context) ([]entity.App, *errs.Error) {
 	rows, err := a.db.Query(`
 	SELECT
 	    id,
-	    apisecret,
+	    name,
+	    description,
+	    api_secret,
 	    active_version_number,
 	    installation_count,
 	    creator_user_id,
 	    created_at,
-	    updated_at,
-	    description,
-	    app_name
+	    updated_at
 	FROM app
 `)
 	if err != nil {
@@ -134,26 +134,26 @@ func (a App) CreateApp(ct context.Context, app entity.App) *errs.Error {
 	INSERT INTO app
 	(
 	 	id,
-	 	apisecret,
+	 	name,
+	 	description,
+	 	api_secret,
 	 	active_version_number,
 	 	installation_count,
 	 	creator_user_id,
 	 	created_at,
-	 	updated_at,
-	 	description,
-	 	app_name
+	 	updated_at
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `,
 		app.ID,
+		app.Name,
+		app.Description,
 		app.APISecret,
 		app.ActiveVersionNumber,
 		app.InstallationCount,
 		app.CreatorUserID,
 		app.CreatedAt,
 		app.UpdatedAt,
-		app.Description,
-		app.AppName,
 	)
 	if err != nil {
 		internalErr := &errs.Error{
@@ -171,16 +171,15 @@ func (a App) UpdateApp(ct context.Context, app entity.App) *errs.Error {
 	_, err := a.db.Exec(`
 		UPDATE app
 		SET
-		    apisecret = $1,
-		    active_version_number = $2,
-		    installation_count = $3,
-		    creator_user_id = $4,
-		    created_at = $5,
-		    updated_at = $6,
-		    description = $7,
-		    app_name = $8
+		    name = $1,
+		    description = $2,
+		    api_secret = $3,
+		    active_version_number = $4,
+		    installation_count = $5,
+		    creator_user_id = $6,
+		    created_at = $7,
+		    updated_at = $8
 		WHERE id = $9;`,
-		app.ID,
 		app.Name,
 		app.Description,
 		app.APISecret,
@@ -189,6 +188,7 @@ func (a App) UpdateApp(ct context.Context, app entity.App) *errs.Error {
 		app.CreatorUserID,
 		app.CreatedAt,
 		app.UpdatedAt,
+		app.ID,
 	)
 	if err != nil {
 		internalErr := &errs.Error{

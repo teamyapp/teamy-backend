@@ -273,7 +273,7 @@ type App {
 	id: ID!
 	apiSecret: String!
 	activeVersion: AppVersion
-	appName: String!
+	name: String!
 	versions: [AppVersion!]!
 	teamInstallations: [AppTeamInstallation!]!
 	installationCount: Int!

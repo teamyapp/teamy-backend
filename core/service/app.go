@@ -51,65 +51,71 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
-func (a App) FindAppByAppId(ct context.Context, appID uint64) (entity.App, *errs.Error) {
-	return a.appDao.FindAppByAppID(ct, appID)
+func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
+	return a.appDao.FindAppByID(ct, appID)
 }
 
 func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *errs.Error) {
 	var apps []entity.App
-	if filter != nil && filter.AppID != nil {
-		app, err := a.appDao.FindAppByAppID(ct, *filter.AppID)
-		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return nil, err
-		}
-		apps = append(apps, app)
-	} else {
-		var err *errs.Error
-		apps, err = a.appDao.FindApps(ct)
-		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-			return nil, err
-		}
-	}
-
-	if filter != nil && filter.TeamID != nil {
-		// find all apps that are visible to the team
-		apps = collect.Filter(apps, func(app entity.App) bool {
-			if app.ActiveVersionNumber == nil {
-				return false
-			}
-
-			appVersions, err := a.appVersionDao.FindAppVersionsByAppID(ct, app.ID)
+	if filter != nil {
+		if filter.AppID != nil {
+			app, err := a.appDao.FindAppByID(ct, *filter.AppID)
 			if err != nil {
 				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-				return false
+				return nil, err
 			}
+			apps = append(apps, app)
+		} else {
+			var err *errs.Error
+			apps, err = a.appDao.FindAllApps(ct)
+			if err != nil {
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				return nil, err
+			}
+		}
 
-			appVersions = collect.Filter(appVersions, func(appVersion entity.AppVersion) bool {
-				if appVersion.VersionNumber < *app.ActiveVersionNumber {
+		if filter.TeamID != nil {
+			// find all apps that are visible to the team
+			apps = collect.Filter(apps, func(app entity.App) bool {
+				appVersions, err := a.appVersionDao.FindAppVersionsByAppID(ct, app.ID)
+				if err != nil {
+					a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 					return false
 				}
 
-				if !appVersion.IsPublic {
-					_, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeam(ct, app.ID, appVersion.VersionNumber, *filter.TeamID)
-					if err != nil {
-						if err.Code != errs.NotFound {
-							a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-						}
+				appVersions = collect.Filter(appVersions, func(appVersion entity.AppVersion) bool {
+					if app.ActiveVersionNumber != nil && appVersion.VersionNumber < *app.ActiveVersionNumber {
+						// if active version has been set, we should filter all old versions
 						return false
 					}
+
+					if !appVersion.IsPublic {
+						_, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeam(ct, app.ID, appVersion.VersionNumber, *filter.TeamID)
+						if err != nil {
+							if err.Code != errs.NotFound {
+								a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+							}
+							return false
+						}
+					}
+
+					return true
+				})
+
+				if len(appVersions) > 0 {
+					return true
 				}
 
-				return true
+				return false
 			})
-
-			if len(appVersions) > 0 {
-				return true
-			}
-
-			return false
-		})
+		}
+	} else {
+		var err *errs.Error
+		apps, err = a.appDao.FindAllApps(ct)
+		if err != nil {
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			return nil, err
+		}
 	}
 
 	return apps, nil
@@ -129,10 +135,6 @@ func (a App) FindAppVersionByAppId(ct context.Context, appID uint64) ([]entity.A
 
 func (a App) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, *errs.Error) {
 	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
-}
-
-func (a App) FindAvailableAppVersionByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
-	panic("implement me")
 }
 
 func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versionNumber int32) ([]entity.Team, *errs.Error) {
@@ -183,7 +185,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 
 	app := entity.App{
 		ID:                genAppIDRes.UniqueNumber,
-		AppName:           name,
+		Name:              name,
 		Description:       "",
 		APISecret:         genAppSecretRes.UniqueString,
 		InstallationCount: 0,
@@ -206,11 +208,13 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 
 		// When create a new app,
 		// 1) Resource: register app resource
-		// 2) UserGroup: create AppAdmin userGroups
+		// 2) UserGroup: create AppAdmin and AppMember userGroups
 		// 3) UserGroupMember:
 		// 		add app creator to AppAdmin group
+		// 		add app creator to AppMember group
 		// 4) Permissions:
 		//		assign AppAdmin permissions to app creator
+		//		assign AppMember permissions to app creator
 		appAdminUserGroupName := fmt.Sprintf("App%d/Admin", app.ID)
 		appAdminDescription := fmt.Sprintf("Admins for %s", appAdminUserGroupName)
 		appAdminOperations := make([]authorization.ResourceOperation, 0)
@@ -288,45 +292,33 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 		}
 	}
 
-	app, err := a.appDao.FindAppByAppID(ct, appID)
+	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.App{}, err
 	}
 
 	if input.AppName != nil {
-		app.AppName = *input.AppName
+		app.Name = *input.AppName
 	}
 	if input.Description != nil {
 		app.Description = *input.Description
 	}
-	if input.ActiveVersionNumber != nil && app.ActiveVersionNumber == nil {
-		if *app.ActiveVersionNumber > *input.ActiveVersionNumber {
-			internalErr := &errs.Error{
-				Code: errs.InvalidOperation,
-				Message: fmt.Sprintf(
-					"Roll back active version is invalid: stateID=%v", appID),
-			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-			return entity.App{}, internalErr
-		}
-
-		if *app.ActiveVersionNumber < *input.ActiveVersionNumber {
-			// roll forward app installation automatically
-			appInstallations, err := a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
-			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-				return entity.App{}, err
-			}
-
-			for _, appInstallation := range appInstallations {
-				if appInstallation.EnabledVersionNumber < *input.ActiveVersionNumber {
-					appInstallation.EnabledVersionNumber = *input.ActiveVersionNumber
-					err = a.appTeamInstallationDao.UpdateAppTeamInstallation(ct, appInstallation)
-					if err != nil {
-						a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-					}
+	if input.ActiveVersionNumber != nil {
+		if app.ActiveVersionNumber != nil {
+			if *app.ActiveVersionNumber > *input.ActiveVersionNumber {
+				internalErr := &errs.Error{
+					Code: errs.InvalidOperation,
+					Message: fmt.Sprintf(
+						"Roll back active version is invalid: stateID=%v", appID),
 				}
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+				return entity.App{}, internalErr
+			}
+
+			if *app.ActiveVersionNumber < *input.ActiveVersionNumber {
+				// roll forward app installation automatically
+				a.RollForwardAppInstallations(ct, appID, *input.ActiveVersionNumber)
 			}
 		}
 
@@ -372,7 +364,7 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 		}
 	}
 
-	app, err := a.appDao.FindAppByAppID(ct, appID)
+	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.App{}, err
@@ -425,7 +417,7 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 		}
 	}
 
-	app, err := a.appDao.FindAppByAppID(ct, appID)
+	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.App{}, err
@@ -584,7 +576,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		return entity.AppVersion{}, err
 	}
 
-	app, err := a.appDao.FindAppByAppID(ct, appID)
+	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.AppVersion{}, err
@@ -766,6 +758,12 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		}
 	}
 
+	app, err := a.appDao.FindAppByID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.AppTeamInstallation{}, err
+	}
+
 	ai := entity.AppTeamInstallation{
 		AppID:                appID,
 		InstalledTeamID:      teamID,
@@ -774,7 +772,14 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		InstalledAt:          time.Now(),
 	}
 
-	err := a.appTeamInstallationDao.CreateAppTeamInstallation(ct, ai)
+	err = a.appTeamInstallationDao.CreateAppTeamInstallation(ct, ai)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.AppTeamInstallation{}, err
+	}
+
+	app.InstallationCount = app.InstallationCount + 1
+	err = a.appDao.UpdateApp(ct, app)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
@@ -870,6 +875,28 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 	}
 
 	return ai, nil
+}
+
+// RollForwardAppInstallations Helper function to roll forward all app installations when a
+// newer active version enabled
+func (a App) RollForwardAppInstallations(ct context.Context, appID uint64, activeVersionNumber int32) *errs.Error {
+	appInstallations, err := a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return err
+	}
+
+	for _, appInstallation := range appInstallations {
+		if appInstallation.EnabledVersionNumber < activeVersionNumber {
+			appInstallation.EnabledVersionNumber = activeVersionNumber
+			err = a.appTeamInstallationDao.UpdateAppTeamInstallation(ct, appInstallation)
+			if err != nil {
+				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			}
+		}
+	}
+
+	return nil
 }
 
 func NewApp(

@@ -5,7 +5,6 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -46,7 +45,7 @@ func (m Mutation) UpdateApp(ct context.Context, args struct {
 	}
 	app, err := m.deps.appService.UpdateApp(ct, appID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 
