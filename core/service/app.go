@@ -69,7 +69,7 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 			var err *errs.Error
 			apps, err = a.appDao.FindAllApps(ct)
 			if err != nil {
-				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return nil, err
 			}
 		}
@@ -163,7 +163,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 
@@ -171,7 +171,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 	genAppIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 
@@ -179,7 +179,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 	genAppSecretRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueString(ct, genAppSecretReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 
@@ -190,12 +190,11 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 		APISecret:         genAppSecretRes.UniqueString,
 		InstallationCount: 0,
 		CreatorUserID:     userID,
-		CreatedAt:         time.Now(),
+		CreatedAt:         time.Now().UTC(),
 	}
-
 	err := a.appDao.CreateApp(ct, app)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, err
 	}
 
@@ -213,7 +212,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 		// 		add app creator to AppAdmin group
 		// 		add app creator to AppMember group
 		// 4) Permissions:
-		//		assign AppAdmin permissions to app creator
+		//		assign AppAdmin permissions to `AppAdmin` group
 		//		assign AppMember permissions to app creator
 		appAdminUserGroupName := fmt.Sprintf("App%d/Admin", app.ID)
 		appAdminDescription := fmt.Sprintf("Admins for %s", appAdminUserGroupName)
@@ -233,7 +232,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 			appAdminOperations,
 		)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 
@@ -255,7 +254,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 			appMemberOperations,
 		)
 		if err != nil {
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 	}
@@ -271,7 +270,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.App{}, internalErr
 		}
 
@@ -287,7 +286,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.App{}, internalErr
 		}
 	}
@@ -329,7 +328,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 	app.UpdatedAt = &now
 	err = a.appDao.UpdateApp(ct, app)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -344,7 +343,7 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.App{}, internalErr
 		}
 
@@ -360,14 +359,14 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.App{}, internalErr
 		}
 	}
 
 	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -375,14 +374,14 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 	genAppSecretRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueString(ct, genAppSecretReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 
 	app.APISecret = genAppSecretRes.UniqueString
 	err = a.appDao.UpdateApp(ct, app)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -397,7 +396,7 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 				Code:    errs.Unauthenticated,
 				Message: "user ID not found",
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.App{}, internalErr
 		}
 
@@ -413,20 +412,20 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("authorization query: %v", query),
 			}
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.App{}, internalErr
 		}
 	}
 
 	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
 	err = a.appDao.DeleteApp(ct, appID)
 	if err != nil {
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -589,7 +588,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 			Message: fmt.Sprintf(
 				"Cannot delete active version: appID=%v", appID),
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersion{}, internalErr
 	}
 
