@@ -166,7 +166,7 @@ func NewUpdateAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
-		Operation:    "UpdateApp",
+		Operation:    "Update",
 		UserID:       userID,
 	}
 }
@@ -175,7 +175,7 @@ func NewRefreshAppSecretQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
-		Operation:    "RefreshAppSecret",
+		Operation:    "RefreshSecret",
 		UserID:       userID,
 	}
 }
@@ -184,7 +184,7 @@ func NewDeleteAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
-		Operation:    "DeleteApp",
+		Operation:    "Delete",
 		UserID:       userID,
 	}
 }

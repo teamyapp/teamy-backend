@@ -30,7 +30,7 @@ func (a App) ActiveVersion(ct context.Context) (*AppVersion, error) {
 
 	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, a.app.ID, *a.app.ActiveVersionNumber)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -38,14 +38,14 @@ func (a App) ActiveVersion(ct context.Context) (*AppVersion, error) {
 	return &activeVersion, nil
 }
 
-func (a App) AppName() string {
-	return a.app.AppName
+func (a App) Name() string {
+	return a.app.Name
 }
 
 func (a App) Versions(ct context.Context) ([]AppVersion, error) {
-	appVersions, err := a.deps.appService.FindAppVersionByAppId(ct, a.app.ID)
+	appVersions, err := a.deps.appService.FindAppVersionsByAppID(ct, a.app.ID)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -55,9 +55,9 @@ func (a App) Versions(ct context.Context) ([]AppVersion, error) {
 }
 
 func (a App) TeamInstallations(ct context.Context) ([]AppTeamInstallation, error) {
-	appTeamInstallations, err := a.deps.appService.FindAppTeamInstallationsByAppId(ct, a.app.ID)
+	appTeamInstallations, err := a.deps.appService.FindAppTeamInstallationsByAppID(ct, a.app.ID)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -77,7 +77,7 @@ func (a App) Description() string {
 func (a App) Creator(ct context.Context) (User, error) {
 	user, err := a.deps.userService.FindUserByID(ct, a.app.CreatorUserID)
 	if err != nil {
-		a.deps.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 

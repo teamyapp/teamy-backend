@@ -19,24 +19,26 @@ type App struct {
 	db            *sql.DB
 }
 
-func (a App) FindAppByAppID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
+func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
 	app := entity.App{}
 	err := a.db.QueryRow(`
 	SELECT
 	    id,
-	    apisecret,
+	    name,
+	    description,
+	    api_secret,
 	    active_version_number,
 	    installation_count,
 	    creator_user_id,
 	    created_at,
-	    updated_at,
-	    description,
-	    app_name
+	    updated_at
 	FROM app
 	WHERE id = $1;
 `,
 		appID).
 		Scan(
+			&app.Name,
+                         &app.Description,
 			&app.ID,
 			&app.APISecret,
 			&app.ActiveVersionNumber,
@@ -44,8 +46,6 @@ func (a App) FindAppByAppID(ct context.Context, appID uint64) (entity.App, *errs
 			&app.CreatorUserID,
 			&app.CreatedAt,
 			&app.UpdatedAt,
-			&app.Description,
-			&app.AppName,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -53,7 +53,7 @@ func (a App) FindAppByAppID(ct context.Context, appID uint64) (entity.App, *errs
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("app not found: appID=%v", appID),
 		}
-		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 

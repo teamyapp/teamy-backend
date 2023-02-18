@@ -154,19 +154,19 @@ var (
 var (
 	ReadApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
-		Operation:    "ReadApp",
+		Operation:    "Read",
 	}
 	UpdateApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
-		Operation:    "UpdateApp",
+		Operation:    "Update",
 	}
 	RefreshAppSecret = ResourceTypeOperation{
 		ResourceType: AppResourceType,
-		Operation:    "RefreshAppSecret",
+		Operation:    "RefreshSecret",
 	}
 	DeleteApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
-		Operation:    "DeleteApp",
+		Operation:    "Delete",
 	}
 	CreateAppVersionUnderApp = ResourceTypeOperation{
 		ResourceType: AppResourceType,
