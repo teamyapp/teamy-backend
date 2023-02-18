@@ -324,6 +324,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 
 		app.ActiveVersionNumber = input.ActiveVersionNumber
 	}
+
 	now := time.Now().UTC()
 	app.UpdatedAt = &now
 	err = a.appDao.UpdateApp(ct, app)
@@ -581,11 +582,12 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return entity.AppVersion{}, err
 	}
+
 	if app.ActiveVersionNumber != nil && *app.ActiveVersionNumber == versionNumber {
 		internalErr := &errs.Error{
 			Code: errs.InvalidOperation,
 			Message: fmt.Sprintf(
-				"Delete active version is invalid: stateID=%v", appID),
+				"Cannot delete active version: appID=%v", appID),
 		}
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return entity.AppVersion{}, internalErr
