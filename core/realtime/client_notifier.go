@@ -49,6 +49,21 @@ func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction
 	c.messages <- message
 }
 
+func (c *ClientNotifier) notifyTransactionV2(ct context.Context, clientTransaction *ClientTransactionV2) {
+	c.dataCollector.Logger.InfoWithContext(ct, "process transaction")
+
+	if !c.acceptTransaction {
+		c.dataCollector.Logger.InfoWithContext(ct, "discard transaction")
+		return
+	}
+
+	message := Message{
+		Type:    TransactionMessageType,
+		Payload: clientTransaction.ToMessage(),
+	}
+	c.messages <- message
+}
+
 func (c *ClientNotifier) sentMetadata() {
 	message := Message{
 		Type: MetadataMessageType,
