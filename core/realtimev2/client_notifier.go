@@ -36,6 +36,7 @@ func (c *ClientNotifier) onInitialStateReady() {
 
 func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
 	c.dataCollector.Logger.InfoWithContext(ct, "process transaction")
+	ct = ctx.WithClientID(ct, c.clientID)
 
 	if !c.acceptTransaction {
 		c.dataCollector.Logger.InfoWithContext(ct, "discard transaction")
