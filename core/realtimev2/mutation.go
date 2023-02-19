@@ -1,4 +1,4 @@
-package realtime
+package realtimev2
 
 import (
 	"context"
@@ -6,15 +6,15 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 )
 
-type MutationTypeV2 string
+type MutationType string
 
 const (
-	CreateMutationTypeV2 MutationType = "Create"
-	UpdateMutationTypeV2 MutationType = "Update"
-	DeleteMutationTypeV2 MutationType = "Delete"
+	CreateMutationType MutationType = "Create"
+	UpdateMutationType MutationType = "Update"
+	DeleteMutationType MutationType = "Delete"
 )
 
-type MutationV2 interface {
+type Mutation interface {
 	GetID() uint64
 	Execute(ct context.Context) *errs.Error
 	CleanUp(ct context.Context) *errs.Error

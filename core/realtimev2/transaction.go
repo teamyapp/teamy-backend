@@ -1,4 +1,4 @@
-package realtime
+package realtimev2
 
 import (
 	"context"
@@ -8,22 +8,22 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
-type ClientTransactionV2 struct {
+type ClientTransaction struct {
 	dataCollector  telemetry.DataCollector
 	id             uint64
 	mutations      []Mutation
 	clientNotifier *ClientNotifier
 }
 
-func (c *ClientTransactionV2) addMutation(mutation Mutation) {
+func (c *ClientTransaction) addMutation(mutation Mutation) {
 	c.mutations = append(c.mutations, mutation)
 }
 
-func (c *ClientTransactionV2) notify(ct context.Context) {
-	c.clientNotifier.notifyTransactionV2(ct, c)
+func (c *ClientTransaction) notify(ct context.Context) {
+	c.clientNotifier.notifyTransaction(ct, c)
 }
 
-func (c *ClientTransactionV2) ToMessage() TransactionMessage {
+func (c *ClientTransaction) ToMessage() TransactionMessage {
 	mutationMessages := collect.Map(c.mutations, func(mutation Mutation, _ int) MutationMessage {
 		return mutation.ToMessage()
 	})
@@ -33,15 +33,15 @@ func (c *ClientTransactionV2) ToMessage() TransactionMessage {
 	}
 }
 
-func newClientTransactionV2(dataCollector telemetry.DataCollector, clientNotifier *ClientNotifier, id uint64) *ClientTransactionV2 {
-	return &ClientTransactionV2{
+func newClientTransaction(dataCollector telemetry.DataCollector, clientNotifier *ClientNotifier, id uint64) *ClientTransaction {
+	return &ClientTransaction{
 		dataCollector:  dataCollector,
 		clientNotifier: clientNotifier,
 		id:             id,
 	}
 }
 
-type TransactionV2 struct {
+type Transaction struct {
 	dataCollector     telemetry.DataCollector
 	stateSyncer       *StateSyncer
 	id                uint64
@@ -49,16 +49,16 @@ type TransactionV2 struct {
 	nextMutationIndex int
 }
 
-func (t *TransactionV2) AppendMutation(ct context.Context, mutation Mutation) *errs.Error {
+func (t *Transaction) AppendMutation(ct context.Context, mutation Mutation) *errs.Error {
 	t.mutations = append(t.mutations, mutation)
 	return nil
 }
 
-func (t *TransactionV2) Notify(ct context.Context) *errs.Error {
+func (t *Transaction) Notify(ct context.Context) *errs.Error {
 	t.stateSyncer.BeginTransaction()
 	defer t.stateSyncer.EndTransaction()
 
-	clientTransactions := make(map[uint64]*ClientTransactionV2)
+	clientTransactions := make(map[uint64]*ClientTransaction)
 	for _, mutation := range t.mutations {
 		clientNotifiers, err := mutation.GetClientNotifiers(ct)
 		if err != nil {
@@ -71,7 +71,7 @@ func (t *TransactionV2) Notify(ct context.Context) *errs.Error {
 			_, ok := clientTransactions[clientID]
 			if !ok {
 				clientTransactionID := t.stateSyncer.NextClientTransactionID()
-				clientTransactions[clientID] = newClientTransactionV2(
+				clientTransactions[clientID] = newClientTransaction(
 					clientNotifier.dataCollector,
 					clientNotifier,
 					clientTransactionID,
@@ -98,8 +98,8 @@ func (t *TransactionV2) Notify(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewTransactionV2(dataCollector telemetry.DataCollector, stateSyncer *StateSyncer) *TransactionV2 {
-	return &TransactionV2{
+func NewTransaction(dataCollector telemetry.DataCollector, stateSyncer *StateSyncer) *Transaction {
+	return &Transaction{
 		dataCollector:     dataCollector,
 		stateSyncer:       stateSyncer,
 		id:                stateSyncer.NextTransactionID(),

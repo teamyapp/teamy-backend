@@ -6,19 +6,19 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/realtimev2"
 )
 
 type TransactionsContext struct {
 	dataCollector telemetry.DataCollector
 	db            *sql.DB
-	stateSyncer   *realtime.StateSyncer
+	stateSyncer   *realtimev2.StateSyncer
 	ct            context.Context
 }
 
 // all unnecessary operations should be executed either before db txn begins or after db txn commits to avoid
 // long-running txn
-func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *realtime.TransactionV2) *errs.Error) *errs.Error {
+func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *realtimev2.Transaction) *errs.Error) *errs.Error {
 	sqlTx, err := t.db.BeginTx(t.ct, nil)
 	defer sqlTx.Rollback()
 	if err != nil {
@@ -30,7 +30,7 @@ func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *
 		return internalErr
 	}
 
-	rtTx := realtime.NewTransactionV2(t.dataCollector, t.stateSyncer)
+	rtTx := realtimev2.NewTransaction(t.dataCollector, t.stateSyncer)
 	execute(sqlTx, rtTx)
 	err = sqlTx.Commit()
 	if err != nil {
