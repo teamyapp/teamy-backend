@@ -42,11 +42,10 @@ func newClientTransaction(dataCollector telemetry.DataCollector, clientNotifier 
 }
 
 type Transaction struct {
-	dataCollector     telemetry.DataCollector
-	stateSyncer       *StateSyncer
-	id                uint64
-	mutations         []Mutation
-	nextMutationIndex int
+	dataCollector telemetry.DataCollector
+	stateSyncer   *StateSyncer
+	id            uint64
+	mutations     []Mutation
 }
 
 func (t *Transaction) AppendMutation(ct context.Context, mutation Mutation) *errs.Error {
@@ -100,10 +99,9 @@ func (t *Transaction) Notify(ct context.Context) *errs.Error {
 
 func NewTransaction(dataCollector telemetry.DataCollector, stateSyncer *StateSyncer) *Transaction {
 	return &Transaction{
-		dataCollector:     dataCollector,
-		stateSyncer:       stateSyncer,
-		id:                stateSyncer.NextTransactionID(),
-		mutations:         make([]Mutation, 0),
-		nextMutationIndex: 0,
+		dataCollector: dataCollector,
+		stateSyncer:   stateSyncer,
+		id:            stateSyncer.NextTransactionID(),
+		mutations:     make([]Mutation, 0),
 	}
 }
