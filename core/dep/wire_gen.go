@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"github.com/google/wire"
 	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	api2 "github.com/teamyapp/teamy-backend/core/api"
@@ -29,7 +30,8 @@ func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB
 	return stateSyncer
 }
 
-func InitGraphQLAPI(dataCollector telemetry.DataCollector, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
+func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, dataCollector telemetry.DataCollector, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
+	prometheusTracer := newPrometheusTracer(appName, serviceName, environment)
 	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
 	activity := cache.NewActivity(dataCollector)
 	task := sqldb.NewTask(dataCollector, sqlDB)
@@ -59,7 +61,7 @@ func InitGraphQLAPI(dataCollector telemetry.DataCollector, cloudWebAPIExternalBa
 	app := service.NewApp(dataCollector, cloudAPIClientRegistry, authorizer, appVersion, appTeamInstallation, appVersionVisibleTeam, team)
 	dependencies := gql2.NewDependencies(dataCollector, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceThread, app)
 	resolver := gql2.NewResolver(dependencies)
-	gqlService := api2.NewGraphQL(dataCollector, resolver)
+	gqlService := api2.NewGraphQL(dataCollector, prometheusTracer, resolver)
 	return gqlService, nil
 }
 
@@ -113,6 +115,10 @@ func InitTaskLinkRPCAPI(dataCollector telemetry.DataCollector, cloudAPIClientReg
 
 // wire.go:
 
+type AppMame string
+
+type ServiceName string
+
 type CloudWebAPIExternalBaseURL string
 
 var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), wire.Bind(new(dao.AppTeamInstallation), new(sqldb.AppTeamInstallation)), wire.Bind(new(dao.AppVersion), new(sqldb.AppVersion)), wire.Bind(new(dao.AppVersionVisibleTeam), new(sqldb.AppVersionVisibleTeam)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread, sqldb.NewSprint, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintTaskRelation, sqldb.NewUserFileUploadSession, sqldb.NewTeamFileUploadSession, sqldb.NewSprintParticipant, sqldb.NewAppTeamInstallation, sqldb.NewAppVersion, sqldb.NewAppVersionVisibleTeam)
@@ -164,4 +170,8 @@ func newTeamService(
 		teamMemberDao,
 		teamFileUploadSessionDao,
 		sprintService)
+}
+
+func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) gql.PrometheusTracer {
+	return gql.NewPrometheusTracer(string(appMame), string(serviceName), environment)
 }
