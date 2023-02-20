@@ -45,6 +45,7 @@ spec:
           ports:
             - containerPort: 9000
             - containerPort: 9001
+            - containerPort: 10000
           env:
             - name: ENVIRONMENT
               value: testing
@@ -79,6 +80,8 @@ spec:
               value: "9000"
             - name: SERVICE_RUNNER_GRPC_SERVER_PORT
               value: "9001"
+            - name: SERVICE_RUNNER_MONITORING_SERVER_PORT
+              value: "10000"
             - name: SERVICE_RUNNER_IDENTITY_API_ENDPOINT
               value: http://cloud/identity
             - name: APPS_GITHUB_APP_NAME
@@ -104,14 +107,19 @@ kind: Service
 metadata:
   namespace: testing
   name: teamy-backend
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '10000'
 spec:
   selector:
     app: teamy-backend
   ports:
-    - name: web-services
+    - name: web
       port: 9000
-    - name: rpc-services
+    - name: rpc
       port: 9001
+    - name: monitoring
+      port: 10000
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute

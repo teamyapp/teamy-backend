@@ -15,6 +15,7 @@ import (
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/errs"
 	tmio "github.com/teamyapp/cloud/libs/io"
+	"github.com/teamyapp/cloud/libs/metrics"
 	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
@@ -32,7 +33,11 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-var serviceLabels = []string{"teamy", "backend"}
+const appName = "teamy"
+const serviceName = "backend"
+
+var serviceLabels = []string{appName, serviceName}
+var fullServiceName = strings.Join(serviceLabels, "-")
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -45,7 +50,7 @@ func main() {
 	}
 
 	lineFormatter := newLineFormatter(cfg.Environment)
-	logOutput, err := newLogOutput(cfg.Environment, strings.Join(serviceLabels, "-"))
+	logOutput, err := newLogOutput(cfg.Environment, fullServiceName)
 	if err != nil {
 		panic(err)
 	}
@@ -119,8 +124,11 @@ func startServiceRunner(
 
 	exponentialBackOff := backoff.NewExponentialBuilder().Build()
 	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, cfg.RequestRetryMaxCount)
+
+	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
+		prom,
 		rpc.ConnectionConfig{
 			Host:          cfg.CloudGRPCAPIHost,
 			Port:          cfg.CloudGRPCAPIPort,
@@ -141,6 +149,7 @@ func startServiceRunner(
 
 	teamyClientRegistry, internalErr := api.NewClientRegistry(
 		dataCollector,
+		prom,
 		rpc.ConnectionConfig{
 			Host:          cfg.TeamyAPIHost,
 			Port:          cfg.TeamyAPIPort,
@@ -174,6 +183,9 @@ func startServiceRunner(
 		dataCollector,
 		realTimeStateSyncer)
 	graphQLAPI, err := dep.InitGraphQLAPI(
+		appName,
+		serviceName,
+		cfg.Environment,
 		dataCollector,
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
@@ -206,6 +218,7 @@ func startServiceRunner(
 		sqlDB)
 	rn := runner.NewServiceRunnerBuilder(
 		dataCollector,
+		prom,
 		runnerConfig, []runner.Service{
 			githubAppAPI,
 			graphQLAPI,

@@ -6,7 +6,9 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
+	"github.com/graph-gophers/graphql-go/trace/tracer"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/env"
 	cloudGQL "github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api"
@@ -18,6 +20,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
+type AppMame string
+type ServiceName string
 type CloudWebAPIExternalBaseURL string
 
 var daoSet = wire.NewSet(
@@ -78,6 +82,9 @@ func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB
 }
 
 func InitGraphQLAPI(
+	appName AppMame,
+	serviceName ServiceName,
+	environment env.Environment,
 	dataCollector telemetry.DataCollector,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
@@ -85,6 +92,9 @@ func InitGraphQLAPI(
 	sqlDB *sql.DB,
 ) (cloudGQL.Service[gql.Resolver], error) {
 	wire.Build(
+		wire.Bind(new(tracer.Tracer), new(cloudGQL.PrometheusTracer)),
+
+		newPrometheusTracer,
 		daoSet,
 		serviceSet,
 		cache.NewActivity,
@@ -194,4 +204,8 @@ func newTeamService(
 		teamMemberDao,
 		teamFileUploadSessionDao,
 		sprintService)
+}
+
+func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) cloudGQL.PrometheusTracer {
+	return cloudGQL.NewPrometheusTracer(string(appMame), string(serviceName), environment)
 }
