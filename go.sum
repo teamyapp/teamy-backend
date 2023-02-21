@@ -380,6 +380,8 @@ github.com/teamyapp/cloud v0.0.0-20230221071418-f9303970aa36 h1:8MDUj+oWUu2umUyC
 github.com/teamyapp/cloud v0.0.0-20230221071418-f9303970aa36/go.mod h1:J1vgOWQF1yAh38h7YfrhJiBz3u1yD/w/q4XkkBKSo34=
 github.com/teamyapp/cloud v0.0.0-20230221074057-2d60799472c4 h1:Ejhv6HPrQx5VqMgixVdoZORt5RN83vXn8qoeMWd1LPw=
 github.com/teamyapp/cloud v0.0.0-20230221074057-2d60799472c4/go.mod h1:J1vgOWQF1yAh38h7YfrhJiBz3u1yD/w/q4XkkBKSo34=
+github.com/teamyapp/cloud v0.0.0-20230221083324-a9c2c68ed10c h1:CJi9wGYkPNBLceL5XlgDt7kx1yDvznd3MNg9HjKABe0=
+github.com/teamyapp/cloud v0.0.0-20230221083324-a9c2c68ed10c/go.mod h1:J1vgOWQF1yAh38h7YfrhJiBz3u1yD/w/q4XkkBKSo34=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
