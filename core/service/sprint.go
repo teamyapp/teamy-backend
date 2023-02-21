@@ -22,7 +22,7 @@ import (
 const timePerWeek = 7 * 24 * time.Hour
 
 const (
-	TooManySprints errs.ErrorCode = "TooManyTeams"
+	TooManySprints errs.ErrorCode = "TooManySprints"
 )
 
 type CreateSprintInput struct {
