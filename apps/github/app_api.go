@@ -312,7 +312,7 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 		telemetry.MessageProp: fmt.Sprintf("received event: deliveryID=%v EventType=%v", deliveryID, evtType),
 	})
 	internalErr := a.processEvent(ct, eventType(evtType), buf)
-	if err != nil {
+	if internalErr != nil {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
