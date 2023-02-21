@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -32,8 +32,11 @@ import (
 )
 
 const githubAppPathPrefix = "/apps/github"
+const teamIDParam = "teamId"
+
 const codeReviewMaxWait = 24 * time.Hour
 const authProvider = "github"
+
 const pullRequestIconURL = "/assets/apps/pull_request_dark_green.svg"
 const pullRequestIconHoverURL = "/assets/apps/pull_request_light_green.svg"
 
@@ -54,39 +57,39 @@ var _ runner.Service = (*AppAPI)(nil)
 func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
-			Path:        path.Join(githubAppPathPrefix, "teams", "{teamId}", "install"),
 			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "install"),
 			HandlerFunc: a.webInstall,
 		},
 		{
-			Path:        path.Join(githubAppPathPrefix, "install", "finish"),
 			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "install", "finish"),
 			HandlerFunc: a.webFinishInstall,
 		},
 		{
-			Path:        path.Join(githubAppPathPrefix, "webhook"),
+			Pattern:     path.Join(githubAppPathPrefix, "webhook"),
 			Method:      http.MethodPost,
 			HandlerFunc: a.webOnEventNotify,
 		},
 		{
-			Path:        path.Join(githubAppPathPrefix, "teams", "{teamId}", "required-actions", "current-user"),
 			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "required-actions", "current-user"),
 			HandlerFunc: a.webListRequiredActionsForCurrentUser,
 		},
 		{
-			Path:        path.Join(githubAppPathPrefix, "teams", "{teamId}", "required-actions", "create"),
 			Method:      http.MethodPost,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "required-actions", "create"),
 			HandlerFunc: a.webCreateRequiredAction,
 		},
 	})
 	return nil
 }
 
-func (a AppAPI) webInstall(w http.ResponseWriter, r *http.Request) {
+func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
 	// Verify request sender is team owner
-	ct := r.Context()
-	teamIDParam := mux.Vars(r)["teamId"]
-	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
+	ct := request.Context()
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
@@ -96,11 +99,11 @@ func (a AppAPI) webInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	query := r.URL.Query()
+	query := request.URL.Query()
 	redirectURL := query.Get("redirectUrl")
 	if len(redirectURL) == 0 {
 		internalErr := &errs.Error{
@@ -111,18 +114,18 @@ func (a AppAPI) webInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	genStateIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubInstallationStateID"}
-	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(r.Context(), genStateIDReq)
+	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(request.Context(), genStateIDReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -137,7 +140,7 @@ func (a AppAPI) webInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -146,16 +149,16 @@ func (a AppAPI) webInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	http.Redirect(w, r, installURL, http.StatusTemporaryRedirect)
+	http.Redirect(writer, request, installURL, http.StatusTemporaryRedirect)
 }
 
-func (a AppAPI) webFinishInstall(w http.ResponseWriter, r *http.Request) {
-	ct := r.Context()
-	query := r.URL.Query()
+func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
+	query := request.URL.Query()
 	stateIDParam := query.Get("state")
 	stateID, err := strconv.ParseUint(stateIDParam, 10, 64)
 	if err != nil {
@@ -167,7 +170,7 @@ func (a AppAPI) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -181,7 +184,7 @@ func (a AppAPI) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -190,7 +193,7 @@ func (a AppAPI) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -204,7 +207,7 @@ func (a AppAPI) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -218,7 +221,7 @@ func (a AppAPI) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -227,19 +230,19 @@ func (a AppAPI) webFinishInstall(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	http.Redirect(w, r, state.RedirectURL, http.StatusTemporaryRedirect)
+	http.Redirect(writer, request, state.RedirectURL, http.StatusTemporaryRedirect)
 }
 
-func (a AppAPI) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
-	deliveryID := r.Header.Get("X-GitHub-Delivery")
-	ct := r.Context()
+func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Request) {
+	deliveryID := request.Header.Get("X-GitHub-Delivery")
+	ct := request.Context()
 	ct = ctx.NewContextWithRequestID(ct, deliveryID)
 
-	bodySignatureHeader := r.Header.Get("X-Hub-Signature-256")
+	bodySignatureHeader := request.Header.Get("X-Hub-Signature-256")
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
 		internalErr := &errs.Error{
@@ -249,7 +252,7 @@ func (a AppAPI) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -261,11 +264,11 @@ func (a AppAPI) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	buf, err := io.ReadAll(r.Body)
+	buf, err := io.ReadAll(request.Body)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.IO,
@@ -275,7 +278,7 @@ func (a AppAPI) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -288,7 +291,7 @@ func (a AppAPI) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -300,11 +303,11 @@ func (a AppAPI) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	evtType := r.Header.Get("X-GitHub-Event")
+	evtType := request.Header.Get("X-GitHub-Event")
 	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
 		telemetry.MessageProp: fmt.Sprintf("received event: deliveryID=%v EventType=%v", deliveryID, evtType),
 	})
@@ -313,15 +316,15 @@ func (a AppAPI) webOnEventNotify(w http.ResponseWriter, r *http.Request) {
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	writer.WriteHeader(http.StatusOK)
 }
 
-func (a AppAPI) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *http.Request) {
-	ct := r.Context()
+func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
@@ -331,12 +334,12 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *h
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	teamIDParam := mux.Vars(r)["teamId"]
-	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:    errs.InvalidArgument,
@@ -345,7 +348,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *h
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -355,7 +358,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *h
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -365,18 +368,18 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(w http.ResponseWriter, r *h
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	requiredUserActions = collect.Filter(requiredUserActions, func(action entity.GithubRequiredUserAction) bool {
 		return action.IsCompleted == false
 	})
-	web.WriteJSONToResponse(ct, a.dataCollector, w, requiredUserActions)
+	web.WriteJSONToResponse(ct, a.dataCollector, writer, requiredUserActions)
 }
 
-func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) {
-	ct := r.Context()
+func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
 	requestSenderID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := &errs.Error{
@@ -386,12 +389,12 @@ func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) 
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	teamIDParam := mux.Vars(r)["teamId"]
-	teamID, err := strconv.ParseUint(teamIDParam, 10, 64)
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:    errs.InvalidArgument,
@@ -400,7 +403,7 @@ func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) 
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -408,7 +411,7 @@ func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) 
 		UserActionType entity.GithubUserActionType `json:"userActionType"`
 		ActionUserID   uint64                      `json:"actionUserId"`
 	}{}
-	buf, err := io.ReadAll(r.Body)
+	buf, err := io.ReadAll(request.Body)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code: errs.IO,
@@ -416,7 +419,7 @@ func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) 
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -428,7 +431,7 @@ func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) 
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -439,7 +442,7 @@ func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) 
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
@@ -458,11 +461,11 @@ func (a AppAPI) webCreateRequiredAction(w http.ResponseWriter, r *http.Request) 
 		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
 			telemetry.CauseProp: internalErr,
 		})
-		errs.SetHTTPErr(internalErr, w)
+		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	writer.WriteHeader(http.StatusNoContent)
 }
 
 func (a AppAPI) refreshRequiredActionsStatus(

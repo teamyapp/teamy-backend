@@ -5,7 +5,7 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -13,6 +13,8 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
+
+const clientIDParam = "clientId"
 
 type RealTimeStateSync struct {
 	dataCollector       telemetry.DataCollector
@@ -24,13 +26,13 @@ var _ runner.Service = (*RealTimeStateSync)(nil)
 func (r RealTimeStateSync) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
-			Path:        path.Join(realTimeStateSyncPrefix, "clients", "connect"),
 			Method:      http.MethodGet,
+			Pattern:     path.Join(realTimeStateSyncPrefix, "clients", "connect"),
 			HandlerFunc: r.connect,
 		},
 		{
-			Path:        path.Join(realTimeStateSyncPrefix, "clients", "{clientID}", "initial-state-ready"),
 			Method:      http.MethodPut,
+			Pattern:     path.Join(realTimeStateSyncPrefix, "clients", runner.Param(clientIDParam), "initial-state-ready"),
 			HandlerFunc: r.clientInitialStateReady,
 		},
 	})
@@ -50,8 +52,8 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 		return
 	}
 
-	clientIDParam := mux.Vars(request)["clientID"]
-	clientID, err := strconv.ParseUint(clientIDParam, 10, 64)
+	clientIDRaw := chi.URLParam(request, clientIDParam)
+	clientID, err := strconv.ParseUint(clientIDRaw, 10, 64)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:    errs.InvalidArgument,
