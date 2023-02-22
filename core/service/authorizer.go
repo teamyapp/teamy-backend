@@ -105,12 +105,7 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 		return 0, internalErr
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
-		telemetry.Props{
-			telemetry.MessageProp: fmt.Sprintf("UserGroup %s is successfully created", userGroupName),
-		},
-	)
-
+	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("UserGroup %s is successfully created", userGroupName))
 	return createUserGroupRes.UserGroup.GroupId, nil
 }
 
@@ -132,12 +127,7 @@ func (a Authorizer) assignPermission(
 		return internalErr
 	}
 
-	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info,
-		telemetry.Props{
-			telemetry.MessageProp: fmt.Sprintf("Permission %s is successfully assigned", addPermissionReq),
-		},
-	)
-
+	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("Permission %s is successfully assigned", addPermissionReq))
 	return nil
 }
 

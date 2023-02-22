@@ -184,11 +184,12 @@ func (s *StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserN
 func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamNotifier, *errs.Error) {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
+		message := fmt.Sprintf("teamNotifier not found: teamID=%v", teamID)
 		internalErr := &errs.Error{
 			Code:    errs.NotFound,
-			Message: fmt.Sprintf("teamNotifier not found: teamID=%v", teamID),
+			Message: message,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.dataCollector.Logger.WarningWithContext(ct, message)
 		return nil, internalErr
 	}
 

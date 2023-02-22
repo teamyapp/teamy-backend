@@ -314,9 +314,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			Code:    errs.InvalidArgument,
 			Message: fmt.Sprintf("sprint and task must belong to the same team: sprintID=%v, taskID=%v", sprintID, taskID),
 		}
-		s.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
