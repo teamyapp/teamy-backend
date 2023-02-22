@@ -53,7 +53,7 @@ func (s SprintRPC) AddTaskToSprint(ct context.Context, req *proto.AddTaskToSprin
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }
 
 func NewSprintRPC(dataCollector telemetry.DataCollector, sprintService service.Sprint) SprintRPC {

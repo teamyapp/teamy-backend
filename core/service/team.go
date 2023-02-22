@@ -55,7 +55,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Team{}, internalErr
 	}
 
@@ -71,7 +71,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Team{}, internalErr
 		}
 	}
@@ -110,7 +110,7 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, err
 	}
 
@@ -381,7 +381,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -397,7 +397,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return 0, internalErr
 		}
 	}
@@ -432,7 +432,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Team{}, internalErr
 	}
 
@@ -448,7 +448,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Team{}, internalErr
 		}
 	}
@@ -470,9 +470,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 				teamID,
 				fileUploadSessionID),
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Team{}, internalErr
 	}
 
@@ -514,7 +512,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -522,7 +520,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 		query := authorization.NewTeamReadMemberQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 
@@ -531,7 +529,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return nil, internalErr
 		}
 	}
@@ -546,7 +544,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.TeamMember{}, internalErr
 	}
 
@@ -562,7 +560,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.TeamMember{}, internalErr
 		}
 	}
@@ -623,7 +621,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.TeamMember{}, internalErr
 	}
 
@@ -639,7 +637,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.TeamMember{}, internalErr
 		}
 	}
@@ -706,7 +704,7 @@ func (t Team) UpdateTeamMember(
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.TeamMember{}, internalErr
 	}
 
@@ -722,7 +720,7 @@ func (t Team) UpdateTeamMember(
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.TeamMember{}, internalErr
 		}
 	}

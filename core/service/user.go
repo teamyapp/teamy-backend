@@ -180,9 +180,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 				userID,
 				fileUploadSessionID),
 		}
-		u.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 

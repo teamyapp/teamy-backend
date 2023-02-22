@@ -247,9 +247,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				invitationCode,
 			),
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
@@ -324,9 +322,7 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 				invitationCode,
 			),
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
@@ -370,27 +366,21 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("invitation is expired: invitationID=%v", invitation.ID),
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	case entity.InvitationStatusInvoked:
 		internalErr := &errs.Error{
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("invitation is revoked: invitationID=%v", invitation.ID),
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
 		internalErr := &errs.Error{
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("invitation is already responded: invitationID=%v", invitation.ID),
 		}
-		i.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-			telemetry.CauseProp: internalErr,
-		})
+		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	default:
 		return nil
