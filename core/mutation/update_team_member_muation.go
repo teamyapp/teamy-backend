@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -18,8 +19,20 @@ type UpdateTeamMemberMutation struct {
 	teamMember    entity.TeamMember
 }
 
+var _ realtime.Mutation = (*UpdateTeamMemberMutation)(nil)
+
 func (u *UpdateTeamMemberMutation) GetID() uint64 {
 	return u.id
+}
+
+func (u *UpdateTeamMemberMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (u *UpdateTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (u *UpdateTeamMemberMutation) Execute(ct context.Context) *errs.Error {

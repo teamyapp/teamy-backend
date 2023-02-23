@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -18,8 +19,20 @@ type DeleteInvitationMutation struct {
 	invitation    entity.Invitation
 }
 
+var _ realtime.Mutation = (*DeleteInvitationMutation)(nil)
+
 func (d *DeleteInvitationMutation) GetID() uint64 {
 	return d.id
+}
+
+func (d *DeleteInvitationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (d *DeleteInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (d *DeleteInvitationMutation) Execute(ct context.Context) *errs.Error {
