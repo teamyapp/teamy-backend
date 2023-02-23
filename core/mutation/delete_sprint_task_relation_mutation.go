@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -19,8 +20,20 @@ type DeleteSprintTaskRelationMutation struct {
 	task                  entity.Task
 }
 
+var _ realtime.Mutation = (*DeleteSprintTaskRelationMutation)(nil)
+
 func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 	return d.id
+}
+
+func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {

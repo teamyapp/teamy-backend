@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -19,8 +20,20 @@ type CreateTaskAwaitForRelationMutation struct {
 	taskAwaitForRelation    entity.TaskAwaitForRelation
 }
 
+var _ realtime.Mutation = (*CreateTaskAwaitForRelationMutation)(nil)
+
 func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
 	return c.id
+}
+
+func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {

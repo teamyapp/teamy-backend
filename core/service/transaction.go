@@ -6,19 +6,19 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/teamy-backend/core/realtimev2"
+	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type TransactionsContext struct {
 	dataCollector telemetry.DataCollector
 	db            *sql.DB
-	stateSyncer   *realtimev2.StateSyncer
+	stateSyncer   *realtime.StateSyncer
 	ct            context.Context
 }
 
 // all unnecessary operations should be executed either before db txn begins or after db txn commits to avoid
 // long-running txn
-func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *realtimev2.Transaction) *errs.Error) *errs.Error {
+func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error) *errs.Error {
 	sqlTx, err := t.db.BeginTx(t.ct, nil)
 	defer sqlTx.Rollback()
 	if err != nil {
@@ -30,8 +30,18 @@ func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *
 		return internalErr
 	}
 
-	rtTx := realtimev2.NewTransaction(t.dataCollector, t.stateSyncer)
+	rtTx := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	execute(sqlTx, rtTx)
+
+	mutations := rtTx.GetMutations()
+	for _, mutation := range mutations {
+		internalErr := mutation.PrepareClientNotifiers(t.ct, sqlTx)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(t.ct, internalErr)
+			return internalErr
+		}
+	}
+
 	err = sqlTx.Commit()
 	if err != nil {
 		internalErr := &errs.Error{
