@@ -19,7 +19,12 @@ func (c *ClientTransaction) addMutation(mutation Mutation) {
 	c.mutations = append(c.mutations, mutation)
 }
 
+// Deprecated: The old method should not be used anymore. Use notify instead
 func (c *ClientTransaction) commit(ct context.Context) {
+	c.clientNotifier.notifyTransaction(ct, c)
+}
+
+func (c *ClientTransaction) notify(ct context.Context) {
 	c.clientNotifier.notifyTransaction(ct, c)
 }
 
@@ -60,6 +65,7 @@ func (t *Transaction) rollback(ct context.Context) *errs.Error {
 	return nil
 }
 
+// Deprecated: The old method should not be used anymore. Use AppendMutation instead
 func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) *errs.Error {
 	err := mutation.Execute(ct)
 	if err != nil {
@@ -78,6 +84,12 @@ func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) *errs
 	return nil
 }
 
+func (t *Transaction) AppendMutation(mutation Mutation) *errs.Error {
+	t.mutations = append(t.mutations, mutation)
+	return nil
+}
+
+// Deprecated: The old method should not be used anymore. Use Notify instead
 func (t *Transaction) Commit(ct context.Context) *errs.Error {
 	t.stateSyncer.BeginTransaction()
 	defer t.stateSyncer.EndTransaction()
@@ -115,6 +127,50 @@ func (t *Transaction) Commit(ct context.Context) *errs.Error {
 
 	for _, clientTransaction := range clientTransactions {
 		clientTransaction.commit(ct)
+	}
+
+	for _, mutation := range t.mutations {
+		err := mutation.CleanUp(ct)
+		if err != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t *Transaction) Notify(ct context.Context) *errs.Error {
+	t.stateSyncer.BeginTransaction()
+	defer t.stateSyncer.EndTransaction()
+
+	clientTransactions := make(map[uint64]*ClientTransaction)
+	for _, mutation := range t.mutations {
+		clientNotifiers, err := mutation.GetClientNotifiers(ct)
+		if err != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+
+		for _, clientNotifier := range clientNotifiers {
+			clientID := clientNotifier.getClientID()
+			_, ok := clientTransactions[clientID]
+			if !ok {
+				clientTransactionID := t.stateSyncer.NextClientTransactionID()
+				clientTransactions[clientID] = newClientTransaction(
+					clientNotifier.dataCollector,
+					clientNotifier,
+					clientTransactionID,
+				)
+			}
+
+			clientTransaction := clientTransactions[clientID]
+			clientTransaction.addMutation(mutation)
+		}
+	}
+
+	for _, clientTransaction := range clientTransactions {
+		clientTransaction.notify(ct)
 	}
 
 	for _, mutation := range t.mutations {

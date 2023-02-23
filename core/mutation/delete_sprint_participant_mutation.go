@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -17,6 +18,18 @@ type DeleteSprintParticipantMutation struct {
 	id                   uint64
 	userID               uint64
 	sprintID             uint64
+}
+
+var _ realtime.Mutation = (*DeleteSprintParticipantMutation)(nil)
+
+func (d *DeleteSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (d *DeleteSprintParticipantMutation) GetID() uint64 {

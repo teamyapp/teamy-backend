@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -17,6 +18,18 @@ type CreateSprintTaskRelationMutation struct {
 	sprintDao             dao.Sprint
 	id                    uint64
 	sprintTaskRelation    entity.SprintTaskRelation
+}
+
+var _ realtime.Mutation = (*CreateSprintTaskRelationMutation)(nil)
+
+func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (c *CreateSprintTaskRelationMutation) GetID() uint64 {

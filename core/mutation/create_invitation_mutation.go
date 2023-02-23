@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -16,6 +17,18 @@ type CreateInvitationMutation struct {
 	invitationDao dao.Invitation
 	id            uint64
 	invitation    entity.Invitation
+}
+
+var _ realtime.Mutation = (*CreateInvitationMutation)(nil)
+
+func (c *CreateInvitationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *CreateInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (c *CreateInvitationMutation) GetID() uint64 {
