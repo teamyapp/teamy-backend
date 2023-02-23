@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -25,18 +24,24 @@ type Node[Type any] struct {
 // https://github.com/graphql/graphql-spec/blob/main/spec/Section%207%20--%20Response.md#errors
 // where entry "extensions" is GitHub GraphQL API specific error extension attributes
 type Error struct {
-	Message   string `json:"message"`
-	Locations []struct {
-		Line   int `json:"line"`
-		Column int `json:"column"`
-	} `json:"locations"`
-	Extensions struct {
-		Value    interface{} `json:"value"`
-		Problems []struct {
-			Path        []interface{} `json:"path"`
-			Explanation string        `json:"explanation"`
-		} `json:"problems"`
-	} `json:"extensions"`
+	Message    string     `json:"message"`
+	Locations  []Location `json:"locations"`
+	Extensions Extensions `json:"extensions"`
+}
+
+type Location struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
+type Problem struct {
+	Path        []interface{} `json:"path"`
+	Explanation string        `json:"explanation"`
+}
+
+type Extensions struct {
+	Value    interface{} `json:"value"`
+	Problems []Problem   `json:"problems"`
 }
 
 type PullRequestNode struct {
@@ -85,16 +90,15 @@ func (g *GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation Ins
 	}
 
 	if len(res.Errors) > 0 {
-		var multiErr *multierror.Error
+		var internalErr *errs.Error
 		for _, resErr := range res.Errors {
-			multiErr = multierror.Append(multiErr, errors.New(resErr.Message))
+			internalErr = &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: errors.New(resErr.Message),
+			}
+			g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		}
 
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: multiErr,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return PullRequestNode{}, err
 	}
 
