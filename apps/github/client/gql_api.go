@@ -2,8 +2,9 @@ package client
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -20,13 +21,20 @@ type Node[Type any] struct {
 	Node Type `json:"node"`
 }
 
-// Error is GitHub GraphQL API error format:
+// Standard GraphQL error response:
 // https://github.com/graphql/graphql-spec/blob/main/spec/Section%207%20--%20Response.md#errors
-// where entry "extensions" is GitHub GraphQL API specific error extension attributes
-type Error struct {
+// Github GraphQL APIs have their own structure
+type GithubGraphQLError struct {
 	Message    string     `json:"message"`
 	Locations  []Location `json:"locations"`
 	Extensions Extensions `json:"extensions"`
+}
+
+func (e *GithubGraphQLError) internalErr() *errs.Error {
+	return &errs.Error{
+		Code:    errs.Unknown,
+		Message: fmt.Sprintf("%+v", e),
+	}
 }
 
 type Location struct {
@@ -34,14 +42,26 @@ type Location struct {
 	Column int `json:"column"`
 }
 
+func (l *Location) String() string {
+	return fmt.Sprintf("[Location Line:%d Column:%d]", l.Line, l.Column)
+}
+
 type Problem struct {
 	Path        []interface{} `json:"path"`
 	Explanation string        `json:"explanation"`
 }
 
+func (p *Problem) String() string {
+	return fmt.Sprintf("[Problem Path:%v Explanation:%s]", p.Path, p.Explanation)
+}
+
 type Extensions struct {
 	Value    interface{} `json:"value"`
 	Problems []Problem   `json:"problems"`
+}
+
+func (e *Extensions) String() string {
+	return fmt.Sprintf("[Extensions: Value:%v Problems:%v]", e.Value, e.Problems)
 }
 
 type PullRequestNode struct {
@@ -82,7 +102,7 @@ func (g *GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation Ins
 		},
 	}
 
-	var res gql.GraphQLResponse[Node[PullRequestNode], Error]
+	var res gql.GraphQLResponse[Node[PullRequestNode], GithubGraphQLError]
 	err := g.query(ct, installation, queryOptions, &res)
 	if err != nil {
 		g.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -90,16 +110,12 @@ func (g *GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation Ins
 	}
 
 	if len(res.Errors) > 0 {
-		var internalErr *errs.Error
-		for _, resErr := range res.Errors {
-			internalErr = &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: errors.New(resErr.Message),
-			}
-			g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		}
-
-		return PullRequestNode{}, err
+		internalErrs := collect.Map(res.Errors, func(err GithubGraphQLError, _ int) *errs.Error {
+			return err.internalErr()
+		})
+		mergedInternalErrs := errs.MergeErrs(internalErrs)
+		g.dataCollector.Logger.ErrorWithContext(ct, mergedInternalErrs)
+		return PullRequestNode{}, mergedInternalErrs
 	}
 
 	return res.Data.Node, nil
