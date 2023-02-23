@@ -70,8 +70,9 @@ type PullRequestNode struct {
 }
 
 type RepositoryNode struct {
-	Name  string              `json:"name"`
-	Owner RepositoryOwnerNode `json:"owner"`
+	Name       string              `json:"name"`
+	Owner      RepositoryOwnerNode `json:"owner"`
+	Repository RepositoryOwnerNode `json:"repository"`
 }
 
 type RepositoryOwnerNode struct {
@@ -96,7 +97,7 @@ func (g *GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation Ins
 			}
 		}`,
 		Variables: struct {
-			NodeID string
+			NodeID string `json:"nodeId"`
 		}{
 			NodeID: nodeID,
 		},
