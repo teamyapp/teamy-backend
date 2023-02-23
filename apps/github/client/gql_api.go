@@ -65,14 +65,14 @@ func (e *Extensions) String() string {
 }
 
 type PullRequestNode struct {
-	Number int    `json:"number"`
-	URL    string `json:"url"`
+	Number     int            `json:"number"`
+	URL        string         `json:"url"`
+	Repository RepositoryNode `json:"repository"`
 }
 
 type RepositoryNode struct {
-	Name       string              `json:"name"`
-	Owner      RepositoryOwnerNode `json:"owner"`
-	Repository RepositoryOwnerNode `json:"repository"`
+	Name  string              `json:"name"`
+	Owner RepositoryOwnerNode `json:"owner"`
 }
 
 type RepositoryOwnerNode struct {
