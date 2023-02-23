@@ -22,18 +22,18 @@ type CreateSprintParticipantMutation struct {
 
 var _ realtime.Mutation = (*CreateSprintParticipantMutation)(nil)
 
+func (c *CreateSprintParticipantMutation) GetID() uint64 {
+	return c.id
+}
+
 func (c *CreateSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *CreateSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (c *CreateSprintParticipantMutation) GetID() uint64 {
-	return c.id
 }
 
 func (c *CreateSprintParticipantMutation) Execute(ct context.Context) *errs.Error {

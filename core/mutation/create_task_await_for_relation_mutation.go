@@ -22,18 +22,18 @@ type CreateTaskAwaitForRelationMutation struct {
 
 var _ realtime.Mutation = (*CreateTaskAwaitForRelationMutation)(nil)
 
+func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
+	return c.id
+}
+
 func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
-	return c.id
 }
 
 func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {

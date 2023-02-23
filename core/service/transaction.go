@@ -32,6 +32,16 @@ func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *
 
 	rtTx := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
 	execute(sqlTx, rtTx)
+
+	mutations := rtTx.GetMutations()
+	for _, mutation := range mutations {
+		internalErr := mutation.PrepareClientNotifiers(t.ct, sqlTx)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(t.ct, internalErr)
+			return internalErr
+		}
+	}
+
 	err = sqlTx.Commit()
 	if err != nil {
 		internalErr := &errs.Error{

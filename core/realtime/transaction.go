@@ -89,6 +89,10 @@ func (t *Transaction) AppendMutation(mutation Mutation) *errs.Error {
 	return nil
 }
 
+func (t *Transaction) GetMutations() []Mutation {
+	return t.mutations
+}
+
 // Deprecated: The old method should not be used anymore. Use Notify instead
 func (t *Transaction) Commit(ct context.Context) *errs.Error {
 	t.stateSyncer.BeginTransaction()

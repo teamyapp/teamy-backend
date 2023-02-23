@@ -24,6 +24,6 @@ type Mutation interface {
 	CleanUp(ct context.Context) *errs.Error
 	// Deprecated: The old method should not be used anymore. Use another PrepareClientNotifiers method instead
 	GetClientNotifiers(ct context.Context) ([]*ClientNotifier, *errs.Error)
-	PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*ClientNotifier, *errs.Error)
+	PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error
 	ToMessage() MutationMessage
 }

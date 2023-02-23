@@ -22,18 +22,18 @@ type CreateSprintTaskRelationMutation struct {
 
 var _ realtime.Mutation = (*CreateSprintTaskRelationMutation)(nil)
 
+func (c *CreateSprintTaskRelationMutation) GetID() uint64 {
+	return c.id
+}
+
 func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (c *CreateSprintTaskRelationMutation) GetID() uint64 {
-	return c.id
 }
 
 func (c *CreateSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {

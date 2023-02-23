@@ -21,18 +21,18 @@ type UpdateTeamMutation struct {
 
 var _ realtime.Mutation = (*UpdateTeamMutation)(nil)
 
+func (u *UpdateTeamMutation) GetID() uint64 {
+	return u.id
+}
+
 func (u *UpdateTeamMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u *UpdateTeamMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+func (u *UpdateTeamMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (u *UpdateTeamMutation) GetID() uint64 {
-	return u.id
 }
 
 func (u *UpdateTeamMutation) Execute(ct context.Context) *errs.Error {

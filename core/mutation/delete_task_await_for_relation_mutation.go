@@ -22,18 +22,18 @@ type DeleteTaskAwaitForRelationMutation struct {
 
 var _ realtime.Mutation = (*DeleteTaskAwaitForRelationMutation)(nil)
 
+func (d *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
+	return d.id
+}
+
 func (d *DeleteTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (d *DeleteTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (d *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
-	return d.id
 }
 
 func (d *DeleteTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {

@@ -21,18 +21,18 @@ type DeleteInvitationMutation struct {
 
 var _ realtime.Mutation = (*DeleteInvitationMutation)(nil)
 
+func (d *DeleteInvitationMutation) GetID() uint64 {
+	return d.id
+}
+
 func (d *DeleteInvitationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (d *DeleteInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (d *DeleteInvitationMutation) GetID() uint64 {
-	return d.id
 }
 
 func (d *DeleteInvitationMutation) Execute(ct context.Context) *errs.Error {

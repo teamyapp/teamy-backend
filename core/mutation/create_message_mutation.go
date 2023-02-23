@@ -22,18 +22,18 @@ type CreateMessageMutation struct {
 
 var _ realtime.Mutation = (*CreateMessageMutation)(nil)
 
+func (c *CreateMessageMutation) GetID() uint64 {
+	return c.id
+}
+
 func (c *CreateMessageMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *CreateMessageMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateMessageMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (c *CreateMessageMutation) GetID() uint64 {
-	return c.id
 }
 
 func (c *CreateMessageMutation) Execute(ct context.Context) *errs.Error {
