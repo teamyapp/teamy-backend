@@ -65,8 +65,9 @@ func (e *Extensions) String() string {
 }
 
 type PullRequestNode struct {
-	Number int    `json:"number"`
-	URL    string `json:"url"`
+	Number     int            `json:"number"`
+	URL        string         `json:"url"`
+	Repository RepositoryNode `json:"repository"`
 }
 
 type RepositoryNode struct {
@@ -96,7 +97,7 @@ func (g *GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation Ins
 			}
 		}`,
 		Variables: struct {
-			NodeID string
+			NodeID string `json:"nodeId"`
 		}{
 			NodeID: nodeID,
 		},
