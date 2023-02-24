@@ -82,6 +82,8 @@ spec:
               value: "9001"
             - name: SERVICE_RUNNER_MONITORING_SERVER_PORT
               value: "10000"
+            - name: TRACE_COLLECTOR_ENDPOINT
+              value: "tempo.monitoring:4317"
             - name: SERVICE_RUNNER_IDENTITY_API_ENDPOINT
               value: http://cloud/identity
             - name: APPS_GITHUB_APP_NAME
