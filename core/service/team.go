@@ -772,7 +772,9 @@ func (t Team) UpdateTeamMember(
 				t.dataCollector,
 				t.stateSyncer,
 				t.sprintService.sprintParticipantDao,
+				t.sprintService.sprintParticipantDaoV2,
 				t.sprintDao,
+				t.sprintService.sprintDaoV2,
 				participant,
 			)
 			err = realTimeTransaction.ApplyMutation(ct, updateSprintParticipantMutation)

@@ -20,48 +20,53 @@ type DeleteTeamMutation struct {
 
 var _ realtime.Mutation = (*DeleteTeamMutation)(nil)
 
-func (u *DeleteTeamMutation) GetID() uint64 {
-	return u.id
+func (d *DeleteTeamMutation) GetID() uint64 {
+	return d.id
 }
 
-func (u *DeleteTeamMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteTeamMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u *DeleteTeamMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteTeamMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u *DeleteTeamMutation) Execute(ct context.Context) *errs.Error {
-	err := u.teamDao.DeleteTeam(ct, u.teamID)
+func (d *DeleteTeamMutation) Execute(ct context.Context) *errs.Error {
+	err := d.teamDao.DeleteTeam(ct, d.teamID)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	return nil
 }
 
-func (u *DeleteTeamMutation) Undo() *errs.Error {
+func (d *DeleteTeamMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (u *DeleteTeamMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.teamID)
+func (d *DeleteTeamMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
 }
 
-func (u *DeleteTeamMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteTeamMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (d *DeleteTeamMutation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
-		ID:             u.id,
+		ID:             d.id,
 		CollectionType: realtime.TeamCollectionType,
 		MutationType:   realtime.DeleteMutationType,
-		Payload:        u.teamID,
+		Payload:        d.teamID,
 	}
 }
 
-func (u *DeleteTeamMutation) CleanUp(ct context.Context) *errs.Error {
+func (d *DeleteTeamMutation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 

@@ -60,6 +60,11 @@ func (c *CreateSprintTaskRelationMutation) GetClientNotifiers(ct context.Context
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
+func (c *CreateSprintTaskRelationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *CreateSprintTaskRelationMutation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,

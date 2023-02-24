@@ -53,6 +53,11 @@ func (u *UpdateTeamMutation) GetClientNotifiers(ct context.Context) ([]*realtime
 	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.team.ID)
 }
 
+func (u *UpdateTeamMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (u *UpdateTeamMutation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             u.id,

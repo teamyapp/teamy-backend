@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -31,16 +32,20 @@ type CreateSprintInput struct {
 }
 
 type Sprint struct {
-	dataCollector         telemetry.DataCollector
-	cloudClientRegistry   *cloudAPI.ClientRegistry
-	stateSyncer           *realtime.StateSyncer
-	authorizer            Authorizer
-	taskDao               dao.Task
-	sprintDao             dao.Sprint
-	sprintTaskRelationDao dao.SprintTaskRelation
-	sprintParticipantDao  dao.SprintParticipant
-	teamMemberDao         dao.TeamMember
-	taskService           Task
+	dataCollector           telemetry.DataCollector
+	cloudClientRegistry     *cloudAPI.ClientRegistry
+	stateSyncer             *realtime.StateSyncer
+	authorizer              Authorizer
+	taskDao                 dao.Task
+	taskDaoV2               daov2.Task
+	sprintDao               dao.Sprint
+	sprintDaoV2             daov2.Sprint
+	sprintTaskRelationDao   dao.SprintTaskRelation
+	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
+	sprintParticipantDao    dao.SprintParticipant
+	sprintParticipantDaoV2  daov2.SprintParticipant
+	teamMemberDao           dao.TeamMember
+	taskService             Task
 }
 
 func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
@@ -342,6 +347,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			s.dataCollector,
 			s.stateSyncer,
 			s.taskDao,
+			s.taskDaoV2,
 			task)
 		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 		if err != nil {
@@ -558,6 +564,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		s.dataCollector,
 		s.stateSyncer,
 		s.sprintTaskRelationDao,
+		s.sprintTaskRelationDaoV2,
 		sprintID,
 		task,
 	)
@@ -574,6 +581,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 			s.dataCollector,
 			s.stateSyncer,
 			s.taskDao,
+			s.taskDaoV2,
 			task)
 		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
 		if err != nil {
@@ -615,7 +623,9 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction,
 			s.dataCollector,
 			s.stateSyncer,
 			s.sprintParticipantDao,
+			s.sprintParticipantDaoV2,
 			s.sprintDao,
+			s.sprintDaoV2,
 			newSprintParticipant)
 		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
 		if err != nil {
@@ -645,7 +655,9 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 			s.dataCollector,
 			s.stateSyncer,
 			s.sprintParticipantDao,
+			s.sprintParticipantDaoV2,
 			s.sprintDao,
+			s.sprintDaoV2,
 			oldSprintParticipant)
 		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
 		if err != nil {
@@ -663,22 +675,30 @@ func NewSprint(
 	stateSyncer *realtime.StateSyncer,
 	authorizer Authorizer,
 	taskDao dao.Task,
+	taskDaoV2 daov2.Task,
 	sprintDao dao.Sprint,
+	sprintDaoV2 daov2.Sprint,
 	sprintTaskRelationDao dao.SprintTaskRelation,
+	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 	sprintParticipantDao dao.SprintParticipant,
+	sprintParticipantDaoV2 daov2.SprintParticipant,
 	teamMemberDao dao.TeamMember,
 	taskService Task,
 ) Sprint {
 	return Sprint{
-		dataCollector:         dataCollector,
-		cloudClientRegistry:   cloudClientRegistry,
-		stateSyncer:           stateSyncer,
-		authorizer:            authorizer,
-		taskDao:               taskDao,
-		sprintDao:             sprintDao,
-		sprintTaskRelationDao: sprintTaskRelationDao,
-		sprintParticipantDao:  sprintParticipantDao,
-		teamMemberDao:         teamMemberDao,
-		taskService:           taskService,
+		dataCollector:           dataCollector,
+		cloudClientRegistry:     cloudClientRegistry,
+		stateSyncer:             stateSyncer,
+		authorizer:              authorizer,
+		taskDao:                 taskDao,
+		taskDaoV2:               taskDaoV2,
+		sprintDao:               sprintDao,
+		sprintDaoV2:             sprintDaoV2,
+		sprintTaskRelationDao:   sprintTaskRelationDao,
+		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
+		sprintParticipantDao:    sprintParticipantDao,
+		sprintParticipantDaoV2:  sprintParticipantDaoV2,
+		teamMemberDao:           teamMemberDao,
+		taskService:             taskService,
 	}
 }

@@ -16,6 +16,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
+	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/daov2/implementation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -42,6 +44,12 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.AppTeamInstallation), new(sqldb.AppTeamInstallation)),
 	wire.Bind(new(dao.AppVersion), new(sqldb.AppVersion)),
 	wire.Bind(new(dao.AppVersionVisibleTeam), new(sqldb.AppVersionVisibleTeam)),
+	wire.Bind(new(daov2.Task), new(implementation.Task)),
+	wire.Bind(new(daov2.TaskAwaitForRelation), new(implementation.TaskAwaitForRelation)),
+	wire.Bind(new(daov2.SprintParticipant), new(implementation.SprintParticipant)),
+	wire.Bind(new(daov2.Sprint), new(implementation.Sprint)),
+	wire.Bind(new(daov2.SprintTaskRelation), new(implementation.SprintTaskRelation)),
+	wire.Bind(new(daov2.Thread), new(implementation.Thread)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -59,6 +67,12 @@ var daoSet = wire.NewSet(
 	sqldb.NewAppTeamInstallation,
 	sqldb.NewAppVersion,
 	sqldb.NewAppVersionVisibleTeam,
+	implementation.NewTask,
+	implementation.NewTaskAwaitForRelation,
+	implementation.NewSprintParticipant,
+	implementation.NewSprint,
+	implementation.NewSprintTaskRelation,
+	implementation.NewThread,
 )
 
 var serviceSet = wire.NewSet(

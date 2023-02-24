@@ -60,6 +60,11 @@ func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*real
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
+func (c *CreateTaskLinkMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *CreateTaskLinkMutation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
