@@ -1,4 +1,4 @@
-package implementation
+package sqldb
 
 import (
 	"context"
