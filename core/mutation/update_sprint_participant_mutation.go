@@ -7,17 +7,21 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type UpdateSprintParticipantMutation struct {
-	dataCollector        telemetry.DataCollector
-	stateSyncer          *realtime.StateSyncer
-	sprintParticipantDao dao.SprintParticipant
-	sprintDao            dao.Sprint
-	id                   uint64
-	sprintParticipant    entity.SprintParticipant
+	dataCollector          telemetry.DataCollector
+	stateSyncer            *realtime.StateSyncer
+	sprintParticipantDao   dao.SprintParticipant
+	sprintParticipantDaoV2 daov2.SprintParticipant
+	sprintDao              dao.Sprint
+	sprintDaoV2            daov2.Sprint
+	id                     uint64
+	sprintParticipant      entity.SprintParticipant
+	clientNotifiers        []*realtime.ClientNotifier
 }
 
 var _ realtime.Mutation = (*UpdateSprintParticipantMutation)(nil)
@@ -27,13 +31,29 @@ func (u *UpdateSprintParticipantMutation) GetID() uint64 {
 }
 
 func (u *UpdateSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	internalErr := u.sprintParticipantDaoV2.UpdateSprintParticipant(ct, tx, u.sprintParticipant)
+	if internalErr != nil {
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	return nil
 }
 
 func (u *UpdateSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	sprint, internalErr := u.sprintDaoV2.FindSprintByID(ct, tx, u.sprintParticipant.SprintID)
+	if internalErr != nil {
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	u.clientNotifiers, internalErr = u.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
+	if internalErr != nil {
+		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	return nil
 }
 
 func (u *UpdateSprintParticipantMutation) Execute(ct context.Context) *errs.Error {
@@ -60,6 +80,10 @@ func (u *UpdateSprintParticipantMutation) GetClientNotifiers(ct context.Context)
 	return u.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
+func (u *UpdateSprintParticipantMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	return u.clientNotifiers
+}
+
 func (u *UpdateSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             u.id,
@@ -77,15 +101,19 @@ func NewUpdateSprintParticipantMutation(
 	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintParticipantDao dao.SprintParticipant,
+	sprintParticipantDaoV2 daov2.SprintParticipant,
 	sprintDao dao.Sprint,
+	sprintDaoV2 daov2.Sprint,
 	sprintParticipant entity.SprintParticipant,
 ) *UpdateSprintParticipantMutation {
 	return &UpdateSprintParticipantMutation{
-		dataCollector:        dataCollector,
-		stateSyncer:          stateSyncer,
-		sprintParticipantDao: sprintParticipantDao,
-		sprintDao:            sprintDao,
-		id:                   stateSyncer.NextMutationID(),
-		sprintParticipant:    sprintParticipant,
+		dataCollector:          dataCollector,
+		stateSyncer:            stateSyncer,
+		sprintParticipantDao:   sprintParticipantDao,
+		sprintParticipantDaoV2: sprintParticipantDaoV2,
+		sprintDao:              sprintDao,
+		sprintDaoV2:            sprintDaoV2,
+		id:                     stateSyncer.NextMutationID(),
+		sprintParticipant:      sprintParticipant,
 	}
 }

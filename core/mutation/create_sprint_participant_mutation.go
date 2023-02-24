@@ -60,6 +60,11 @@ func (c *CreateSprintParticipantMutation) GetClientNotifiers(ct context.Context)
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
+func (c *CreateSprintParticipantMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *CreateSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,

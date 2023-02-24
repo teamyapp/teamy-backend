@@ -18,6 +18,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
+	"github.com/teamyapp/teamy-backend/core/daov2"
+	sqldb2 "github.com/teamyapp/teamy-backend/core/daov2/sqldb"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -35,20 +37,26 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
 	activity := cache.NewActivity(dataCollector)
 	task := sqldb.NewTask(dataCollector, sqlDB)
+	sqldbTask := sqldb2.NewTask(dataCollector)
 	thread := sqldb.NewThread(dataCollector, sqlDB)
+	sqldbThread := sqldb2.NewThread(dataCollector)
 	sprint := sqldb.NewSprint(dataCollector, sqlDB)
+	sqldbSprint := sqldb2.NewSprint(dataCollector)
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
+	sqldbTaskAwaitForRelation := sqldb2.NewTaskAwaitForRelation(dataCollector)
 	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
+	sqldbSprintParticipant := sqldb2.NewSprintParticipant(dataCollector)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
+	sqldbSprintTaskRelation := sqldb2.NewSprintTaskRelation(dataCollector)
 	message := sqldb.NewMessage(dataCollector, sqlDB)
 	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, task, thread, message)
-	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, sqldbTask, thread, sqldbThread, sprint, sqldbSprint, taskAwaitForRelation, sqldbTaskAwaitForRelation, sprintParticipant, sqldbSprintParticipant, sprintTaskRelation, sqldbSprintTaskRelation, serviceThread, sqlDB)
 	taskLink := sqldb.NewTaskLink(dataCollector, sqlDB)
 	serviceTaskLink := service.NewTaskLink(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, taskLink, task)
 	team := sqldb.NewTeam(dataCollector, sqlDB)
 	teamMember := sqldb.NewTeamMember(dataCollector, sqlDB)
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(dataCollector, sqlDB)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, serviceTask)
 	serviceTeam := newTeamService(dataCollector, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, task, sprint, team, teamMember, teamFileUploadSession, serviceSprint)
 	user := sqldb.NewUser(dataCollector, sqlDB)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(dataCollector, sqlDB)
@@ -74,14 +82,20 @@ func InitTaskRPCAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegistr
 	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
 	activity := cache.NewActivity(dataCollector)
 	task := sqldb.NewTask(dataCollector, sqlDB)
+	sqldbTask := sqldb2.NewTask(dataCollector)
 	thread := sqldb.NewThread(dataCollector, sqlDB)
+	sqldbThread := sqldb2.NewThread(dataCollector)
 	sprint := sqldb.NewSprint(dataCollector, sqlDB)
+	sqldbSprint := sqldb2.NewSprint(dataCollector)
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
+	sqldbTaskAwaitForRelation := sqldb2.NewTaskAwaitForRelation(dataCollector)
 	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
+	sqldbSprintParticipant := sqldb2.NewSprintParticipant(dataCollector)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
+	sqldbSprintTaskRelation := sqldb2.NewSprintTaskRelation(dataCollector)
 	message := sqldb.NewMessage(dataCollector, sqlDB)
 	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, task, thread, message)
-	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, sqldbTask, thread, sqldbThread, sprint, sqldbSprint, taskAwaitForRelation, sqldbTaskAwaitForRelation, sprintParticipant, sqldbSprintParticipant, sprintTaskRelation, sqldbSprintTaskRelation, serviceThread, sqlDB)
 	taskRPC := api2.NewTaskRPC(dataCollector, serviceTask)
 	return taskRPC
 }
@@ -89,17 +103,23 @@ func InitTaskRPCAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegistr
 func InitSprintRPCAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.SprintRPC {
 	authorizer := service.NewAuthorizer(dataCollector, cloudAPIClientRegistry)
 	task := sqldb.NewTask(dataCollector, sqlDB)
+	sqldbTask := sqldb2.NewTask(dataCollector)
 	sprint := sqldb.NewSprint(dataCollector, sqlDB)
+	sqldbSprint := sqldb2.NewSprint(dataCollector)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(dataCollector, sqlDB)
+	sqldbSprintTaskRelation := sqldb2.NewSprintTaskRelation(dataCollector)
 	sprintParticipant := sqldb.NewSprintParticipant(dataCollector, sqlDB)
+	sqldbSprintParticipant := sqldb2.NewSprintParticipant(dataCollector)
 	teamMember := sqldb.NewTeamMember(dataCollector, sqlDB)
 	activity := cache.NewActivity(dataCollector)
 	thread := sqldb.NewThread(dataCollector, sqlDB)
+	sqldbThread := sqldb2.NewThread(dataCollector)
 	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(dataCollector, sqlDB)
+	sqldbTaskAwaitForRelation := sqldb2.NewTaskAwaitForRelation(dataCollector)
 	message := sqldb.NewMessage(dataCollector, sqlDB)
 	serviceThread := service.NewThread(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, task, thread, message)
-	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, serviceThread)
-	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sprint, sprintTaskRelation, sprintParticipant, teamMember, serviceTask)
+	serviceTask := service.NewTask(dataCollector, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, activity, task, sqldbTask, thread, sqldbThread, sprint, sqldbSprint, taskAwaitForRelation, sqldbTaskAwaitForRelation, sprintParticipant, sqldbSprintParticipant, sprintTaskRelation, sqldbSprintTaskRelation, serviceThread, sqlDB)
+	serviceSprint := service.NewSprint(dataCollector, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, serviceTask)
 	sprintRPC := api2.NewSprintRPC(dataCollector, serviceSprint)
 	return sprintRPC
 }
@@ -121,7 +141,7 @@ type ServiceName string
 
 type CloudWebAPIExternalBaseURL string
 
-var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), wire.Bind(new(dao.AppTeamInstallation), new(sqldb.AppTeamInstallation)), wire.Bind(new(dao.AppVersion), new(sqldb.AppVersion)), wire.Bind(new(dao.AppVersionVisibleTeam), new(sqldb.AppVersionVisibleTeam)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread, sqldb.NewSprint, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintTaskRelation, sqldb.NewUserFileUploadSession, sqldb.NewTeamFileUploadSession, sqldb.NewSprintParticipant, sqldb.NewAppTeamInstallation, sqldb.NewAppVersion, sqldb.NewAppVersionVisibleTeam)
+var daoSet = wire.NewSet(wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), wire.Bind(new(dao.AppTeamInstallation), new(sqldb.AppTeamInstallation)), wire.Bind(new(dao.AppVersion), new(sqldb.AppVersion)), wire.Bind(new(dao.AppVersionVisibleTeam), new(sqldb.AppVersionVisibleTeam)), wire.Bind(new(daov2.Task), new(sqldb2.Task)), wire.Bind(new(daov2.TaskAwaitForRelation), new(sqldb2.TaskAwaitForRelation)), wire.Bind(new(daov2.SprintParticipant), new(sqldb2.SprintParticipant)), wire.Bind(new(daov2.Sprint), new(sqldb2.Sprint)), wire.Bind(new(daov2.SprintTaskRelation), new(sqldb2.SprintTaskRelation)), wire.Bind(new(daov2.Thread), new(sqldb2.Thread)), sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTeam, sqldb.NewTeamMember, sqldb.NewUser, sqldb.NewThread, sqldb.NewSprint, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintTaskRelation, sqldb.NewUserFileUploadSession, sqldb.NewTeamFileUploadSession, sqldb.NewSprintParticipant, sqldb.NewAppTeamInstallation, sqldb.NewAppVersion, sqldb.NewAppVersionVisibleTeam, sqldb2.NewTask, sqldb2.NewTaskAwaitForRelation, sqldb2.NewSprintParticipant, sqldb2.NewSprint, sqldb2.NewSprintTaskRelation, sqldb2.NewThread)
 
 var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewAuthorizer, service.NewApp)
 

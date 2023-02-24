@@ -7,17 +7,20 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteSprintTaskRelationMutation struct {
-	dataCollector         telemetry.DataCollector
-	stateSyncer           *realtime.StateSyncer
-	sprintTaskRelationDao dao.SprintTaskRelation
-	id                    uint64
-	sprintID              uint64
-	task                  entity.Task
+	dataCollector           telemetry.DataCollector
+	stateSyncer             *realtime.StateSyncer
+	sprintTaskRelationDao   dao.SprintTaskRelation
+	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
+	id                      uint64
+	sprintID                uint64
+	task                    entity.Task
+	clientNotifiers         []*realtime.ClientNotifier
 }
 
 var _ realtime.Mutation = (*DeleteSprintTaskRelationMutation)(nil)
@@ -27,13 +30,24 @@ func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 }
 
 func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	internalErr := d.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, d.sprintID, d.task.ID)
+	if internalErr != nil {
+		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	return nil
 }
 
 func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	var internalErr *errs.Error
+	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
+	if internalErr != nil {
+		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	return nil
 }
 
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
@@ -52,6 +66,10 @@ func (d *DeleteSprintTaskRelationMutation) Undo() *errs.Error {
 
 func (d *DeleteSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
+}
+
+func (d *DeleteSprintTaskRelationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	return d.clientNotifiers
 }
 
 func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage {
@@ -77,15 +95,17 @@ func NewDeleteSprintTaskRelationMutation(
 	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
+	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 	sprintID uint64,
 	task entity.Task,
 ) *DeleteSprintTaskRelationMutation {
 	return &DeleteSprintTaskRelationMutation{
-		dataCollector:         dataCollector,
-		stateSyncer:           stateSyncer,
-		sprintTaskRelationDao: sprintTaskRelationDao,
-		id:                    stateSyncer.NextMutationID(),
-		sprintID:              sprintID,
-		task:                  task,
+		dataCollector:           dataCollector,
+		stateSyncer:             stateSyncer,
+		sprintTaskRelationDao:   sprintTaskRelationDao,
+		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
+		id:                      stateSyncer.NextMutationID(),
+		sprintID:                sprintID,
+		task:                    task,
 	}
 }

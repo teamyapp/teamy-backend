@@ -18,8 +18,14 @@ type TransactionsContext struct {
 
 // all unnecessary operations should be executed either before db txn begins or after db txn commits to avoid
 // long-running txn
-func (t TransactionsContext) withTransactions(execute func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error) *errs.Error {
-	sqlTx, err := t.db.BeginTx(t.ct, nil)
+func (t TransactionsContext) withTransactions(readonly bool, execute func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error) *errs.Error {
+	// If isolation level not specify explicitly here, it will be the default level of DB
+	// For postgres, the default level is Read Committed
+	// https://www.postgresql.org/docs/7.2/xact-read-committed.html
+	opt := sql.TxOptions{
+		ReadOnly: readonly,
+	}
+	sqlTx, err := t.db.BeginTx(t.ct, &opt)
 	defer sqlTx.Rollback()
 	if err != nil {
 		internalErr := &errs.Error{

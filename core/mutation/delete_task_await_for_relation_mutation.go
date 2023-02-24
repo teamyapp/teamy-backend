@@ -54,6 +54,11 @@ func (d *DeleteTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Conte
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.awaitingTask.OwningTeamID)
 }
 
+func (d *DeleteTaskAwaitForRelationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (d *DeleteTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,

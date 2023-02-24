@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -56,18 +58,25 @@ type UpdateTaskInput struct {
 }
 
 type Task struct {
-	dataCollector           telemetry.DataCollector
-	cloudClientRegistry     *cloudAPI.ClientRegistry
-	authorizer              Authorizer
-	stateSyncer             *realtime.StateSyncer
-	activityCache           cache.Activity
-	taskDao                 dao.Task
-	sprintDao               dao.Sprint
-	threadDao               dao.Thread
-	taskAwaitForRelationDao dao.TaskAwaitForRelation
-	sprintParticipantDao    dao.SprintParticipant
-	sprintTaskRelationDao   dao.SprintTaskRelation
-	threadService           Thread
+	dataCollector             telemetry.DataCollector
+	cloudClientRegistry       *cloudAPI.ClientRegistry
+	authorizer                Authorizer
+	stateSyncer               *realtime.StateSyncer
+	activityCache             cache.Activity
+	taskDao                   dao.Task
+	taskDaoV2                 daov2.Task
+	sprintDao                 dao.Sprint
+	sprintDaoV2               daov2.Sprint
+	threadDao                 dao.Thread
+	threadDaoV2               daov2.Thread
+	taskAwaitForRelationDao   dao.TaskAwaitForRelation
+	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
+	sprintParticipantDao      dao.SprintParticipant
+	sprintParticipantDaoV2    daov2.SprintParticipant
+	sprintTaskRelationDao     dao.SprintTaskRelation
+	sprintTaskRelationDaoV2   daov2.SprintTaskRelation
+	threadService             Thread
+	db                        *sql.DB
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
@@ -293,70 +302,79 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		}
 	}
 
-	task, err := t.taskDao.FindTaskByID(ct, taskID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
+	var task entity.Task
+	txCtx := TransactionsContext{
+		dataCollector: t.dataCollector,
+		db:            t.db,
+		stateSyncer:   t.stateSyncer,
+		ct:            ct,
 	}
+	err := txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		task, internalErr = t.taskDaoV2.FindTaskByID(ct, sqlTx, taskID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
 
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	oldEffort := task.Effort
-	oldOwnerID := task.OwnerUserID
-	task.Goal = input.Goal
-	task.Context = input.Context
-	task.OwnerUserID = input.OwnerUserID
-	task.OwningTeamID = input.OwningTeamID
-	task.Effort = input.Effort
-	task.DueAt = input.DueAt
-	updatedAt := time.Now()
-	task.UpdatedAt = &updatedAt
-	updateTaskMutation := mutation.NewUpdateTaskMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.taskDao,
-		task,
-	)
-	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
+		oldEffort := task.Effort
+		oldOwnerID := task.OwnerUserID
+		task.Goal = input.Goal
+		task.Context = input.Context
+		task.OwnerUserID = input.OwnerUserID
+		task.OwningTeamID = input.OwningTeamID
+		task.Effort = input.Effort
+		task.DueAt = input.DueAt
+		updatedAt := time.Now().UTC()
+		task.UpdatedAt = &updatedAt
+		updateTaskMutation := mutation.NewUpdateTaskMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.taskDao,
+			t.taskDaoV2,
+			task,
+		)
+		rtTx.AppendMutation(updateTaskMutation)
+		internalErr = updateTaskMutation.ExecuteV2(ct, sqlTx)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
 
-	err = t.updateUnusedBandWidth(ct, realTimeTransaction, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
+		internalErr = t.updateUnusedBandWidth(ct, sqlTx, rtTx, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
 
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
+		return nil
+	})
 
-	return task, nil
+	return task, err
 }
 
 func (t Task) updateUnusedBandWidth(
 	ct context.Context,
-	tx *realtime.Transaction,
+	sqlTx *sql.Tx,
+	rtTx *realtime.Transaction,
 	taskID uint64,
 	oldEffort *time.Duration,
 	newEffort *time.Duration,
 	oldOwnerID *uint64,
 	newOwnerID *uint64,
 ) *errs.Error {
-	err := t.tryIncreaseBandwidth(ct, tx, taskID, oldOwnerID, oldEffort)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return err
+	internalErr := t.tryIncreaseBandwidth(ct, sqlTx, rtTx, taskID, oldOwnerID, oldEffort)
+	if internalErr != nil {
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
 	}
 
 	if newOwnerID != nil && newEffort != nil {
-		participants, err := t.findTaskOwnerInSprints(ct, taskID, *newOwnerID)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return err
+		var participants []entity.SprintParticipant
+		participants, internalErr = t.findTaskOwnerInSprints(ct, sqlTx, taskID, *newOwnerID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
 		}
 
 		for _, participant := range participants {
@@ -365,13 +383,16 @@ func (t Task) updateUnusedBandWidth(
 				t.dataCollector,
 				t.stateSyncer,
 				t.sprintParticipantDao,
+				t.sprintParticipantDaoV2,
 				t.sprintDao,
+				t.sprintDaoV2,
 				participant,
 			)
-			err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
-			if err != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
-				return err
+			rtTx.AppendMutation(updateSprintParticipantMutation)
+			internalErr = updateSprintParticipantMutation.ExecuteV2(ct, sqlTx)
+			if internalErr != nil {
+				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return internalErr
 			}
 		}
 	}
@@ -381,15 +402,16 @@ func (t Task) updateUnusedBandWidth(
 
 func (t Task) tryIncreaseBandwidth(
 	ct context.Context,
-	tx *realtime.Transaction,
+	sqlTx *sql.Tx,
+	rtTx *realtime.Transaction,
 	taskID uint64,
 	oldOwnerID *uint64,
 	oldEffort *time.Duration) *errs.Error {
 	if oldOwnerID != nil && oldEffort != nil {
-		participants, err := t.findTaskOwnerInSprints(ct, taskID, *oldOwnerID)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return err
+		participants, internalErr := t.findTaskOwnerInSprints(ct, sqlTx, taskID, *oldOwnerID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
 		}
 
 		for _, participant := range participants {
@@ -398,13 +420,16 @@ func (t Task) tryIncreaseBandwidth(
 				t.dataCollector,
 				t.stateSyncer,
 				t.sprintParticipantDao,
+				t.sprintParticipantDaoV2,
 				t.sprintDao,
+				t.sprintDaoV2,
 				participant,
 			)
-			err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
-			if err != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
-				return err
+			rtTx.AppendMutation(updateSprintParticipantMutation)
+			internalErr = updateSprintParticipantMutation.ExecuteV2(ct, sqlTx)
+			if internalErr != nil {
+				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return internalErr
 			}
 		}
 	}
@@ -412,8 +437,8 @@ func (t Task) tryIncreaseBandwidth(
 	return nil
 }
 
-func (t Task) findTaskOwnerInSprints(ct context.Context, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, *errs.Error) {
-	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
+func (t Task) findTaskOwnerInSprints(ct context.Context, tx *sql.Tx, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	sprintIDs, err := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, tx, taskID)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
@@ -421,7 +446,7 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, taskID uint64, taskOwne
 
 	participants := make([]entity.SprintParticipant, 0)
 	for _, sprintID := range sprintIDs {
-		participant, err := t.sprintParticipantDao.FindParticipant(ct, sprintID, taskOwnerUserID)
+		participant, err := t.sprintParticipantDaoV2.FindParticipant(ct, tx, sprintID, taskOwnerUserID)
 		if err != nil {
 			if err.Code != errs.NotFound {
 				t.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -437,114 +462,125 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, taskID uint64, taskOwne
 }
 
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
-	task, err := t.taskDao.FindTaskByID(ct, taskID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
+	var task entity.Task
+	txCtx := TransactionsContext{
+		dataCollector: t.dataCollector,
+		db:            t.db,
+		stateSyncer:   t.stateSyncer,
+		ct:            ct,
 	}
+	err := txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		task, internalErr = t.taskDaoV2.FindTaskByID(ct, sqlTx, taskID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
 
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
+		sprintIDs, internalErr := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, sqlTx, taskID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
 
-	for _, sprintID := range sprintIDs {
-		deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
+		for _, sprintID := range sprintIDs {
+			deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
+				t.dataCollector,
+				t.stateSyncer,
+				t.sprintTaskRelationDao,
+				t.sprintTaskRelationDaoV2,
+				sprintID,
+				task,
+			)
+			rtTx.AppendMutation(deleteSprintTaskRelationMutation)
+			internalErr = deleteSprintTaskRelationMutation.ExecuteV2(ct, sqlTx)
+			if internalErr != nil {
+				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return internalErr
+			}
+		}
+
+		awaitForTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDs(ct, sqlTx, taskID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
+
+		for _, awaitForTaskID := range awaitForTaskIDs {
+			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+				t.dataCollector,
+				t.stateSyncer,
+				t.taskAwaitForRelationDao,
+				task,
+				awaitForTaskID,
+			)
+
+			rtTx.AppendMutation(deleteTaskAwaitForRelationMutation)
+			internalErr = deleteTaskAwaitForRelationMutation.ExecuteV2(ct, sqlTx)
+			if internalErr != nil {
+				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return internalErr
+			}
+		}
+
+		awaitingTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitingTaskIDs(ct, sqlTx, taskID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
+
+		awaitingTasks, internalErr := t.taskDaoV2.FindTasksByIDs(ct, sqlTx, awaitingTaskIDs)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
+
+		for _, awaitingTask := range awaitingTasks {
+			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+				t.dataCollector,
+				t.stateSyncer,
+				t.taskAwaitForRelationDao,
+				awaitingTask,
+				taskID,
+			)
+			rtTx.AppendMutation(deleteTaskAwaitForRelationMutation)
+			internalErr = deleteTaskAwaitForRelationMutation.ExecuteV2(ct, sqlTx)
+			if internalErr != nil {
+				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return internalErr
+			}
+		}
+
+		internalErr = t.tryIncreaseBandwidth(ct, sqlTx, rtTx, taskID, task.OwnerUserID, task.Effort)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
+
+		deleteTaskMutation := mutation.NewDeleteTaskMutation(
 			t.dataCollector,
 			t.stateSyncer,
-			t.sprintTaskRelationDao,
-			sprintID,
+			t.taskDao,
+			t.taskDaoV2,
 			task,
 		)
-		err = realTimeTransaction.ApplyMutation(ct, deleteSprintTaskRelationMutation)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return entity.Task{}, err
+		rtTx.AppendMutation(deleteTaskMutation)
+		internalErr = deleteTaskMutation.ExecuteV2(ct, sqlTx)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
 		}
-	}
 
-	awaitForTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitForTaskIDs(ct, taskID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
-
-	for _, awaitForTaskID := range awaitForTaskIDs {
-		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
-			t.dataCollector,
-			t.stateSyncer,
-			t.taskAwaitForRelationDao,
-			task,
-			awaitForTaskID,
-		)
-
-		err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return entity.Task{}, err
+		internalErr = t.threadDaoV2.DeleteThread(ct, sqlTx, task.CommentsThreadID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
 		}
-	}
 
-	awaitingTaskIDs, err := t.taskAwaitForRelationDao.FindAwaitingTaskIDs(ct, taskID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
+		return nil
+	})
 
-	awaitingTasks, err := t.taskDao.FindTasksByIDs(ct, awaitingTaskIDs)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
-
-	for _, awaitingTask := range awaitingTasks {
-		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
-			t.dataCollector,
-			t.stateSyncer,
-			t.taskAwaitForRelationDao,
-			awaitingTask,
-			taskID,
-		)
-		err = realTimeTransaction.ApplyMutation(ct, deleteTaskAwaitForRelationMutation)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return entity.Task{}, err
-		}
-	}
-
-	err = t.tryIncreaseBandwidth(ct, realTimeTransaction, taskID, task.OwnerUserID, task.Effort)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
-
-	deleteTaskMutation := mutation.NewDeleteTaskMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.taskDao,
-		task,
-	)
-	err = realTimeTransaction.ApplyMutation(ct, deleteTaskMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
-
-	err = t.threadDao.DeleteThread(ct, task.CommentsThreadID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
-
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
-
-	return task, nil
+	return task, err
 }
 
 func (t Task) moveTaskToUpcoming(ct context.Context, tx *realtime.Transaction, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
@@ -569,6 +605,7 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *realtime.Transaction, t
 		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
+		t.taskDaoV2,
 		task,
 	)
 	err = tx.ApplyMutation(ct, updateTaskMutation)
@@ -602,6 +639,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
+		t.taskDaoV2,
 		task,
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
@@ -669,6 +707,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			t.dataCollector,
 			t.stateSyncer,
 			t.taskDao,
+			t.taskDaoV2,
 			inProgressTask,
 		)
 		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
@@ -684,6 +723,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
+		t.taskDaoV2,
 		task,
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
@@ -717,6 +757,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
+		t.taskDaoV2,
 		task,
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
@@ -811,6 +852,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		t.dataCollector,
 		t.stateSyncer,
 		t.taskDao,
+		t.taskDaoV2,
 		task,
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
@@ -978,25 +1020,39 @@ func NewTask(
 	stateSyncer *realtime.StateSyncer,
 	activityCache cache.Activity,
 	taskDao dao.Task,
+	taskDaoV2 daov2.Task,
 	threadDao dao.Thread,
+	threadDaoV2 daov2.Thread,
 	sprintDao dao.Sprint,
+	sprintDaoV2 daov2.Sprint,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
+	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
 	sprintParticipantDao dao.SprintParticipant,
+	sprintParticipantDaoV2 daov2.SprintParticipant,
 	sprintTaskRelationDao dao.SprintTaskRelation,
+	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 	threadService Thread,
+	db *sql.DB,
 ) Task {
 	return Task{
-		dataCollector:           dataCollector,
-		cloudClientRegistry:     cloudClientRegistry,
-		authorizer:              authorizer,
-		stateSyncer:             stateSyncer,
-		activityCache:           activityCache,
-		taskDao:                 taskDao,
-		threadDao:               threadDao,
-		sprintDao:               sprintDao,
-		taskAwaitForRelationDao: taskAwaitForRelationDao,
-		sprintParticipantDao:    sprintParticipantDao,
-		sprintTaskRelationDao:   sprintTaskRelationDao,
-		threadService:           threadService,
+		dataCollector:             dataCollector,
+		cloudClientRegistry:       cloudClientRegistry,
+		authorizer:                authorizer,
+		stateSyncer:               stateSyncer,
+		activityCache:             activityCache,
+		taskDao:                   taskDao,
+		taskDaoV2:                 taskDaoV2,
+		threadDao:                 threadDao,
+		threadDaoV2:               threadDaoV2,
+		sprintDao:                 sprintDao,
+		sprintDaoV2:               sprintDaoV2,
+		taskAwaitForRelationDao:   taskAwaitForRelationDao,
+		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,
+		sprintParticipantDao:      sprintParticipantDao,
+		sprintParticipantDaoV2:    sprintParticipantDaoV2,
+		sprintTaskRelationDao:     sprintTaskRelationDao,
+		sprintTaskRelationDaoV2:   sprintTaskRelationDaoV2,
+		threadService:             threadService,
+		db:                        db,
 	}
 }

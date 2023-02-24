@@ -84,9 +84,8 @@ func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) *errs
 	return nil
 }
 
-func (t *Transaction) AppendMutation(mutation Mutation) *errs.Error {
+func (t *Transaction) AppendMutation(mutation Mutation) {
 	t.mutations = append(t.mutations, mutation)
-	return nil
 }
 
 func (t *Transaction) GetMutations() []Mutation {
@@ -150,12 +149,7 @@ func (t *Transaction) Notify(ct context.Context) *errs.Error {
 
 	clientTransactions := make(map[uint64]*ClientTransaction)
 	for _, mutation := range t.mutations {
-		clientNotifiers, err := mutation.GetClientNotifiers(ct)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return err
-		}
-
+		clientNotifiers := mutation.GetClientNotifiersV2()
 		for _, clientNotifier := range clientNotifiers {
 			clientID := clientNotifier.getClientID()
 			_, ok := clientTransactions[clientID]
