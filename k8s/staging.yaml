@@ -150,4 +150,4 @@ spec:
           passHostHeader: true
           scheme: h2c
   tls:
-    secretName: certs-teamyapp.com
+    secretName: cert-teamyapp.com
