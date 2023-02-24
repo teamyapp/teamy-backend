@@ -2,8 +2,8 @@
 ALTER TABLE app
 	DROP COLUMN apisecret,
     DROP COLUMN app_name,
-	ADD COLUMN api_secret VARCHAR(128) NOT NULL,
-	ADD COLUMN name VARCHAR(100) NOT NULL;
+    ADD COLUMN api_secret VARCHAR(128) NOT NULL,
+    ADD COLUMN name VARCHAR(100) NOT NULL;
 
 -- +migrate Down
 ALTER TABLE app

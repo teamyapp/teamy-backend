@@ -215,7 +215,8 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 		appID,
 	)
 
-	if errors.Is(row.Err(), sql.ErrNoRows) {
+	err := row.Err()
+	if errors.Is(err, sql.ErrNoRows) {
 		internalErr := &errs.Error{
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("max VersionNumber not found: appID=%v", appID),
@@ -224,18 +225,23 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 		return 0, internalErr
 	}
 
-	if row.Err() != nil {
+	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
-			EmbedErr: row.Err(),
+			EmbedErr: err,
 		}
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
-	err := row.Scan(&maxVersion)
+	err = row.Scan(&maxVersion)
 	if err != nil {
-		return 0, nil
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return 0, internalErr
 	}
 
 	return maxVersion, nil

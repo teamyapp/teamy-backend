@@ -42,7 +42,7 @@ func (a App) Name() string {
 }
 
 func (a App) Versions(ct context.Context) ([]AppVersion, error) {
-	appVersions, err := a.deps.appService.FindAppVersionByAppId(ct, a.app.ID)
+	appVersions, err := a.deps.appService.FindAppVersionByAppID(ct, a.app.ID)
 	if err != nil {
 		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
@@ -54,7 +54,7 @@ func (a App) Versions(ct context.Context) ([]AppVersion, error) {
 }
 
 func (a App) TeamInstallations(ct context.Context) ([]AppTeamInstallation, error) {
-	appTeamInstallations, err := a.deps.appService.FindAppTeamInstallationsByAppId(ct, a.app.ID)
+	appTeamInstallations, err := a.deps.appService.FindAppTeamInstallationsByAppID(ct, a.app.ID)
 	if err != nil {
 		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
