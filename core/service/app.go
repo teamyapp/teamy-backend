@@ -283,11 +283,27 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 					Message: fmt.Sprintf(
 						"Cannot rollback app version: appID=%v, prevAppVesion=%v newAppVersion=%v", appID, *app.ActiveVersionNumber, *input.ActiveVersionNumber),
 				}
-				a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+				a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return entity.App{}, internalErr
 			}
 
 			if *app.ActiveVersionNumber < *input.ActiveVersionNumber {
+				appVersion, internalErr := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, *input.ActiveVersionNumber)
+				if internalErr != nil {
+					a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+					return entity.App{}, internalErr
+				}
+
+				if !appVersion.IsPublic {
+					internalErr = &errs.Error{
+						Code: errs.InvalidOperation,
+						Message: fmt.Sprintf(
+							"Cannot activate a non-public app version: appID=%v, appVersion=%v", appID, *input.ActiveVersionNumber),
+					}
+					a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+					return entity.App{}, internalErr
+				}
+
 				// roll forward app installation automatically
 				a.rollForwardAppInstallations(ct, appID, *input.ActiveVersionNumber)
 			}
@@ -491,10 +507,23 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		}
 	}
 
-	av, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
-	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.AppVersion{}, err
+	av, internalErr := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.AppVersion{}, internalErr
+	}
+
+	app, internalErr := a.appDao.FindAppByID(ct, appID)
+	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.AppVersion{}, internalErr
+	}
+	if app.ActiveVersionNumber != nil && *app.ActiveVersionNumber == versionNumber && !input.IsPublic {
+		internalErr = &errs.Error{
+			Code:    errs.InvalidOperation,
+			Message: "cannot mark an activated version as non-public",
+		}
+		return entity.AppVersion{}, internalErr
 	}
 
 	av.HasUIExtension = input.HasUIExtension
@@ -504,10 +533,10 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 	av.UIExtensionEntrypointPath = input.UIExtensionEntryPointPath
 	now := time.Now().UTC()
 	av.UpdateAt = &now
-	err = a.appVersionDao.UpdateAppVersion(ct, av)
-	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.AppVersion{}, err
+	internalErr = a.appVersionDao.UpdateAppVersion(ct, av)
+	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.AppVersion{}, internalErr
 	}
 
 	return av, nil
@@ -850,7 +879,7 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 	return ai, nil
 }
 
-// rollForwardAppInstallations moves all app installations to a new version
+// rollForwardAppInstallations moves all app installations to a newly enabled version
 func (a App) rollForwardAppInstallations(ct context.Context, appID uint64, activeVersionNumber int32) *errs.Error {
 	appInstallations, err := a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
 	if err != nil {
@@ -871,7 +900,6 @@ func (a App) rollForwardAppInstallations(ct context.Context, appID uint64, activ
 	return nil
 }
 
-// isAppVisibleToTeam check if an app is visible to a team
 func (a App) isAppVisibleToTeam(ct context.Context, app entity.App, teamID uint64) bool {
 	appVersions, err := a.appVersionDao.FindAppVersionsByAppID(ct, app.ID)
 	if err != nil {
@@ -890,7 +918,6 @@ func (a App) isAppVisibleToTeam(ct context.Context, app entity.App, teamID uint6
 	return false
 }
 
-// isAppVersionVisibleToTeam check if an app version is visible to a team
 func (a App) isAppVersionVisibleToTeam(ct context.Context, app entity.App, appVersion entity.AppVersion, teamID uint64) bool {
 	if app.ActiveVersionNumber != nil && appVersion.VersionNumber < *app.ActiveVersionNumber {
 		// if active version has been set, we should filter all old versions
@@ -907,6 +934,8 @@ func (a App) isAppVersionVisibleToTeam(ct context.Context, app entity.App, appVe
 
 			return false
 		}
+
+		return true
 	}
 
 	return true
