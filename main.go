@@ -66,6 +66,7 @@ func main() {
 		[]telemetry.LogInterceptor{
 			telemetry.NewCommitLogInterceptor(cfg.GitLongCommitHash),
 			telemetry.NewServiceLogInterceptor(strings.Join(serviceLabelsWithEnv, "/")),
+			telemetry.TraceLogInterceptor,
 			telemetry.RequestLogInterceptor,
 			realtime.MutationLogInterceptor,
 			telemetry.ClientLogInterceptor,
@@ -219,7 +220,9 @@ func startServiceRunner(
 	rn := runner.NewServiceRunnerBuilder(
 		dataCollector,
 		prom,
-		runnerConfig, []runner.Service{
+		runnerConfig,
+		fullServiceName,
+		[]runner.Service{
 			githubAppAPI,
 			graphQLAPI,
 			realTimeStateSyncAPI,
@@ -248,6 +251,8 @@ func newLineFormatter(environment env.Environment) telemetry.LineFormatter {
 			telemetry.SeverityProp,
 			telemetry.FileNameProp,
 			telemetry.LineNumberProp,
+			telemetry.TraceIDProp,
+			telemetry.SpanIDProp,
 			telemetry.RequestIDProp,
 			realtime.MutationIDProp,
 			telemetry.ClientIDProp,
