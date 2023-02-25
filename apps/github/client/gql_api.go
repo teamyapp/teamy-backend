@@ -14,7 +14,7 @@ const githubGraphQLAPIEndpoint = "https://api.github.com/graphql"
 
 type GraphQLAPI struct {
 	dataCollector telemetry.DataCollector
-	graphQLClient gql.Client
+	graphQLClient *gql.Client
 }
 
 type Node[Type any] struct {
@@ -79,7 +79,7 @@ type RepositoryOwnerNode struct {
 	Login string `json:"login"`
 }
 
-func (g *GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation Installation, nodeID string) (PullRequestNode, *errs.Error) {
+func (g GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation *Installation, nodeID string) (PullRequestNode, *errs.Error) {
 	queryOptions := gql.QueryOptions{
 		Query: `
 		query getPullRequest($nodeId:ID!) {
@@ -122,9 +122,9 @@ func (g *GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation Ins
 	return res.Data.Node, nil
 }
 
-func (g *GraphQLAPI) query(
+func (g GraphQLAPI) query(
 	ct context.Context,
-	installation Installation,
+	installation *Installation,
 	queryOptions gql.QueryOptions,
 	gqlResponse interface{},
 ) *errs.Error {
@@ -138,8 +138,8 @@ func (g *GraphQLAPI) query(
 	return g.graphQLClient.Query(ct, githubGraphQLAPIEndpoint, headers, queryOptions, gqlResponse)
 }
 
-func NewGraphQLAPI(dataCollector telemetry.DataCollector, graphQLClient gql.Client) *GraphQLAPI {
-	return &GraphQLAPI{
+func NewGraphQLAPI(dataCollector telemetry.DataCollector, graphQLClient *gql.Client) GraphQLAPI {
+	return GraphQLAPI{
 		dataCollector: dataCollector,
 		graphQLClient: graphQLClient,
 	}
