@@ -9,20 +9,37 @@ package dep
 import (
 	"database/sql"
 	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
+	"github.com/teamyapp/teamy-backend/apps/github/client"
 	api2 "github.com/teamyapp/teamy-backend/core/api"
 )
 
 // Injectors from wire.go:
 
-func InitGithubAppAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, config github.AppConfig, sqlDB *sql.DB) (github.AppAPI, error) {
+func InitGithubAppAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, httpClient web.HTTPClient, config github.AppConfig, githubAppPrivateKeyPEM GithubAppPrivateKeyPEM, sqlDB *sql.DB) (github.AppAPI, error) {
 	githubAppInstallState := sqldb.NewGithubAppInstallState(dataCollector, sqlDB)
 	githubAppInstallation := sqldb.NewGithubAppInstallation(dataCollector, sqlDB)
 	githubPullRequest := sqldb.NewGithubPullRequest(dataCollector, sqlDB)
 	githubCodeReview := sqldb.NewGithubCodeReview(dataCollector, sqlDB)
 	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
-	appAPI := github.NewAppAPI(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction)
+	gqlClient := gql.NewClient(dataCollector, httpClient)
+	graphQLAPI := client.NewGraphQLAPI(dataCollector, gqlClient)
+	githubApp, err := newGithubApp(dataCollector, config, githubAppPrivateKeyPEM)
+	if err != nil {
+		return github.AppAPI{}, err
+	}
+	appAPI := github.NewAppAPI(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction, graphQLAPI, githubApp)
 	return appAPI, nil
+}
+
+// wire.go:
+
+type GithubAppPrivateKeyPEM []byte
+
+func newGithubApp(dataCollector telemetry.DataCollector, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client.GithubApp, error) {
+	return client.NewGithubApp(dataCollector, config.AppID, []byte(privateKeyPEM))
 }

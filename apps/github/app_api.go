@@ -26,6 +26,7 @@ import (
 	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
+	"github.com/teamyapp/teamy-backend/apps/github/client"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -50,6 +51,8 @@ type AppAPI struct {
 	githubPullRequestDao        dao.GithubPullRequest
 	githubCodeReviewDao         dao.GithubCodeReview
 	githubRequiredUserActionDao dao.GithubRequiredUserAction
+	githubApp                   *client.GithubApp
+	githubGraphQLAPI            client.GraphQLAPI
 }
 
 var _ runner.Service = (*AppAPI)(nil)
@@ -993,6 +996,8 @@ func NewAppAPI(
 	githubPullRequestDao dao.GithubPullRequest,
 	githubCodeReviewDao dao.GithubCodeReview,
 	githubRequiredUserActionDao dao.GithubRequiredUserAction,
+	githubGraphQLAPI client.GraphQLAPI,
+	githubApp *client.GithubApp,
 ) AppAPI {
 	return AppAPI{
 		config:                      cfg,
@@ -1004,6 +1009,8 @@ func NewAppAPI(
 		githubPullRequestDao:        githubPullRequestDao,
 		githubCodeReviewDao:         githubCodeReviewDao,
 		githubRequiredUserActionDao: githubRequiredUserActionDao,
+		githubGraphQLAPI:            githubGraphQLAPI,
+		githubApp:                   githubApp,
 	}
 }
 

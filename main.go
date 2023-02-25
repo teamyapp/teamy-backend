@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,6 +25,7 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/web"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDI "github.com/teamyapp/teamy-backend/apps/inject"
@@ -165,11 +168,31 @@ func startServiceRunner(
 		return internalErr
 	}
 
+	httpClientMiddlewares := []middleware.Middleware[web.HTTPClient]{
+		middleware.ClientHTTPWithRequestID(dataCollector),
+	}
+	httpClient := middleware.WithMiddlewares[web.HTTPClient](
+		func(ct context.Context, req *http.Request) (*http.Response, error) {
+			return http.DefaultClient.Do(req)
+		}, httpClientMiddlewares)
+
+	privateKeyPEM, err := os.ReadFile(githubCfg.PrivateKeyPEMFilePath)
+	if err != nil {
+		internalErr = &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
+	}
+
 	githubAppAPI, err := appsDep.InitGithubAppAPI(
 		dataCollector,
 		cloudClientRegistry,
 		teamyClientRegistry,
+		httpClient,
 		githubCfg,
+		privateKeyPEM,
 		sqlDB)
 	if err != nil {
 		internalErr = &errs.Error{
