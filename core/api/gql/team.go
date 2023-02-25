@@ -142,7 +142,7 @@ func (t Team) Sprints(ct context.Context, args struct {
 }
 
 func (t Team) AppInstallations(ct context.Context) ([]AppTeamInstallation, error) {
-	appInstallations, err := t.deps.appService.FindAppInstallationsByTeamId(ct, t.team.ID)
+	appInstallations, err := t.deps.appService.FindAppInstallationsByTeamID(ct, t.team.ID)
 	if err != nil {
 		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)

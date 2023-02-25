@@ -6,6 +6,7 @@ import (
 	"time"
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -20,10 +21,22 @@ type App struct {
 	dataCollector            telemetry.DataCollector
 	cloudClientRegistry      *cloudAPI.ClientRegistry
 	authorizer               Authorizer
+	appDao                   dao.App
 	appVersionDao            dao.AppVersion
 	appTeamInstallationDao   dao.AppTeamInstallation
 	appVersionVisibleTeamDao dao.AppVersionVisibleTeam
 	teamDao                  dao.Team
+}
+
+type AppFilter struct {
+	AppID  *uint64
+	TeamID *uint64
+}
+
+type UpdateAppInput struct {
+	Name                *string
+	Description         *string
+	ActiveVersionNumber *int32
 }
 
 type UpdateAppVersionInput struct {
@@ -38,15 +51,57 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
-func (a App) FindAppTeamInstallationsByAppId(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
+func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
+	return a.appDao.FindAppByID(ct, appID)
+}
+
+func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *errs.Error) {
+	var apps []entity.App
+	if filter != nil {
+		if filter.AppID != nil {
+			app, err := a.appDao.FindAppByID(ct, *filter.AppID)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return nil, err
+			}
+
+			apps = append(apps, app)
+		} else {
+			var err *errs.Error
+			apps, err = a.appDao.FindAllApps(ct)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return nil, err
+			}
+		}
+
+		if filter.TeamID != nil {
+			// find all apps that are visible to the team
+			apps = collect.Filter(apps, func(app entity.App) bool {
+				return a.isAppVisibleToTeam(ct, app, *filter.TeamID)
+			})
+		}
+	} else {
+		var err *errs.Error
+		apps, err = a.appDao.FindAllApps(ct)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return nil, err
+		}
+	}
+
+	return apps, nil
+}
+
+func (a App) FindAppTeamInstallationsByAppID(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	return a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
 }
 
-func (a App) FindAppInstallationsByTeamId(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
+func (a App) FindAppInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
 	return a.appTeamInstallationDao.FindAppTeamInstallationsByTeamID(ct, teamID)
 }
 
-func (a App) FindAppVersionByAppId(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
+func (a App) FindAppVersionByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
 	return a.appVersionDao.FindAppVersionsByAppID(ct, appID)
 }
 
@@ -71,6 +126,300 @@ func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versio
 	}
 
 	return teams, nil
+}
+
+func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := &errs.Error{
+			Code:    errs.Unauthenticated,
+			Message: "user ID not found",
+		}
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.App{}, internalErr
+	}
+
+	genAppIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "appID"}
+	genAppIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppIDReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.App{}, internalErr
+	}
+
+	genAppSecretReq := &proto.GenerateUniqueStringRequest{SequenceName: "apiSecret"}
+	genAppSecretRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueString(ct, genAppSecretReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.App{}, internalErr
+	}
+
+	app := entity.App{
+		ID:                genAppIDRes.UniqueNumber,
+		Name:              name,
+		Description:       "",
+		APISecret:         genAppSecretRes.UniqueString,
+		InstallationCount: 0,
+		CreatorUserID:     userID,
+		CreatedAt:         time.Now().UTC(),
+	}
+	err := a.appDao.CreateApp(ct, app)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.App{}, err
+	}
+
+	if feature.EnableAuthorization {
+		err = a.authorizer.registerResource(ct, authorization.AppResourceType, app.ID)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return entity.App{}, err
+		}
+
+		// When create a new app,
+		// 1) Resource: register app resource
+		// 2) UserGroup: create AppAdmin and AppMember userGroups
+		// 3) UserGroupMember:
+		// 		add app creator to AppAdmin group
+		// 		add app creator to AppMember group
+		// 4) Permissions:
+		//		assign AppAdmin permissions to `AppAdmin` group
+		//		assign AppMember permissions to app creator
+		appAdminUserGroupName := fmt.Sprintf("App%d/Admin", app.ID)
+		appAdminDescription := fmt.Sprintf("Admins for %s", appAdminUserGroupName)
+		appAdminOperations := make([]authorization.ResourceOperation, 0)
+		for _, appAdminResourceTypeOperation := range authorization.AppAdminResourceTypeOperations {
+			appAdminOperations = append(appAdminOperations, authorization.ResourceOperation{
+				ResourceType: appAdminResourceTypeOperation.ResourceType,
+				Operation:    appAdminResourceTypeOperation.Operation,
+				ResourceID:   app.ID,
+			})
+		}
+
+		_, err := a.authorizer.createUserGroupAndAssignPermissions(ct,
+			userID,
+			appAdminUserGroupName,
+			&appAdminDescription,
+			appAdminOperations,
+		)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return entity.App{}, err
+		}
+
+		appMemberUserGroupName := fmt.Sprintf("App%d/Member", app.ID)
+		appMemberDescription := fmt.Sprintf("Members for %s", appMemberUserGroupName)
+		appMemberOperations := make([]authorization.ResourceOperation, 0)
+		for _, appMemberResourceTypeOperation := range authorization.AppMemberResourceTypeOperations {
+			appMemberOperations = append(appMemberOperations, authorization.ResourceOperation{
+				ResourceType: appMemberResourceTypeOperation.ResourceType,
+				Operation:    appMemberResourceTypeOperation.Operation,
+				ResourceID:   app.ID,
+			})
+		}
+
+		_, err = a.authorizer.createUserGroupAndAssignPermissions(ct,
+			userID,
+			appMemberUserGroupName,
+			&appMemberDescription,
+			appMemberOperations,
+		)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return entity.App{}, err
+		}
+	}
+
+	return app, nil
+}
+
+func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (entity.App, *errs.Error) {
+	if feature.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			internalErr := &errs.Error{
+				Code:    errs.Unauthenticated,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.App{}, internalErr
+		}
+
+		query := authorization.NewUpdateAppQuery(userID, appID)
+		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		if err != nil {
+			a.authorizer.dataCollector.Logger.ErrorWithContext(ct, err)
+			return entity.App{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
+			}
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.App{}, internalErr
+		}
+	}
+
+	app, err := a.appDao.FindAppByID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.App{}, err
+	}
+
+	if input.Name != nil {
+		app.Name = *input.Name
+	}
+	if input.Description != nil {
+		app.Description = *input.Description
+	}
+	if input.ActiveVersionNumber != nil {
+		if app.ActiveVersionNumber != nil {
+			if *app.ActiveVersionNumber > *input.ActiveVersionNumber {
+				internalErr := &errs.Error{
+					Code: errs.InvalidOperation,
+					Message: fmt.Sprintf(
+						"Cannot rollback app version: appID=%v, prevAppVesion=%v newAppVersion=%v", appID, *app.ActiveVersionNumber, *input.ActiveVersionNumber),
+				}
+				a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return entity.App{}, internalErr
+			}
+
+			if *app.ActiveVersionNumber < *input.ActiveVersionNumber {
+				appVersion, internalErr := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, *input.ActiveVersionNumber)
+				if internalErr != nil {
+					a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+					return entity.App{}, internalErr
+				}
+
+				if !appVersion.IsPublic {
+					internalErr = &errs.Error{
+						Code: errs.InvalidOperation,
+						Message: fmt.Sprintf(
+							"Cannot activate a non-public app version: appID=%v, appVersion=%v", appID, *input.ActiveVersionNumber),
+					}
+					a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+					return entity.App{}, internalErr
+				}
+
+				// roll forward app installation automatically
+				a.rollForwardAppInstallations(ct, appID, *input.ActiveVersionNumber)
+			}
+		}
+
+		app.ActiveVersionNumber = input.ActiveVersionNumber
+	}
+
+	now := time.Now().UTC()
+	app.UpdatedAt = &now
+	err = a.appDao.UpdateApp(ct, app)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.App{}, err
+	}
+
+	return app, nil
+}
+
+func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *errs.Error) {
+	if feature.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			internalErr := &errs.Error{
+				Code:    errs.Unauthenticated,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.App{}, internalErr
+		}
+
+		query := authorization.NewRefreshAppSecretQuery(userID, appID)
+		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		if err != nil {
+			a.authorizer.dataCollector.Logger.ErrorWithContext(ct, err)
+			return entity.App{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
+			}
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.App{}, internalErr
+		}
+	}
+
+	app, err := a.appDao.FindAppByID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.App{}, err
+	}
+
+	genAppSecretReq := &proto.GenerateUniqueStringRequest{SequenceName: "apiSecret"}
+	genAppSecretRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueString(ct, genAppSecretReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.App{}, internalErr
+	}
+
+	app.APISecret = genAppSecretRes.UniqueString
+	err = a.appDao.UpdateApp(ct, app)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.App{}, err
+	}
+
+	return app, nil
+}
+
+func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Error) {
+	if feature.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			internalErr := &errs.Error{
+				Code:    errs.Unauthenticated,
+				Message: "user ID not found",
+			}
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.App{}, internalErr
+		}
+
+		query := authorization.NewDeleteAppQuery(userID, appID)
+		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		if err != nil {
+			a.authorizer.dataCollector.Logger.ErrorWithContext(ct, err)
+			return entity.App{}, err
+		}
+
+		if !hasPermission {
+			internalErr := &errs.Error{
+				Code:    errs.PermissionDenied,
+				Message: fmt.Sprintf("authorization query: %v", query),
+			}
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return entity.App{}, internalErr
+		}
+	}
+
+	app, err := a.appDao.FindAppByID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.App{}, err
+	}
+
+	err = a.appDao.DeleteApp(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.App{}, err
+	}
+
+	// TODO(yuhang): delete registered app resource and groups
+
+	return app, nil
 }
 
 func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersion, *errs.Error) {
@@ -158,10 +507,23 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		}
 	}
 
-	av, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
-	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.AppVersion{}, err
+	av, internalErr := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.AppVersion{}, internalErr
+	}
+
+	app, internalErr := a.appDao.FindAppByID(ct, appID)
+	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.AppVersion{}, internalErr
+	}
+	if app.ActiveVersionNumber != nil && *app.ActiveVersionNumber == versionNumber && !input.IsPublic {
+		internalErr = &errs.Error{
+			Code:    errs.InvalidOperation,
+			Message: "cannot mark an activated version as non-public",
+		}
+		return entity.AppVersion{}, internalErr
 	}
 
 	av.HasUIExtension = input.HasUIExtension
@@ -171,10 +533,10 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 	av.UIExtensionEntrypointPath = input.UIExtensionEntryPointPath
 	now := time.Now().UTC()
 	av.UpdateAt = &now
-	err = a.appVersionDao.UpdateAppVersion(ct, av)
-	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.AppVersion{}, err
+	internalErr = a.appVersionDao.UpdateAppVersion(ct, av)
+	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.AppVersion{}, internalErr
 	}
 
 	return av, nil
@@ -215,7 +577,21 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		return entity.AppVersion{}, err
 	}
 
-	// TODO(yuhang): check if version to delete is the active version of the app after implementing app APIs
+	app, err := a.appDao.FindAppByID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.AppVersion{}, err
+	}
+
+	if app.ActiveVersionNumber != nil && *app.ActiveVersionNumber == versionNumber {
+		internalErr := &errs.Error{
+			Code: errs.InvalidOperation,
+			Message: fmt.Sprintf(
+				"Cannot delete active version: appID=%v", appID),
+		}
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.AppVersion{}, internalErr
+	}
 
 	// TODO(yuhang): below operations should be atomic by wrapping in one txn. We'll implement that after adding our
 	// own transaction library.
@@ -384,6 +760,12 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		}
 	}
 
+	app, err := a.appDao.FindAppByID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.AppTeamInstallation{}, err
+	}
+
 	ai := entity.AppTeamInstallation{
 		AppID:                appID,
 		InstalledTeamID:      teamID,
@@ -392,7 +774,14 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		InstalledAt:          time.Now(),
 	}
 
-	err := a.appTeamInstallationDao.CreateAppTeamInstallation(ct, ai)
+	err = a.appTeamInstallationDao.CreateAppTeamInstallation(ct, ai)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return entity.AppTeamInstallation{}, err
+	}
+
+	app.InstallationCount = app.InstallationCount + 1
+	err = a.appDao.UpdateApp(ct, app)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
@@ -490,10 +879,73 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 	return ai, nil
 }
 
+// rollForwardAppInstallations moves all app installations to a newly enabled version
+func (a App) rollForwardAppInstallations(ct context.Context, appID uint64, activeVersionNumber int32) *errs.Error {
+	appInstallations, err := a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	for _, appInstallation := range appInstallations {
+		if appInstallation.EnabledVersionNumber < activeVersionNumber {
+			appInstallation.EnabledVersionNumber = activeVersionNumber
+			err = a.appTeamInstallationDao.UpdateAppTeamInstallation(ct, appInstallation)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (a App) isAppVisibleToTeam(ct context.Context, app entity.App, teamID uint64) bool {
+	appVersions, err := a.appVersionDao.FindAppVersionsByAppID(ct, app.ID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return false
+	}
+
+	appVersions = collect.Filter(appVersions, func(appVersion entity.AppVersion) bool {
+		return a.isAppVersionVisibleToTeam(ct, app, appVersion, teamID)
+	})
+
+	if len(appVersions) > 0 {
+		return true
+	}
+
+	return false
+}
+
+func (a App) isAppVersionVisibleToTeam(ct context.Context, app entity.App, appVersion entity.AppVersion, teamID uint64) bool {
+	if app.ActiveVersionNumber != nil && appVersion.VersionNumber < *app.ActiveVersionNumber {
+		// if active version has been set, we should filter all old versions
+		return false
+	}
+
+	if !appVersion.IsPublic {
+		// if app version not public, we need to check if team is in visible list
+		_, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeam(ct, app.ID, appVersion.VersionNumber, teamID)
+		if err != nil {
+			if err.Code != errs.NotFound {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+			}
+
+			return false
+		}
+
+		return true
+	}
+
+	return true
+}
+
 func NewApp(
 	dataCollector telemetry.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	appDao dao.App,
 	appVersionDao dao.AppVersion,
 	appTeamInstallationDao dao.AppTeamInstallation,
 	appVersionVisibleTeamDao dao.AppVersionVisibleTeam,
@@ -503,6 +955,7 @@ func NewApp(
 		dataCollector,
 		cloudClientRegistry,
 		authorizer,
+		appDao,
 		appVersionDao,
 		appTeamInstallationDao,
 		appVersionVisibleTeamDao,

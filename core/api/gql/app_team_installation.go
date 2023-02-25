@@ -13,8 +13,14 @@ type AppTeamInstallation struct {
 	appTeamInstallation entity.AppTeamInstallation
 }
 
-func (a AppTeamInstallation) App() (App, error) {
-	panic("implement me")
+func (a AppTeamInstallation) App(ct context.Context) (App, error) {
+	app, err := a.deps.appService.FindAppByID(ct, a.appTeamInstallation.AppID)
+	if err != nil {
+		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		return App{}, errs.ToResolverErr(err)
+	}
+
+	return newApp(a.deps, app), nil
 }
 
 func (a AppTeamInstallation) EnabledVersion(ct context.Context) (AppVersion, error) {

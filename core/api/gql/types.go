@@ -153,6 +153,27 @@ func fromGraphQLInvitationFilterPtr(filter *InvitationFilter) (*service.Invitati
 	}, nil
 }
 
+func fromGraphQLAppFilterPtr(filter *AppFilter) (*service.AppFilter, error) {
+	if filter == nil {
+		return nil, nil
+	}
+
+	appID, err := fromGraphQLIDPtr(filter.AppID)
+	if err != nil {
+		return nil, err
+	}
+
+	teamID, err := fromGraphQLIDPtr(filter.TeamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.AppFilter{
+		AppID:  appID,
+		TeamID: teamID,
+	}, nil
+}
+
 func fromGraphQLDurationPtr(duration *scalar.Duration) *time.Duration {
 	if duration == nil {
 		return nil
