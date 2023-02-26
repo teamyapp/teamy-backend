@@ -90,6 +90,13 @@ spec:
               value: http://cloud/identity
             - name: APPS_GITHUB_APP_NAME
               value: teamy-apps-staging
+            - name: APPS_GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: apps
+                  key: github-app-id
+            - name: APPS_GITHUB_PRIVATE_KEY_PEM_FILE_PATH
+              value: /var/lib/vault/github/private-key.pem
             - name: APPS_GITHUB_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
@@ -105,6 +112,17 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: internal-service-account-api-token
+          volumeMounts:
+            - mountPath: /var/lib/vault
+              name: vault
+      volumes:
+        - name: vault
+          secret:
+            secretName: apps
+            defaultMode: 0600
+            items:
+              - key: github-private-key.pem
+                path: github/private-key.pem
 ---
 apiVersion: v1
 kind: Service
