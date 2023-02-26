@@ -93,6 +93,7 @@ spec:
             - name: APPS_GITHUB_APP_ID
               valueFrom:
                 secretKeyRef:
+                  name: apps
                   key: github-app-id
             - name: APPS_GITHUB_PRIVATE_KEY_PEM_FILE_PATH
               value: /var/lib/vault/github/private-key.pem
