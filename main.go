@@ -25,7 +25,6 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/web"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDI "github.com/teamyapp/teamy-backend/apps/inject"
@@ -168,13 +167,9 @@ func startServiceRunner(
 		return internalErr
 	}
 
-	httpClientMiddlewares := []middleware.Middleware[web.HTTPClient]{
-		middleware.ClientHTTPWithRequestID(dataCollector),
+	httpClient := func(ct context.Context, req *http.Request) (*http.Response, error) {
+		return http.DefaultClient.Do(req)
 	}
-	httpClient := middleware.WithMiddlewares[web.HTTPClient](
-		func(ct context.Context, req *http.Request) (*http.Response, error) {
-			return http.DefaultClient.Do(req)
-		}, httpClientMiddlewares)
 
 	privateKeyPEM, err := os.ReadFile(githubCfg.PrivateKeyPEMFilePath)
 	if err != nil {
