@@ -92,7 +92,7 @@ func (g *GithubApp) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error)
 	return signedStr, nil
 }
 
-func NewGithubApp(dataCollector telemetry.DataCollector, appID string, privateKeyPEM []byte) (*GithubApp, *errs.Error) {
+func NewGithubApp(dataCollector telemetry.DataCollector, appID string, privateKeyPEM []byte) (*GithubApp, error) {
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyPEM)
 	if err != nil {
 		internalErr := &errs.Error{
@@ -100,7 +100,7 @@ func NewGithubApp(dataCollector telemetry.DataCollector, appID string, privateKe
 			EmbedErr: err,
 		}
 		dataCollector.Logger.Error(internalErr)
-		return nil, internalErr
+		return nil, internalErr.ToError()
 	}
 
 	return &GithubApp{

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,11 +167,27 @@ func startServiceRunner(
 		return internalErr
 	}
 
+	httpClient := func(ct context.Context, req *http.Request) (*http.Response, error) {
+		return http.DefaultClient.Do(req)
+	}
+
+	privateKeyPEM, err := os.ReadFile(githubCfg.PrivateKeyPEMFilePath)
+	if err != nil {
+		internalErr = &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return internalErr
+	}
+
 	githubAppAPI, err := appsDep.InitGithubAppAPI(
 		dataCollector,
 		cloudClientRegistry,
 		teamyClientRegistry,
+		httpClient,
 		githubCfg,
+		privateKeyPEM,
 		sqlDB)
 	if err != nil {
 		internalErr = &errs.Error{
