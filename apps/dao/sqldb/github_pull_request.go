@@ -31,7 +31,8 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(
 	    github_repository_owner,
 	    github_repository_name,
 	    github_pull_request_number,
-	    github_pull_request_url
+	    github_pull_request_url,
+	    github_organization_id
 	FROM apps_github_pull_request
 	WHERE internal_task_id = $1;
 `,
@@ -43,6 +44,7 @@ func (g GithubPullRequest) FindPullRequestByInternalTaskID(
 			&pullRequest.RepositoryName,
 			&pullRequest.Number,
 			&pullRequest.URL,
+			&pullRequest.OrganizationID,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -79,7 +81,8 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 	    github_repository_owner,
 	    github_repository_name,
 	    github_pull_request_number,
-	    github_pull_request_url
+	    github_pull_request_url,
+	    github_organization_id
 	FROM apps_github_pull_request
 	WHERE github_pull_request_node_id = $1;
 `,
@@ -91,6 +94,7 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 			&pullRequest.RepositoryName,
 			&pullRequest.Number,
 			&pullRequest.URL,
+			&pullRequest.OrganizationID,
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -128,9 +132,10 @@ func (g GithubPullRequest) CreatePullRequest(
 	 	github_repository_owner,
 	    github_repository_name,
 	    github_pull_request_number,
-	    github_pull_request_url
+	    github_pull_request_url,
+	 	github_organization_id
 	)
-	VALUES ($1, $2, $3, $4, $5, $6);
+	VALUES ($1, $2, $3, $4, $5, $6, $7);
 `,
 		pullRequest.InternalTaskID,
 		pullRequest.NodeID,
@@ -138,6 +143,7 @@ func (g GithubPullRequest) CreatePullRequest(
 		pullRequest.RepositoryName,
 		pullRequest.Number,
 		pullRequest.URL,
+		pullRequest.OrganizationID,
 	)
 
 	if err != nil {

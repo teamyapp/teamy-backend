@@ -619,6 +619,7 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 		RepositoryName:  evt.Repository.Name,
 		Number:          prEvt.Number,
 		URL:             prEvt.PullRequest.HtmlURL,
+		OrganizationID:  evt.Organization.ID,
 	}
 	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {

@@ -7,4 +7,5 @@ type GithubPullRequest struct {
 	RepositoryName  string
 	Number          int
 	URL             string
+	OrganizationID  uint64
 }
