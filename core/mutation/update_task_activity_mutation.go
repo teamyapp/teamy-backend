@@ -12,11 +12,12 @@ import (
 )
 
 type UpdateTaskActivityMutation struct {
-	dataCollector telemetry.DataCollector
-	stateSyncer   *realtime.StateSyncer
-	activityCache cache.Activity
-	id            uint64
-	taskActivity  entity.TaskActivity
+	dataCollector   telemetry.DataCollector
+	stateSyncer     *realtime.StateSyncer
+	activityCache   cache.Activity
+	id              uint64
+	taskActivity    entity.TaskActivity
+	clientNotifiers []*realtime.ClientNotifier
 }
 
 var _ realtime.Mutation = (*UpdateTaskActivityMutation)(nil)
@@ -26,13 +27,24 @@ func (u *UpdateTaskActivityMutation) GetID() uint64 {
 }
 
 func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
+	if err != nil {
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	return nil
 }
 
 func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	var err *errs.Error
+	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
+	if err != nil {
+		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	return err
 }
 
 func (u *UpdateTaskActivityMutation) Execute(ct context.Context) *errs.Error {
@@ -54,8 +66,7 @@ func (u *UpdateTaskActivityMutation) GetClientNotifiers(ct context.Context) ([]*
 }
 
 func (u *UpdateTaskActivityMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return u.clientNotifiers
 }
 
 func (u *UpdateTaskActivityMutation) ToMessage() realtime.MutationMessage {

@@ -100,7 +100,6 @@ func main() {
 		realTimeStateSyncer := dep.InitRealTimeStateSyncer(dataCollector, sqlDB)
 		return startServiceRunner(dataCollector, cfg, sqlDB, realTimeStateSyncer)
 	})
-
 	if err != nil {
 		dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: err})
 		panic(err)
