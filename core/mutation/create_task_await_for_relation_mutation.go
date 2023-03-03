@@ -7,17 +7,21 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateTaskAwaitForRelationMutation struct {
-	dataCollector           telemetry.DataCollector
-	stateSyncer             *realtime.StateSyncer
-	taskAwaitForRelationDao dao.TaskAwaitForRelation
-	taskDao                 dao.Task
-	id                      uint64
-	taskAwaitForRelation    entity.TaskAwaitForRelation
+	dataCollector             telemetry.DataCollector
+	stateSyncer               *realtime.StateSyncer
+	taskAwaitForRelationDao   dao.TaskAwaitForRelation
+	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
+	taskDao                   dao.Task
+	taskDaoV2                 daov2.Task
+	id                        uint64
+	taskAwaitForRelation      entity.TaskAwaitForRelation
+	clientNotifiers           []*realtime.ClientNotifier
 }
 
 var _ realtime.Mutation = (*CreateTaskAwaitForRelationMutation)(nil)
@@ -27,13 +31,29 @@ func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
 }
 
 func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	err := c.taskAwaitForRelationDaoV2.CreateRelation(ct, tx, c.taskAwaitForRelation)
+	if err != nil {
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	return nil
 }
 
 func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	task, err := c.taskDaoV2.FindTaskByID(ct, tx, c.taskAwaitForRelation.AwaitForTaskID)
+	if err != nil {
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	c.clientNotifiers, err = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
+	if err != nil {
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	return nil
 }
 
 func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {
@@ -61,8 +81,7 @@ func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Conte
 }
 
 func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return c.clientNotifiers
 }
 
 func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessage {
@@ -82,15 +101,19 @@ func NewCreateTaskAwaitForRelationMutation(
 	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
+	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
 	taskDao dao.Task,
+	taskDaoV2 daov2.Task,
 	taskAwaitForRelation entity.TaskAwaitForRelation,
 ) *CreateTaskAwaitForRelationMutation {
 	return &CreateTaskAwaitForRelationMutation{
-		dataCollector:           dataCollector,
-		stateSyncer:             stateSyncer,
-		taskAwaitForRelationDao: taskAwaitForRelationDao,
-		taskDao:                 taskDao,
-		id:                      stateSyncer.NextMutationID(),
-		taskAwaitForRelation:    taskAwaitForRelation,
+		dataCollector:             dataCollector,
+		stateSyncer:               stateSyncer,
+		taskAwaitForRelationDao:   taskAwaitForRelationDao,
+		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,
+		taskDao:                   taskDao,
+		taskDaoV2:                 taskDaoV2,
+		id:                        stateSyncer.NextMutationID(),
+		taskAwaitForRelation:      taskAwaitForRelation,
 	}
 }
