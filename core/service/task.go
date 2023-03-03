@@ -285,8 +285,8 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
-		rtTx.AppendMutation(createTaskMutation)
 
+		rtTx.AppendMutation(createTaskMutation)
 		return nil
 	})
 
@@ -684,9 +684,9 @@ func (t Task) moveTaskToUpcoming(ct context.Context, sqlTx *sql.Tx, rtTx *realti
 	} else {
 		task.Status = entity.TaskStatusTodo
 	}
+
 	now := time.Now()
 	task.UpdatedAt = &now
-
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
 		t.dataCollector,
 		t.stateSyncer,
@@ -728,6 +728,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 		} else {
 			task.Status = entity.TaskStatusTodo
 		}
+
 		now := time.Now()
 		task.UpdatedAt = &now
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
