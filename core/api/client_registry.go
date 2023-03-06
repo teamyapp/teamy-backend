@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/middleware"
+	"github.com/teamyapp/cloud/libs/network"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -43,15 +44,16 @@ func (c *ClientRegistry) SprintClient() proto.SprintClient {
 
 func NewClientRegistry(
 	dataCollector telemetry.DataCollector,
+	network network.Network,
 	clientGRPCMetrics middleware.ClientGRPCMetrics,
 	connCfg rpc.ConnectionConfig,
 	retry retry.Retry,
 ) (*ClientRegistry, *errs.Error) {
-	conn, err := rpc.NewClientConnection(dataCollector, clientGRPCMetrics, connCfg, retry)
+	conn, err := rpc.NewClientConnection(dataCollector, network, clientGRPCMetrics, connCfg, retry)
 	if err != nil {
 		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, &errs.Error{
-			Code:     rpc.ConnectionErr,
+			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
 	}

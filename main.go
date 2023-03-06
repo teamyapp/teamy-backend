@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
-	"io"
 	"math/rand"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,9 +13,9 @@ import (
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/errs"
-	tmio "github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/metrics"
 	"github.com/teamyapp/cloud/libs/middleware"
+	"github.com/teamyapp/cloud/libs/network"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
@@ -52,7 +49,7 @@ func main() {
 	}
 
 	lineFormatter := newLineFormatter(cfg.Environment)
-	logOutput, err := newLogOutput(cfg.Environment, fullServiceName)
+	logOutput, err := telemetry.NewLogOutput(cfg.Environment, fullServiceName)
 	if err != nil {
 		panic(err)
 	}
@@ -128,8 +125,10 @@ func startServiceRunner(
 	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, cfg.RequestRetryMaxCount)
 
 	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
+	nw := network.NewSocket()
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
+		nw,
 		prom,
 		rpc.ConnectionConfig{
 			Host:          cfg.CloudGRPCAPIHost,
@@ -151,6 +150,7 @@ func startServiceRunner(
 
 	teamyClientRegistry, internalErr := api.NewClientRegistry(
 		dataCollector,
+		nw,
 		prom,
 		rpc.ConnectionConfig{
 			Host:          cfg.TeamyAPIHost,
@@ -164,10 +164,6 @@ func startServiceRunner(
 	if internalErr != nil {
 		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return internalErr
-	}
-
-	httpClient := func(ct context.Context, req *http.Request) (*http.Response, error) {
-		return http.DefaultClient.Do(req)
 	}
 
 	privateKeyPEM, err := os.ReadFile(githubCfg.PrivateKeyPEMFilePath)
@@ -184,7 +180,7 @@ func startServiceRunner(
 		dataCollector,
 		cloudClientRegistry,
 		teamyClientRegistry,
-		httpClient,
+		http.DefaultClient,
 		githubCfg,
 		privateKeyPEM,
 		sqlDB)
@@ -236,6 +232,7 @@ func startServiceRunner(
 		sqlDB)
 	rn := runner.NewServiceRunnerBuilder(
 		dataCollector,
+		nw,
 		prom,
 		runnerConfig,
 		fullServiceName,
@@ -248,7 +245,7 @@ func startServiceRunner(
 			sprintRPCAPI,
 		}).
 		Build()
-	rn.Start()
+	rn.Start(nil)
 	return nil
 }
 
@@ -289,34 +286,4 @@ func newLineFormatter(environment env.Environment) telemetry.LineFormatter {
 	}
 
 	return telemetry.NewJSONLineFormatter()
-}
-
-func newLogOutput(environment env.Environment, serviceName string) (io.WriteCloser, *errs.Error) {
-	if environment == env.DevelopmentEnv {
-		logFileName := fmt.Sprintf("%v.log", serviceName)
-		logFilePath := getEnv("LOG_OUTPUT_FILE", filepath.Join("..", "logs", logFileName))
-		logDir := filepath.Dir(logFilePath)
-
-		// MkdirAll requires at least 700 permission:
-		// https://github.com/golang/go/issues/22323
-		err := os.MkdirAll(logDir, 0744)
-		if err != nil {
-			return nil, &errs.Error{
-				Code:     errs.OS,
-				EmbedErr: err,
-			}
-		}
-
-		file, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0640)
-		if err != nil {
-			return nil, &errs.Error{
-				Code:     errs.IO,
-				EmbedErr: err,
-			}
-		}
-
-		return tmio.NewMultiWriteCloser(file, os.Stdout), nil
-	}
-
-	return os.Stdout, nil
 }

@@ -13,35 +13,35 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type BackfillRPC struct {
+type BackFillRPC struct {
 	dataCollector   telemetry.DataCollector
-	backfillService service.Backfill
-	proto.UnimplementedBackfillServer
+	backFillService service.Backfill
+	proto.UnimplementedBackFillServer
 }
 
-var _ runner.Service = (*BackfillRPC)(nil)
-var _ proto.BackfillServer = (*BackfillRPC)(nil)
+var _ runner.Service = (*BackFillRPC)(nil)
+var _ proto.BackFillServer = (*BackFillRPC)(nil)
 
-func (b BackfillRPC) Start(runner *runner.ServiceRunner) *errs.Error {
+func (b BackFillRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
-		proto.RegisterBackfillServer(server, b)
+		proto.RegisterBackFillServer(server, b)
 	})
 	return nil
 }
 
-func (b BackfillRPC) BackfillPullRequestLinks(ct context.Context, in *proto.BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
+func (b BackFillRPC) BackFillPullRequestLinks(ct context.Context, in *proto.BackFillPullRequestLinksRequest) (*emptypb.Empty, error) {
 	panic("implement me")
 	return &emptypb.Empty{}, nil
 }
 
-func (b BackfillRPC) BackfillParticipantsBandwidth(ct context.Context, in *proto.BackfillParticipantsBandwidthRequest) (*emptypb.Empty, error) {
+func (b BackFillRPC) BackFillParticipantsBandwidth(ct context.Context, in *proto.BackFillParticipantsBandwidthRequest) (*emptypb.Empty, error) {
 	panic("implement me")
 	return &emptypb.Empty{}, nil
 }
 
-func NewBackfillRPC(dataCollector telemetry.DataCollector, backfillService service.Backfill) BackfillRPC {
-	return BackfillRPC{
+func NewBackFillRPC(dataCollector telemetry.DataCollector, backFillService service.Backfill) BackFillRPC {
+	return BackFillRPC{
 		dataCollector:   dataCollector,
-		backfillService: backfillService,
+		backFillService: backFillService,
 	}
 }

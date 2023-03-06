@@ -71,7 +71,7 @@ func (m Mutation) DeleteTeam(ct context.Context, args struct {
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
 		internalErr := &errs.Error{
-			Code: errs.InvalidArgument,
+			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
 		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)

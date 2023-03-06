@@ -4,8 +4,8 @@ import "time"
 
 type App struct {
 	ID                  uint64
-        Name             string
-        Description         string
+	Name                string
+	Description         string
 	APISecret           string
 	ActiveVersionNumber *int32
 	InstallationCount   uint64
