@@ -19,122 +19,122 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// BackfillClient is the client API for Backfill service.
+// BackFillClient is the client API for BackFill service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type BackfillClient interface {
-	BackfillPullRequestLinks(ctx context.Context, in *BackfillPullRequestLinksRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	BackfillParticipantsBandwidth(ctx context.Context, in *BackfillParticipantsBandwidthRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+type BackFillClient interface {
+	BackFillPullRequestLinks(ctx context.Context, in *BackFillPullRequestLinksRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	BackFillParticipantsBandwidth(ctx context.Context, in *BackFillParticipantsBandwidthRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
-type backfillClient struct {
+type backFillClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewBackfillClient(cc grpc.ClientConnInterface) BackfillClient {
-	return &backfillClient{cc}
+func NewBackFillClient(cc grpc.ClientConnInterface) BackFillClient {
+	return &backFillClient{cc}
 }
 
-func (c *backfillClient) BackfillPullRequestLinks(ctx context.Context, in *BackfillPullRequestLinksRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *backFillClient) BackFillPullRequestLinks(ctx context.Context, in *BackFillPullRequestLinksRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/Backfill/BackfillPullRequestLinks", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/BackFill/BackFillPullRequestLinks", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *backfillClient) BackfillParticipantsBandwidth(ctx context.Context, in *BackfillParticipantsBandwidthRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *backFillClient) BackFillParticipantsBandwidth(ctx context.Context, in *BackFillParticipantsBandwidthRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/Backfill/BackfillParticipantsBandwidth", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/BackFill/BackFillParticipantsBandwidth", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// BackfillServer is the server API for Backfill service.
-// All implementations must embed UnimplementedBackfillServer
+// BackFillServer is the server API for BackFill service.
+// All implementations must embed UnimplementedBackFillServer
 // for forward compatibility
-type BackfillServer interface {
-	BackfillPullRequestLinks(context.Context, *BackfillPullRequestLinksRequest) (*emptypb.Empty, error)
-	BackfillParticipantsBandwidth(context.Context, *BackfillParticipantsBandwidthRequest) (*emptypb.Empty, error)
-	mustEmbedUnimplementedBackfillServer()
+type BackFillServer interface {
+	BackFillPullRequestLinks(context.Context, *BackFillPullRequestLinksRequest) (*emptypb.Empty, error)
+	BackFillParticipantsBandwidth(context.Context, *BackFillParticipantsBandwidthRequest) (*emptypb.Empty, error)
+	mustEmbedUnimplementedBackFillServer()
 }
 
-// UnimplementedBackfillServer must be embedded to have forward compatible implementations.
-type UnimplementedBackfillServer struct {
+// UnimplementedBackFillServer must be embedded to have forward compatible implementations.
+type UnimplementedBackFillServer struct {
 }
 
-func (UnimplementedBackfillServer) BackfillPullRequestLinks(context.Context, *BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BackfillPullRequestLinks not implemented")
+func (UnimplementedBackFillServer) BackFillPullRequestLinks(context.Context, *BackFillPullRequestLinksRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BackFillPullRequestLinks not implemented")
 }
-func (UnimplementedBackfillServer) BackfillParticipantsBandwidth(context.Context, *BackfillParticipantsBandwidthRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BackfillParticipantsBandwidth not implemented")
+func (UnimplementedBackFillServer) BackFillParticipantsBandwidth(context.Context, *BackFillParticipantsBandwidthRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BackFillParticipantsBandwidth not implemented")
 }
-func (UnimplementedBackfillServer) mustEmbedUnimplementedBackfillServer() {}
+func (UnimplementedBackFillServer) mustEmbedUnimplementedBackFillServer() {}
 
-// UnsafeBackfillServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to BackfillServer will
+// UnsafeBackFillServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to BackFillServer will
 // result in compilation errors.
-type UnsafeBackfillServer interface {
-	mustEmbedUnimplementedBackfillServer()
+type UnsafeBackFillServer interface {
+	mustEmbedUnimplementedBackFillServer()
 }
 
-func RegisterBackfillServer(s grpc.ServiceRegistrar, srv BackfillServer) {
-	s.RegisterService(&Backfill_ServiceDesc, srv)
+func RegisterBackFillServer(s grpc.ServiceRegistrar, srv BackFillServer) {
+	s.RegisterService(&BackFill_ServiceDesc, srv)
 }
 
-func _Backfill_BackfillPullRequestLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BackfillPullRequestLinksRequest)
+func _BackFill_BackFillPullRequestLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackFillPullRequestLinksRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BackfillServer).BackfillPullRequestLinks(ctx, in)
+		return srv.(BackFillServer).BackFillPullRequestLinks(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Backfill/BackfillPullRequestLinks",
+		FullMethod: "/BackFill/BackFillPullRequestLinks",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackfillServer).BackfillPullRequestLinks(ctx, req.(*BackfillPullRequestLinksRequest))
+		return srv.(BackFillServer).BackFillPullRequestLinks(ctx, req.(*BackFillPullRequestLinksRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backfill_BackfillParticipantsBandwidth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BackfillParticipantsBandwidthRequest)
+func _BackFill_BackFillParticipantsBandwidth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackFillParticipantsBandwidthRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BackfillServer).BackfillParticipantsBandwidth(ctx, in)
+		return srv.(BackFillServer).BackFillParticipantsBandwidth(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Backfill/BackfillParticipantsBandwidth",
+		FullMethod: "/BackFill/BackFillParticipantsBandwidth",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackfillServer).BackfillParticipantsBandwidth(ctx, req.(*BackfillParticipantsBandwidthRequest))
+		return srv.(BackFillServer).BackFillParticipantsBandwidth(ctx, req.(*BackFillParticipantsBandwidthRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Backfill_ServiceDesc is the grpc.ServiceDesc for Backfill service.
+// BackFill_ServiceDesc is the grpc.ServiceDesc for BackFill service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Backfill_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Backfill",
-	HandlerType: (*BackfillServer)(nil),
+var BackFill_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "BackFill",
+	HandlerType: (*BackFillServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "BackfillPullRequestLinks",
-			Handler:    _Backfill_BackfillPullRequestLinks_Handler,
+			MethodName: "BackFillPullRequestLinks",
+			Handler:    _BackFill_BackFillPullRequestLinks_Handler,
 		},
 		{
-			MethodName: "BackfillParticipantsBandwidth",
-			Handler:    _Backfill_BackfillParticipantsBandwidth_Handler,
+			MethodName: "BackFillParticipantsBandwidth",
+			Handler:    _BackFill_BackFillParticipantsBandwidth_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

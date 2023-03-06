@@ -4,16 +4,16 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/teamy-backend/core/api/proto";
 
-service Backfill {
-	rpc BackfillPullRequestLinks(BackfillPullRequestLinksRequest) returns (google.protobuf.Empty);
-	rpc BackfillParticipantsBandwidth(BackfillParticipantsBandwidthRequest) returns (google.protobuf.Empty);
+service BackFill {
+	rpc BackFillPullRequestLinks(BackFillPullRequestLinksRequest) returns (google.protobuf.Empty);
+	rpc BackFillParticipantsBandwidth(BackFillParticipantsBandwidthRequest) returns (google.protobuf.Empty);
 }
 
-message BackfillPullRequestLinksRequest {
+message BackFillPullRequestLinksRequest {
 	optional uint64 teamId = 1;
 }
 
-message BackfillParticipantsBandwidthRequest {
+message BackFillParticipantsBandwidthRequest {
 	optional uint64 teamId = 1;
 	optional uint64 sprintId = 2;
 }
