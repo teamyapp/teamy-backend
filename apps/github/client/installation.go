@@ -19,7 +19,7 @@ const (
 type Installation struct {
 	dataCollector telemetry.DataCollector
 	app           *GithubApp
-	id            string
+	id            int
 	accessToken   *string
 	expireAt      *time.Time
 }
@@ -127,7 +127,7 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 	return body.Token, nil
 }
 
-func newInstallation(dataCollector telemetry.DataCollector, app *GithubApp, id string) *Installation {
+func newInstallation(dataCollector telemetry.DataCollector, app *GithubApp, id int) *Installation {
 	return &Installation{
 		dataCollector: dataCollector,
 		app:           app,
