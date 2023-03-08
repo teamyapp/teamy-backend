@@ -38,7 +38,7 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 		return "", internalErr
 	}
 
-	githubAppAccessTokenURL := fmt.Sprintf("https://api.github.com/app/installations/%s/access_tokens", i.id)
+	githubAppAccessTokenURL := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", i.id)
 	req, err := http.NewRequest("POST", githubAppAccessTokenURL, nil)
 	if err != nil {
 		internalErr = &errs.Error{
