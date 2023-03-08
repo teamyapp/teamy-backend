@@ -29,11 +29,6 @@ func (b BackFillRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	return nil
 }
 
-func (b BackFillRPC) BackFillPullRequestLinks(ct context.Context, in *proto.BackFillPullRequestLinksRequest) (*emptypb.Empty, error) {
-	panic("implement me")
-	return &emptypb.Empty{}, nil
-}
-
 func (b BackFillRPC) BackFillParticipantsBandwidth(ct context.Context, in *proto.BackFillParticipantsBandwidthRequest) (*emptypb.Empty, error) {
 	panic("implement me")
 	return &emptypb.Empty{}, nil
