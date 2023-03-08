@@ -51,6 +51,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(daov2.Sprint), new(sqldbV2.Sprint)),
 	wire.Bind(new(daov2.SprintTaskRelation), new(sqldbV2.SprintTaskRelation)),
 	wire.Bind(new(daov2.Thread), new(sqldbV2.Thread)),
+	wire.Bind(new(daov2.TeamMember), new(sqldbV2.TeamMember)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -75,6 +76,7 @@ var daoSet = wire.NewSet(
 	sqldbV2.NewSprint,
 	sqldbV2.NewSprintTaskRelation,
 	sqldbV2.NewThread,
+	sqldbV2.NewTeamMember,
 )
 
 var serviceSet = wire.NewSet(
@@ -155,7 +157,6 @@ func InitSprintRPCAPI(
 	wire.Build(
 		daoSet,
 		serviceSet,
-		cache.NewActivity,
 		api.NewSprintRPC,
 	)
 	return api.SprintRPC{}

@@ -22,6 +22,7 @@ type UpdateSprintParticipantMutation struct {
 	id                     uint64
 	sprintParticipant      entity.SprintParticipant
 	clientNotifiers        []*realtime.ClientNotifier
+	notifierPrepared       bool
 }
 
 var _ realtime.Mutation = (*UpdateSprintParticipantMutation)(nil)
@@ -41,6 +42,9 @@ func (u *UpdateSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.
 }
 
 func (u *UpdateSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	if u.notifierPrepared {
+		return nil
+	}
 	sprint, internalErr := u.sprintDaoV2.FindSprintByID(ct, tx, u.sprintParticipant.SprintID)
 	if internalErr != nil {
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -53,6 +57,7 @@ func (u *UpdateSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 		return internalErr
 	}
 
+	u.notifierPrepared = true
 	return nil
 }
 
@@ -115,5 +120,6 @@ func NewUpdateSprintParticipantMutation(
 		sprintDaoV2:            sprintDaoV2,
 		id:                     stateSyncer.NextMutationID(),
 		sprintParticipant:      sprintParticipant,
+		notifierPrepared:       false,
 	}
 }

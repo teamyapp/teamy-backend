@@ -21,6 +21,7 @@ type DeleteSprintTaskRelationMutation struct {
 	sprintID                uint64
 	task                    entity.Task
 	clientNotifiers         []*realtime.ClientNotifier
+	notifierPrepared        bool
 }
 
 var _ realtime.Mutation = (*DeleteSprintTaskRelationMutation)(nil)
@@ -40,6 +41,9 @@ func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql
 }
 
 func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	if d.notifierPrepared {
+		return nil
+	}
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {
@@ -47,6 +51,7 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 		return internalErr
 	}
 
+	d.notifierPrepared = true
 	return nil
 }
 
@@ -107,5 +112,6 @@ func NewDeleteSprintTaskRelationMutation(
 		id:                      stateSyncer.NextMutationID(),
 		sprintID:                sprintID,
 		task:                    task,
+		notifierPrepared:        false,
 	}
 }

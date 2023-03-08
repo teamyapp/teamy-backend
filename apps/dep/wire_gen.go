@@ -8,7 +8,6 @@ package dep
 
 import (
 	"database/sql"
-
 	"github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
