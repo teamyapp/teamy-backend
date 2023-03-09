@@ -7,7 +7,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.5.0
-	github.com/teamyapp/cloud v0.0.0-20230305104212-0231f61ed445
+	github.com/teamyapp/cloud v0.0.0-20230306001404-923da369465c
 	google.golang.org/grpc v1.52.3
 	google.golang.org/protobuf v1.28.1
 )

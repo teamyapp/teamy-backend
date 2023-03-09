@@ -27,8 +27,11 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/apps/github/client"
+	appsProto "github.com/teamyapp/teamy-backend/apps/proto"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -53,9 +56,11 @@ type AppAPI struct {
 	githubRequiredUserActionDao dao.GithubRequiredUserAction
 	githubApp                   *client.GithubApp
 	githubGraphQLAPI            client.GraphQLAPI
+	appsProto.UnimplementedGithubServer
 }
 
 var _ runner.Service = (*AppAPI)(nil)
+var _ appsProto.GithubServer = (*AppAPI)(nil)
 
 func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
@@ -84,6 +89,9 @@ func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "required-actions", "create"),
 			HandlerFunc: a.webCreateRequiredAction,
 		},
+	})
+	rn.WithGRPCServer(func(server *grpc.Server) {
+		appsProto.RegisterGithubServer(server, a)
 	})
 	return nil
 }
@@ -795,6 +803,87 @@ func (a AppAPI) GetInternalUserID(ct context.Context, githubUserID uint64) (uint
 	}
 
 	return getInternalUserIdRes.InternalUserId, nil
+}
+
+func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+	var err *errs.Error
+
+	prs, err := a.githubPullRequestDao.FindPullRequestsMissingMetadata(ct)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	for _, pr := range prs {
+		a.dataCollector.Logger.InfoWithContext(
+			ct,
+			fmt.Sprintf("start backfilling pull request, taskID=%d, nodeID=%s",
+				pr.InternalTaskID,
+				pr.NodeID,
+			),
+		)
+
+		getTaskReq := &proto.GetTaskRequest{TaskId: pr.InternalTaskID}
+		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
+		if rpcErr != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, errs.FromGRPCErr(rpcErr))
+			continue
+		}
+
+		if err == nil {
+			err = errs.FromGRPCErr(rpcErr)
+		}
+
+		installationID, sqlErr := a.githubAppInstallationDao.FindInstallationIDByTeamID(ct, task.OwningTeamId)
+		if sqlErr != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, sqlErr)
+			continue
+		}
+
+		if err == nil {
+			err = sqlErr
+		}
+
+		ins := a.githubApp.GetInstallation(installationID)
+		node, gqlErr := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, ins, pr.NodeID)
+		if gqlErr != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, gqlErr)
+			continue
+		}
+
+		if err == nil {
+			err = gqlErr
+		}
+
+		gpr := entity.GithubPullRequest{
+			NodeID:          pr.NodeID,
+			RepositoryOwner: node.Repository.Owner.Login,
+			RepositoryName:  node.Repository.Name,
+			Number:          node.Number,
+			URL:             node.URL,
+		}
+
+		sqlErr = a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
+		if sqlErr != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, sqlErr)
+			continue
+		}
+
+		if err == nil {
+			err = sqlErr
+		}
+
+		a.dataCollector.Logger.InfoWithContext(
+			ct,
+			fmt.Sprintf("complete backfilling pull request, metadata=%v", pr))
+	}
+
+	return &emptypb.Empty{}, errs.ToGRPCErr(err)
+}
+
+func (a AppAPI) BackfillPullRequestLinks(ct context.Context, request *appsProto.BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/apps/proto";
+
+service Github {
+	rpc BackfillPullRequestMetadata(google.protobuf.Empty) returns (google.protobuf.Empty);
+	rpc BackfillPullRequestLinks(BackfillPullRequestLinksRequest) returns (google.protobuf.Empty);
+}
+
+message BackfillPullRequestLinksRequest {
+	optional uint64 teamId = 1;
+}

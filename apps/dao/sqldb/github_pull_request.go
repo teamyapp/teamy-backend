@@ -158,6 +158,34 @@ func (g GithubPullRequest) CreatePullRequest(
 	return nil
 }
 
+func (g GithubPullRequest) UpdatePullRequest(ct context.Context, pullRequest entity.GithubPullRequest) *errs.Error {
+	_, err := g.db.Exec(`
+		UPDATE apps_github_pull_request
+		SET
+    		github_repository_owner = $1,
+			github_repository_name = $2,
+			github_pull_request_number = $3,
+			github_pull_request_url = $4
+		WHERE github_pull_request_node_id = $5;`,
+		pullRequest.RepositoryOwner,
+		pullRequest.RepositoryName,
+		pullRequest.Number,
+		pullRequest.URL,
+		pullRequest.NodeID,
+	)
+
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	return nil
+}
+
 func (g GithubPullRequest) DeletePullRequestByInternalTaskID(
 	ct context.Context,
 	internalTaskID uint64,
@@ -200,6 +228,59 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(
 	}
 
 	return nil
+}
+
+// FindPullRequestsMissingMetadata returns task IDs and node IDs of pull requests that need to backfill metadata
+func (g GithubPullRequest) FindPullRequestsMissingMetadata(
+	ct context.Context,
+) ([]entity.GithubPullRequest, *errs.Error) {
+	rows, err := g.db.Query(`
+	SELECT
+	    internal_task_id,
+	    github_pull_request_node_id
+	FROM apps_github_pull_request
+	WHERE
+		github_pull_request_number IS NULL
+	    OR github_pull_request_url IS NULL
+	    OR github_repository_owner IS NULL
+	    OR github_repository_name IS NULL;`,
+	)
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+	}
+
+	defer rows.Close()
+
+	var internalErr *errs.Error
+	var prs []entity.GithubPullRequest
+	for rows.Next() {
+		var pr entity.GithubPullRequest
+		err = rows.Scan(
+			&pr.InternalTaskID,
+			&pr.NodeID,
+		)
+		if err != nil {
+			newInternalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			g.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			continue
+		}
+
+		prs = append(prs, pr)
+	}
+
+	return prs, internalErr
 }
 
 func NewGithubPullRequest(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubPullRequest {
