@@ -14,7 +14,7 @@ type GithubPullRequest struct {
 
 func (g *GithubPullRequest) String() string {
 	return fmt.Sprintf(
-		"[GithubPullRequest NodeID:%s InternalTaskID:%d RepositoryOwner:%s RepositoryName:%s Number:%d URL:%s OrganizationID:%s]",
+		"[GithubPullRequest NodeID:%s InternalTaskID:%d RepositoryOwner:%s RepositoryName:%s Number:%d URL:%s OrganizationID:%d]",
 		g.NodeID,
 		g.InternalTaskID,
 		g.RepositoryOwner,
