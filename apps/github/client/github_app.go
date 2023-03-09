@@ -18,10 +18,10 @@ type GithubApp struct {
 	appPrivateKey *rsa.PrivateKey
 	jwt           *string
 	jwtExpireAt   *time.Time
-	installations map[string]*Installation
+	installations map[int]*Installation
 }
 
-func (g *GithubApp) GetInstallation(installationID string) *Installation {
+func (g *GithubApp) GetInstallation(installationID int) *Installation {
 	installation, ok := g.installations[installationID]
 	if ok {
 		return installation
@@ -106,6 +106,6 @@ func NewGithubApp(dataCollector telemetry.DataCollector, appID string, privateKe
 	return &GithubApp{
 		appID:         appID,
 		appPrivateKey: privateKey,
-		installations: map[string]*Installation{},
+		installations: map[int]*Installation{},
 	}, nil
 }
