@@ -230,7 +230,7 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(
 	return nil
 }
 
-func (g GithubPullRequest) FindAllPullRequest(ct context.Context) ([]entity.GithubPullRequest, *errs.Error) {
+func (g GithubPullRequest) FindAllPullRequests(ct context.Context) ([]entity.GithubPullRequest, *errs.Error) {
 	rows, err := g.db.Query(`
 	SELECT
 	    internal_task_id,
@@ -258,13 +258,13 @@ func (g GithubPullRequest) FindAllPullRequest(ct context.Context) ([]entity.Gith
 	for rows.Next() {
 		var pullRequest entity.GithubPullRequest
 		err = rows.Scan(
-			&pr.InternalTaskID,
-			&pr.NodeID,
-			&pr.RepositoryOwner,
-			&pr.RepositoryName,
-			&pr.Number,
-			&pr.URL,
-			&pr.OrganizationID,
+			&pullRequest.InternalTaskID,
+			&pullRequest.NodeID,
+			&pullRequest.RepositoryOwner,
+			&pullRequest.RepositoryName,
+			&pullRequest.Number,
+			&pullRequest.URL,
+			&pullRequest.OrganizationID,
 		)
 		if err != nil {
 			newInternalErr := &errs.Error{
@@ -280,10 +280,10 @@ func (g GithubPullRequest) FindAllPullRequest(ct context.Context) ([]entity.Gith
 			continue
 		}
 
-		prs = append(prs, pr)
+		pullRequests = append(pullRequests, pullRequest)
 	}
 
-	return prs, internalErr
+	return pullRequests, internalErr
 }
 
 func NewGithubPullRequest(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubPullRequest {

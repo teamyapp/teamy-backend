@@ -807,29 +807,29 @@ func (a AppAPI) GetInternalUserID(ct context.Context, githubUserID uint64) (uint
 
 func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	var err *errs.Error
-	prs, err := a.githubPullRequestDao.FindAllPullRequest(ct)
+	pullRequests, err := a.githubPullRequestDao.FindAllPullRequests(ct)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	pullRequests = collect.Filter(prs, func(pr entity.GithubPullRequest) bool {
+	pullRequests = collect.Filter(pullRequests, func(pullRequest entity.GithubPullRequest) bool {
 		return pullRequest.RepositoryName == nil ||
-			pr.RepositoryOwner == nil ||
-			pr.URL == nil ||
-			pr.Number == nil
+			pullRequest.RepositoryOwner == nil ||
+			pullRequest.URL == nil ||
+			pullRequest.Number == nil
 	})
 
-	for _, pullRequest := range prs {
+	for _, pullRequest := range pullRequests {
 		a.dataCollector.Logger.InfoWithContext(
 			ct,
 			fmt.Sprintf("start backfilling pull request, taskID=%d, nodeID=%s",
-				pr.InternalTaskID,
-				pr.NodeID,
+				pullRequest.InternalTaskID,
+				pullRequest.NodeID,
 			),
 		)
 
-		getTaskReq := &proto.GetTaskRequest{TaskId: pr.InternalTaskID}
+		getTaskReq := &proto.GetTaskRequest{TaskId: pullRequest.InternalTaskID}
 		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
 		if rpcErr != nil {
 			if err == nil {
@@ -851,7 +851,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		}
 
 		ins := a.githubApp.GetInstallation(installationID)
-		node, gqlErr := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, ins, pr.NodeID)
+		node, gqlErr := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, ins, pullRequest.NodeID)
 		if gqlErr != nil {
 			if err == nil {
 				err = gqlErr
@@ -862,7 +862,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		}
 
 		gpr := entity.GithubPullRequest{
-			NodeID:          pr.NodeID,
+			NodeID:          pullRequest.NodeID,
 			RepositoryOwner: &node.Repository.Owner.Login,
 			RepositoryName:  &node.Repository.Name,
 			Number:          &node.Number,
@@ -881,7 +881,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 
 		a.dataCollector.Logger.InfoWithContext(
 			ct,
-			fmt.Sprintf("finish backfilling pull request, metadata=%v", pr))
+			fmt.Sprintf("finish backfilling pull request, metadata=%v", pullRequest))
 	}
 
 	return &emptypb.Empty{}, errs.ToGRPCErr(err)

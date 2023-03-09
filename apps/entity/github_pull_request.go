@@ -24,3 +24,16 @@ func (g *GithubPullRequest) String() string {
 		*g.OrganizationID,
 	)
 }
+
+func (g *GithubPullRequest) String() string {
+	return fmt.Sprintf(
+		"[GithubPullRequest NodeID:%s InternalTaskID:%d RepositoryOwner:%s RepositoryName:%s Number:%d URL:%s OrganizationID:%s]",
+		g.NodeID,
+		g.InternalTaskID,
+		g.RepositoryOwner,
+		g.RepositoryName,
+		g.Number,
+		g.URL,
+		g.OrganizationID,
+	)
+}
