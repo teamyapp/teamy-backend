@@ -52,7 +52,7 @@ func main() {
 	lineFormatter := newLineFormatter(cfg.Environment)
 
 	logFileName := fmt.Sprintf("%v.log", serviceName)
-	logFilePath := getEnv("LOG_OUTPUT_FILE", filepath.Join("logs", logFileName))
+	logFilePath := getEnv("LOG_OUTPUT_FILE", filepath.Join("..", "logs", logFileName))
 	logOutput, err := telemetry.NewLogOutput(cfg.Environment, logFilePath)
 	if err != nil {
 		panic(err)

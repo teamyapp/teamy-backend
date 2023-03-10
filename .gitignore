@@ -10,6 +10,3 @@
 
 # Secrets and certificates
 .secrets
-
-# Default log directory
-logs/
