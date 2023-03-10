@@ -874,7 +874,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 
 		a.dataCollector.Logger.InfoWithContext(
 			ct,
-			fmt.Sprintf("complete backfilling pull request, metadata=%v", pr))
+			fmt.Sprintf("finish backfilling pull request, metadata=%v", pr))
 	}
 
 	return &emptypb.Empty{}, errs.ToGRPCErr(err)
