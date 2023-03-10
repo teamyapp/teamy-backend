@@ -675,13 +675,13 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 }
 
 func (s Sprint) copyTaskToSprint(
-    ct context.Context, 
-    sqlTx *sql.Tx, 
-    rtTx *realtime.Transaction, 
-    toSprintID uint64, 
-    taskID uint64, 
-    newTaskID uint64, 
-    newThreadID uint64,
+	ct context.Context,
+	sqlTx *sql.Tx,
+	rtTx *realtime.Transaction,
+	toSprintID uint64,
+	taskID uint64,
+	newTaskID uint64,
+	newThreadID uint64,
 ) (entity.Task, *errs.Error) {
 	task, err := s.taskDaoV2.FindTaskByID(ct, sqlTx, taskID)
 	if err != nil {
@@ -791,12 +791,12 @@ func (s Sprint) copyTaskToSprint(
 }
 
 func (s Sprint) moveTaskToSprint(
-   bct context.Context, 
-   sqlTx *sql.Tx, 
-   rtTx *realtime.Transaction, 
-   fromSprintID uint64, 
-   toSprintID uint64, 
-   taskID uint64,
+	ct context.Context,
+	sqlTx *sql.Tx,
+	rtTx *realtime.Transaction,
+	fromSprintID uint64,
+	toSprintID uint64,
+	taskID uint64,
 ) (entity.Task, *errs.Error) {
 	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, sqlTx, taskID)
 	if err != nil {
@@ -922,11 +922,11 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, sqlTx *sql.Tx, rtTx *re
 }
 
 func (s Sprint) tryReduceBandwidth(
-    ct context.Context, 
-    sqlTx *sql.Tx, 
-    rtTx *realtime.Transaction, 
-    sprintID uint64, 
-    task entity.Task,
+	ct context.Context,
+	sqlTx *sql.Tx,
+	rtTx *realtime.Transaction,
+	sprintID uint64,
+	task entity.Task,
 ) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
 		newSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, sqlTx, sprintID, *task.OwnerUserID)
@@ -961,11 +961,11 @@ func (s Sprint) tryReduceBandwidth(
 }
 
 func (s Sprint) tryIncreaseBandwidth(
-    ct context.Context, 
-    sqlTx *sql.Tx, 
-    rtTx *realtime.Transaction, 
-    sprintID uint64, 
-    task entity.Task,
+	ct context.Context,
+	sqlTx *sql.Tx,
+	rtTx *realtime.Transaction,
+	sprintID uint64,
+	task entity.Task,
 ) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
 		oldSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, sqlTx, sprintID, *task.OwnerUserID)
