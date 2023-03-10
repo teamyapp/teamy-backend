@@ -41,6 +41,7 @@ func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, 
 	if u.notifierPrepared {
 		return nil
 	}
+	
 	var err *errs.Error
 	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 	if err != nil {

@@ -44,6 +44,7 @@ func (d *DeleteTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 	if d.notifierPrepared {
 		return nil
 	}
+	
 	var err *errs.Error
 	d.clientNotifiers, err = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.awaitingTask.OwningTeamID)
 	if err != nil {

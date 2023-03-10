@@ -45,6 +45,7 @@ func (u *UpdateSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 	if u.notifierPrepared {
 		return nil
 	}
+	
 	sprint, internalErr := u.sprintDaoV2.FindSprintByID(ct, tx, u.sprintParticipant.SprintID)
 	if internalErr != nil {
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)

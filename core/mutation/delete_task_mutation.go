@@ -43,6 +43,7 @@ func (d *DeleteTaskMutation) PrepareClientNotifiers(ct context.Context, tx *sql.
 	if d.notifierPrepared {
 		return nil
 	}
+	
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {

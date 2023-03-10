@@ -44,6 +44,7 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 	if d.notifierPrepared {
 		return nil
 	}
+	
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {

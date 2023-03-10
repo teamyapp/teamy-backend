@@ -45,6 +45,7 @@ func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 	if c.notifiersPrepared {
 		return nil
 	}
+	
 	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
 	if err != nil {
 		c.dataCollector.Logger.ErrorWithContext(ct, err)
