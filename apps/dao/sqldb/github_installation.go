@@ -66,6 +66,15 @@ func (g GithubAppInstallation) FindInstallationIDByTeamID(ct context.Context, te
 		return 0, internalErr
 	}
 
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return 0, internalErr
+	}
+
 	return installationID, nil
 }
 
