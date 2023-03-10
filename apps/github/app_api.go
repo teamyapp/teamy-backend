@@ -807,7 +807,6 @@ func (a AppAPI) GetInternalUserID(ct context.Context, githubUserID uint64) (uint
 
 func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	var err *errs.Error
-
 	prs, err := a.githubPullRequestDao.FindPullRequestsMissingMetadata(ct)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
