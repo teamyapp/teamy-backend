@@ -825,33 +825,33 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		getTaskReq := &proto.GetTaskRequest{TaskId: pr.InternalTaskID}
 		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
 		if rpcErr != nil {
+			if err == nil {
+				err = errs.FromGRPCErr(rpcErr)
+			}
+
 			a.dataCollector.Logger.ErrorWithContext(ct, errs.FromGRPCErr(rpcErr))
 			continue
 		}
 
-		if err == nil {
-			err = errs.FromGRPCErr(rpcErr)
-		}
-
 		installationID, sqlErr := a.githubAppInstallationDao.FindInstallationIDByTeamID(ct, task.OwningTeamId)
 		if sqlErr != nil {
+			if err == nil {
+				err = sqlErr
+			}
+
 			a.dataCollector.Logger.ErrorWithContext(ct, sqlErr)
 			continue
-		}
-
-		if err == nil {
-			err = sqlErr
 		}
 
 		ins := a.githubApp.GetInstallation(installationID)
 		node, gqlErr := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, ins, pr.NodeID)
 		if gqlErr != nil {
+			if err == nil {
+				err = gqlErr
+			}
+
 			a.dataCollector.Logger.ErrorWithContext(ct, gqlErr)
 			continue
-		}
-
-		if err == nil {
-			err = gqlErr
 		}
 
 		gpr := entity.GithubPullRequest{
@@ -864,12 +864,12 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 
 		sqlErr = a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
 		if sqlErr != nil {
+			if err == nil {
+				err = sqlErr
+			}
+
 			a.dataCollector.Logger.ErrorWithContext(ct, sqlErr)
 			continue
-		}
-
-		if err == nil {
-			err = sqlErr
 		}
 
 		a.dataCollector.Logger.InfoWithContext(
