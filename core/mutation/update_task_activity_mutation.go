@@ -12,12 +12,13 @@ import (
 )
 
 type UpdateTaskActivityMutation struct {
-	dataCollector   telemetry.DataCollector
-	stateSyncer     *realtime.StateSyncer
-	activityCache   cache.Activity
-	id              uint64
-	taskActivity    entity.TaskActivity
-	clientNotifiers []*realtime.ClientNotifier
+	dataCollector    telemetry.DataCollector
+	stateSyncer      *realtime.StateSyncer
+	activityCache    cache.Activity
+	id               uint64
+	taskActivity     entity.TaskActivity
+	clientNotifiers  []*realtime.ClientNotifier
+	notifierPrepared bool
 }
 
 var _ realtime.Mutation = (*UpdateTaskActivityMutation)(nil)
@@ -37,6 +38,10 @@ func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *
 }
 
 func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	if u.notifierPrepared {
+		return nil
+	}
+	
 	var err *errs.Error
 	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 	if err != nil {
@@ -44,6 +49,7 @@ func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, 
 		return err
 	}
 
+	u.notifierPrepared = true
 	return err
 }
 
@@ -89,10 +95,11 @@ func NewUpdateTaskActivityMutation(
 	taskActivity entity.TaskActivity,
 ) *UpdateTaskActivityMutation {
 	return &UpdateTaskActivityMutation{
-		dataCollector: dataCollector,
-		stateSyncer:   stateSyncer,
-		activityCache: activityCache,
-		id:            stateSyncer.NextMutationID(),
-		taskActivity:  taskActivity,
+		dataCollector:    dataCollector,
+		stateSyncer:      stateSyncer,
+		activityCache:    activityCache,
+		id:               stateSyncer.NextMutationID(),
+		taskActivity:     taskActivity,
+		notifierPrepared: false,
 	}
 }

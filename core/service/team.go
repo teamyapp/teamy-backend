@@ -595,7 +595,9 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			t.dataCollector,
 			t.stateSyncer,
 			t.sprintService.sprintParticipantDao,
+			t.sprintService.sprintParticipantDaoV2,
 			t.sprintDao,
+			t.sprintService.sprintDaoV2,
 			participant,
 		)
 		err = realTimeTransaction.ApplyMutation(ct, createSprintParticipantMutation)
@@ -673,7 +675,9 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 			t.dataCollector,
 			t.stateSyncer,
 			t.sprintService.sprintParticipantDao,
+			t.sprintService.sprintParticipantDaoV2,
 			t.sprintDao,
+			t.sprintService.sprintDaoV2,
 			teamMember.UserID,
 			sprint.ID,
 		)

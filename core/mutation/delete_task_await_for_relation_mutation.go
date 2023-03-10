@@ -21,6 +21,7 @@ type DeleteTaskAwaitForRelationMutation struct {
 	awaitingTask              entity.Task
 	awaitForTaskID            uint64
 	clientNotifiers           []*realtime.ClientNotifier
+	notifierPrepared          bool
 }
 
 var _ realtime.Mutation = (*DeleteTaskAwaitForRelationMutation)(nil)
@@ -40,6 +41,10 @@ func (d *DeleteTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *s
 }
 
 func (d *DeleteTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+	if d.notifierPrepared {
+		return nil
+	}
+	
 	var err *errs.Error
 	d.clientNotifiers, err = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.awaitingTask.OwningTeamID)
 	if err != nil {
@@ -47,6 +52,7 @@ func (d *DeleteTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 		return err
 	}
 
+	d.notifierPrepared = true
 	return nil
 }
 
@@ -107,5 +113,6 @@ func NewDeleteTaskAwaitForRelationMutation(
 		id:                        stateSyncer.NextMutationID(),
 		awaitingTask:              awaitingTask,
 		awaitForTaskID:            awaitForTaskID,
+		notifierPrepared:          false,
 	}
 }
