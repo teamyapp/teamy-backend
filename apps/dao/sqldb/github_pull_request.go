@@ -254,7 +254,7 @@ func (g GithubPullRequest) FindAllPullRequest(ct context.Context) ([]entity.Gith
 	defer rows.Close()
 
 	var internalErr *errs.Error
-	var prs []entity.GithubPullRequest
+	var pullRequests []entity.GithubPullRequest
 	for rows.Next() {
 		var pullRequest entity.GithubPullRequest
 		err = rows.Scan(
