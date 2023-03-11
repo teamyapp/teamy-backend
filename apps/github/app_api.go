@@ -820,7 +820,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			pr.Number == nil
 	})
 
-	for _, pr := range prs {
+	for _, pullRequest := range prs {
 		a.dataCollector.Logger.InfoWithContext(
 			ct,
 			fmt.Sprintf("start backfilling pull request, taskID=%d, nodeID=%s",
