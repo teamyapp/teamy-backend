@@ -256,7 +256,7 @@ func (g GithubPullRequest) FindAllPullRequest(ct context.Context) ([]entity.Gith
 	var internalErr *errs.Error
 	var prs []entity.GithubPullRequest
 	for rows.Next() {
-		var pr entity.GithubPullRequest
+		var pullRequest entity.GithubPullRequest
 		err = rows.Scan(
 			&pr.InternalTaskID,
 			&pr.NodeID,
