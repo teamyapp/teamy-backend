@@ -230,20 +230,17 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(
 	return nil
 }
 
-// FindPullRequestsMissingMetadata returns task IDs and node IDs of pull requests that need to backfill metadata
-func (g GithubPullRequest) FindPullRequestsMissingMetadata(
-	ct context.Context,
-) ([]entity.GithubPullRequest, *errs.Error) {
+func (g GithubPullRequest) FindAllPullRequest(ct context.Context) ([]entity.GithubPullRequest, *errs.Error) {
 	rows, err := g.db.Query(`
 	SELECT
 	    internal_task_id,
-	    github_pull_request_node_id
-	FROM apps_github_pull_request
-	WHERE
-		github_pull_request_number IS NULL
-	    OR github_pull_request_url IS NULL
-	    OR github_repository_owner IS NULL
-	    OR github_repository_name IS NULL;`,
+	    github_pull_request_node_id,
+	 	github_repository_owner,
+	    github_repository_name,
+	    github_pull_request_number,
+	    github_pull_request_url,
+	 	github_organization_id
+	FROM apps_github_pull_request;`,
 	)
 	if err != nil {
 		internalErr := &errs.Error{
@@ -251,6 +248,7 @@ func (g GithubPullRequest) FindPullRequestsMissingMetadata(
 			EmbedErr: err,
 		}
 		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return nil, internalErr
 	}
 
 	defer rows.Close()
@@ -262,6 +260,11 @@ func (g GithubPullRequest) FindPullRequestsMissingMetadata(
 		err = rows.Scan(
 			&pr.InternalTaskID,
 			&pr.NodeID,
+			&pr.RepositoryOwner,
+			&pr.RepositoryName,
+			&pr.Number,
+			&pr.URL,
+			&pr.OrganizationID,
 		)
 		if err != nil {
 			newInternalErr := &errs.Error{

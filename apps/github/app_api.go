@@ -807,11 +807,18 @@ func (a AppAPI) GetInternalUserID(ct context.Context, githubUserID uint64) (uint
 
 func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	var err *errs.Error
-	prs, err := a.githubPullRequestDao.FindPullRequestsMissingMetadata(ct)
+	prs, err := a.githubPullRequestDao.FindAllPullRequest(ct)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
+
+	prs = collect.Filter(prs, func(pr entity.GithubPullRequest) bool {
+		return pr.RepositoryName == nil ||
+			pr.RepositoryOwner == nil ||
+			pr.URL == nil ||
+			pr.Number == nil
+	})
 
 	for _, pr := range prs {
 		a.dataCollector.Logger.InfoWithContext(
