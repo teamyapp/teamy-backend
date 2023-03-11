@@ -60,7 +60,7 @@ func (g GithubAppInstallation) FindInstallationIDByTeamID(ct context.Context, te
 	if errors.Is(err, sql.ErrNoRows) {
 		internalErr := &errs.Error{
 			Code:    errs.NotFound,
-			Message: fmt.Sprintf("installation not found, team_id=%d", teamID),
+			Message: fmt.Sprintf("installation not found: teamID=%d", teamID),
 		}
 		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
