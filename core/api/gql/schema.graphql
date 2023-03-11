@@ -340,7 +340,7 @@ input CreateTaskInput {
 	context: String
 	ownerUserId: ID
 	dueAt: Time
-	isPlanned: Boolean
+	isPlanned: Boolean!
 }
 
 input UpdateTaskInput {

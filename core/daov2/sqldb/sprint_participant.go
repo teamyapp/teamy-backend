@@ -8,6 +8,7 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -18,8 +19,8 @@ type SprintParticipant struct {
 
 var _ daov2.SprintParticipant = (*SprintParticipant)(nil)
 
-func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, tx *sql.Tx, sprintID uint64) ([]uint64, *errs.Error) {
-	rows, err := tx.Query(
+func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		user_id
@@ -65,8 +66,8 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, tx *
 	return participantUserIDs, internalErr
 }
 
-func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, tx *sql.Tx, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
-	rows, err := tx.Query(
+func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		sprint_id,
@@ -122,9 +123,9 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, tx *sq
 	return sprintParticipants, internalErr
 }
 
-func (s SprintParticipant) FindParticipant(ct context.Context, tx *sql.Tx, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
+func (s SprintParticipant) FindParticipant(ct context.Context, tx *transaction.Transaction, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
 	participant := entity.SprintParticipant{}
-	err := tx.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 	SELECT
 		sprint_id,
 		user_id,
@@ -168,8 +169,8 @@ func (s SprintParticipant) FindParticipant(ct context.Context, tx *sql.Tx, sprin
 	return participant, nil
 }
 
-func (s SprintParticipant) CreateSprintParticipant(ct context.Context, tx *sql.Tx, participant entity.SprintParticipant) *errs.Error {
-	_, err := tx.Exec(`
+func (s SprintParticipant) CreateSprintParticipant(ct context.Context, tx *transaction.Transaction, participant entity.SprintParticipant) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 	INSERT INTO sprint_participant
 	(
 	    sprint_id,
@@ -200,8 +201,8 @@ func (s SprintParticipant) CreateSprintParticipant(ct context.Context, tx *sql.T
 	return nil
 }
 
-func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, tx *sql.Tx, participant entity.SprintParticipant) *errs.Error {
-	_, err := tx.Exec(`
+func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, tx *transaction.Transaction, participant entity.SprintParticipant) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE sprint_participant
 		SET
 		    sprint_id = $1,
@@ -233,8 +234,8 @@ func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, tx *sql.T
 	return nil
 }
 
-func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *sql.Tx, sprintID uint64, userID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *transaction.Transaction, sprintID uint64, userID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM sprint_participant
 		WHERE sprint_id = $1 AND user_id = $2;
 		`,

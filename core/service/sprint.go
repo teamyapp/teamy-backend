@@ -12,6 +12,7 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
@@ -37,6 +38,7 @@ type Sprint struct {
 	cloudClientRegistry     *cloudAPI.ClientRegistry
 	stateSyncer             *realtime.StateSyncer
 	authorizer              Authorizer
+	transactionFactory      transaction.Factory
 	taskDao                 dao.Task
 	taskDaoV2               daov2.Task
 	sprintDao               dao.Sprint
@@ -54,14 +56,14 @@ type Sprint struct {
 func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
 	var sprints []entity.Sprint
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(true, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		sprints, err = s.sprintDaoV2.FindSprintsByTeamID(ct, sqlTx, teamID)
+		sprints, err = s.sprintDaoV2.FindSprintsByTeamID(ct, tx, teamID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -85,14 +87,14 @@ func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *Spr
 func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	var participants []entity.SprintParticipant
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(true, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		participants, err = s.sprintParticipantDaoV2.FindParticipantsBySprintID(ct, sqlTx, sprintID)
+		participants, err = s.sprintParticipantDaoV2.FindParticipantsBySprintID(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -112,14 +114,14 @@ func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([
 func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
 	var sprints []entity.Sprint
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(true, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		sprints, err = s.sprintDaoV2.FindAllSprints(ct, sqlTx)
+		sprints, err = s.sprintDaoV2.FindAllSprints(ct, tx)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -143,13 +145,13 @@ func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.
 func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Sprint, *errs.Error) {
 	var sprint entity.Sprint
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(true, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
-		sprints, err := s.sprintDaoV2.FindSprintsByTeamID(ct, sqlTx, teamID)
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		sprints, err := s.sprintDaoV2.FindSprintsByTeamID(ct, tx, teamID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -196,14 +198,14 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
 	var sprints []entity.Sprint
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(true, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		sprints, err = s.sprintDaoV2.FindSprintsByTeamID(ct, sqlTx, teamID)
+		sprints, err = s.sprintDaoV2.FindSprintsByTeamID(ct, tx, teamID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -231,14 +233,14 @@ func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) (
 func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
 	var sprint entity.Sprint
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(true, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		sprint, err = s.sprintDaoV2.FindSprintByID(ct, sqlTx, sprintID)
+		sprint, err = s.sprintDaoV2.FindSprintByID(ct, tx, sprintID)
 		return err
 	})
 
@@ -289,12 +291,12 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 
 	var sprint entity.Sprint
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		sprint = entity.Sprint{
 			ID:           genSprintIDRes.UniqueNumber,
 			StartAt:      input.StartAt.UTC(),
@@ -302,13 +304,13 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 			CreatedAt:    time.Now().UTC(),
 			OwningTeamID: teamID,
 		}
-		err := s.sprintDaoV2.CreateSprint(ct, sqlTx, sprint)
+		err := s.sprintDaoV2.CreateSprint(ct, tx, sprint)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
-		teamMembers, err := s.teamMemberDaoV2.FindTeamMembersByTeamID(ct, sqlTx, teamID)
+		teamMembers, err := s.teamMemberDaoV2.FindTeamMembersByTeamID(ct, tx, teamID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -336,7 +338,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 				s.sprintDaoV2,
 				participant)
 			rtTx.AppendMutation(createSprintParticipantMutation)
-			err = createSprintParticipantMutation.ExecuteV2(ct, sqlTx)
+			err = createSprintParticipantMutation.ExecuteV2(ct, tx)
 			if err != nil {
 				s.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
@@ -378,33 +380,33 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
 	var sprint entity.Sprint
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
-		taskIds, err := s.sprintTaskRelationDaoV2.FindTaskIDsBySprintID(ct, sqlTx, sprintID)
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		taskIds, err := s.sprintTaskRelationDaoV2.FindTaskIDsBySprintID(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		for _, taskId := range taskIds {
-			_, err = s.removeTaskFromSprint(ct, sqlTx, rtTx, sprintID, taskId)
+			_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId)
 			if err != nil {
 				s.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 		}
 
-		participantUserIDs, err := s.sprintParticipantDaoV2.FindParticipantIDsBySprintID(ct, sqlTx, sprintID)
+		participantUserIDs, err := s.sprintParticipantDaoV2.FindParticipantIDsBySprintID(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
-		sprint, err = s.sprintDaoV2.FindSprintByID(ct, sqlTx, sprintID)
+		sprint, err = s.sprintDaoV2.FindSprintByID(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -421,17 +423,17 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 				participantUserID,
 				sprintID)
 			rtTx.AppendMutation(deleteSprintParticipantMutation)
-			err = deleteSprintParticipantMutation.ExecuteV2(ct, sqlTx)
+			err = deleteSprintParticipantMutation.ExecuteV2(ct, tx)
 			if err != nil {
 				s.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
 			// we need to prepare notifier in advance since sprint will be actually deleted later
-			deleteSprintParticipantMutation.PrepareClientNotifiers(ct, sqlTx)
+			deleteSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
 		}
 
-		return s.sprintDaoV2.DeleteSprint(ct, sqlTx, sprintID)
+		return s.sprintDaoV2.DeleteSprint(ct, tx, sprintID)
 	})
 
 	if err != nil {
@@ -445,20 +447,20 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = s.taskDaoV2.FindTaskByID(ct, sqlTx, taskID)
+		task, err = s.taskDaoV2.FindTaskByID(ct, tx, taskID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
-		sprint, err := s.sprintDaoV2.FindSprintByID(ct, sqlTx, sprintID)
+		sprint, err := s.sprintDaoV2.FindSprintByID(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -487,7 +489,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			s.sprintDaoV2,
 			relation)
 		rtTx.AppendMutation(createSprintTaskRelationMutation)
-		err = createSprintTaskRelationMutation.ExecuteV2(ct, sqlTx)
+		err = createSprintTaskRelationMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -502,14 +504,14 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 				s.taskDaoV2,
 				task)
 			rtTx.AppendMutation(updateTaskMutation)
-			err = updateTaskMutation.ExecuteV2(ct, sqlTx)
+			err = updateTaskMutation.ExecuteV2(ct, tx)
 			if err != nil {
 				s.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 		}
 
-		err = s.tryReduceBandwidth(ct, sqlTx, rtTx, sprintID, task)
+		err = s.tryReduceBandwidth(ct, tx, rtTx, sprintID, task)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -530,10 +532,10 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 	var sprint entity.Sprint
 	var err *errs.Error
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
@@ -547,8 +549,8 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		}
 
 		// TODO(yuhang): better call non-transactional query here, will update after we add those functions in daoV2
-		txCtx.withTransactions(true, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
-			sprint, err = s.sprintDaoV2.FindSprintByID(ct, sqlTx, toSprintID)
+		txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			sprint, err = s.sprintDaoV2.FindSprintByID(ct, tx, toSprintID)
 			return err
 		})
 		if err != nil {
@@ -598,10 +600,10 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		newThreadIDs = append(newThreadIDs, genThreadIDRes.UniqueNumber)
 	}
 
-	err = txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		for idx, taskID := range taskIDs {
 			var task entity.Task
-			task, err = s.copyTaskToSprint(ct, sqlTx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx])
+			task, err = s.copyTaskToSprint(ct, tx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx])
 			if err != nil {
 				s.dataCollector.Logger.ErrorWithContext(ct, err)
 				continue
@@ -619,14 +621,14 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, *errs.Error) {
 	var tasks []entity.Task
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		for _, taskID := range taskIDs {
-			task, err := s.moveTaskToSprint(ct, sqlTx, rtTx, fromSprintID, toSprintID, taskID)
+			task, err := s.moveTaskToSprint(ct, tx, rtTx, fromSprintID, toSprintID, taskID)
 
 			if err != nil {
 				s.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -650,14 +652,14 @@ func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSpr
 func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector: s.dataCollector,
-		db:            s.db,
-		stateSyncer:   s.stateSyncer,
-		ct:            ct,
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err := txCtx.withTransactions(false, func(sqlTx *sql.Tx, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = s.removeTaskFromSprint(ct, sqlTx, rtTx, sprintID, taskID)
+		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -676,20 +678,20 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 
 func (s Sprint) copyTaskToSprint(
 	ct context.Context,
-	sqlTx *sql.Tx,
+	tx *transaction.Transaction,
 	rtTx *realtime.Transaction,
 	toSprintID uint64,
 	taskID uint64,
 	newTaskID uint64,
 	newThreadID uint64,
 ) (entity.Task, *errs.Error) {
-	task, err := s.taskDaoV2.FindTaskByID(ct, sqlTx, taskID)
+	task, err := s.taskDaoV2.FindTaskByID(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
-	sprint, err := s.sprintDaoV2.FindSprintByID(ct, sqlTx, toSprintID)
+	sprint, err := s.sprintDaoV2.FindSprintByID(ct, tx, toSprintID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -704,7 +706,7 @@ func (s Sprint) copyTaskToSprint(
 		return entity.Task{}, internalErr
 	}
 
-	err = s.threadDaoV2.CreateThread(ct, sqlTx, newThreadID)
+	err = s.threadDaoV2.CreateThread(ct, tx, newThreadID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -733,7 +735,7 @@ func (s Sprint) copyTaskToSprint(
 		s.taskDaoV2,
 		newTask,
 	)
-	err = createTaskMutation.ExecuteV2(ct, sqlTx)
+	err = createTaskMutation.ExecuteV2(ct, tx)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -759,7 +761,7 @@ func (s Sprint) copyTaskToSprint(
 		s.sprintDaoV2,
 		relation)
 	rtTx.AppendMutation(createSprintTaskRelationMutation)
-	err = createSprintTaskRelationMutation.ExecuteV2(ct, sqlTx)
+	err = createSprintTaskRelationMutation.ExecuteV2(ct, tx)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -774,14 +776,14 @@ func (s Sprint) copyTaskToSprint(
 			s.taskDaoV2,
 			task)
 		rtTx.AppendMutation(updateTaskMutation)
-		err = updateTaskMutation.ExecuteV2(ct, sqlTx)
+		err = updateTaskMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
-	err = s.tryReduceBandwidth(ct, sqlTx, rtTx, toSprintID, task)
+	err = s.tryReduceBandwidth(ct, tx, rtTx, toSprintID, task)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -792,13 +794,13 @@ func (s Sprint) copyTaskToSprint(
 
 func (s Sprint) moveTaskToSprint(
 	ct context.Context,
-	sqlTx *sql.Tx,
+	tx *transaction.Transaction,
 	rtTx *realtime.Transaction,
 	fromSprintID uint64,
 	toSprintID uint64,
 	taskID uint64,
 ) (entity.Task, *errs.Error) {
-	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, sqlTx, taskID)
+	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -816,7 +818,7 @@ func (s Sprint) moveTaskToSprint(
 		return entity.Task{}, internalErr
 	}
 
-	err = s.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, sqlTx, fromSprintID, taskID)
+	err = s.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, fromSprintID, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -828,25 +830,25 @@ func (s Sprint) moveTaskToSprint(
 		CreatedAt: time.Now().UTC(),
 	}
 
-	err = s.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, sqlTx, relation)
+	err = s.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, relation)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
-	task, err := s.taskDaoV2.FindTaskByID(ct, sqlTx, taskID)
+	task, err := s.taskDaoV2.FindTaskByID(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
-	err = s.tryIncreaseBandwidth(ct, sqlTx, rtTx, fromSprintID, task)
+	err = s.tryIncreaseBandwidth(ct, tx, rtTx, fromSprintID, task)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
-	err = s.tryReduceBandwidth(ct, sqlTx, rtTx, toSprintID, task)
+	err = s.tryReduceBandwidth(ct, tx, rtTx, toSprintID, task)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -855,8 +857,8 @@ func (s Sprint) moveTaskToSprint(
 	return task, nil
 }
 
-func (s Sprint) removeTaskFromSprint(ct context.Context, sqlTx *sql.Tx, rtTx *realtime.Transaction, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
-	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, sqlTx, taskID)
+func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transaction, rtTx *realtime.Transaction, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
+	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -874,7 +876,7 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, sqlTx *sql.Tx, rtTx *re
 		return entity.Task{}, internalErr
 	}
 
-	task, err := s.taskDaoV2.FindTaskByID(ct, sqlTx, taskID)
+	task, err := s.taskDaoV2.FindTaskByID(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -889,7 +891,7 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, sqlTx *sql.Tx, rtTx *re
 		task,
 	)
 	rtTx.AppendMutation(deleteSprintTaskRelationMutation)
-	err = deleteSprintTaskRelationMutation.ExecuteV2(ct, sqlTx)
+	err = deleteSprintTaskRelationMutation.ExecuteV2(ct, tx)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -905,14 +907,14 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, sqlTx *sql.Tx, rtTx *re
 			s.taskDaoV2,
 			task)
 		rtTx.AppendMutation(updateTaskMutation)
-		err = updateTaskMutation.ExecuteV2(ct, sqlTx)
+		err = updateTaskMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 	}
 
-	err = s.tryIncreaseBandwidth(ct, sqlTx, rtTx, sprintID, task)
+	err = s.tryIncreaseBandwidth(ct, tx, rtTx, sprintID, task)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -923,13 +925,13 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, sqlTx *sql.Tx, rtTx *re
 
 func (s Sprint) tryReduceBandwidth(
 	ct context.Context,
-	sqlTx *sql.Tx,
+	tx *transaction.Transaction,
 	rtTx *realtime.Transaction,
 	sprintID uint64,
 	task entity.Task,
 ) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
-		newSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, sqlTx, sprintID, *task.OwnerUserID)
+		newSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, tx, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
 			if err.Code == errs.NotFound {
@@ -950,7 +952,7 @@ func (s Sprint) tryReduceBandwidth(
 			s.sprintDaoV2,
 			newSprintParticipant)
 		rtTx.AppendMutation(updateSprintParticipantMutation)
-		err = updateSprintParticipantMutation.ExecuteV2(ct, sqlTx)
+		err = updateSprintParticipantMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -962,13 +964,13 @@ func (s Sprint) tryReduceBandwidth(
 
 func (s Sprint) tryIncreaseBandwidth(
 	ct context.Context,
-	sqlTx *sql.Tx,
+	tx *transaction.Transaction,
 	rtTx *realtime.Transaction,
 	sprintID uint64,
 	task entity.Task,
 ) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
-		oldSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, sqlTx, sprintID, *task.OwnerUserID)
+		oldSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, tx, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
 			if err.Code == errs.NotFound {
@@ -989,7 +991,7 @@ func (s Sprint) tryIncreaseBandwidth(
 			s.sprintDaoV2,
 			oldSprintParticipant)
 		rtTx.AppendMutation(updateSprintParticipantMutation)
-		err = updateSprintParticipantMutation.ExecuteV2(ct, sqlTx)
+		err = updateSprintParticipantMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -1004,6 +1006,7 @@ func NewSprint(
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
 	authorizer Authorizer,
+	transactionFactory transaction.Factory,
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	sprintDao dao.Sprint,
@@ -1015,13 +1018,13 @@ func NewSprint(
 	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 	threadDaoV2 daov2.Thread,
-	db *sql.DB,
 ) Sprint {
 	return Sprint{
 		dataCollector:           dataCollector,
 		cloudClientRegistry:     cloudClientRegistry,
 		stateSyncer:             stateSyncer,
 		authorizer:              authorizer,
+		transactionFactory:      transactionFactory,
 		taskDao:                 taskDao,
 		taskDaoV2:               taskDaoV2,
 		sprintDao:               sprintDao,
@@ -1033,6 +1036,5 @@ func NewSprint(
 		teamMemberDao:           teamMemberDao,
 		teamMemberDaoV2:         teamMemberDaoV2,
 		threadDaoV2:             threadDaoV2,
-		db:                      db,
 	}
 }

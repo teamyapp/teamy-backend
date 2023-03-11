@@ -2,10 +2,10 @@ package sqldb
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -16,8 +16,8 @@ type SprintTaskRelation struct {
 
 var _ daov2.SprintTaskRelation = (*SprintTaskRelation)(nil)
 
-func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, tx *sql.Tx, sprintID uint64) ([]uint64, *errs.Error) {
-	rows, err := tx.Query(
+func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		task_id
@@ -63,8 +63,8 @@ func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, tx *sql.Tx
 	return taskIDs, internalErr
 }
 
-func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, tx *sql.Tx, taskID uint64) ([]uint64, *errs.Error) {
-	rows, err := tx.Query(
+func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		sprint_id
@@ -110,8 +110,8 @@ func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, tx *sql.Tx
 	return sprintIDs, internalErr
 }
 
-func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *sql.Tx, relation entity.SprintTaskRelation) *errs.Error {
-	_, err := tx.Exec(`
+func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *transaction.Transaction, relation entity.SprintTaskRelation) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO sprint_task_relation
 		(
 			sprint_id,
@@ -136,8 +136,8 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *sql
 	return nil
 }
 
-func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, tx *sql.Tx, sprintID uint64, taskID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, tx *transaction.Transaction, sprintID uint64, taskID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM sprint_task_relation
 		WHERE sprint_id = $1 AND task_id = $2;
 		`,

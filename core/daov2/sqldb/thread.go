@@ -2,10 +2,10 @@ package sqldb
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 )
 
@@ -15,8 +15,8 @@ type Thread struct {
 
 var _ daov2.Thread = (*Thread)(nil)
 
-func (t Thread) CreateThread(ct context.Context, tx *sql.Tx, threadID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (t Thread) CreateThread(ct context.Context, tx *transaction.Transaction, threadID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO thread (id)
 		VALUES ($1);
 		`,
@@ -33,8 +33,8 @@ func (t Thread) CreateThread(ct context.Context, tx *sql.Tx, threadID uint64) *e
 	return nil
 }
 
-func (t Thread) DeleteThread(ct context.Context, tx *sql.Tx, threadID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (t Thread) DeleteThread(ct context.Context, tx *transaction.Transaction, threadID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM thread
 		WHERE id = $1;
 		`,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -18,9 +19,9 @@ type Task struct {
 
 var _ daov2.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(ct context.Context, tx *sql.Tx, taskID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByID(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
-	err := tx.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
 			goal,
@@ -67,7 +68,7 @@ func (t Task) FindTaskByID(ct context.Context, tx *sql.Tx, taskID uint64) (entit
 	return task, nil
 }
 
-func (t Task) FindTasksByIDs(ct context.Context, tx *sql.Tx, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+func (t Task) FindTasksByIDs(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -91,7 +92,7 @@ func (t Task) FindTasksByIDs(ct context.Context, tx *sql.Tx, taskIDs []uint64) (
 		delivered_at
 	FROM task
 	WHERE id IN (%v);`, idsString)
-	rows, err := tx.Query(query)
+	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
@@ -144,9 +145,9 @@ func (t Task) FindTasksByIDs(ct context.Context, tx *sql.Tx, taskIDs []uint64) (
 	return tasks, internalErr
 }
 
-func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *sql.Tx, commentThreadID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
-	err := tx.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
 			goal,
@@ -202,8 +203,8 @@ func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *sql.Tx, comment
 	return task, nil
 }
 
-func (t Task) FindAllTasks(ct context.Context, tx *sql.Tx) ([]entity.Task, *errs.Error) {
-	rows, err := tx.Query(`
+func (t Task) FindAllTasks(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
 		goal,
@@ -272,8 +273,8 @@ func (t Task) FindAllTasks(ct context.Context, tx *sql.Tx) ([]entity.Task, *errs
 	return tasks, internalErr
 }
 
-func (t Task) FindTasksByTeamID(ct context.Context, tx *sql.Tx, teamID uint64) ([]entity.Task, *errs.Error) {
-	rows, err := tx.Query(
+func (t Task) FindTasksByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		id,
@@ -345,8 +346,8 @@ func (t Task) FindTasksByTeamID(ct context.Context, tx *sql.Tx, teamID uint64) (
 	return tasks, nil
 }
 
-func (t Task) CreateTask(ct context.Context, tx *sql.Tx, task entity.Task) *errs.Error {
-	_, err := tx.Exec(`
+func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO task
 		(
 			id,
@@ -389,8 +390,8 @@ func (t Task) CreateTask(ct context.Context, tx *sql.Tx, task entity.Task) *errs
 	return nil
 }
 
-func (t Task) UpdateTask(ct context.Context, tx *sql.Tx, task entity.Task) *errs.Error {
-	_, err := tx.Exec(`
+func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE task
 		SET
 			goal = $1,
@@ -429,8 +430,8 @@ func (t Task) UpdateTask(ct context.Context, tx *sql.Tx, task entity.Task) *errs
 	return nil
 }
 
-func (t Task) DeleteTask(ct context.Context, tx *sql.Tx, taskID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM task
 		WHERE id = $1;
 		`,

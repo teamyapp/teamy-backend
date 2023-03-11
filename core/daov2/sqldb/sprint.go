@@ -8,6 +8,7 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -18,9 +19,9 @@ type Sprint struct {
 
 var _ daov2.Sprint = (*Sprint)(nil)
 
-func (s Sprint) FindSprintByID(ct context.Context, tx *sql.Tx, sprintID uint64) (entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintByID(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
 	sprint := entity.Sprint{}
-	err := tx.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
 			start_at,
@@ -60,7 +61,7 @@ func (s Sprint) FindSprintByID(ct context.Context, tx *sql.Tx, sprintID uint64) 
 	return sprint, nil
 }
 
-func (s Sprint) FindSprintsByIDs(ct context.Context, tx *sql.Tx, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintsByIDs(ct context.Context, tx *transaction.Transaction, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
 	if len(sprintIDs) == 0 {
 		return []entity.Sprint{}, nil
 	}
@@ -75,7 +76,7 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, tx *sql.Tx, sprintIDs []uin
 		owning_team_id
 	FROM sprint
 	WHERE id IN (%v);`, idsString)
-	rows, err := tx.Query(query)
+	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
@@ -119,8 +120,8 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, tx *sql.Tx, sprintIDs []uin
 	return sprints, internalErr
 }
 
-func (s Sprint) FindSprintsByTeamID(ct context.Context, tx *sql.Tx, teamID uint64) ([]entity.Sprint, *errs.Error) {
-	rows, err := tx.Query(
+func (s Sprint) FindSprintsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		id,
@@ -175,8 +176,8 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, tx *sql.Tx, teamID uint6
 	return sprints, internalErr
 }
 
-func (s Sprint) FindAllSprints(ct context.Context, tx *sql.Tx) ([]entity.Sprint, *errs.Error) {
-	rows, err := tx.Query(`
+func (s Sprint) FindAllSprints(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
 		start_at,
@@ -228,8 +229,8 @@ func (s Sprint) FindAllSprints(ct context.Context, tx *sql.Tx) ([]entity.Sprint,
 	return sprints, internalErr
 }
 
-func (s Sprint) CreateSprint(ct context.Context, tx *sql.Tx, sprint entity.Sprint) *errs.Error {
-	_, err := tx.Exec(`
+func (s Sprint) CreateSprint(ct context.Context, tx *transaction.Transaction, sprint entity.Sprint) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO sprint
 		(
 			id,
@@ -258,8 +259,8 @@ func (s Sprint) CreateSprint(ct context.Context, tx *sql.Tx, sprint entity.Sprin
 	return nil
 }
 
-func (s Sprint) DeleteSprint(ct context.Context, tx *sql.Tx, sprintID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sprintID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM sprint
 		WHERE id = $1;
 		`,

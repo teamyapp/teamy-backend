@@ -2,10 +2,10 @@ package sqldb
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -16,8 +16,8 @@ type TaskAwaitForRelation struct {
 
 var _ daov2.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
 
-func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, tx *sql.Tx, waitForTaskID uint64) ([]uint64, *errs.Error) {
-	rows, err := tx.Query(`
+func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		awaiting_task_id
 	FROM task_await_for_relation
@@ -59,8 +59,8 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, tx *sql.Tx
 	return waitingTaskIDs, nil
 }
 
-func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, tx *sql.Tx, waitingTaskID uint64) ([]uint64, *errs.Error) {
-	rows, err := tx.Query(`
+func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		await_for_task_id
 	FROM task_await_for_relation
@@ -102,8 +102,8 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, tx *sql.Tx
 	return waitForTaskIDs, nil
 }
 
-func (t TaskAwaitForRelation) CreateRelation(ct context.Context, tx *sql.Tx, relation entity.TaskAwaitForRelation) *errs.Error {
-	_, err := tx.Exec(`
+func (t TaskAwaitForRelation) CreateRelation(ct context.Context, tx *transaction.Transaction, relation entity.TaskAwaitForRelation) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 	INSERT INTO task_await_for_relation
 	(
 	    awaiting_task_id,
@@ -129,8 +129,8 @@ func (t TaskAwaitForRelation) CreateRelation(ct context.Context, tx *sql.Tx, rel
 	return nil
 }
 
-func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, tx *sql.Tx, waitingTaskID uint64, awaitForTaskID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64, awaitForTaskID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM task_await_for_relation
 		WHERE awaiting_task_id = $1 AND await_for_task_id = $2;
 		`,

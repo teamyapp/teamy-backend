@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -31,7 +31,7 @@ func (c *CreateSprintTaskRelationMutation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, c.sprintTaskRelation)
 	if err != nil {
 		c.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -41,11 +41,11 @@ func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql
 	return nil
 }
 
-func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifiersPrepared {
 		return nil
 	}
-	
+
 	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
 	if err != nil {
 		c.dataCollector.Logger.ErrorWithContext(ct, err)

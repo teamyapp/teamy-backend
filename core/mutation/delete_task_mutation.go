@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -29,7 +29,7 @@ func (d *DeleteTaskMutation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTaskMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteTaskMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := d.taskDaoV2.DeleteTask(ct, tx, d.task.ID)
 	if internalErr != nil {
 		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -39,11 +39,11 @@ func (d *DeleteTaskMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Err
 	return nil
 }
 
-func (d *DeleteTaskMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteTaskMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifierPrepared {
 		return nil
 	}
-	
+
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {
