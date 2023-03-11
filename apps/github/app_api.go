@@ -813,7 +813,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	prs = collect.Filter(prs, func(pr entity.GithubPullRequest) bool {
+	pullRequests = collect.Filter(prs, func(pr entity.GithubPullRequest) bool {
 		return pr.RepositoryName == nil ||
 			pr.RepositoryOwner == nil ||
 			pr.URL == nil ||
