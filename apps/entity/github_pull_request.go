@@ -5,11 +5,11 @@ import "fmt"
 type GithubPullRequest struct {
 	NodeID          string
 	InternalTaskID  uint64
-	RepositoryOwner string
-	RepositoryName  string
-	Number          int
-	URL             string
-	OrganizationID  uint64
+	RepositoryOwner *string
+	RepositoryName  *string
+	Number          *int
+	URL             *string
+	OrganizationID  *uint64
 }
 
 func (g *GithubPullRequest) String() string {
@@ -17,10 +17,10 @@ func (g *GithubPullRequest) String() string {
 		"[GithubPullRequest NodeID:%s InternalTaskID:%d RepositoryOwner:%s RepositoryName:%s Number:%d URL:%s OrganizationID:%d]",
 		g.NodeID,
 		g.InternalTaskID,
-		g.RepositoryOwner,
-		g.RepositoryName,
-		g.Number,
-		g.URL,
-		g.OrganizationID,
+		*g.RepositoryOwner,
+		*g.RepositoryName,
+		*g.Number,
+		*g.URL,
+		*g.OrganizationID,
 	)
 }

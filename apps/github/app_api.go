@@ -623,11 +623,11 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 	pr := entity.GithubPullRequest{
 		NodeID:          prEvt.PullRequest.NodeID,
 		InternalTaskID:  createTaskRes.TaskId,
-		RepositoryOwner: evt.Repository.Owner.Login,
-		RepositoryName:  evt.Repository.Name,
-		Number:          prEvt.Number,
-		URL:             prEvt.PullRequest.HtmlURL,
-		OrganizationID:  evt.Organization.ID,
+		RepositoryOwner: &evt.Repository.Owner.Login,
+		RepositoryName:  &evt.Repository.Name,
+		Number:          &prEvt.Number,
+		URL:             &prEvt.PullRequest.HtmlURL,
+		OrganizationID:  &evt.Organization.ID,
 	}
 	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
@@ -856,10 +856,10 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 
 		gpr := entity.GithubPullRequest{
 			NodeID:          pr.NodeID,
-			RepositoryOwner: node.Repository.Owner.Login,
-			RepositoryName:  node.Repository.Name,
-			Number:          node.Number,
-			URL:             node.URL,
+			RepositoryOwner: &node.Repository.Owner.Login,
+			RepositoryName:  &node.Repository.Name,
+			Number:          &node.Number,
+			URL:             &node.URL,
 		}
 
 		sqlErr = a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
