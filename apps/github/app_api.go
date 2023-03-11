@@ -27,8 +27,11 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/apps/github/client"
+	appsProto "github.com/teamyapp/teamy-backend/apps/proto"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -53,9 +56,11 @@ type AppAPI struct {
 	githubRequiredUserActionDao dao.GithubRequiredUserAction
 	githubApp                   *client.GithubApp
 	githubGraphQLAPI            client.GraphQLAPI
+	appsProto.UnimplementedGithubServer
 }
 
 var _ runner.Service = (*AppAPI)(nil)
+var _ appsProto.GithubServer = (*AppAPI)(nil)
 
 func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
@@ -84,6 +89,9 @@ func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "required-actions", "create"),
 			HandlerFunc: a.webCreateRequiredAction,
 		},
+	})
+	rn.WithGRPCServer(func(server *grpc.Server) {
+		appsProto.RegisterGithubServer(server, a)
 	})
 	return nil
 }
@@ -615,11 +623,11 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 	pr := entity.GithubPullRequest{
 		NodeID:          prEvt.PullRequest.NodeID,
 		InternalTaskID:  createTaskRes.TaskId,
-		RepositoryOwner: evt.Repository.Owner.Login,
-		RepositoryName:  evt.Repository.Name,
-		Number:          prEvt.Number,
-		URL:             prEvt.PullRequest.HtmlURL,
-		OrganizationID:  evt.Organization.ID,
+		RepositoryOwner: &evt.Repository.Owner.Login,
+		RepositoryName:  &evt.Repository.Name,
+		Number:          &prEvt.Number,
+		URL:             &prEvt.PullRequest.HtmlURL,
+		OrganizationID:  &evt.Organization.ID,
 	}
 	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
@@ -795,6 +803,93 @@ func (a AppAPI) GetInternalUserID(ct context.Context, githubUserID uint64) (uint
 	}
 
 	return getInternalUserIdRes.InternalUserId, nil
+}
+
+func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+	var err *errs.Error
+	pullRequests, err := a.githubPullRequestDao.FindAllPullRequests(ct)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	pullRequests = collect.Filter(pullRequests, func(pullRequest entity.GithubPullRequest) bool {
+		return pullRequest.RepositoryName == nil ||
+			pullRequest.RepositoryOwner == nil ||
+			pullRequest.URL == nil ||
+			pullRequest.Number == nil
+	})
+
+	for _, pullRequest := range pullRequests {
+		a.dataCollector.Logger.InfoWithContext(
+			ct,
+			fmt.Sprintf("start backfilling pull request, taskID=%d, nodeID=%s",
+				pullRequest.InternalTaskID,
+				pullRequest.NodeID,
+			),
+		)
+
+		getTaskReq := &proto.GetTaskRequest{TaskId: pullRequest.InternalTaskID}
+		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
+		if rpcErr != nil {
+			if err == nil {
+				err = errs.FromGRPCErr(rpcErr)
+			}
+
+			a.dataCollector.Logger.ErrorWithContext(ct, errs.FromGRPCErr(rpcErr))
+			continue
+		}
+
+		installationID, sqlErr := a.githubAppInstallationDao.FindInstallationIDByTeamID(ct, task.OwningTeamId)
+		if sqlErr != nil {
+			if err == nil {
+				err = sqlErr
+			}
+
+			a.dataCollector.Logger.ErrorWithContext(ct, sqlErr)
+			continue
+		}
+
+		ins := a.githubApp.GetInstallation(installationID)
+		node, gqlErr := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, ins, pullRequest.NodeID)
+		if gqlErr != nil {
+			if err == nil {
+				err = gqlErr
+			}
+
+			a.dataCollector.Logger.ErrorWithContext(ct, gqlErr)
+			continue
+		}
+
+		gpr := entity.GithubPullRequest{
+			NodeID:          pullRequest.NodeID,
+			RepositoryOwner: &node.Repository.Owner.Login,
+			RepositoryName:  &node.Repository.Name,
+			Number:          &node.Number,
+			URL:             &node.URL,
+		}
+
+		sqlErr = a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
+		if sqlErr != nil {
+			if err == nil {
+				err = sqlErr
+			}
+
+			a.dataCollector.Logger.ErrorWithContext(ct, sqlErr)
+			continue
+		}
+
+		a.dataCollector.Logger.InfoWithContext(
+			ct,
+			fmt.Sprintf("finish backfilling pull request, metadata=%v", pullRequest))
+	}
+
+	return &emptypb.Empty{}, errs.ToGRPCErr(err)
+}
+
+func (a AppAPI) BackfillPullRequestLinks(ct context.Context, request *appsProto.BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {

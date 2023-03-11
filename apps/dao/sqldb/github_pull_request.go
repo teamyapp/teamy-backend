@@ -158,6 +158,34 @@ func (g GithubPullRequest) CreatePullRequest(
 	return nil
 }
 
+func (g GithubPullRequest) UpdatePullRequest(ct context.Context, pullRequest entity.GithubPullRequest) *errs.Error {
+	_, err := g.db.Exec(`
+		UPDATE apps_github_pull_request
+		SET
+    		github_repository_owner = $1,
+			github_repository_name = $2,
+			github_pull_request_number = $3,
+			github_pull_request_url = $4
+		WHERE github_pull_request_node_id = $5;`,
+		pullRequest.RepositoryOwner,
+		pullRequest.RepositoryName,
+		pullRequest.Number,
+		pullRequest.URL,
+		pullRequest.NodeID,
+	)
+
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	return nil
+}
+
 func (g GithubPullRequest) DeletePullRequestByInternalTaskID(
 	ct context.Context,
 	internalTaskID uint64,
@@ -200,6 +228,62 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(
 	}
 
 	return nil
+}
+
+func (g GithubPullRequest) FindAllPullRequests(ct context.Context) ([]entity.GithubPullRequest, *errs.Error) {
+	rows, err := g.db.Query(`
+	SELECT
+	    internal_task_id,
+	    github_pull_request_node_id,
+	 	github_repository_owner,
+	    github_repository_name,
+	    github_pull_request_number,
+	    github_pull_request_url,
+	 	github_organization_id
+	FROM apps_github_pull_request;`,
+	)
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return nil, internalErr
+	}
+
+	defer rows.Close()
+
+	var internalErr *errs.Error
+	var pullRequests []entity.GithubPullRequest
+	for rows.Next() {
+		var pullRequest entity.GithubPullRequest
+		err = rows.Scan(
+			&pullRequest.InternalTaskID,
+			&pullRequest.NodeID,
+			&pullRequest.RepositoryOwner,
+			&pullRequest.RepositoryName,
+			&pullRequest.Number,
+			&pullRequest.URL,
+			&pullRequest.OrganizationID,
+		)
+		if err != nil {
+			newInternalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			g.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			continue
+		}
+
+		pullRequests = append(pullRequests, pullRequest)
+	}
+
+	return pullRequests, internalErr
 }
 
 func NewGithubPullRequest(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubPullRequest {

@@ -49,6 +49,35 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 	return nil
 }
 
+func (g GithubAppInstallation) FindInstallationIDByTeamID(ct context.Context, teamID uint64) (int, *errs.Error) {
+	var installationID int
+	err := g.db.QueryRow(`
+		SELECT id
+		FROM apps_github_app_installation
+		WHERE team_id = $1;`,
+		teamID).
+		Scan(&installationID)
+	if errors.Is(err, sql.ErrNoRows) {
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("installation not found: teamID=%d", teamID),
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return 0, internalErr
+	}
+
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return 0, internalErr
+	}
+
+	return installationID, nil
+}
+
 func (g GithubAppInstallation) FindInstallationByID(
 	ct context.Context,
 	installationID uint64,
