@@ -8,6 +8,7 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -18,14 +19,14 @@ type TeamMember struct {
 
 var _ daov2.TeamMember = (*TeamMember)(nil)
 
-func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *sql.Tx, userID uint64) ([]uint64, *errs.Error) {
+func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
 	statement := `
 	SELECT
 		team_id
 	FROM team_member
 	WHERE user_id = $1;
 `
-	rows, err := tx.Query(statement, int64(userID))
+	rows, err := tx.SQLTx().Query(statement, int64(userID))
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
@@ -64,14 +65,14 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *sql.Tx, userID u
 	return teamIDs, internalErr
 }
 
-func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, tx *sql.Tx, teamID uint64) ([]uint64, *errs.Error) {
+func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error) {
 	statement := `
 	SELECT
 		user_id
 	FROM team_member
 	WHERE team_id = $1;
 `
-	rows, err := tx.Query(statement, int64(teamID))
+	rows, err := tx.SQLTx().Query(statement, int64(teamID))
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.Unknown,
@@ -110,8 +111,8 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, tx *sql.Tx, te
 	return teamMemberIDs, internalErr
 }
 
-func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, tx *sql.Tx, teamID uint64) ([]entity.TeamMember, *errs.Error) {
-	rows, err := tx.Query(`
+func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		team_id,
 		user_id,
@@ -162,9 +163,9 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, tx *sql.Tx, team
 	return teamMembers, internalErr
 }
 
-func (t TeamMember) FindTeamMember(ct context.Context, tx *sql.Tx, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
+func (t TeamMember) FindTeamMember(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
 	teamMember := entity.TeamMember{}
-	err := tx.QueryRow(
+	err := tx.SQLTx().QueryRow(
 		`
 	SELECT
 		team_id,
@@ -207,8 +208,8 @@ func (t TeamMember) FindTeamMember(ct context.Context, tx *sql.Tx, teamID uint64
 	return teamMember, nil
 }
 
-func (t TeamMember) CreateTeamMember(ct context.Context, tx *sql.Tx, teamMember entity.TeamMember) *errs.Error {
-	_, err := tx.Exec(`
+func (t TeamMember) CreateTeamMember(ct context.Context, tx *transaction.Transaction, teamMember entity.TeamMember) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO team_member
 		(
 		 	team_id,
@@ -237,8 +238,8 @@ func (t TeamMember) CreateTeamMember(ct context.Context, tx *sql.Tx, teamMember 
 	return nil
 }
 
-func (t TeamMember) UpdateTeamMember(ct context.Context, tx *sql.Tx, teamMember entity.TeamMember) *errs.Error {
-	_, err := tx.Exec(`
+func (t TeamMember) UpdateTeamMember(ct context.Context, tx *transaction.Transaction, teamMember entity.TeamMember) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE team_member
 		SET
 			weekly_bandwidth = $1,
@@ -262,8 +263,8 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, tx *sql.Tx, teamMember 
 	return nil
 }
 
-func (t TeamMember) DeleteTeamMember(ct context.Context, tx *sql.Tx, teamID uint64, userID uint64) *errs.Error {
-	_, err := tx.Exec(`
+func (t TeamMember) DeleteTeamMember(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM team_member
 		WHERE team_id = $1 AND user_id = $2;
 		`,

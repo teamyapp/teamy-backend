@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -27,7 +27,7 @@ func (u *UpdateTaskActivityMutation) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
 		u.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -37,11 +37,11 @@ func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *
 	return nil
 }
 
-func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if u.notifierPrepared {
 		return nil
 	}
-	
+
 	var err *errs.Error
 	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 	if err != nil {

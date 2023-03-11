@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -26,12 +26,12 @@ func (d *DeleteTeamMemberMutation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTeamMemberMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteTeamMemberMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (d *DeleteTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }

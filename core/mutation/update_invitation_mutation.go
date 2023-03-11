@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -25,12 +25,12 @@ func (u *UpdateInvitationMutation) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateInvitationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (u *UpdateInvitationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u *UpdateInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (u *UpdateInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	//TODO implement me
 	panic("implement me")
 }

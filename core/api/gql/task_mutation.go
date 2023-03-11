@@ -16,7 +16,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		Context     *string
 		OwnerUserID *graphql.ID
 		DueAt       *graphql.Time
-		IsPlanned   *bool
+		IsPlanned   bool
 	}
 }) (Task, error) {
 	owningTeamID, argErr := fromGraphQLID(args.TeamID)

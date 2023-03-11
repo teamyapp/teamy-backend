@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -31,7 +31,7 @@ func (d *DeleteSprintParticipantMutation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteSprintParticipantMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := d.sprintParticipantDaoV2.DeleteSprintParticipant(ct, tx, d.sprintID, d.userID)
 	if err != nil {
 		d.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -41,7 +41,7 @@ func (d *DeleteSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.
 	return nil
 }
 
-func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifiersPrepared {
 		return nil
 	}
