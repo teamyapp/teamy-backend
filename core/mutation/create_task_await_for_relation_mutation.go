@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,6 +22,7 @@ type CreateTaskAwaitForRelationMutation struct {
 	id                        uint64
 	taskAwaitForRelation      entity.TaskAwaitForRelation
 	clientNotifiers           []*realtime.ClientNotifier
+	notifiersPrepared         bool
 }
 
 var _ realtime.Mutation = (*CreateTaskAwaitForRelationMutation)(nil)
@@ -30,7 +31,7 @@ func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.taskAwaitForRelationDaoV2.CreateRelation(ct, tx, c.taskAwaitForRelation)
 	if err != nil {
 		c.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -40,7 +41,11 @@ func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *s
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	if c.notifiersPrepared {
+		return nil
+	}
+
 	task, err := c.taskDaoV2.FindTaskByID(ct, tx, c.taskAwaitForRelation.AwaitForTaskID)
 	if err != nil {
 		c.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -53,6 +58,7 @@ func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 		return err
 	}
 
+	c.notifiersPrepared = true
 	return nil
 }
 
@@ -115,5 +121,6 @@ func NewCreateTaskAwaitForRelationMutation(
 		taskDaoV2:                 taskDaoV2,
 		id:                        stateSyncer.NextMutationID(),
 		taskAwaitForRelation:      taskAwaitForRelation,
+		notifiersPrepared:         false,
 	}
 }

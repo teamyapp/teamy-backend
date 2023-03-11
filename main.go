@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -49,7 +50,9 @@ func main() {
 	}
 
 	lineFormatter := newLineFormatter(cfg.Environment)
-	logOutput, err := telemetry.NewLogOutput(cfg.Environment, fullServiceName)
+	logFileName := fmt.Sprintf("%v.log", fullServiceName)
+	logFilePath := getEnv("LOG_OUTPUT_FILE", filepath.Join("..", "logs", logFileName))
+	logOutput, err := telemetry.NewLogOutput(cfg.Environment, logFilePath)
 	if err != nil {
 		panic(err)
 	}

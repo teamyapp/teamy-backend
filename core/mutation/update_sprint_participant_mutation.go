@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -22,6 +22,7 @@ type UpdateSprintParticipantMutation struct {
 	id                     uint64
 	sprintParticipant      entity.SprintParticipant
 	clientNotifiers        []*realtime.ClientNotifier
+	notifierPrepared       bool
 }
 
 var _ realtime.Mutation = (*UpdateSprintParticipantMutation)(nil)
@@ -30,7 +31,7 @@ func (u *UpdateSprintParticipantMutation) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (u *UpdateSprintParticipantMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := u.sprintParticipantDaoV2.UpdateSprintParticipant(ct, tx, u.sprintParticipant)
 	if internalErr != nil {
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -40,7 +41,11 @@ func (u *UpdateSprintParticipantMutation) ExecuteV2(ct context.Context, tx *sql.
 	return nil
 }
 
-func (u *UpdateSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (u *UpdateSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	if u.notifierPrepared {
+		return nil
+	}
+
 	sprint, internalErr := u.sprintDaoV2.FindSprintByID(ct, tx, u.sprintParticipant.SprintID)
 	if internalErr != nil {
 		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -53,6 +58,7 @@ func (u *UpdateSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 		return internalErr
 	}
 
+	u.notifierPrepared = true
 	return nil
 }
 
@@ -115,5 +121,6 @@ func NewUpdateSprintParticipantMutation(
 		sprintDaoV2:            sprintDaoV2,
 		id:                     stateSyncer.NextMutationID(),
 		sprintParticipant:      sprintParticipant,
+		notifierPrepared:       false,
 	}
 }

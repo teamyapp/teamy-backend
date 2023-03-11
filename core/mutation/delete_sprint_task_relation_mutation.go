@@ -2,10 +2,10 @@ package mutation
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -21,6 +21,7 @@ type DeleteSprintTaskRelationMutation struct {
 	sprintID                uint64
 	task                    entity.Task
 	clientNotifiers         []*realtime.ClientNotifier
+	notifierPrepared        bool
 }
 
 var _ realtime.Mutation = (*DeleteSprintTaskRelationMutation)(nil)
@@ -29,7 +30,7 @@ func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := d.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, d.sprintID, d.task.ID)
 	if internalErr != nil {
 		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -39,7 +40,11 @@ func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *sql
 	return nil
 }
 
-func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *sql.Tx) *errs.Error {
+func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	if d.notifierPrepared {
+		return nil
+	}
+
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {
@@ -47,6 +52,7 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 		return internalErr
 	}
 
+	d.notifierPrepared = true
 	return nil
 }
 
@@ -107,5 +113,6 @@ func NewDeleteSprintTaskRelationMutation(
 		id:                      stateSyncer.NextMutationID(),
 		sprintID:                sprintID,
 		task:                    task,
+		notifierPrepared:        false,
 	}
 }

@@ -7,7 +7,8 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.5.0
-	github.com/teamyapp/cloud v0.0.0-20230306001404-923da369465c
+	github.com/stretchr/testify v1.8.1
+	github.com/teamyapp/cloud v0.0.0-20230311022808-f181b47928db
 	google.golang.org/grpc v1.52.3
 	google.golang.org/protobuf v1.28.1
 )
@@ -18,6 +19,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
@@ -32,6 +34,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
@@ -49,4 +52,5 @@ require (
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20221118155620-16455021b5e6 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

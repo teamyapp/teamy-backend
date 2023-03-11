@@ -11,6 +11,7 @@ import (
 	"github.com/teamyapp/cloud/libs/env"
 	cloudGQL "github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/cache"
@@ -51,6 +52,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(daov2.Sprint), new(sqldbV2.Sprint)),
 	wire.Bind(new(daov2.SprintTaskRelation), new(sqldbV2.SprintTaskRelation)),
 	wire.Bind(new(daov2.Thread), new(sqldbV2.Thread)),
+	wire.Bind(new(daov2.TeamMember), new(sqldbV2.TeamMember)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -75,6 +77,7 @@ var daoSet = wire.NewSet(
 	sqldbV2.NewSprint,
 	sqldbV2.NewSprintTaskRelation,
 	sqldbV2.NewThread,
+	sqldbV2.NewTeamMember,
 )
 
 var serviceSet = wire.NewSet(
@@ -112,6 +115,7 @@ func InitGraphQLAPI(
 
 		newPrometheusTracer,
 		daoSet,
+		transaction.NewFactory,
 		serviceSet,
 		cache.NewActivity,
 		gql.NewDependencies,
@@ -141,6 +145,7 @@ func InitTaskRPCAPI(
 		daoSet,
 		cache.NewActivity,
 		serviceSet,
+		transaction.NewFactory,
 		api.NewTaskRPC,
 	)
 	return api.TaskRPC{}
@@ -155,7 +160,7 @@ func InitSprintRPCAPI(
 	wire.Build(
 		daoSet,
 		serviceSet,
-		cache.NewActivity,
+		transaction.NewFactory,
 		api.NewSprintRPC,
 	)
 	return api.SprintRPC{}
