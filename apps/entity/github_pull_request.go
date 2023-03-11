@@ -14,34 +14,13 @@ type GithubPullRequest struct {
 
 func (g *GithubPullRequest) String() string {
 	return fmt.Sprintf(
-		"[GithubPullRequest NodeID:%s InternalTaskID:%d RepositoryOwner:%s RepositoryName:%s Number:%d URL:%s OrganizationID:%d]",
+		"[GithubPullRequest NodeID:%v InternalTaskID:%v RepositoryOwner:%v RepositoryName:%v Number:%v URL:%v OrganizationID:%v]",
 		g.NodeID,
 		g.InternalTaskID,
-		getString(g.RepositoryOwner),
-		getString(g.RepositoryName),
-		getInt(g.Number),
-		getString(g.URL),
-		getUint64(g.OrganizationID),
+		g.RepositoryOwner,
+		g.RepositoryName,
+		g.Number,
+		g.URL,
+		g.OrganizationID,
 	)
-}
-
-func getString(ptr *string) string {
-	if ptr == nil {
-		return ""
-	}
-	return *ptr
-}
-
-func getInt(ptr *int) int {
-	if ptr == nil {
-		return 0
-	}
-	return *ptr
-}
-
-func getUint64(ptr *uint64) uint64 {
-	if ptr == nil {
-		return 0
-	}
-	return *ptr
 }
