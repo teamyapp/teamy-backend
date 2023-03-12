@@ -15,11 +15,162 @@ import (
 
 type SprintParticipant struct {
 	dataCollector telemetry.DataCollector
+	db            *sql.DB
 }
 
 var _ daov2.SprintParticipant = (*SprintParticipant)(nil)
 
-func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
+func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, *errs.Error) {
+	rows, err := s.db.Query(
+		`
+	SELECT
+		user_id
+	FROM sprint_participant
+	WHERE sprint_id = $1;
+`,
+		sprintID)
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return nil, internalErr
+	}
+
+	defer rows.Close()
+
+	var internalErr *errs.Error
+	participantUserIDs := make([]uint64, 0)
+	for rows.Next() {
+		var participantUserID uint64
+		err = rows.Scan(
+			&participantUserID,
+		)
+		if err != nil {
+			newInternalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			continue
+		}
+
+		participantUserIDs = append(participantUserIDs, participantUserID)
+	}
+
+	return participantUserIDs, internalErr
+}
+
+func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	rows, err := s.db.Query(
+		`
+	SELECT
+		sprint_id,
+		user_id,
+		total_bandwidth,
+	 	unused_bandwidth,
+		created_at,
+	 	updated_at
+	FROM sprint_participant
+	WHERE sprint_id = $1;
+`,
+		sprintID)
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return nil, internalErr
+	}
+
+	defer rows.Close()
+
+	var internalErr *errs.Error
+	sprintParticipants := make([]entity.SprintParticipant, 0)
+	for rows.Next() {
+		sprintParticipant := entity.SprintParticipant{}
+		err = rows.Scan(
+			&sprintParticipant.SprintID,
+			&sprintParticipant.UserID,
+			&sprintParticipant.TotalBandwidth,
+			&sprintParticipant.UnusedBandwidth,
+			&sprintParticipant.CreatedAt,
+			&sprintParticipant.UpdatedAt,
+		)
+		if err != nil {
+			newInternalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			continue
+		}
+
+		sprintParticipants = append(sprintParticipants, sprintParticipant)
+	}
+
+	return sprintParticipants, internalErr
+}
+
+func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
+	participant := entity.SprintParticipant{}
+	err := s.db.QueryRow(`
+	SELECT
+		sprint_id,
+		user_id,
+		total_bandwidth,
+		unused_bandwidth,
+		created_at,
+		updated_at
+	FROM sprint_participant
+	WHERE sprint_id = $1 AND user_id=$2;
+`,
+		sprintID,
+		participantUserID).
+		Scan(
+			&participant.SprintID,
+			&participant.UserID,
+			&participant.TotalBandwidth,
+			&participant.UnusedBandwidth,
+			&participant.CreatedAt,
+			&participant.UpdatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"participant not found: sprintID=%v, participantUserID=%v", sprintID, participantUserID),
+		}
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.SprintParticipant{}, internalErr
+	}
+
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.SprintParticipant{}, internalErr
+	}
+
+	return participant, nil
+}
+
+func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -66,7 +217,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, tx *
 	return participantUserIDs, internalErr
 }
 
-func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -123,7 +274,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, tx *tr
 	return sprintParticipants, internalErr
 }
 
-func (s SprintParticipant) FindParticipant(ct context.Context, tx *transaction.Transaction, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
+func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
 	participant := entity.SprintParticipant{}
 	err := tx.SQLTx().QueryRow(`
 	SELECT
@@ -253,8 +404,9 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 	return nil
 }
 
-func NewSprintParticipant(dataCollector telemetry.DataCollector) SprintParticipant {
+func NewSprintParticipant(dataCollector telemetry.DataCollector, db *sql.DB) SprintParticipant {
 	return SprintParticipant{
 		dataCollector: dataCollector,
+		db:            db,
 	}
 }

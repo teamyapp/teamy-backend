@@ -19,7 +19,7 @@ type TeamMember struct {
 
 var _ daov2.TeamMember = (*TeamMember)(nil)
 
-func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
+func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
 	statement := `
 	SELECT
 		team_id
@@ -65,7 +65,7 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *transaction.Tran
 	return teamIDs, internalErr
 }
 
-func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error) {
+func (t TeamMember) FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error) {
 	statement := `
 	SELECT
 		user_id
@@ -111,7 +111,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, tx *transactio
 	return teamMemberIDs, internalErr
 }
 
-func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error) {
+func (t TeamMember) FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error) {
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		team_id,
@@ -163,7 +163,7 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, tx *transaction.
 	return teamMembers, internalErr
 }
 
-func (t TeamMember) FindTeamMember(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
+func (t TeamMember) FindTeamMemberWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
 	teamMember := entity.TeamMember{}
 	err := tx.SQLTx().QueryRow(
 		`

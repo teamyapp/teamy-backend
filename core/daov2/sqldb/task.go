@@ -15,11 +15,204 @@ import (
 
 type Task struct {
 	dataCollector telemetry.DataCollector
+	db            *sql.DB
 }
 
 var _ daov2.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	task := entity.Task{}
+	err := t.db.QueryRow(`
+		SELECT
+			id,
+			goal,
+			context,
+			creator_user_id,
+			owner_user_id,
+			owning_team_id,
+			status,
+			is_planned,
+			effort,
+			comments_thread_id,
+			due_at,
+			created_at,
+			updated_at,
+			delivered_at
+		FROM task
+		WHERE id = $1;`,
+		taskID).
+		Scan(
+			&task.ID,
+			&task.Goal,
+			&task.Context,
+			&task.CreatorUserID,
+			&task.OwnerUserID,
+			&task.OwningTeamID,
+			&task.Status,
+			&task.IsPlanned,
+			&task.Effort,
+			&task.CommentsThreadID,
+			&task.DueAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+			&task.DeliveredAt,
+		)
+	if errors.Is(err, sql.ErrNoRows) {
+		internalErr := &errs.Error{
+			Code:    errs.NotFound,
+			Message: fmt.Sprintf("task not found: taskID=%v", taskID),
+		}
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.Task{}, internalErr
+	}
+
+	return task, nil
+}
+
+func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
+	rows, err := t.db.Query(
+		`
+	SELECT
+		id,
+		goal,
+		context,
+		creator_user_id,
+		owner_user_id,
+		owning_team_id,
+		status,
+		is_planned,
+		effort,
+		comments_thread_id,
+		due_at,
+		created_at,
+		updated_at,
+		delivered_at
+	FROM task
+	WHERE owning_team_id = $1;
+`,
+		teamID)
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return nil, internalErr
+	}
+
+	defer rows.Close()
+
+	var internalErr *errs.Error
+	tasks := make([]entity.Task, 0)
+	for rows.Next() {
+		task := entity.Task{}
+		err = rows.Scan(
+			&task.ID,
+			&task.Goal,
+			&task.Context,
+			&task.CreatorUserID,
+			&task.OwnerUserID,
+			&task.OwningTeamID,
+			&task.Status,
+			&task.IsPlanned,
+			&task.Effort,
+			&task.CommentsThreadID,
+			&task.DueAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+			&task.DeliveredAt,
+		)
+		if err != nil {
+			newInternalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			continue
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
+}
+
+func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
+	rows, err := t.db.Query(`
+	SELECT
+		id,
+		goal,
+		context,
+		creator_user_id,
+		owner_user_id,
+		owning_team_id,
+		status,
+		is_planned,
+		effort,
+		comments_thread_id,
+		due_at,
+		created_at,
+		updated_at,
+		delivered_at
+	FROM task;
+`)
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return nil, internalErr
+	}
+
+	defer rows.Close()
+
+	var internalErr *errs.Error
+	tasks := make([]entity.Task, 0)
+	for rows.Next() {
+		task := entity.Task{}
+		err = rows.Scan(
+			&task.ID,
+			&task.Goal,
+			&task.Context,
+			&task.CreatorUserID,
+			&task.OwnerUserID,
+			&task.OwningTeamID,
+			&task.Status,
+			&task.IsPlanned,
+			&task.Effort,
+			&task.CommentsThreadID,
+			&task.DueAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+			&task.DeliveredAt,
+		)
+		if err != nil {
+			newInternalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+
+			if internalErr == nil {
+				internalErr = newInternalErr
+			}
+
+			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			continue
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, internalErr
+}
+
+func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -68,7 +261,7 @@ func (t Task) FindTaskByID(ct context.Context, tx *transaction.Transaction, task
 	return task, nil
 }
 
-func (t Task) FindTasksByIDs(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -145,7 +338,7 @@ func (t Task) FindTasksByIDs(ct context.Context, tx *transaction.Transaction, ta
 	return tasks, internalErr
 }
 
-func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -203,7 +396,7 @@ func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *transaction.Tra
 	return task, nil
 }
 
-func (t Task) FindAllTasks(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
+func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -273,7 +466,7 @@ func (t Task) FindAllTasks(ct context.Context, tx *transaction.Transaction) ([]e
 	return tasks, internalErr
 }
 
-func (t Task) FindTasksByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
+func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -448,6 +641,9 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 	return nil
 }
 
-func NewTask(dataCollector telemetry.DataCollector) Task {
-	return Task{dataCollector: dataCollector}
+func NewTask(dataCollector telemetry.DataCollector, db *sql.DB) Task {
+	return Task{
+		dataCollector: dataCollector,
+		db:            db,
+	}
 }

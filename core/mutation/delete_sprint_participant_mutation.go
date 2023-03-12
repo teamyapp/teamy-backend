@@ -45,7 +45,7 @@ func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 	if d.notifiersPrepared {
 		return nil
 	}
-	sprint, err := d.sprintDaoV2.FindSprintByID(ct, tx, d.sprintID)
+	sprint, err := d.sprintDaoV2.FindSprintByIDWithTx(ct, tx, d.sprintID)
 	if err != nil {
 		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err

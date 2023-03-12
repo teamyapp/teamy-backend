@@ -9,8 +9,8 @@ import (
 )
 
 type TaskAwaitForRelation interface {
-	FindAwaitingTaskIDs(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error)
-	FindAwaitForTaskIDs(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error)
+	FindAwaitingTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error)
+	FindAwaitForTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error)
 	CreateRelation(ct context.Context, tx *transaction.Transaction, relation entity.TaskAwaitForRelation) *errs.Error
 	DeleteRelation(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64, awaitForTaskID uint64) *errs.Error
 }

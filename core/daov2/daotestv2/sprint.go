@@ -16,22 +16,37 @@ type Sprint struct {
 
 var _ daov2.Sprint = (*Sprint)(nil)
 
-func (s Sprint) FindSprintByID(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s Sprint) FindSprintsByIDs(ct context.Context, tx *transaction.Transaction, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s Sprint) FindSprintsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
+func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s Sprint) FindAllSprints(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Transaction, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
