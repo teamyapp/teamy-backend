@@ -22,13 +22,13 @@ var _ dao.GithubCodeReview = (*GithubCodeReview)(nil)
 func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 	ct context.Context,
 	githubPullRequestNodeID string,
-	githubReviewerID uint64,
+	githubReviewerID string,
 ) (entity.GithubCodeReview, *errs.Error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
 	SELECT
 	    github_pull_request_node_id,
-    	github_reviewer_id,
+    	github_reviewer_node_id,
     	internal_code_review_task_id,
     	internal_address_feedback_task_id,
     	round
@@ -39,7 +39,7 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 		githubReviewerID).
 		Scan(
 			&codeReview.GithubPullRequestNodeID,
-			&codeReview.GithubReviewerID,
+			&codeReview.GithubReviewerNodeID,
 			&codeReview.InternalCodeReviewTaskID,
 			&codeReview.InternalAddressFeedbackTaskID,
 			&codeReview.Round,
@@ -76,7 +76,7 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
 	err := g.db.QueryRow(`
 	SELECT
 	    github_pull_request_node_id,
-    	github_reviewer_id,
+    	github_reviewer_node_id,
     	internal_code_review_task_id,
     	internal_address_feedback_task_id,
     	round
@@ -86,7 +86,7 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
 		internalTaskID).
 		Scan(
 			&codeReview.GithubPullRequestNodeID,
-			&codeReview.GithubReviewerID,
+			&codeReview.GithubReviewerNodeID,
 			&codeReview.InternalCodeReviewTaskID,
 			&codeReview.InternalAddressFeedbackTaskID,
 			&codeReview.Round,
@@ -122,7 +122,7 @@ func (g GithubCodeReview) CreateCodeReview(
 	INSERT INTO apps_github_code_review
 	(
 	    github_pull_request_node_id,
-    	github_reviewer_id,
+    	github_reviewer_node_id,
     	internal_code_review_task_id,
     	internal_address_feedback_task_id,
     	round
@@ -130,7 +130,7 @@ func (g GithubCodeReview) CreateCodeReview(
 	VALUES ($1, $2, $3, $4, $5);
 `,
 		codeReview.GithubPullRequestNodeID,
-		codeReview.GithubReviewerID,
+		codeReview.GithubReviewerNodeID,
 		codeReview.InternalCodeReviewTaskID,
 		codeReview.InternalAddressFeedbackTaskID,
 		codeReview.Round,
@@ -156,18 +156,18 @@ func (g GithubCodeReview) UpdateCodeReview(
 		UPDATE apps_github_code_review
 		SET
 			github_pull_request_node_id = $1,
-    		github_reviewer_id = $2,
+    		github_reviewer_node_id = $2,
 			internal_code_review_task_id = $3,
 			internal_address_feedback_task_id = $4,
 			round = $5
-		WHERE github_pull_request_node_id=$6 AND github_reviewer_id = $7;`,
+		WHERE github_pull_request_node_id=$6 AND github_reviewer_node_id = $7;`,
 		codeReview.GithubPullRequestNodeID,
-		codeReview.GithubReviewerID,
+		codeReview.GithubReviewerNodeID,
 		codeReview.InternalCodeReviewTaskID,
 		codeReview.InternalAddressFeedbackTaskID,
 		codeReview.Round,
 		codeReview.GithubPullRequestNodeID,
-		codeReview.GithubReviewerID,
+		codeReview.GithubReviewerNodeID,
 	)
 
 	if err != nil {
