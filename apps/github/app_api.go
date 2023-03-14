@@ -173,12 +173,24 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	installationID := query.Get("installation_id")
-	if len(installationID) == 0 {
+	rawInstallationID := query.Get("installation_id")
+	if len(rawInstallationID) == 0 {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
 			EmbedErr: err,
 			Message:  "must provide installation_id",
+		}
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	installationID, err := strconv.ParseUint(rawInstallationID, 10, 64)
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.InvalidArgument,
+			EmbedErr: err,
+			Message:  "installation_id must be int",
 		}
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
