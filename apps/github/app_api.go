@@ -571,7 +571,7 @@ func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt pullRequest
 }
 
 func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {
-	prAuthorUserID, err := a.GetInternalUserID(ct, prEvt.PullRequest.User.ID)
+	prAuthorUserID, err := a.GetInternalUserID(ct, prEvt.PullRequest.User.NodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
@@ -695,7 +695,7 @@ func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64,
 		return internalErr
 	}
 
-	codeReview, internalErr := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, prReviewEvt.PullRequest.NodeID, prReviewEvt.Review.User.ID)
+	codeReview, internalErr := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, prReviewEvt.PullRequest.NodeID, prReviewEvt.Review.User.NodeID)
 	if internalErr != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
@@ -726,13 +726,13 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 	case submittedPullRequestReviewAction:
 		switch prReviewEvt.Review.State {
 		case commentedPullRequestReviewState, changesRequestedPullRequestReviewState:
-			prAuthorUserID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
+			prAuthorUserID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.NodeID)
 			if err != nil {
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
-			prReviewerID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.ID)
+			prReviewerID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.NodeID)
 			if err != nil {
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
@@ -792,9 +792,8 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 	return nil
 }
 
-func (a AppAPI) GetInternalUserID(ct context.Context, githubUserID uint64) (uint64, *errs.Error) {
-	githubReviewerIDStr := strconv.FormatUint(githubUserID, 10)
-	getInternalUserIdReq := &cloudProto.GetInternalUserIdRequest{AuthProvider: "github", ExternalUserId: githubReviewerIDStr}
+func (a AppAPI) GetInternalUserID(ct context.Context, githubUserNodeID string) (uint64, *errs.Error) {
+	getInternalUserIdReq := &cloudProto.GetInternalUserIdRequest{AuthProvider: "github", ExternalUserId: githubUserNodeID}
 	getInternalUserIdRes, rpcErr := a.cloudClientRegistry.IdentityClient().GetInternalUserId(ct, getInternalUserIdReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -900,7 +899,7 @@ func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint6
 	}
 
 	for _, githubReviewer := range prEvt.PullRequest.RequestedReviewers {
-		err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, pr.InternalTaskID, githubReviewer.ID, evt, prEvt)
+		err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, pr.InternalTaskID, githubReviewer.NodeID, evt, prEvt)
 		if err != nil {
 			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			continue
@@ -915,11 +914,11 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 	teamID uint64,
 	githubPullRequestNodeID string,
 	pullRequestTaskID uint64,
-	githubReviewerID uint64,
+	githubReviewerNodeID string,
 	evt event,
 	prEvt pullRequestEvent,
 ) *errs.Error {
-	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, githubPullRequestNodeID, githubReviewerID)
+	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, githubPullRequestNodeID, githubReviewerNodeID)
 	if err != nil && err.Code != errs.NotFound {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
@@ -937,7 +936,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 		moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
 			TaskId: *codeReview.InternalAddressFeedbackTaskID,
 		}
-		createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, codeReview.Round+1, evt, prEvt)
+		createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerNodeID, codeReview.Round+1, evt, prEvt)
 		if err != nil {
 			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -956,7 +955,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 		return a.githubCodeReviewDao.UpdateCodeReview(ct, codeReview)
 	}
 
-	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerID, 1, evt, prEvt)
+	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerNodeID, 1, evt, prEvt)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
@@ -965,7 +964,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 	codeReview = entity.GithubCodeReview{
 		GithubPullRequestNodeID:  githubPullRequestNodeID,
 		InternalCodeReviewTaskID: createdTaskID,
-		GithubReviewerID:         githubReviewerID,
+		GithubReviewerNodeID:     githubReviewerNodeID,
 		Round:                    1,
 	}
 
@@ -978,8 +977,8 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 	return a.tryAddTaskToCurrentSprint(ct, teamID, createdTaskID)
 }
 
-func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerID uint64, round int, evt event, prEvt pullRequestEvent) (uint64, *errs.Error) {
-	codeReviewerInternalUserID, err := a.GetInternalUserID(ct, githubReviewerID)
+func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerNodeID string, round int, evt event, prEvt pullRequestEvent) (uint64, *errs.Error) {
+	codeReviewerInternalUserID, err := a.GetInternalUserID(ct, githubReviewerNodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return 0, err
@@ -1034,7 +1033,7 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 
 	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("pull request is waiting for review task: prTaskID=%v, GithubReviewerID=%v, reviewTaskID=%v",
 		pullRequestTaskID,
-		githubReviewerID,
+		githubReviewerNodeID,
 		createTaskRes.TaskId))
 	return createTaskRes.TaskId, nil
 }
