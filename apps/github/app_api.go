@@ -198,7 +198,6 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	}
 
 	installationID := int(installationID64)
-
 	state, internalErr := a.githubAppInstallStateDao.FindStateByID(ct, stateID)
 	if internalErr != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
