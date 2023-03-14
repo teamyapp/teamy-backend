@@ -185,7 +185,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	installationID, err := strconv.ParseUint(rawInstallationID, 10, 64)
+	installationID64, err := strconv.ParseInt(rawInstallationID, 10, 32)
 	if err != nil {
 		internalErr := &errs.Error{
 			Code:     errs.InvalidArgument,
@@ -197,6 +197,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
+	installationID := int(installationID64)
 	state, internalErr := a.githubAppInstallStateDao.FindStateByID(ct, stateID)
 	if internalErr != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
