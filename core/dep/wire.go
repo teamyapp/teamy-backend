@@ -53,6 +53,8 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(daov2.SprintTaskRelation), new(sqldbV2.SprintTaskRelation)),
 	wire.Bind(new(daov2.Thread), new(sqldbV2.Thread)),
 	wire.Bind(new(daov2.TeamMember), new(sqldbV2.TeamMember)),
+	wire.Bind(new(daov2.User), new(sqldbV2.User)),
+	wire.Bind(new(daov2.UserFileUploadSession), new(sqldbV2.UserFileUploadSession)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -78,6 +80,8 @@ var daoSet = wire.NewSet(
 	sqldbV2.NewSprintTaskRelation,
 	sqldbV2.NewThread,
 	sqldbV2.NewTeamMember,
+	sqldbV2.NewUser,
+	sqldbV2.NewUserFileUploadSession,
 )
 
 var serviceSet = wire.NewSet(
@@ -186,18 +190,22 @@ func newUserService(
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
+	transactionFactory transaction.Factory,
 	userDao dao.User,
-	userFileUploadSessionDao dao.UserFileUploadSession,
-	teamMemberDao dao.TeamMember,
+	userDaoV2 daov2.User,
+	teamMemberV2 daov2.TeamMember,
+	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
 ) service.User {
 	return service.NewUser(
 		dataCollector,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		stateSyncer,
+		transactionFactory,
 		userDao,
-		userFileUploadSessionDao,
-		teamMemberDao,
+		userDaoV2,
+		teamMemberV2,
+		userFileUploadSessionDaoV2,
 	)
 }
 
