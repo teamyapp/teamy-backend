@@ -5,7 +5,7 @@ import (
 )
 
 type GithubAppInstallation struct {
-	ID        string
+	ID        uint64
 	TeamID    uint64
 	CreatedAt time.Time
 }
