@@ -43,6 +43,7 @@ func InitGithubAppAPI(
 		newGithubApp,
 		gql.NewClient,
 		client.NewGraphQLAPI,
+		client.NewRestAPI,
 		github.NewAppAPI,
 	)
 	return github.AppAPI{}, nil

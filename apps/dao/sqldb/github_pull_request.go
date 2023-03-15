@@ -165,12 +165,14 @@ func (g GithubPullRequest) UpdatePullRequest(ct context.Context, pullRequest ent
     		github_repository_owner = $1,
 			github_repository_name = $2,
 			github_pull_request_number = $3,
-			github_pull_request_url = $4
-		WHERE github_pull_request_node_id = $5;`,
+			github_pull_request_url = $4,
+			github_organization_id = $5
+		WHERE github_pull_request_node_id = $6;`,
 		pullRequest.RepositoryOwner,
 		pullRequest.RepositoryName,
 		pullRequest.Number,
 		pullRequest.URL,
+		pullRequest.OrganizationID,
 		pullRequest.NodeID,
 	)
 
