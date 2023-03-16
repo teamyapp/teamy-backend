@@ -31,7 +31,6 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
 	wire.Bind(new(dao.Task), new(sqldb.Task)),
-	wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)),
 	wire.Bind(new(dao.Team), new(sqldb.Team)),
 	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
 	wire.Bind(new(dao.User), new(sqldb.User)),
@@ -47,6 +46,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.AppVersionVisibleTeam), new(sqldb.AppVersionVisibleTeam)),
 	wire.Bind(new(dao.App), new(sqldb.App)),
 	wire.Bind(new(daov2.Task), new(sqldbV2.Task)),
+	wire.Bind(new(daov2.TaskLink), new(sqldbV2.TaskLink)),
 	wire.Bind(new(daov2.TaskAwaitForRelation), new(sqldbV2.TaskAwaitForRelation)),
 	wire.Bind(new(daov2.SprintParticipant), new(sqldbV2.SprintParticipant)),
 	wire.Bind(new(daov2.Sprint), new(sqldbV2.Sprint)),
@@ -56,7 +56,6 @@ var daoSet = wire.NewSet(
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
-	sqldb.NewTaskLink,
 	sqldb.NewTeam,
 	sqldb.NewTeamMember,
 	sqldb.NewUser,
@@ -72,6 +71,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewAppVersionVisibleTeam,
 	sqldb.NewApp,
 	sqldbV2.NewTask,
+	sqldbV2.NewTaskLink,
 	sqldbV2.NewTaskAwaitForRelation,
 	sqldbV2.NewSprintParticipant,
 	sqldbV2.NewSprint,
@@ -175,6 +175,7 @@ func InitTaskLinkRPCAPI(
 	wire.Build(
 		daoSet,
 		serviceSet,
+		transaction.NewFactory,
 		api.NewTaskLinkRPC,
 	)
 	return api.TaskLinkRPC{}

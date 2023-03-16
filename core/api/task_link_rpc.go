@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type TaskLinkRPC struct {
@@ -44,6 +45,16 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLink
 	}
 
 	return &proto.CreateTaskLinkResponse{LinkId: taskLink.ID}, nil
+}
+
+func (t TaskLinkRPC) DeleteTaskLink(ct context.Context, in *proto.DeleteTaskLinkRequest) (*emptypb.Empty, error) {
+	_, err := t.taskLinkService.DeleteTaskLink(ct, in.LinkId)
+	if err != nil {
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func NewTaskLinkRPC(dataCollector telemetry.DataCollector, taskLinkService service.TaskLink) TaskLinkRPC {

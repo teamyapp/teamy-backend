@@ -64,10 +64,18 @@ func (e *Extensions) String() string {
 	return fmt.Sprintf("[Extensions: Value:%v Problems:%v]", e.Value, e.Problems)
 }
 
+type UserNode struct {
+	ID    string `json:"id"`
+	Login string `json:"login"`
+}
+
 type PullRequestNode struct {
 	Number     int            `json:"number"`
 	URL        string         `json:"url"`
 	Repository RepositoryNode `json:"repository"`
+	Title      string         `json:"title"`
+	Body       string         `json:"body"`
+	Author     UserNode       `json:"author"`
 }
 
 type RepositoryNode struct {
@@ -79,6 +87,11 @@ type RepositoryOwnerNode struct {
 	Login string `json:"login"`
 }
 
+type UpdatePullRequestInput struct {
+	PullRequestID string  `json:"pullRequestId"`
+	Body          *string `json:"body,omitempty"`
+}
+
 func (g GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation *Installation, nodeID string) (PullRequestNode, *errs.Error) {
 	queryOptions := gql.QueryOptions{
 		Query: `
@@ -86,6 +99,7 @@ func (g GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation *Ins
 			node(id: $nodeId) {
 				... on PullRequest {
 					number
+					body
 					repository {
 						owner {
 							login
@@ -93,7 +107,14 @@ func (g GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation *Ins
 						name
 					}
 					url
+					author {
+						login
+						... on User {
+							id
+						}
+					}
 				}
+
 			}
 		}`,
 		Variables: struct {
@@ -122,6 +143,43 @@ func (g GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation *Ins
 	return res.Data.Node, nil
 }
 
+func (g GraphQLAPI) UpdatePullRequest(ct context.Context, installation *Installation, pullRequestInput UpdatePullRequestInput) (PullRequestNode, *errs.Error) {
+	mutationOptions := gql.MutationOptions{
+		Mutation: `mutation ($input: UpdatePullRequestInput!) {
+			updatePullRequest(input: $input) {
+				pullRequest{
+					body
+				}
+			}
+		  }`,
+		Variables: map[string]interface{}{
+			"input": pullRequestInput,
+		},
+	}
+
+	type GqlMutationRes struct {
+		PullRequest PullRequestNode `json:"pullRequest"`
+	}
+
+	var res gql.GraphQLResponse[Node[GqlMutationRes], GithubGraphQLError]
+	err := g.mutate(ct, installation, mutationOptions, &res)
+	if err != nil {
+		g.dataCollector.Logger.ErrorWithContext(ct, err)
+		return PullRequestNode{}, err
+	}
+
+	if len(res.Errors) > 0 {
+		internalErrs := collect.Map(res.Errors, func(err GithubGraphQLError, _ int) *errs.Error {
+			return err.internalErr()
+		})
+		mergedInternalErrs := errs.MergeErrs(internalErrs)
+		g.dataCollector.Logger.ErrorWithContext(ct, mergedInternalErrs)
+		return PullRequestNode{}, mergedInternalErrs
+	}
+
+	return res.Data.Node.PullRequest, nil
+}
+
 func (g GraphQLAPI) query(
 	ct context.Context,
 	installation *Installation,
@@ -136,6 +194,22 @@ func (g GraphQLAPI) query(
 
 	headers := withCredential(make(map[string]string), accessToken)
 	return g.graphQLClient.Query(ct, githubGraphQLAPIEndpoint, headers, queryOptions, gqlResponse)
+}
+
+func (g *GraphQLAPI) mutate(
+	ct context.Context,
+	installation *Installation,
+	mutationOptions gql.MutationOptions,
+	gqlResponse interface{},
+) *errs.Error {
+	accessToken, err := installation.GetOrRefreshAccessToken(ct)
+	if err != nil {
+		g.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	headers := withCredential(make(map[string]string), accessToken)
+	return g.graphQLClient.Mutate(ct, githubGraphQLAPIEndpoint, headers, mutationOptions, gqlResponse)
 }
 
 func NewGraphQLAPI(dataCollector telemetry.DataCollector, graphQLClient *gql.Client) GraphQLAPI {

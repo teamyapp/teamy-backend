@@ -38,6 +38,7 @@ type pullRequest struct {
 	NodeID             string           `json:"node_id"`
 	Number             int              `json:"number"`
 	HtmlURL            string           `json:"html_url"`
+	URL                string           `json:"url"`
 	State              pullRequestState `json:"state"`
 	Locked             bool             `json:"locked"`
 	Title              string           `json:"title"`
