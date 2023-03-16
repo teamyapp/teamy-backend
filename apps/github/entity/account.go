@@ -1,10 +1,10 @@
-package github
+package entity
 
 type accountType string
 
 const (
-	userAccountType         accountType = "User"
-	organizationAccountType accountType = "Organization"
+	UserAccountType         accountType = "User"
+	OrganizationAccountType accountType = "Organization"
 )
 
 type account struct {

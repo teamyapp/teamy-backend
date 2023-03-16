@@ -1,4 +1,4 @@
-package github
+package entity
 
 import (
 	"fmt"
@@ -7,17 +7,17 @@ import (
 type pullRequestReviewAction string
 
 const (
-	submittedPullRequestReviewAction       pullRequestReviewAction = "submitted"
-	editedRequestedPullRequestReviewAction pullRequestReviewAction = "edited"
-	dismissedPullRequestReviewAction       pullRequestReviewAction = "dismissed"
+	SubmittedPullRequestReviewAction       pullRequestReviewAction = "submitted"
+	EditedRequestedPullRequestReviewAction pullRequestReviewAction = "edited"
+	DismissedPullRequestReviewAction       pullRequestReviewAction = "dismissed"
 )
 
 type pullRequestReviewState string
 
 const (
-	commentedPullRequestReviewState        pullRequestReviewState = "commented"
-	changesRequestedPullRequestReviewState pullRequestReviewState = "changes_requested"
-	approvedPullRequestReviewState         pullRequestReviewState = "approved"
+	CommentedPullRequestReviewState        pullRequestReviewState = "commented"
+	ChangesRequestedPullRequestReviewState pullRequestReviewState = "changes_requested"
+	ApprovedPullRequestReviewState         pullRequestReviewState = "approved"
 )
 
 type authorAssociation string

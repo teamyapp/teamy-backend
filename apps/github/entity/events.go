@@ -1,33 +1,33 @@
-package github
+package entity
 
 import (
 	"fmt"
 )
 
-type eventType string
+type EventType string
 
 const (
-	pullRequestEventType         eventType = "pull_request"
-	pullRequestReviewEventType   eventType = "pull_request_review"
-	pullRequestStatusesEventType eventType = "statuses"
+	PullRequestEventType         EventType = "pull_request"
+	PullRequestReviewEventType   EventType = "pull_request_review"
+	PullRequestStatusesEventType EventType = "statuses"
 )
 
-type event struct {
+type Event struct {
 	Sender       account      `json:"sender"`
 	Repository   repository   `json:"repository"`
 	Organization organization `json:"organization"`
 	Installation installation `json:"installation"`
 }
 
-type pullRequestEvent struct {
+type PullRequestEvent struct {
 	Action      pullRequestAction `json:"action"`
 	Number      int               `json:"number"`
 	PullRequest pullRequest       `json:"pull_request"`
 }
 
-func (p pullRequestEvent) String() string {
+func (p PullRequestEvent) String() string {
 	return fmt.Sprintf(
-		`[pullRequestEvent
+		`[PullRequestEvent
 	Action:%v
 	Number:%v
 	PullRequest:%v]`,
@@ -36,15 +36,15 @@ func (p pullRequestEvent) String() string {
 		p.PullRequest)
 }
 
-type pullRequestReviewEvent struct {
+type PullRequestReviewEvent struct {
 	Action      pullRequestReviewAction `json:"action"`
 	Review      pullRequestReview       `json:"review"`
 	PullRequest pullRequest             `json:"pull_request"`
 }
 
-func (p pullRequestReviewEvent) String() string {
+func (p PullRequestReviewEvent) String() string {
 	return fmt.Sprintf(
-		`[pullRequestReviewEvent
+		`[PullRequestReviewEvent
 	Action:%v
 	Review:%v
 	PullRequest:%v]`,

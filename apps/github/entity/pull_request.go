@@ -1,4 +1,4 @@
-package github
+package entity
 
 import (
 	"fmt"
@@ -7,23 +7,23 @@ import (
 type pullRequestAction string
 
 const (
-	assignedPullRequestAction             pullRequestAction = "assigned"
-	autoMergeDisabledPullRequestAction    pullRequestAction = "auto_merge_disabled"
-	autoMergeEnabledPullRequestAction     pullRequestAction = "auto_merge_enabled"
-	closedPullRequestAction               pullRequestAction = "closed"
-	convertedToDraftPullRequestAction     pullRequestAction = "converted_to_draft"
-	editedPullRequestAction               pullRequestAction = "edited"
-	labeledPullRequestAction              pullRequestAction = "labeled"
-	lockedPullRequestAction               pullRequestAction = "locked"
-	openedPullRequestAction               pullRequestAction = "opened"
-	readyForReviewPullRequestAction       pullRequestAction = "ready_for_review"
-	reopenedPullRequestAction             pullRequestAction = "reopened"
-	reviewRequestRemovedPullRequestAction pullRequestAction = "review_request_removed"
-	reviewRequestedPullRequestAction      pullRequestAction = "review_requested"
-	synchronizePullRequestAction          pullRequestAction = "synchronize"
-	unassignedPullRequestAction           pullRequestAction = "unassigned"
-	unlabeledPullRequestAction            pullRequestAction = "unlabeled"
-	unlockedPullRequestAction             pullRequestAction = "unlocked"
+	AssignedPullRequestAction             pullRequestAction = "assigned"
+	AutoMergeDisabledPullRequestAction    pullRequestAction = "auto_merge_disabled"
+	AutoMergeEnabledPullRequestAction     pullRequestAction = "auto_merge_enabled"
+	ClosedPullRequestAction               pullRequestAction = "closed"
+	ConvertedToDraftPullRequestAction     pullRequestAction = "converted_to_draft"
+	EditedPullRequestAction               pullRequestAction = "edited"
+	LabeledPullRequestAction              pullRequestAction = "labeled"
+	LockedPullRequestAction               pullRequestAction = "locked"
+	OpenedPullRequestAction               pullRequestAction = "opened"
+	ReadyForReviewPullRequestAction       pullRequestAction = "ready_for_review"
+	ReopenedPullRequestAction             pullRequestAction = "reopened"
+	ReviewRequestRemovedPullRequestAction pullRequestAction = "review_request_removed"
+	ReviewRequestedPullRequestAction      pullRequestAction = "review_requested"
+	SynchronizePullRequestAction          pullRequestAction = "synchronize"
+	UnassignedPullRequestAction           pullRequestAction = "unassigned"
+	UnlabeledPullRequestAction            pullRequestAction = "unlabeled"
+	UnlockedPullRequestAction             pullRequestAction = "unlocked"
 )
 
 type pullRequestState string

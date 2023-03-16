@@ -27,6 +27,7 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/apps/github/client"
+	githubEntity "github.com/teamyapp/teamy-backend/apps/github/entity"
 	appsProto "github.com/teamyapp/teamy-backend/apps/proto"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
@@ -301,7 +302,7 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 
 	evtType := request.Header.Get("X-GitHub-Event")
 	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("received event: deliveryID=%v EventType=%v", deliveryID, evtType))
-	internalErr := a.processEvent(ct, eventType(evtType), buf)
+	internalErr := a.processEvent(ct, githubEntity.EventType(evtType), buf)
 	if internalErr != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
@@ -493,8 +494,8 @@ func (a AppAPI) refreshRequiredActionStatus(
 	return requiredAction, nil
 }
 
-func (a AppAPI) processEvent(ct context.Context, evtType eventType, payload []byte) *errs.Error {
-	var evt event
+func (a AppAPI) processEvent(ct context.Context, evtType githubEntity.EventType, payload []byte) *errs.Error {
+	var evt githubEntity.Event
 	err := json.Unmarshal(payload, &evt)
 	if err != nil {
 		internalErr := &errs.Error{
@@ -511,9 +512,9 @@ func (a AppAPI) processEvent(ct context.Context, evtType eventType, payload []by
 	}
 
 	switch evtType {
-	case pullRequestEventType:
+	case githubEntity.PullRequestEventType:
 		return a.processPullRequestEvent(ct, ins.TeamID, evt, payload)
-	case pullRequestReviewEventType:
+	case githubEntity.PullRequestReviewEventType:
 		return a.processPullRequestReviewEvent(ct, ins.TeamID, evt, payload)
 	default:
 		a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("unknown event: eventType=%v", evtType))
@@ -522,8 +523,8 @@ func (a AppAPI) processEvent(ct context.Context, evtType eventType, payload []by
 	return nil
 }
 
-func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt event, payload []byte) *errs.Error {
-	if evt.Sender.Type == organizationAccountType {
+func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt githubEntity.Event, payload []byte) *errs.Error {
+	if evt.Sender.Type == githubEntity.OrganizationAccountType {
 		internalErr := &errs.Error{
 			Code:    errs.InvalidArgument,
 			Message: fmt.Sprintf("unsupported sender type: senderType=%v", evt.Sender.Type),
@@ -533,7 +534,7 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt e
 	}
 
 	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
-	var prEvt pullRequestEvent
+	var prEvt githubEntity.PullRequestEvent
 	err := json.Unmarshal(payload, &prEvt)
 	if err != nil {
 		internalErr := &errs.Error{
@@ -545,16 +546,16 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt e
 	}
 
 	switch prEvt.Action {
-	case openedPullRequestAction, reopenedPullRequestAction:
+	case githubEntity.OpenedPullRequestAction, githubEntity.ReopenedPullRequestAction:
 		return a.createTaskForPullRequest(ct, teamID, evt, prEvt)
-	case editedPullRequestAction:
+	case githubEntity.EditedPullRequestAction:
 		return a.updateTaskForPullRequest(ct, teamID, evt, prEvt)
-	case assignedPullRequestAction:
-	case reviewRequestedPullRequestAction:
+	case githubEntity.AssignedPullRequestAction:
+	case githubEntity.ReviewRequestedPullRequestAction:
 		return a.createTaskForRequestedReviewers(ct, teamID, evt, prEvt)
-	case reviewRequestRemovedPullRequestAction:
-	case convertedToDraftPullRequestAction:
-	case closedPullRequestAction:
+	case githubEntity.ReviewRequestRemovedPullRequestAction:
+	case githubEntity.ConvertedToDraftPullRequestAction:
+	case githubEntity.ClosedPullRequestAction:
 		if prEvt.PullRequest.Merged {
 			return a.movePullRequestToDelivered(ct, prEvt)
 		}
@@ -563,7 +564,7 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt e
 	return nil
 }
 
-func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt pullRequestEvent) *errs.Error {
+func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -583,7 +584,7 @@ func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt pullRequest
 	return nil
 }
 
-func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {
+func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	prAuthorUserID, err := a.GetInternalUserID(ct, prEvt.PullRequest.User.NodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -651,7 +652,7 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 	return a.tryAddTaskToCurrentSprint(ct, teamID, createTaskRes.TaskId)
 }
 
-func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {
+func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -686,8 +687,8 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 	return nil
 }
 
-func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt event, payload []byte) *errs.Error {
-	if evt.Sender.Type == organizationAccountType {
+func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt githubEntity.Event, payload []byte) *errs.Error {
+	if evt.Sender.Type == githubEntity.OrganizationAccountType {
 		internalErr := &errs.Error{
 			Code:    errs.InvalidArgument,
 			Message: fmt.Sprintf("unsupported sender type: senderType=%v", evt.Sender.Type),
@@ -697,7 +698,7 @@ func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64,
 	}
 
 	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
-	var prReviewEvt pullRequestReviewEvent
+	var prReviewEvt githubEntity.PullRequestReviewEvent
 	err := json.Unmarshal(payload, &prReviewEvt)
 	if err != nil {
 		internalErr := &errs.Error{
@@ -734,11 +735,11 @@ func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64,
 	return nil
 }
 
-func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, codeReview entity.GithubCodeReview, evt event, prReviewEvt pullRequestReviewEvent) *errs.Error {
+func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint64, codeReview entity.GithubCodeReview, evt githubEntity.Event, prReviewEvt githubEntity.PullRequestReviewEvent) *errs.Error {
 	switch prReviewEvt.Action {
-	case submittedPullRequestReviewAction:
+	case githubEntity.SubmittedPullRequestReviewAction:
 		switch prReviewEvt.Review.State {
-		case commentedPullRequestReviewState, changesRequestedPullRequestReviewState:
+		case githubEntity.CommentedPullRequestReviewState, githubEntity.ChangesRequestedPullRequestReviewState:
 			prAuthorUserID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.NodeID)
 			if err != nil {
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -797,7 +798,7 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 				createTaskRes.TaskId))
 			codeReview.InternalAddressFeedbackTaskID = &addressFeedbackTaskID
 			return a.githubCodeReviewDao.UpdateCodeReview(ct, codeReview)
-		case approvedPullRequestReviewState:
+		case githubEntity.ApprovedPullRequestReviewState:
 			// TODO: create merge task to wait for CI pipeline
 		}
 	}
@@ -904,7 +905,7 @@ func (a AppAPI) BackfillPullRequestLinks(ct context.Context, request *appsProto.
 	panic("implement me")
 }
 
-func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt event, prEvt pullRequestEvent) *errs.Error {
+func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -928,8 +929,8 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 	githubPullRequestNodeID string,
 	pullRequestTaskID uint64,
 	githubReviewerNodeID string,
-	evt event,
-	prEvt pullRequestEvent,
+	evt githubEntity.Event,
+	prEvt githubEntity.PullRequestEvent,
 ) *errs.Error {
 	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, githubPullRequestNodeID, githubReviewerNodeID)
 	if err != nil && err.Code != errs.NotFound {
@@ -990,7 +991,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 	return a.tryAddTaskToCurrentSprint(ct, teamID, createdTaskID)
 }
 
-func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerNodeID string, round int, evt event, prEvt pullRequestEvent) (uint64, *errs.Error) {
+func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerNodeID string, round int, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) (uint64, *errs.Error) {
 	codeReviewerInternalUserID, err := a.GetInternalUserID(ct, githubReviewerNodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
