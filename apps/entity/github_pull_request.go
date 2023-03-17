@@ -33,7 +33,7 @@ func getString(ptr *string) string {
 	return *ptr
 }
 
-func getInt(ptr *int) int {
+func getInt(ptr *int) string {
 	if ptr == nil {
 		return 0
 	}
