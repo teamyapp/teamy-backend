@@ -52,6 +52,7 @@ func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Instal
 		if res.StatusCode == http.StatusNotFound {
 			internalErr = errs.NewError(errs.NotFound, "Not found")
 		}
+		
 		return entity.Organization{}, errs.NewError(errs.Unknown, "Unknown")
 	}
 
