@@ -57,6 +57,7 @@ type AppAPI struct {
 	githubRequiredUserActionDao dao.GithubRequiredUserAction
 	githubApp                   *client.GithubApp
 	githubGraphQLAPI            client.GraphQLAPI
+	githubRESTAPI               client.RESTAPI
 	appsProto.UnimplementedGithubServer
 }
 
@@ -830,7 +831,8 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		return pullRequest.RepositoryName == nil ||
 			pullRequest.RepositoryOwner == nil ||
 			pullRequest.URL == nil ||
-			pullRequest.Number == nil
+			pullRequest.Number == nil ||
+			pullRequest.OrganizationID == nil
 	})
 
 	for _, pullRequest := range pullRequests {
@@ -874,12 +876,19 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			continue
 		}
 
+		org, err := a.githubRESTAPI.GetOrganizationByLogin(ct, ins, node.Repository.Owner.Login)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			continue
+		}
+
 		gpr := entity.GithubPullRequest{
 			NodeID:          pullRequest.NodeID,
 			RepositoryOwner: &node.Repository.Owner.Login,
 			RepositoryName:  &node.Repository.Name,
 			Number:          &node.Number,
 			URL:             &node.URL,
+			OrganizationID:  &org.ID,
 		}
 
 		sqlErr = a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
@@ -1106,6 +1115,7 @@ func NewAppAPI(
 	githubCodeReviewDao dao.GithubCodeReview,
 	githubRequiredUserActionDao dao.GithubRequiredUserAction,
 	githubGraphQLAPI client.GraphQLAPI,
+	githubRESTAPI client.RESTAPI,
 	githubApp *client.GithubApp,
 ) AppAPI {
 	return AppAPI{
@@ -1119,6 +1129,7 @@ func NewAppAPI(
 		githubCodeReviewDao:         githubCodeReviewDao,
 		githubRequiredUserActionDao: githubRequiredUserActionDao,
 		githubGraphQLAPI:            githubGraphQLAPI,
+		githubRESTAPI:               githubRESTAPI,
 		githubApp:                   githubApp,
 	}
 }

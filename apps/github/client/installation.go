@@ -12,10 +12,6 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
-const (
-	gitHubAPIVersion = "2022-11-28"
-)
-
 type Installation struct {
 	dataCollector telemetry.DataCollector
 	app           *GithubApp

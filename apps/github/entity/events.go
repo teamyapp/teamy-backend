@@ -15,7 +15,7 @@ const (
 type Event struct {
 	Sender       account      `json:"sender"`
 	Repository   repository   `json:"repository"`
-	Organization organization `json:"organization"`
+	Organization Organization `json:"organization"`
 	Installation installation `json:"installation"`
 }
 
