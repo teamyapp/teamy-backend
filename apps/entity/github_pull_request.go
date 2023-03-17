@@ -41,7 +41,7 @@ func getInt(ptr *int) int {
 	return *ptr
 }
 
-func getUint64(ptr *uint64) uint64 {
+func getUint64(ptr *uint64) string {
 	if ptr == nil {
 		return 0
 	}
