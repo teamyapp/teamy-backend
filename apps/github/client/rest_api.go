@@ -54,7 +54,7 @@ func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Instal
 		} else {
 			internalErr = errs.NewError(errs.Unknown, "Unknown")
 		}
-		return entity.Organization{}, internalErr
+		return entity.Organization{}, errs.NewError(errs.Unknown, "Unknown")
 	}
 
 	buf, err := io.ReadAll(res.Body)
