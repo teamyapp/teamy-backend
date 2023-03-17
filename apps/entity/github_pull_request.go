@@ -1,6 +1,9 @@
 package entity
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type GithubPullRequest struct {
 	NodeID          string
@@ -29,7 +32,7 @@ func getString(ptr *string) string {
 	if ptr == nil {
 		return "nil"
 	}
-	
+
 	return *ptr
 }
 
@@ -37,14 +40,14 @@ func getInt(ptr *int) string {
 	if ptr == nil {
 		return "nil"
 	}
-	
-	return *ptr
+
+	return strconv.Itoa(*ptr)
 }
 
 func getUint64(ptr *uint64) string {
 	if ptr == nil {
 		return "nil"
 	}
-	
-	return *ptr
+
+	return strconv.FormatUint(*ptr, 10)
 }
