@@ -17,12 +17,12 @@ const (
 	gitHubAPIVersion = "2022-11-28"
 )
 
-type RestAPI struct {
+type RESTAPI struct {
 	dataCollector telemetry.DataCollector
 	httpClient    web.HTTPClient
 }
 
-func (r RestAPI) GetOrganizationIDByLogin(ct context.Context, installation *Installation, orgName string) (uint64, *errs.Error) {
+func (r RESTAPI) GetOrganizationIDByLogin(ct context.Context, installation *Installation, orgName string) (uint64, *errs.Error) {
 	url := fmt.Sprintf("https://api.github.com/orgs/%s", orgName)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -71,8 +71,8 @@ func (r RestAPI) GetOrganizationIDByLogin(ct context.Context, installation *Inst
 	return body.ID, nil
 }
 
-func NewRestAPI(dataCollector telemetry.DataCollector, httpClient web.HTTPClient) RestAPI {
-	return RestAPI{
+func NewRESTAPI(dataCollector telemetry.DataCollector, httpClient web.HTTPClient) RESTAPI {
+	return RESTAPI{
 		dataCollector: dataCollector,
 		httpClient:    httpClient,
 	}

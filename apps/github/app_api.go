@@ -57,7 +57,7 @@ type AppAPI struct {
 	githubRequiredUserActionDao dao.GithubRequiredUserAction
 	githubApp                   *client.GithubApp
 	githubGraphQLAPI            client.GraphQLAPI
-	githubRestAPI               client.RestAPI
+	githubRESTAPI               client.RESTAPI
 	appsProto.UnimplementedGithubServer
 }
 
@@ -876,7 +876,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			continue
 		}
 
-		orgID, err := a.githubRestAPI.GetOrganizationIDByLogin(ct, ins, node.Repository.Owner.Login)
+		orgID, err := a.githubRESTAPI.GetOrganizationIDByLogin(ct, ins, node.Repository.Owner.Login)
 		if err != nil {
 			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			continue
@@ -1115,7 +1115,7 @@ func NewAppAPI(
 	githubCodeReviewDao dao.GithubCodeReview,
 	githubRequiredUserActionDao dao.GithubRequiredUserAction,
 	githubGraphQLAPI client.GraphQLAPI,
-	githubRestAPI client.RestAPI,
+	githubRESTAPI client.RESTAPI,
 	githubApp *client.GithubApp,
 ) AppAPI {
 	return AppAPI{
@@ -1129,7 +1129,7 @@ func NewAppAPI(
 		githubCodeReviewDao:         githubCodeReviewDao,
 		githubRequiredUserActionDao: githubRequiredUserActionDao,
 		githubGraphQLAPI:            githubGraphQLAPI,
-		githubRestAPI:               githubRestAPI,
+		githubRESTAPI:               githubRESTAPI,
 		githubApp:                   githubApp,
 	}
 }

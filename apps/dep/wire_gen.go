@@ -28,7 +28,7 @@ func InitGithubAppAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegis
 	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
 	gqlClient := gql.NewClient(dataCollector, httpClient)
 	graphQLAPI := client.NewGraphQLAPI(dataCollector, gqlClient)
-	restAPI := client.NewRestAPI(dataCollector, httpClient)
+	restAPI := client.NewRESTAPI(dataCollector, httpClient)
 	githubApp, err := newGithubApp(dataCollector, config, githubAppPrivateKeyPEM)
 	if err != nil {
 		return github.AppAPI{}, err
