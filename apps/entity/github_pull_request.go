@@ -35,7 +35,7 @@ func getString(ptr *string) string {
 
 func getInt(ptr *int) string {
 	if ptr == nil {
-		return 0
+		return "nil"
 	}
 	
 	return *ptr
