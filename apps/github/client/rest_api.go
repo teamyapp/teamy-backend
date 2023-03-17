@@ -22,13 +22,13 @@ type RESTAPI struct {
 	httpClient    web.HTTPClient
 }
 
-func (r RESTAPI) GetOrganizationIDByLogin(ct context.Context, installation *Installation, orgName string) (uint64, *errs.Error) {
-	url := fmt.Sprintf("https://api.github.com/orgs/%s", orgName)
+func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Installation, login string) (entity.Organization, *errs.Error) {
+	url := fmt.Sprintf("https://api.github.com/orgs/%s", login)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		internalErr := errs.NewError(errs.Unknown, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return entity.Organization{}, internalErr
 	}
 
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -36,7 +36,7 @@ func (r RESTAPI) GetOrganizationIDByLogin(ct context.Context, installation *Inst
 
 	accessToken, internalErr := installation.GetOrRefreshAccessToken(ct)
 	if internalErr != nil {
-		return 0, internalErr
+		return entity.Organization{}, internalErr
 	}
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
@@ -45,19 +45,23 @@ func (r RESTAPI) GetOrganizationIDByLogin(ct context.Context, installation *Inst
 	if err != nil {
 		internalErr = errs.NewError(errs.Unknown, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return entity.Organization{}, internalErr
 	}
 
-	if res.StatusCode == http.StatusNotFound {
-		internalErr = errs.NewError(errs.NotFound, "Not found")
-		return 0, internalErr
+	if res.StatusCode >= errs.HTTPClientErrors && res.StatusCode < errs.HTTPServerErrors {
+		if res.StatusCode == http.StatusNotFound {
+			internalErr = errs.NewError(errs.NotFound, "Not found")
+		} else {
+			internalErr = errs.NewError(errs.Unknown, "Unknown")
+		}
+		return entity.Organization{}, internalErr
 	}
 
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
 		internalErr = errs.NewError(errs.IO, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return entity.Organization{}, internalErr
 	}
 
 	var body entity.Organization
@@ -65,10 +69,10 @@ func (r RESTAPI) GetOrganizationIDByLogin(ct context.Context, installation *Inst
 	if err != nil {
 		internalErr = errs.NewError(errs.Deserialization, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return entity.Organization{}, internalErr
 	}
 
-	return body.ID, nil
+	return body, nil
 }
 
 func NewRESTAPI(dataCollector telemetry.DataCollector, httpClient web.HTTPClient) RESTAPI {

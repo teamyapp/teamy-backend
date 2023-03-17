@@ -876,7 +876,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			continue
 		}
 
-		orgID, err := a.githubRESTAPI.GetOrganizationIDByLogin(ct, ins, node.Repository.Owner.Login)
+		org, err := a.githubRESTAPI.GetOrganizationByLogin(ct, ins, node.Repository.Owner.Login)
 		if err != nil {
 			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			continue
@@ -888,7 +888,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			RepositoryName:  &node.Repository.Name,
 			Number:          &node.Number,
 			URL:             &node.URL,
-			OrganizationID:  &orgID,
+			OrganizationID:  &org.ID,
 		}
 
 		sqlErr = a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
