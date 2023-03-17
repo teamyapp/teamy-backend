@@ -1,6 +1,9 @@
 package entity
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type GithubPullRequest struct {
 	NodeID          string
@@ -17,10 +20,34 @@ func (g *GithubPullRequest) String() string {
 		"[GithubPullRequest NodeID:%v InternalTaskID:%v RepositoryOwner:%v RepositoryName:%v Number:%v URL:%v OrganizationID:%v]",
 		g.NodeID,
 		g.InternalTaskID,
-		g.RepositoryOwner,
-		g.RepositoryName,
-		g.Number,
-		g.URL,
-		g.OrganizationID,
+		getString(g.RepositoryOwner),
+		getString(g.RepositoryName),
+		getInt(g.Number),
+		getString(g.URL),
+		getUint64(g.OrganizationID),
 	)
+}
+
+func getString(ptr *string) string {
+	if ptr == nil {
+		return "nil"
+	}
+
+	return *ptr
+}
+
+func getInt(ptr *int) string {
+	if ptr == nil {
+		return "nil"
+	}
+
+	return strconv.Itoa(*ptr)
+}
+
+func getUint64(ptr *uint64) string {
+	if ptr == nil {
+		return "nil"
+	}
+
+	return strconv.FormatUint(*ptr, 10)
 }

@@ -883,6 +883,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		}
 
 		gpr := entity.GithubPullRequest{
+			InternalTaskID:  pullRequest.InternalTaskID,
 			NodeID:          pullRequest.NodeID,
 			RepositoryOwner: &node.Repository.Owner.Login,
 			RepositoryName:  &node.Repository.Name,
@@ -903,7 +904,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 
 		a.dataCollector.Logger.InfoWithContext(
 			ct,
-			fmt.Sprintf("finish backfilling pull request, metadata=%v", pullRequest))
+			fmt.Sprintf("finish backfilling pull request, metadata=%v", gpr.String()))
 	}
 
 	return &emptypb.Empty{}, errs.ToGRPCErr(err)
