@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type organization struct {
+type Organization struct {
 	Login       string `json:"login"`
 	ID          uint64 `json:"id"`
 	NodeID      string `json:"node_id"`
@@ -12,9 +12,9 @@ type organization struct {
 	Description string `json:"description"`
 }
 
-func (o organization) String() string {
+func (o Organization) String() string {
 	return fmt.Sprintf(
-		`[organization
+		`[Organization
 	Login:%v
 	ID:%v
 	NodeID:%v

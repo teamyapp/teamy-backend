@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/web"
+	"github.com/teamyapp/teamy-backend/apps/github/entity"
 )
 
 const (
@@ -21,14 +22,11 @@ type RestAPI struct {
 	httpClient    web.HTTPClient
 }
 
-func (r RestAPI) GetOrgIDByOrgName(ct context.Context, installation *Installation, orgName string) (uint64, *errs.Error) {
+func (r RestAPI) GetOrganizationIDByLogin(ct context.Context, installation *Installation, orgName string) (uint64, *errs.Error) {
 	url := fmt.Sprintf("https://api.github.com/orgs/%s", orgName)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:    errs.Unknown,
-			Message: err.Error(),
-		}
+		internalErr := errs.NewError(errs.Unknown, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
@@ -40,43 +38,32 @@ func (r RestAPI) GetOrgIDByOrgName(ct context.Context, installation *Installatio
 	if internalErr != nil {
 		return 0, internalErr
 	}
+
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	res, err := r.httpClient.Do(req)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:    errs.Unknown,
-			Message: err.Error(),
-		}
+		internalErr = errs.NewError(errs.Unknown, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
 	if res.StatusCode == http.StatusNotFound {
-		return 0, &errs.Error{
-			Code: errs.NotFound,
-		}
+		internalErr = errs.NewError(errs.NotFound, "Not found")
+		return 0, internalErr
 	}
 
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:    errs.IO,
-			Message: err.Error(),
-		}
+		internalErr = errs.NewError(errs.IO, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
-	var body struct {
-		ID uint64 `json:"id"`
-	}
+	var body entity.Organization
 	err = json.Unmarshal(buf, &body)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:    errs.IO,
-			Message: err.Error(),
-		}
+		internalErr = errs.NewError(errs.Deserialization, err.Error())
 		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}

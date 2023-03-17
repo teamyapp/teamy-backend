@@ -876,7 +876,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			continue
 		}
 
-		orgID, err := a.githubRestAPI.GetOrgIDByOrgName(ct, ins, node.Repository.Owner.Login)
+		orgID, err := a.githubRestAPI.GetOrganizationIDByLogin(ct, ins, node.Repository.Owner.Login)
 		if err != nil {
 			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			continue
