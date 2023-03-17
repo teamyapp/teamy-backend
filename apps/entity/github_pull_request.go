@@ -43,7 +43,7 @@ func getInt(ptr *int) int {
 
 func getUint64(ptr *uint64) string {
 	if ptr == nil {
-		return 0
+		return "nil"
 	}
 	
 	return *ptr
