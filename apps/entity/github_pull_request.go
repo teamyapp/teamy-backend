@@ -27,7 +27,7 @@ func (g *GithubPullRequest) String() string {
 
 func getString(ptr *string) string {
 	if ptr == nil {
-		return ""
+		return "nil"
 	}
 	
 	return *ptr
