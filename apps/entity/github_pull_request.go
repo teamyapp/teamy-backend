@@ -29,6 +29,7 @@ func getString(ptr *string) string {
 	if ptr == nil {
 		return ""
 	}
+	
 	return *ptr
 }
 
