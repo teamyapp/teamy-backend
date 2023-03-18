@@ -11,8 +11,7 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
-	"github.com/teamyapp/cloud/libs/env"
-	"github.com/teamyapp/cloud/libs/metrics"
+	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
@@ -52,7 +51,7 @@ func prepareUserService(t *testing.T) User {
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
-	teamyPrometheus := metrics.NewPrometheus("teamy", "backend", env.DevelopmentEnv)
+	teamyPrometheus := metricstest.NewNoopMetrics()
 	exponentialBackOff := backoff.NewExponentialBuilder().Build()
 	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
 	cloudClientCfg := rpc.ConnectionConfig{

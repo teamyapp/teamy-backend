@@ -439,8 +439,13 @@ github.com/teamyapp/cloud v0.0.0-20230311045758-cade651f3693/go.mod h1:x1ub99MMn
 >>>>>>> 4957b17 (Integrate user service with txn)
 github.com/teamyapp/cloud v0.0.0-20230316054223-dc0546213a00 h1:t3X767Pz0x+/R/WjoOYml0RiVrvPLF+56wRBSeoZiBE=
 github.com/teamyapp/cloud v0.0.0-20230316054223-dc0546213a00/go.mod h1:x1ub99MMnnxuf7vrDGKR8OEvvnnfZX9BDAvUOJHi5e4=
+<<<<<<< HEAD
 github.com/teamyapp/cloud v0.0.0-20230319085317-922605073b41 h1:8dtCFSoiH4Q+D299yYgn4RfKNeJFGUTFg4lE8/pnmIU=
 github.com/teamyapp/cloud v0.0.0-20230319085317-922605073b41/go.mod h1:CBLmr+Q5iUg6HkVuPaCv/smfsIBoK+Nvmfoz9tUCfDs=
+=======
+github.com/teamyapp/cloud v0.0.0-20230318013030-d0f99a90ca35 h1:GXG5fuOGvVrqHBaYBj/phY/KFYxJzbD5kjmRj5ONU3o=
+github.com/teamyapp/cloud v0.0.0-20230318013030-d0f99a90ca35/go.mod h1:CBLmr+Q5iUg6HkVuPaCv/smfsIBoK+Nvmfoz9tUCfDs=
+>>>>>>> 9d36a2d (Use no-op metrics for unit tests)
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
