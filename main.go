@@ -124,11 +124,9 @@ func startServiceRunner(
 		return internalErr
 	}
 
-	exponentialBackOff := backoff.NewExponentialBuilder().Build()
-	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, cfg.RequestRetryMaxCount)
-
 	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
 	nw := network.NewSocket()
+	retryFactory := makeRetryFactory(cfg)
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
 		nw,
@@ -141,7 +139,7 @@ func startServiceRunner(
 				return cfg.TeamyServiceAccountAPIToken
 			},
 			RequestTimeout: cfg.RequestTimeout,
-		}, maxCountRetry)
+		}, retryFactory)
 	if err != nil {
 		internalErr = &errs.Error{
 			Code:     errs.Unknown,
@@ -163,7 +161,7 @@ func startServiceRunner(
 				return cfg.AppsServiceAccountAPIToken
 			},
 			RequestTimeout: cfg.RequestTimeout,
-		}, maxCountRetry)
+		}, retryFactory)
 	if internalErr != nil {
 		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return internalErr
@@ -289,4 +287,11 @@ func newLineFormatter(environment env.Environment) telemetry.LineFormatter {
 	}
 
 	return telemetry.NewJSONLineFormatter()
+}
+
+func makeRetryFactory(cfg config.App) func() retry.Retry {
+	return func() retry.Retry {
+		exponentialBackOff := backoff.NewExponentialBuilder().Build()
+		return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, cfg.RequestRetryMaxCount)
+	}
 }

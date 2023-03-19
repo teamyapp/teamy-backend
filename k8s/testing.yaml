@@ -76,6 +76,8 @@ spec:
               value: "81"
             - name: CLOUD_GRPC_API_SHOULD_ENCRYPT
               value: "false"
+            - name: REQUEST_RETRY_MAX_COUNT # Temporary set to 1 before error category is implemented
+              value: "1"
             - name: SERVICE_RUNNER_WEB_SERVER_PORT
               value: "9000"
             - name: SERVICE_RUNNER_GRPC_SERVER_PORT
