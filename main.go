@@ -92,7 +92,7 @@ func main() {
 	})
 	err = sqldb.Use(dataCollector, cfg.Config, func(sqlDB *sql.DB) *errs.Error {
 		internalErr := sqldb.MigrateUp(dataCollector, sqlDB, "migrations", 0)
-		if err != nil {
+		if internalErr != nil {
 			dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: internalErr})
 			return internalErr
 		}
