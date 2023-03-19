@@ -47,9 +47,9 @@ func NewClientRegistry(
 	network network.Network,
 	clientGRPCMetrics middleware.ClientGRPCMetrics,
 	connCfg rpc.ConnectionConfig,
-	retry retry.Retry,
+	makeRetry func() retry.Retry,
 ) (*ClientRegistry, *errs.Error) {
-	conn, err := rpc.NewClientConnection(dataCollector, network, clientGRPCMetrics, connCfg, retry)
+	conn, err := rpc.NewClientConnection(dataCollector, network, clientGRPCMetrics, connCfg, makeRetry)
 	if err != nil {
 		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, &errs.Error{
