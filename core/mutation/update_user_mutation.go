@@ -13,14 +13,15 @@ import (
 )
 
 type UpdateUserMutation struct {
-	dataCollector   telemetry.DataCollector
-	stateSyncer     *realtime.StateSyncer
-	userDao         dao.User
-	userDaoV2       daov2.User
-	teamMemberDaoV2 daov2.TeamMember
-	id              uint64
-	user            entity.User
-	clientNotifiers []*realtime.ClientNotifier
+	dataCollector     telemetry.DataCollector
+	stateSyncer       *realtime.StateSyncer
+	userDao           dao.User
+	userDaoV2         daov2.User
+	teamMemberDaoV2   daov2.TeamMember
+	id                uint64
+	user              entity.User
+	clientNotifiers   []*realtime.ClientNotifier
+	notifiersPrepared bool
 }
 
 var _ realtime.Mutation = (*UpdateUserMutation)(nil)
@@ -34,8 +35,13 @@ func (u *UpdateUserMutation) ExecuteV2(ct context.Context, tx *transaction.Trans
 }
 
 func (u *UpdateUserMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	teamIDs, err := u.teamMemberDaoV2.FindTeamIDsByUserID(ct, tx, u.user.ID)
+	if u.notifiersPrepared {
+		return nil
+	}
+
+	teamIDs, err := u.teamMemberDaoV2.FindTeamIDsByUserIDWithTx(ct, tx, u.user.ID)
 	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamIDs(ct, teamIDs)
+	u.notifiersPrepared = true
 	return err
 }
 
@@ -82,12 +88,13 @@ func NewUpdateUserMutation(
 	user entity.User,
 ) *UpdateUserMutation {
 	return &UpdateUserMutation{
-		dataCollector:   dataCollector,
-		stateSyncer:     stateSyncer,
-		userDao:         userDao,
-		userDaoV2:       userDaoV2,
-		teamMemberDaoV2: teamMemberDaoV2,
-		id:              stateSyncer.NextMutationID(),
-		user:            user,
+		dataCollector:     dataCollector,
+		stateSyncer:       stateSyncer,
+		userDao:           userDao,
+		userDaoV2:         userDaoV2,
+		teamMemberDaoV2:   teamMemberDaoV2,
+		id:                stateSyncer.NextMutationID(),
+		user:              user,
+		notifiersPrepared: false,
 	}
 }

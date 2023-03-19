@@ -27,6 +27,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 	if err != nil {
 		return entity.User{}, err
 	}
+
 	defer tx.Rollback()
 	return u.FindUserByIDWithTx(ct, tx, userID)
 }

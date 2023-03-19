@@ -37,7 +37,9 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserIDWithTx(
 			updated_at
 		FROM user_file_upload_session
 		WHERE user_id = $1 AND type = $2 AND file_upload_session_id = $3;`,
-		userID, userFileUploadSessionType, fileUploadSessionID).
+		userID,
+		userFileUploadSessionType,
+		fileUploadSessionID).
 		Scan(
 			&userFileUploadSession.UserID,
 			&userFileUploadSession.Type,

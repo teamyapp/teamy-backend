@@ -120,6 +120,7 @@ func (u User) CreateUser(ct context.Context, tx *transaction.Transaction, user e
 	if tx.SQLTx() == nil {
 		panic("It's nil")
 	}
+
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO "user"
 		(

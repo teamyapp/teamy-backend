@@ -77,8 +77,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := u.userDaoV2.CreateUser(ct, tx, user)
-		return err
+		return u.userDaoV2.CreateUser(ct, tx, user)
 	})
 
 	return user, err
@@ -101,7 +100,7 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 
 		user.FirstName = input.FirstName
 		user.LastName = input.LastName
-		updatedAt := time.Now()
+		updatedAt := time.Now().UTC()
 		user.UpdatedAt = &updatedAt
 		userMutation := mutation.NewUpdateUserMutation(
 			u.dataCollector,
@@ -200,7 +199,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 				fileUploadSessionID))
 		}
 
-		now := time.Now()
+		now := time.Now().UTC()
 		profileUploadSession.IsCompleted = true
 		profileUploadSession.UpdatedAt = &now
 		err = u.userFileUploadSessionDaoV2.UpdateUserFileUploadSession(ct, tx, profileUploadSession)

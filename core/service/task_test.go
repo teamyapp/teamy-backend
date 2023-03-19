@@ -43,7 +43,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 		GoogleClientID:           "456",
 		GoogleClientSecret:       "GoogleSecret",
 		SlackClientID:            "789",
-		SlackClientSecret:        "Slack",
+		SlackClientSecret:        "SlackSecret",
 		WebServerPort:            80,
 		GRPCServerPort:           81,
 	}

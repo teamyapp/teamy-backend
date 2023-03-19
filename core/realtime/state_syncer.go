@@ -49,8 +49,12 @@ func (s *StateSyncer) EndTransaction() {
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) *errs.Error {
 	ct := ctx.WithClientID(context.Background(), s.nextClientID)
 	s.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("client connected: userID=%v", userID))
-	// TODO(yuhang): use daoV2 non-transactional read after we support that
-	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
+	teamIDs, err := s.teamMemberDaoV2.FindTeamIDsByUserID(ct, userID)
+	if err != nil {
+		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
 	userNotifier, err := s.GetUserNotifierV2(ct, userID, teamIDs)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)

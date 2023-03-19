@@ -14,10 +14,25 @@ import (
 )
 
 type TeamMember struct {
-	dataCollector telemetry.DataCollector
+	dataCollector      telemetry.DataCollector
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.TeamMember = (*TeamMember)(nil)
+
+func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]uint64, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+
+	return t.FindTeamIDsByUserIDWithTx(ct, tx, userID)
+}
 
 func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
 	statement := `
@@ -282,6 +297,6 @@ func (t TeamMember) DeleteTeamMember(ct context.Context, tx *transaction.Transac
 	return nil
 }
 
-func NewTeamMember(dataCollector telemetry.DataCollector) TeamMember {
-	return TeamMember{dataCollector: dataCollector}
+func NewTeamMember(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) TeamMember {
+	return TeamMember{dataCollector: dataCollector, transactionFactory: transactionFactory}
 }

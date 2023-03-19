@@ -16,7 +16,12 @@ type TeamMember struct {
 
 var _ daov2.TeamMember = (*TeamMember)(nil)
 
-func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
+func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]uint64, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
 	var teamIDs []uint64
 	err := tx.ExecuteCommand(transaction.Command{
 		Execute: func() *errs.Error {
@@ -38,17 +43,17 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *transaction.Tran
 	return teamIDs, err
 }
 
-func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error) {
+func (t TeamMember) FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error) {
+func (t TeamMember) FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t TeamMember) FindTeamMember(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
+func (t TeamMember) FindTeamMemberWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }

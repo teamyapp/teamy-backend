@@ -26,7 +26,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-func prepareUserService(t *testing.T) User {
+func prepareUserService(t *testing.T) (User, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	dataCollector := telemetry.NewDataCollector(logger)
@@ -42,18 +42,18 @@ func prepareUserService(t *testing.T) User {
 		GoogleClientID:           "456",
 		GoogleClientSecret:       "GoogleSecret",
 		SlackClientID:            "789",
-		SlackClientSecret:        "Slack",
+		SlackClientSecret:        "SlackSecret",
 		WebServerPort:            80,
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	assert.Nil(t, internalErr)
+	if !assert.Nil(t, internalErr) {
+		return User{}, false
+	}
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
 	teamyPrometheus := metricstest.NewNoopMetrics()
-	exponentialBackOff := backoff.NewExponentialBuilder().Build()
-	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -68,8 +68,13 @@ func prepareUserService(t *testing.T) User {
 		virtualNetwork,
 		teamyPrometheus,
 		cloudClientCfg,
-		maxCountRetry)
-	assert.Nil(t, err)
+		func() retry.Retry {
+			exponentialBackOff := backoff.NewExponentialBuilder().Build()
+			return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
+		})
+	if !assert.Nil(t, err) {
+		return User{}, false
+	}
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotestv2.UserTableName)
@@ -94,23 +99,29 @@ func prepareUserService(t *testing.T) User {
 		userDaoV2,
 		teamMemberDaoV2,
 		userFileUploadSessionDaoV2,
-	)
+	), true
 }
 
 func TestUserService_CreateUser(t *testing.T) {
-	userService := prepareUserService(t)
+	userService, ok := prepareUserService(t)
+	if !ok {
+		return
+	}
+
 	var requesterUserID uint64 = 20
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	var profileURL = "https://test"
 	userInput := CreateUserInput{
-		LastName:   "test_lastname",
-		FirstName:  "test_firstname",
+		LastName:   "LastName",
+		FirstName:  "FirstName",
 		ProfileURL: &profileURL,
 	}
 	newUser, internalErr := userService.CreateUser(ct, userInput)
-	assert.Nil(t, internalErr)
+	if !assert.Nil(t, internalErr) {
+		return
+	}
 
 	// verify return result
 	assert.Equal(t, requesterUserID, newUser.ID)
@@ -122,7 +133,10 @@ func TestUserService_CreateUser(t *testing.T) {
 
 	// verify in-memory DB
 	userInMemory, err := userService.userDaoV2.FindUserByID(ct, newUser.ID)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
+
 	assert.Equal(t, requesterUserID, userInMemory.ID)
 	assert.Equal(t, userInput.LastName, userInMemory.LastName)
 	assert.Equal(t, userInput.FirstName, userInMemory.FirstName)
@@ -132,7 +146,11 @@ func TestUserService_CreateUser(t *testing.T) {
 }
 
 func TestUserService_UpdateUser(t *testing.T) {
-	userService := prepareUserService(t)
+	userService, ok := prepareUserService(t)
+	if !ok {
+		return
+	}
+
 	var requesterUserID uint64 = 20
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
@@ -140,25 +158,32 @@ func TestUserService_UpdateUser(t *testing.T) {
 	var profileURL = "https://test"
 
 	tx, err := userService.transactionFactory.BeginTx(ct, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
+
 	user := entity.User{
 		ID:         requesterUserID,
-		LastName:   "test_lastname",
-		FirstName:  "test_firstname",
+		LastName:   "LastName",
+		FirstName:  "FirstName",
 		ProfileURL: &profileURL,
 		CreatedAt:  time.Now().UTC(),
 		UpdatedAt:  nil,
 	}
 
 	// insert user into table
-	assert.Nil(t, userService.userDaoV2.CreateUser(ct, tx, user))
+	if !assert.Nil(t, userService.userDaoV2.CreateUser(ct, tx, user)) {
+		return
+	}
 
 	updateInput := UpdateUserInput{
-		LastName:  "test_lastname_updated",
-		FirstName: "test_firstname_updated",
+		LastName:  "UpdatedLastName",
+		FirstName: "UpdatedFirstName",
 	}
 	updatedUser, internalErr := userService.UpdateUser(ct, user.ID, updateInput)
-	assert.Nil(t, internalErr)
+	if !assert.Nil(t, internalErr) {
+		return
+	}
 
 	// verify return result
 	assert.Equal(t, requesterUserID, updatedUser.ID)
@@ -170,7 +195,10 @@ func TestUserService_UpdateUser(t *testing.T) {
 
 	// verify in-memory DB
 	userInMemory, err := userService.userDaoV2.FindUserByID(ct, user.ID)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
+
 	assert.Equal(t, requesterUserID, userInMemory.ID)
 	assert.Equal(t, updateInput.LastName, userInMemory.LastName)
 	assert.Equal(t, updateInput.FirstName, userInMemory.FirstName)
@@ -180,30 +208,40 @@ func TestUserService_UpdateUser(t *testing.T) {
 }
 
 func TestUserService_FindUserByID(t *testing.T) {
-	userService := prepareUserService(t)
+	userService, ok := prepareUserService(t)
+	if !ok {
+		return
+	}
+
 	var requesterUserID uint64 = 20
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	var profileURL = "https://test"
-
 	tx, err := userService.transactionFactory.BeginTx(ct, nil)
-	assert.Nil(t, err)
-	updateTime := time.Now().UTC()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	now := time.Now().UTC()
 	user := entity.User{
 		ID:         requesterUserID,
 		LastName:   "test_lastname",
 		FirstName:  "test_firstname",
 		ProfileURL: &profileURL,
-		CreatedAt:  time.Now().UTC(),
-		UpdatedAt:  &updateTime,
+		CreatedAt:  now,
+		UpdatedAt:  &now,
 	}
 
 	// insert user into table
-	assert.Nil(t, userService.userDaoV2.CreateUser(ct, tx, user))
+	if !assert.Nil(t, userService.userDaoV2.CreateUser(ct, tx, user)) {
+		return
+	}
 
 	userFound, internalErr := userService.FindUserByID(ct, user.ID)
-	assert.Nil(t, internalErr)
+	if !assert.Nil(t, internalErr) {
+		return
+	}
 
 	// verify return result
 	assert.Equal(t, user.ID, userFound.ID)
@@ -215,16 +253,25 @@ func TestUserService_FindUserByID(t *testing.T) {
 }
 
 func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
-	userService := prepareUserService(t)
+	userService, ok := prepareUserService(t)
+	if !ok {
+		return
+	}
+
 	var requesterUserID uint64 = 20
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := userService.transactionFactory.BeginTx(ct, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	uploadSessionID, err := userService.CreateUserProfileUploadSession(ct)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
+
 	assert.Equal(t, uploadSessionID, uint64(1))
 
 	// verify in-memory DB
@@ -233,6 +280,9 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 		requesterUserID,
 		entity.ProfileUserFileUploadSessionType,
 		uploadSessionID)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	assert.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
 	assert.Equal(t, uploadSessionInMemory.UserID, requesterUserID)
@@ -242,35 +292,47 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 }
 
 func TestUserService_UpdateUserProfileUploadSession(t *testing.T) {
-	userService := prepareUserService(t)
+	userService, ok := prepareUserService(t)
+	if !ok {
+		return
+	}
+
 	var requesterUserID uint64 = 20
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := userService.transactionFactory.BeginTx(ct, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	var profileURL = "https://test"
-	updateTime := time.Now().UTC()
+	now := time.Now().UTC()
 	user := entity.User{
 		ID:         requesterUserID,
 		LastName:   "test_lastname",
 		FirstName:  "test_firstname",
 		ProfileURL: &profileURL,
-		CreatedAt:  time.Now().UTC(),
+		CreatedAt:  now,
 		UpdatedAt:  &now,
 	}
 
 	// insert user table
-	assert.Nil(t, userService.userDaoV2.CreateUser(ct, tx, user))
+	if !assert.Nil(t, userService.userDaoV2.CreateUser(ct, tx, user)) {
+		return
+	}
 
 	// create user upload session
 	uploadSessionID, err := userService.CreateUserProfileUploadSession(ct)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	// finish upload session
 	updatedUser, err := userService.FinishUserProfileUploadSession(ct, uploadSessionID)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	// verify returned user
 	assert.Equal(t, user.ID, updatedUser.ID)

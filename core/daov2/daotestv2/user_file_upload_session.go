@@ -80,7 +80,19 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(ct context.Context, t
 				return err
 			}
 
-			table.Rows = table.Rows[:len(table.Rows)-1]
+			rows := make([]interface{}, 0)
+			for _, row := range table.Rows {
+				currUserFileUploadSession := row.(entity.UserFileUploadSession)
+				if currUserFileUploadSession.FileUploadSessionID == userFileUploadSession.FileUploadSessionID &&
+					currUserFileUploadSession.UserID == userFileUploadSession.UserID &&
+					currUserFileUploadSession.Type == userFileUploadSession.Type {
+					continue
+				}
+
+				rows = append(rows, row)
+			}
+
+			table.Rows = rows
 			return nil
 		},
 	})
@@ -99,12 +111,12 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(ct context.Context, t
 				return err
 			}
 
-			for i, row := range table.Rows {
+			for index, row := range table.Rows {
 				currFileUploadSession := row.(entity.UserFileUploadSession)
 				if currFileUploadSession.UserID == userFileUploadSession.UserID &&
 					currFileUploadSession.FileUploadSessionID == userFileUploadSession.FileUploadSessionID &&
 					currFileUploadSession.Type == userFileUploadSession.Type {
-					table.Rows[i] = userFileUploadSession
+					table.Rows[index] = userFileUploadSession
 					return nil
 				}
 			}
@@ -120,12 +132,13 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(ct context.Context, t
 				return err
 			}
 
-			for i, row := range table.Rows {
+			for index, row := range table.Rows {
 				currFileUploadSession := row.(entity.UserFileUploadSession)
 				if currFileUploadSession.UserID == userFileUploadSession.UserID &&
 					currFileUploadSession.FileUploadSessionID == userFileUploadSession.FileUploadSessionID &&
 					currFileUploadSession.Type == userFileUploadSession.Type {
-					table.Rows[i] = oldFileUploadSession
+					table.Rows[index] = oldFileUploadSession
+					return nil
 				}
 			}
 
