@@ -87,33 +87,14 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(ct context.Context, t
 }
 
 func (u UserFileUploadSession) UpdateUserFileUploadSession(ct context.Context, tx *transaction.Transaction, userFileUploadSession entity.UserFileUploadSession) *errs.Error {
-	var oldFileUploadSession entity.UserFileUploadSession
-	oldFileUploadSessionFound := false
-	table, err := u.db.GetTable(UserFileUploadSessionTableName)
-	if err != nil {
-		return err
-	}
-
-	for _, row := range table.Rows {
-		currFileUploadSession := row.(entity.UserFileUploadSession)
-		if currFileUploadSession.UserID == userFileUploadSession.UserID &&
-			currFileUploadSession.FileUploadSessionID == userFileUploadSession.FileUploadSessionID &&
-			currFileUploadSession.Type == userFileUploadSession.Type {
-			oldFileUploadSession = currFileUploadSession
-			oldFileUploadSessionFound = true
-		}
-	}
-
-	if !oldFileUploadSessionFound {
-		return errs.NewError(errs.Unknown, fmt.Sprintf("row not exist: userID=%v, userFileUploadSessionType=%v, fileUploadSessionID=%v",
-			userFileUploadSession.UserID,
-			userFileUploadSession.Type,
-			userFileUploadSession.FileUploadSessionID))
+	oldFileUploadSession, internalErr := u.FindUserFileUploadSessionByUserIDWithTx(ct, tx, userFileUploadSession.UserID, userFileUploadSession.Type, userFileUploadSession.FileUploadSessionID)
+	if internalErr != nil {
+		return internalErr
 	}
 
 	return tx.ExecuteCommand(transaction.Command{
 		Execute: func() *errs.Error {
-			table, err = u.db.GetTable(UserFileUploadSessionTableName)
+			table, err := u.db.GetTable(UserFileUploadSessionTableName)
 			if err != nil {
 				return err
 			}
@@ -134,7 +115,7 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(ct context.Context, t
 				userFileUploadSession.FileUploadSessionID))
 		},
 		Undo: func() *errs.Error {
-			table, err = u.db.GetTable(UserFileUploadSessionTableName)
+			table, err := u.db.GetTable(UserFileUploadSessionTableName)
 			if err != nil {
 				return err
 			}
