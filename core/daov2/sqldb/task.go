@@ -44,7 +44,6 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 	}
 
 	defer tx.Rollback()
-
 	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
 }
 
@@ -58,7 +57,6 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 	}
 
 	defer tx.Rollback()
-
 	return t.FindAllTasksWithTx(ct, tx)
 }
 

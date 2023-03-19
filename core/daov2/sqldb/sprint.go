@@ -30,7 +30,6 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 	}
 	
 	defer tx.Rollback()
-
 	return s.FindSprintByIDWithTx(ct, tx, sprintID)
 }
 
@@ -44,7 +43,6 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 	}
 	
 	defer tx.Rollback()
-
 	return s.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 }
 
@@ -58,7 +56,6 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error
 	}
 	
 	defer tx.Rollback()
-
 	return s.FindAllSprintsWithTx(ct, tx)
 }
 
