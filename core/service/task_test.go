@@ -57,8 +57,6 @@ func TestTaskService_CreateTask(t *testing.T) {
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
 	teamyPrometheus := metrics.NewPrometheus("teamy", "backend", env.DevelopmentEnv)
-	exponentialBackOff := backoff.NewExponentialBuilder().Build()
-	maxCountRetry := retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -73,7 +71,10 @@ func TestTaskService_CreateTask(t *testing.T) {
 		virtualNetwork,
 		teamyPrometheus,
 		cloudClientCfg,
-		maxCountRetry)
+		func() retry.Retry {
+			exponentialBackOff := backoff.NewExponentialBuilder().Build()
+			return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
+		})
 	assert.Nil(t, err)
 	if err != nil {
 		return
