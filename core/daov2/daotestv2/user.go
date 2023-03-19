@@ -28,6 +28,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 	if err != nil {
 		return entity.User{}, err
 	}
+
 	return u.FindUserByIDWithTx(ct, tx, userID)
 }
 
@@ -66,13 +67,16 @@ func (u User) FindUsersByIDsWithTx(ct context.Context, tx *transaction.Transacti
 				return err
 			}
 
+			userMap := make(map[uint64]int)
 			for _, userID := range userIDs {
-				for _, rawRow := range table.Rows {
-					currUser := rawRow.(entity.User)
-					if currUser.ID == userID {
-						users = append(users, currUser)
-						return nil
-					}
+				userMap[userID]++
+			}
+
+			for _, rawRow := range table.Rows {
+				currUser := rawRow.(entity.User)
+				if _, ok := userMap[currUser.ID]; ok {
+					users = append(users, currUser)
+					return nil
 				}
 			}
 
@@ -123,28 +127,14 @@ func (u User) CreateUser(ct context.Context, tx *transaction.Transaction, user e
 }
 
 func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user entity.User) *errs.Error {
-	var oldUser entity.User
-	oldUserFound := false
-	table, err := u.db.GetTable(UserTableName)
-	if err != nil {
-		return err
-	}
-
-	for _, row := range table.Rows {
-		currUser := row.(entity.User)
-		if currUser.ID == user.ID {
-			oldUser = currUser
-			oldUserFound = true
-		}
-	}
-
-	if !oldUserFound {
-		return errs.NewError(errs.Unknown, fmt.Sprintf("row not exist: userID=%v", user.ID))
+	oldUser, internalErr := u.FindUserByIDWithTx(ct, tx, user.ID)
+	if internalErr != nil {
+		return internalErr
 	}
 
 	return tx.ExecuteCommand(transaction.Command{
 		Execute: func() *errs.Error {
-			table, err = u.db.GetTable(UserTableName)
+			table, err := u.db.GetTable(UserTableName)
 			if err != nil {
 				return err
 			}
@@ -160,15 +150,15 @@ func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user e
 			return errs.NewError(errs.Unknown, fmt.Sprintf("row not exist: userID=%v", user.ID))
 		},
 		Undo: func() *errs.Error {
-			table, err = u.db.GetTable(UserTableName)
+			table, err := u.db.GetTable(UserTableName)
 			if err != nil {
 				return err
 			}
 
-			for i, row := range table.Rows {
+			for index, row := range table.Rows {
 				currUser := row.(entity.User)
 				if currUser.ID == user.ID {
-					table.Rows[i] = oldUser
+					table.Rows[index] = oldUser
 				}
 			}
 

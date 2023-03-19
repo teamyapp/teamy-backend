@@ -17,7 +17,13 @@ type UserFileUploadSession struct {
 
 var _ daov2.UserFileUploadSession = (*UserFileUploadSession)(nil)
 
-func (u UserFileUploadSession) FindUserFileUploadSessionByUserIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64, userFileUploadSessionType entity.UserFileUploadSessionType, fileUploadSessionID uint64) (entity.UserFileUploadSession, *errs.Error) {
+func (u UserFileUploadSession) FindUserFileUploadSessionByUserIDWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	userID uint64,
+	userFileUploadSessionType entity.UserFileUploadSessionType,
+	fileUploadSessionID uint64,
+) (entity.UserFileUploadSession, *errs.Error) {
 	var uploadSession entity.UserFileUploadSession
 	err := tx.ExecuteCommand(transaction.Command{
 		Execute: func() *errs.Error {
