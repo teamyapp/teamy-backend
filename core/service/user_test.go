@@ -258,7 +258,7 @@ func TestUserService_UpdateUserProfileUploadSession(t *testing.T) {
 		FirstName:  "test_firstname",
 		ProfileURL: &profileURL,
 		CreatedAt:  time.Now().UTC(),
-		UpdatedAt:  &updateTime,
+		UpdatedAt:  &now,
 	}
 
 	// insert user table
@@ -288,4 +288,8 @@ func TestUserService_UpdateUserProfileUploadSession(t *testing.T) {
 		uploadSessionID)
 
 	assert.Equal(t, uploadSessionInMemory.IsCompleted, true)
+	assert.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
+	assert.Equal(t, uploadSessionInMemory.UserID, user.ID)
+	assert.Equal(t, uploadSessionInMemory.Type, entity.ProfileUserFileUploadSessionType)
+	assert.NotNil(t, uploadSessionInMemory.UpdatedAt)
 }

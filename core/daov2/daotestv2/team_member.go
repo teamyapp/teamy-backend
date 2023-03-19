@@ -29,7 +29,6 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, tx *transaction.Tran
 				currTeamMember := rawRow.(entity.TeamMember)
 				if currTeamMember.UserID == userID {
 					teamIDs = append(teamIDs, currTeamMember.TeamID)
-					return nil
 				}
 			}
 

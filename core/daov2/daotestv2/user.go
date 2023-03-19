@@ -24,11 +24,10 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 		ReadOnly: true,
 	}
 	tx, err := u.transactionFactory.BeginTx(ct, &opt)
-	defer tx.Rollback()
 	if err != nil {
 		return entity.User{}, err
 	}
-
+	defer tx.Rollback()
 	return u.FindUserByIDWithTx(ct, tx, userID)
 }
 
@@ -76,7 +75,6 @@ func (u User) FindUsersByIDsWithTx(ct context.Context, tx *transaction.Transacti
 				currUser := rawRow.(entity.User)
 				if _, ok := userMap[currUser.ID]; ok {
 					users = append(users, currUser)
-					return nil
 				}
 			}
 
