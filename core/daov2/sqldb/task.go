@@ -26,9 +26,9 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
-		return nil, err
+		return entity.Task{}, err
 	}
-	
+
 	defer tx.Rollback()
 
 	return t.FindTaskByIDWithTx(ct, tx, taskID)
@@ -42,7 +42,7 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer tx.Rollback()
 
 	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
@@ -56,7 +56,7 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer tx.Rollback()
 
 	return t.FindAllTasksWithTx(ct, tx)

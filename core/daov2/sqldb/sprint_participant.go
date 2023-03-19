@@ -28,7 +28,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer tx.Rollback()
 
 	return s.FindParticipantIDsBySprintIDWithTx(ct, tx, sprintID)
@@ -42,7 +42,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer tx.Rollback()
 
 	return s.FindParticipantsBySprintIDWithTx(ct, tx, sprintID)
@@ -54,9 +54,9 @@ func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, 
 	}
 	tx, err := s.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
-		return nil, err
+		return entity.SprintParticipant{}, err
 	}
-	
+
 	defer tx.Rollback()
 
 	return s.FindParticipantWithTx(ct, tx, sprintID, participantUserID)
