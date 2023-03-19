@@ -43,7 +43,7 @@ func (d *DeleteTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *
 		return nil
 	}
 
-	task, err := d.taskDaoV2.FindTaskByID(ct, d.taskLink.TaskID)
+	task, err := d.taskDaoV2.FindTaskByIDWithTx(ct, tx, d.taskLink.TaskID)
 	if err != nil {
 		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
