@@ -14,202 +14,49 @@ import (
 )
 
 type Task struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	dataCollector      telemetry.DataCollector
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.Task = (*Task)(nil)
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
-	task := entity.Task{}
-	err := t.db.QueryRow(`
-		SELECT
-			id,
-			goal,
-			context,
-			creator_user_id,
-			owner_user_id,
-			owning_team_id,
-			status,
-			is_planned,
-			effort,
-			comments_thread_id,
-			due_at,
-			created_at,
-			updated_at,
-			delivered_at
-		FROM task
-		WHERE id = $1;`,
-		taskID).
-		Scan(
-			&task.ID,
-			&task.Goal,
-			&task.Context,
-			&task.CreatorUserID,
-			&task.OwnerUserID,
-			&task.OwningTeamID,
-			&task.Status,
-			&task.IsPlanned,
-			&task.Effort,
-			&task.CommentsThreadID,
-			&task.DueAt,
-			&task.CreatedAt,
-			&task.UpdatedAt,
-			&task.DeliveredAt,
-		)
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("task not found: taskID=%v", taskID),
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
+	if err != nil {
+		return entity.Task{}, err
 	}
 
-	return task, nil
+	return t.FindTaskByIDWithTx(ct, tx, taskID)
 }
 
 func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
-	rows, err := t.db.Query(
-		`
-	SELECT
-		id,
-		goal,
-		context,
-		creator_user_id,
-		owner_user_id,
-		owning_team_id,
-		status,
-		is_planned,
-		effort,
-		comments_thread_id,
-		due_at,
-		created_at,
-		updated_at,
-		delivered_at
-	FROM task
-	WHERE owning_team_id = $1;
-`,
-		teamID)
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, err
 	}
 
-	defer rows.Close()
-
-	var internalErr *errs.Error
-	tasks := make([]entity.Task, 0)
-	for rows.Next() {
-		task := entity.Task{}
-		err = rows.Scan(
-			&task.ID,
-			&task.Goal,
-			&task.Context,
-			&task.CreatorUserID,
-			&task.OwnerUserID,
-			&task.OwningTeamID,
-			&task.Status,
-			&task.IsPlanned,
-			&task.Effort,
-			&task.CommentsThreadID,
-			&task.DueAt,
-			&task.CreatedAt,
-			&task.UpdatedAt,
-			&task.DeliveredAt,
-		)
-		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
-		}
-
-		tasks = append(tasks, task)
-	}
-
-	return tasks, nil
+	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
 }
 
 func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
-	rows, err := t.db.Query(`
-	SELECT
-		id,
-		goal,
-		context,
-		creator_user_id,
-		owner_user_id,
-		owning_team_id,
-		status,
-		is_planned,
-		effort,
-		comments_thread_id,
-		due_at,
-		created_at,
-		updated_at,
-		delivered_at
-	FROM task;
-`)
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, err
 	}
 
-	defer rows.Close()
-
-	var internalErr *errs.Error
-	tasks := make([]entity.Task, 0)
-	for rows.Next() {
-		task := entity.Task{}
-		err = rows.Scan(
-			&task.ID,
-			&task.Goal,
-			&task.Context,
-			&task.CreatorUserID,
-			&task.OwnerUserID,
-			&task.OwningTeamID,
-			&task.Status,
-			&task.IsPlanned,
-			&task.Effort,
-			&task.CommentsThreadID,
-			&task.DueAt,
-			&task.CreatedAt,
-			&task.UpdatedAt,
-			&task.DeliveredAt,
-		)
-		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
-		}
-
-		tasks = append(tasks, task)
-	}
-
-	return tasks, internalErr
+	return t.FindAllTasksWithTx(ct, tx)
 }
 
 func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
@@ -641,9 +488,9 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 	return nil
 }
 
-func NewTask(dataCollector telemetry.DataCollector, db *sql.DB) Task {
+func NewTask(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) Task {
 	return Task{
-		dataCollector: dataCollector,
-		db:            db,
+		dataCollector:      dataCollector,
+		transactionFactory: transactionFactory,
 	}
 }

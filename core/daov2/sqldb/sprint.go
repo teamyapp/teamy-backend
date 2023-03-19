@@ -14,161 +14,49 @@ import (
 )
 
 type Sprint struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	dataCollector      telemetry.DataCollector
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.Sprint = (*Sprint)(nil)
 
 func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
-	sprint := entity.Sprint{}
-	err := s.db.QueryRow(`
-		SELECT
-			id,
-			start_at,
-			end_at,
-			created_at,
-			owning_team_id
-		FROM sprint
-		WHERE id = $1;`,
-		sprintID).
-		Scan(
-			&sprint.ID,
-			&sprint.StartAt,
-			&sprint.EndAt,
-			&sprint.CreatedAt,
-			&sprint.OwningTeamID,
-		)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"sprint not found: sprintID=%v", sprintID),
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Sprint{}, internalErr
+	opt := sql.TxOptions{
+		ReadOnly: true,
 	}
-
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Sprint{}, internalErr
+		return entity.Sprint{}, err
 	}
 
-	return sprint, nil
+	return s.FindSprintByIDWithTx(ct, tx, sprintID)
 }
 
 func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
-	rows, err := s.db.Query(
-		`
-	SELECT
-		id,
-		start_at,
-		end_at,
-		created_at,
-		owning_team_id
-	FROM sprint
-	WHERE owning_team_id = $1;
-`,
-		teamID)
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, err
 	}
 
-	defer rows.Close()
-
-	var internalErr *errs.Error
-	var sprints []entity.Sprint
-	for rows.Next() {
-		var sprint entity.Sprint
-		err = rows.
-			Scan(
-				&sprint.ID,
-				&sprint.StartAt,
-				&sprint.EndAt,
-				&sprint.CreatedAt,
-				&sprint.OwningTeamID,
-			)
-		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
-		}
-
-		sprints = append(sprints, sprint)
-	}
-
-	return sprints, internalErr
+	return s.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 }
 
 func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error) {
-	rows, err := s.db.Query(`
-	SELECT
-		id,
-		start_at,
-		end_at,
-		created_at,
-		owning_team_id
-	FROM sprint;
-`)
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, err
 	}
 
-	defer rows.Close()
-
-	var internalErr *errs.Error
-	var sprints []entity.Sprint
-	for rows.Next() {
-		var sprint entity.Sprint
-		err = rows.
-			Scan(
-				&sprint.ID,
-				&sprint.StartAt,
-				&sprint.EndAt,
-				&sprint.CreatedAt,
-				&sprint.OwningTeamID,
-			)
-		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
-		}
-
-		sprints = append(sprints, sprint)
-	}
-
-	return sprints, internalErr
+	return s.FindAllSprintsWithTx(ct, tx)
 }
 
 func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
@@ -430,9 +318,9 @@ func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sp
 	return nil
 }
 
-func NewSprint(dataCollector telemetry.DataCollector, db *sql.DB) Sprint {
+func NewSprint(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) Sprint {
 	return Sprint{
-		dataCollector: dataCollector,
-		db:            db,
+		dataCollector:      dataCollector,
+		transactionFactory: transactionFactory,
 	}
 }

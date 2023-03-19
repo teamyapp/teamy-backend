@@ -14,160 +14,49 @@ import (
 )
 
 type SprintParticipant struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	dataCollector      telemetry.DataCollector
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.SprintParticipant = (*SprintParticipant)(nil)
 
 func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, *errs.Error) {
-	rows, err := s.db.Query(
-		`
-	SELECT
-		user_id
-	FROM sprint_participant
-	WHERE sprint_id = $1;
-`,
-		sprintID)
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, err
 	}
 
-	defer rows.Close()
-
-	var internalErr *errs.Error
-	participantUserIDs := make([]uint64, 0)
-	for rows.Next() {
-		var participantUserID uint64
-		err = rows.Scan(
-			&participantUserID,
-		)
-		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
-		}
-
-		participantUserIDs = append(participantUserIDs, participantUserID)
-	}
-
-	return participantUserIDs, internalErr
+	return s.FindParticipantIDsBySprintIDWithTx(ct, tx, sprintID)
 }
 
 func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
-	rows, err := s.db.Query(
-		`
-	SELECT
-		sprint_id,
-		user_id,
-		total_bandwidth,
-	 	unused_bandwidth,
-		created_at,
-	 	updated_at
-	FROM sprint_participant
-	WHERE sprint_id = $1;
-`,
-		sprintID)
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, err
 	}
 
-	defer rows.Close()
-
-	var internalErr *errs.Error
-	sprintParticipants := make([]entity.SprintParticipant, 0)
-	for rows.Next() {
-		sprintParticipant := entity.SprintParticipant{}
-		err = rows.Scan(
-			&sprintParticipant.SprintID,
-			&sprintParticipant.UserID,
-			&sprintParticipant.TotalBandwidth,
-			&sprintParticipant.UnusedBandwidth,
-			&sprintParticipant.CreatedAt,
-			&sprintParticipant.UpdatedAt,
-		)
-		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
-		}
-
-		sprintParticipants = append(sprintParticipants, sprintParticipant)
-	}
-
-	return sprintParticipants, internalErr
+	return s.FindParticipantsBySprintIDWithTx(ct, tx, sprintID)
 }
 
 func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
-	participant := entity.SprintParticipant{}
-	err := s.db.QueryRow(`
-	SELECT
-		sprint_id,
-		user_id,
-		total_bandwidth,
-		unused_bandwidth,
-		created_at,
-		updated_at
-	FROM sprint_participant
-	WHERE sprint_id = $1 AND user_id=$2;
-`,
-		sprintID,
-		participantUserID).
-		Scan(
-			&participant.SprintID,
-			&participant.UserID,
-			&participant.TotalBandwidth,
-			&participant.UnusedBandwidth,
-			&participant.CreatedAt,
-			&participant.UpdatedAt,
-		)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"participant not found: sprintID=%v, participantUserID=%v", sprintID, participantUserID),
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.SprintParticipant{}, internalErr
+	opt := sql.TxOptions{
+		ReadOnly: true,
 	}
-
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.SprintParticipant{}, internalErr
+		return entity.SprintParticipant{}, err
 	}
 
-	return participant, nil
+	return s.FindParticipantWithTx(ct, tx, sprintID, participantUserID)
 }
 
 func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
@@ -404,9 +293,9 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 	return nil
 }
 
-func NewSprintParticipant(dataCollector telemetry.DataCollector, db *sql.DB) SprintParticipant {
+func NewSprintParticipant(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) SprintParticipant {
 	return SprintParticipant{
-		dataCollector: dataCollector,
-		db:            db,
+		dataCollector:      dataCollector,
+		transactionFactory: transactionFactory,
 	}
 }
