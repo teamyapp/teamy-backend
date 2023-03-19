@@ -17,7 +17,22 @@ type Task struct {
 
 var _ daov2.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
 	var task entity.Task
 	err := tx.ExecuteCommand(transaction.Command{
 		Execute: func() *errs.Error {
@@ -43,22 +58,22 @@ func (t Task) FindTaskByID(ct context.Context, tx *transaction.Transaction, task
 	return task, err
 }
 
-func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t Task) FindTasksByIDs(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t Task) FindTasksByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
+func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t Task) FindAllTasks(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
+func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }

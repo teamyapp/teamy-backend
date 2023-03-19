@@ -14,12 +14,53 @@ import (
 )
 
 type Task struct {
-	dataCollector telemetry.DataCollector
+	dataCollector      telemetry.DataCollector
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	defer tx.Rollback()
+
+	return t.FindTaskByIDWithTx(ct, tx, taskID)
+}
+
+func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
+}
+
+func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return t.FindAllTasksWithTx(ct, tx)
+}
+
+func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -68,7 +109,7 @@ func (t Task) FindTaskByID(ct context.Context, tx *transaction.Transaction, task
 	return task, nil
 }
 
-func (t Task) FindTasksByIDs(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -145,7 +186,7 @@ func (t Task) FindTasksByIDs(ct context.Context, tx *transaction.Transaction, ta
 	return tasks, internalErr
 }
 
-func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
+func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -203,7 +244,7 @@ func (t Task) FindTaskByCommentsThreadID(ct context.Context, tx *transaction.Tra
 	return task, nil
 }
 
-func (t Task) FindAllTasks(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
+func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -273,7 +314,7 @@ func (t Task) FindAllTasks(ct context.Context, tx *transaction.Transaction) ([]e
 	return tasks, internalErr
 }
 
-func (t Task) FindTasksByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
+func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -448,6 +489,9 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 	return nil
 }
 
-func NewTask(dataCollector telemetry.DataCollector) Task {
-	return Task{dataCollector: dataCollector}
+func NewTask(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) Task {
+	return Task{
+		dataCollector:      dataCollector,
+		transactionFactory: transactionFactory,
+	}
 }

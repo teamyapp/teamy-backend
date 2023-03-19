@@ -16,12 +16,12 @@ type TaskAwaitForRelation struct {
 
 var _ daov2.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
 
-func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error) {
+func (t TaskAwaitForRelation) FindAwaitingTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error) {
+func (t TaskAwaitForRelation) FindAwaitForTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }

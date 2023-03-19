@@ -54,89 +54,32 @@ type Sprint struct {
 }
 
 func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
-	var sprints []entity.Sprint
-	txCtx := TransactionsContext{
-		dataCollector:      s.dataCollector,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		sprints, err = s.sprintDaoV2.FindSprintsByTeamID(ct, tx, teamID)
-		if err != nil {
-			s.dataCollector.Logger.ErrorWithContext(ct, err)
-			return err
-		}
-
-		if filter != nil {
-			sprints = filterSprints(sprints, *filter)
-		}
-
-		return nil
-	})
-
+	sprints, err := s.sprintDaoV2.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
+	}
+
+	if filter != nil {
+		sprints = filterSprints(sprints, *filter)
 	}
 
 	return sprints, nil
 }
 
 func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
-	var participants []entity.SprintParticipant
-	txCtx := TransactionsContext{
-		dataCollector:      s.dataCollector,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		participants, err = s.sprintParticipantDaoV2.FindParticipantsBySprintID(ct, tx, sprintID)
-		if err != nil {
-			s.dataCollector.Logger.ErrorWithContext(ct, err)
-			return err
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
-		return nil, err
-	}
-
-	return participants, nil
+	return s.sprintParticipantDaoV2.FindParticipantsBySprintID(ct, sprintID)
 }
 
 func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
-	var sprints []entity.Sprint
-	txCtx := TransactionsContext{
-		dataCollector:      s.dataCollector,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		sprints, err = s.sprintDaoV2.FindAllSprints(ct, tx)
-		if err != nil {
-			s.dataCollector.Logger.ErrorWithContext(ct, err)
-			return err
-		}
-
-		if filter != nil {
-			sprints = filterSprints(sprints, *filter)
-		}
-
-		return nil
-	})
-
+	sprints, err := s.sprintDaoV2.FindAllSprints(ct)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
+	}
+
+	if filter != nil {
+		sprints = filterSprints(sprints, *filter)
 	}
 
 	return sprints, nil
@@ -151,7 +94,7 @@ func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Spr
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		sprints, err := s.sprintDaoV2.FindSprintsByTeamID(ct, tx, teamID)
+		sprints, err := s.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -205,7 +148,7 @@ func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) (
 	}
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		sprints, err = s.sprintDaoV2.FindSprintsByTeamID(ct, tx, teamID)
+		sprints, err = s.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -240,7 +183,7 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 	}
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		sprint, err = s.sprintDaoV2.FindSprintByID(ct, tx, sprintID)
+		sprint, err = s.sprintDaoV2.FindSprintByIDWithTx(ct, tx, sprintID)
 		return err
 	})
 
@@ -310,7 +253,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 			return err
 		}
 
-		teamMembers, err := s.teamMemberDaoV2.FindTeamMembersByTeamID(ct, tx, teamID)
+		teamMembers, err := s.teamMemberDaoV2.FindTeamMembersByTeamIDWithTx(ct, tx, teamID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -386,7 +329,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		taskIds, err := s.sprintTaskRelationDaoV2.FindTaskIDsBySprintID(ct, tx, sprintID)
+		taskIds, err := s.sprintTaskRelationDaoV2.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -400,13 +343,13 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 			}
 		}
 
-		participantUserIDs, err := s.sprintParticipantDaoV2.FindParticipantIDsBySprintID(ct, tx, sprintID)
+		participantUserIDs, err := s.sprintParticipantDaoV2.FindParticipantIDsBySprintIDWithTx(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
-		sprint, err = s.sprintDaoV2.FindSprintByID(ct, tx, sprintID)
+		sprint, err = s.sprintDaoV2.FindSprintByIDWithTx(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -454,13 +397,13 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = s.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, err = s.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
-		sprint, err := s.sprintDaoV2.FindSprintByID(ct, tx, sprintID)
+		sprint, err := s.sprintDaoV2.FindSprintByIDWithTx(ct, tx, sprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -529,14 +472,6 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 }
 
 func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs []uint64) ([]entity.Task, *errs.Error) {
-	var sprint entity.Sprint
-	var err *errs.Error
-	txCtx := TransactionsContext{
-		dataCollector:      s.dataCollector,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
@@ -548,11 +483,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 			return nil, internalErr
 		}
 
-		// TODO(yuhang): better call non-transactional query here, will update after we add those functions in daoV2
-		txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-			sprint, err = s.sprintDaoV2.FindSprintByID(ct, tx, toSprintID)
-			return err
-		})
+		sprint, err := s.sprintDaoV2.FindSprintByID(ct, toSprintID)
 		if err != nil {
 			s.dataCollector.Logger.ErrorWithContext(ct, err)
 			return nil, err
@@ -600,6 +531,13 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		newThreadIDs = append(newThreadIDs, genThreadIDRes.UniqueNumber)
 	}
 
+	var err *errs.Error
+	txCtx := TransactionsContext{
+		dataCollector:      s.dataCollector,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		for idx, taskID := range taskIDs {
 			var task entity.Task
@@ -685,13 +623,13 @@ func (s Sprint) copyTaskToSprint(
 	newTaskID uint64,
 	newThreadID uint64,
 ) (entity.Task, *errs.Error) {
-	task, err := s.taskDaoV2.FindTaskByID(ct, tx, taskID)
+	task, err := s.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
-	sprint, err := s.sprintDaoV2.FindSprintByID(ct, tx, toSprintID)
+	sprint, err := s.sprintDaoV2.FindSprintByIDWithTx(ct, tx, toSprintID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -800,7 +738,7 @@ func (s Sprint) moveTaskToSprint(
 	toSprintID uint64,
 	taskID uint64,
 ) (entity.Task, *errs.Error) {
-	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, tx, taskID)
+	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -836,7 +774,7 @@ func (s Sprint) moveTaskToSprint(
 		return entity.Task{}, err
 	}
 
-	task, err := s.taskDaoV2.FindTaskByID(ct, tx, taskID)
+	task, err := s.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -858,7 +796,7 @@ func (s Sprint) moveTaskToSprint(
 }
 
 func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transaction, rtTx *realtime.Transaction, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
-	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, tx, taskID)
+	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -876,7 +814,7 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 		return entity.Task{}, internalErr
 	}
 
-	task, err := s.taskDaoV2.FindTaskByID(ct, tx, taskID)
+	task, err := s.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
 		s.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -931,7 +869,7 @@ func (s Sprint) tryReduceBandwidth(
 	task entity.Task,
 ) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
-		newSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, tx, sprintID, *task.OwnerUserID)
+		newSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
 			if err.Code == errs.NotFound {
@@ -970,7 +908,7 @@ func (s Sprint) tryIncreaseBandwidth(
 	task entity.Task,
 ) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
-		oldSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipant(ct, tx, sprintID, *task.OwnerUserID)
+		oldSprintParticipant, err := s.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
 			if err.Code == errs.NotFound {

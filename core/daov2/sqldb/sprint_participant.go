@@ -14,12 +14,52 @@ import (
 )
 
 type SprintParticipant struct {
-	dataCollector telemetry.DataCollector
+	dataCollector      telemetry.DataCollector
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.SprintParticipant = (*SprintParticipant)(nil)
 
-func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
+func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return s.FindParticipantIDsBySprintIDWithTx(ct, tx, sprintID)
+}
+
+func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return s.FindParticipantsBySprintIDWithTx(ct, tx, sprintID)
+}
+
+func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.SprintParticipant{}, err
+	}
+
+	defer tx.Rollback()
+	return s.FindParticipantWithTx(ct, tx, sprintID, participantUserID)
+}
+
+func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -66,7 +106,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, tx *
 	return participantUserIDs, internalErr
 }
 
-func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -123,7 +163,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, tx *tr
 	return sprintParticipants, internalErr
 }
 
-func (s SprintParticipant) FindParticipant(ct context.Context, tx *transaction.Transaction, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
+func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
 	participant := entity.SprintParticipant{}
 	err := tx.SQLTx().QueryRow(`
 	SELECT
@@ -253,8 +293,9 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 	return nil
 }
 
-func NewSprintParticipant(dataCollector telemetry.DataCollector) SprintParticipant {
+func NewSprintParticipant(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) SprintParticipant {
 	return SprintParticipant{
-		dataCollector: dataCollector,
+		dataCollector:      dataCollector,
+		transactionFactory: transactionFactory,
 	}
 }

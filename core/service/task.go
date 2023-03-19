@@ -78,42 +78,11 @@ type Task struct {
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
-	var task entity.Task
-	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var internalErr *errs.Error
-		task, internalErr = t.taskDaoV2.FindTaskByID(ct, tx, taskID)
-		return internalErr
-	})
-
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Task{}, err
-	}
-
-	return task, err
+	return t.taskDaoV2.FindTaskByID(ct, taskID)
 }
 
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, *errs.Error) {
-	var tasks []entity.Task
-	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var internalErr *errs.Error
-		tasks, internalErr = t.taskDaoV2.FindAllTasks(ct, tx)
-		return internalErr
-	})
-
+	tasks, err := t.taskDaoV2.FindAllTasks(ct)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
@@ -127,19 +96,7 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 }
 
 func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, *errs.Error) {
-	var tasks []entity.Task
-	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var internalErr *errs.Error
-		tasks, internalErr = t.taskDaoV2.FindTasksByTeamID(ct, tx, teamID)
-		return internalErr
-	})
-
+	tasks, err := t.taskDaoV2.FindTasksByTeamID(ct, teamID)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
@@ -165,13 +122,13 @@ func (t Task) FindTasksInSprint(
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		taskIDs, internalErr := t.sprintTaskRelationDaoV2.FindTaskIDsBySprintID(ct, tx, sprintID)
+		taskIDs, internalErr := t.sprintTaskRelationDaoV2.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
-		tasks, internalErr = t.taskDaoV2.FindTasksByIDs(ct, tx, taskIDs)
+		tasks, internalErr = t.taskDaoV2.FindTasksByIDsWithTx(ct, tx, taskIDs)
 		return internalErr
 	})
 
@@ -196,13 +153,13 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		taskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDs(ct, tx, awaitingTaskID)
+		taskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, awaitingTaskID)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
-		tasks, internalErr = t.taskDaoV2.FindTasksByIDs(ct, tx, taskIDs)
+		tasks, internalErr = t.taskDaoV2.FindTasksByIDsWithTx(ct, tx, taskIDs)
 		return internalErr
 	})
 
@@ -391,7 +348,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		task, internalErr = t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, internalErr = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
@@ -518,7 +475,7 @@ func (t Task) tryIncreaseBandwidth(
 }
 
 func (t Task) findTaskOwnerInSprints(ct context.Context, tx *transaction.Transaction, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, *errs.Error) {
-	sprintIDs, err := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, tx, taskID)
+	sprintIDs, err := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
@@ -526,7 +483,7 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, tx *transaction.Transac
 
 	participants := make([]entity.SprintParticipant, 0)
 	for _, sprintID := range sprintIDs {
-		participant, err := t.sprintParticipantDaoV2.FindParticipant(ct, tx, sprintID, taskOwnerUserID)
+		participant, err := t.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, sprintID, taskOwnerUserID)
 		if err != nil {
 			if err.Code != errs.NotFound {
 				t.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -551,13 +508,13 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		task, internalErr = t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, internalErr = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
-		sprintIDs, internalErr := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskID(ct, tx, taskID)
+		sprintIDs, internalErr := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
@@ -580,7 +537,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			}
 		}
 
-		awaitForTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDs(ct, tx, taskID)
+		awaitForTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, taskID)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
@@ -604,13 +561,13 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			}
 		}
 
-		awaitingTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitingTaskIDs(ct, tx, taskID)
+		awaitingTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitingTaskIDsWithTx(ct, tx, taskID)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
-		awaitingTasks, internalErr := t.taskDaoV2.FindTasksByIDs(ct, tx, awaitingTaskIDs)
+		awaitingTasks, internalErr := t.taskDaoV2.FindTasksByIDsWithTx(ct, tx, awaitingTaskIDs)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
@@ -666,7 +623,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 }
 
 func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction, rtTx *realtime.Transaction, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
-	task, err := t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+	task, err := t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
 		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
@@ -710,7 +667,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -767,13 +724,13 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
-		tasks, err := t.taskDaoV2.FindTasksByTeamID(ct, tx, task.OwningTeamID)
+		tasks, err := t.taskDaoV2.FindTasksByTeamIDWithTx(ct, tx, task.OwningTeamID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -847,7 +804,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -871,7 +828,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 			return err
 		}
 
-		awaitingTaskIDs, err := t.taskAwaitForRelationDaoV2.FindAwaitingTaskIDs(ct, tx, taskID)
+		awaitingTaskIDs, err := t.taskAwaitForRelationDaoV2.FindAwaitingTaskIDsWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -879,14 +836,14 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 
 		for _, awaitingTaskID := range awaitingTaskIDs {
 			var awaitForTaskIDs []uint64
-			awaitForTaskIDs, err = t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDs(ct, tx, awaitingTaskID)
+			awaitForTaskIDs, err = t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, awaitingTaskID)
 			if err != nil {
 				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
 			var awaitForTasks []entity.Task
-			awaitForTasks, err = t.taskDaoV2.FindTasksByIDs(ct, tx, awaitForTaskIDs)
+			awaitForTasks, err = t.taskDaoV2.FindTasksByIDsWithTx(ct, tx, awaitForTaskIDs)
 			if err != nil {
 				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
@@ -924,14 +881,14 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = t.taskDaoV2.FindTaskByID(ct, tx, awaitingTaskID)
+		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, awaitingTaskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		var awaitForTask entity.Task
-		awaitForTask, err = t.taskDaoV2.FindTaskByID(ct, tx, awaitForTaskId)
+		awaitForTask, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, awaitForTaskId)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -1000,14 +957,14 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		var awaitForTask entity.Task
-		awaitForTask, err = t.taskDaoV2.FindTaskByID(ct, tx, awaitForTaskId)
+		awaitForTask, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, awaitForTaskId)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -1037,7 +994,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 			return err
 		}
 
-		awaitForTaskIds, err := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDs(ct, tx, taskID)
+		awaitForTaskIds, err := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -1075,7 +1032,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		task, err := t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, err := t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
@@ -1119,7 +1076,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		task, err := t.taskDaoV2.FindTaskByID(ct, tx, taskID)
+		task, err := t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err

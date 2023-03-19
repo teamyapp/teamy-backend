@@ -9,8 +9,8 @@ import (
 )
 
 type SprintTaskRelation interface {
-	FindTaskIDsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error)
-	FindSprintIDsByTaskID(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error)
+	FindTaskIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error)
+	FindSprintIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error)
 	CreateSprintTaskRelation(ct context.Context, tx *transaction.Transaction, relation entity.SprintTaskRelation) *errs.Error
 	DeleteSprintTaskRelation(ct context.Context, tx *transaction.Transaction, sprintID uint64, taskID uint64) *errs.Error
 }

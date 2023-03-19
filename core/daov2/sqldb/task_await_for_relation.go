@@ -16,7 +16,7 @@ type TaskAwaitForRelation struct {
 
 var _ daov2.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
 
-func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error) {
+func (t TaskAwaitForRelation) FindAwaitingTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error) {
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		awaiting_task_id
@@ -59,7 +59,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, tx *transa
 	return waitingTaskIDs, nil
 }
 
-func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error) {
+func (t TaskAwaitForRelation) FindAwaitForTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error) {
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		await_for_task_id

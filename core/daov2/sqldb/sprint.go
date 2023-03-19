@@ -14,12 +14,52 @@ import (
 )
 
 type Sprint struct {
-	dataCollector telemetry.DataCollector
+	dataCollector      telemetry.DataCollector
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.Sprint = (*Sprint)(nil)
 
-func (s Sprint) FindSprintByID(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Sprint{}, err
+	}
+	
+	defer tx.Rollback()
+	return s.FindSprintByIDWithTx(ct, tx, sprintID)
+}
+
+func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+	
+	defer tx.Rollback()
+	return s.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+}
+
+func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+	
+	defer tx.Rollback()
+	return s.FindAllSprintsWithTx(ct, tx)
+}
+
+func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
 	sprint := entity.Sprint{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -61,7 +101,7 @@ func (s Sprint) FindSprintByID(ct context.Context, tx *transaction.Transaction, 
 	return sprint, nil
 }
 
-func (s Sprint) FindSprintsByIDs(ct context.Context, tx *transaction.Transaction, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Transaction, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
 	if len(sprintIDs) == 0 {
 		return []entity.Sprint{}, nil
 	}
@@ -120,7 +160,7 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, tx *transaction.Transaction
 	return sprints, internalErr
 }
 
-func (s Sprint) FindSprintsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
+func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -176,7 +216,7 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, tx *transaction.Transact
 	return sprints, internalErr
 }
 
-func (s Sprint) FindAllSprints(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
+func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -278,6 +318,9 @@ func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sp
 	return nil
 }
 
-func NewSprint(dataCollector telemetry.DataCollector) Sprint {
-	return Sprint{dataCollector: dataCollector}
+func NewSprint(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) Sprint {
+	return Sprint{
+		dataCollector:      dataCollector,
+		transactionFactory: transactionFactory,
+	}
 }

@@ -16,12 +16,12 @@ type SprintTaskRelation struct {
 
 var _ daov2.SprintTaskRelation = (*SprintTaskRelation)(nil)
 
-func (s SprintTaskRelation) FindTaskIDsBySprintID(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
+func (s SprintTaskRelation) FindTaskIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SprintTaskRelation) FindSprintIDsByTaskID(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
+func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
 	//TODO implement me
 	panic("implement me")
 }
