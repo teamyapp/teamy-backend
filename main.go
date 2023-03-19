@@ -181,7 +181,7 @@ func startServiceRunner(
 		dataCollector,
 		cloudClientRegistry,
 		teamyClientRegistry,
-		http.DefaultClient,
+		http.DefaultClient, //TODO: add a log middleware to log outgoing request
 		githubCfg,
 		privateKeyPEM,
 		sqlDB)

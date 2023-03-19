@@ -19,56 +19,6 @@ type GithubPullRequest struct {
 
 var _ dao.GithubPullRequest = (*GithubPullRequest)(nil)
 
-func (g GithubPullRequest) FindPullRequestByInternalTaskID(
-	ct context.Context,
-	internalTaskID uint64,
-) (entity.GithubPullRequest, *errs.Error) {
-	pullRequest := entity.GithubPullRequest{}
-	err := g.db.QueryRow(`
-	SELECT
-	    internal_task_id,
-	    github_pull_request_node_id,
-	    github_repository_owner,
-	    github_repository_name,
-	    github_pull_request_number,
-	    github_pull_request_url,
-	    github_organization_id
-	FROM apps_github_pull_request
-	WHERE internal_task_id = $1;
-`,
-		internalTaskID).
-		Scan(
-			&pullRequest.InternalTaskID,
-			&pullRequest.NodeID,
-			&pullRequest.RepositoryOwner,
-			&pullRequest.RepositoryName,
-			&pullRequest.Number,
-			&pullRequest.URL,
-			&pullRequest.OrganizationID,
-		)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"GithubPullRequest not found: internalTaskID=%v", internalTaskID),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubPullRequest{}, internalErr
-	}
-
-	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubPullRequest{}, internalErr
-	}
-
-	return pullRequest, nil
-}
-
 func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 	ct context.Context,
 	githubNodeID string,
@@ -76,7 +26,6 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 	pullRequest := entity.GithubPullRequest{}
 	err := g.db.QueryRow(`
 	SELECT
-	    internal_task_id,
 	    github_pull_request_node_id,
 	    github_repository_owner,
 	    github_repository_name,
@@ -88,7 +37,6 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 `,
 		githubNodeID).
 		Scan(
-			&pullRequest.InternalTaskID,
 			&pullRequest.NodeID,
 			&pullRequest.RepositoryOwner,
 			&pullRequest.RepositoryName,
@@ -127,7 +75,6 @@ func (g GithubPullRequest) CreatePullRequest(
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_pull_request
 	(
-	    internal_task_id,
 	    github_pull_request_node_id,
 	 	github_repository_owner,
 	    github_repository_name,
@@ -135,9 +82,8 @@ func (g GithubPullRequest) CreatePullRequest(
 	    github_pull_request_url,
 	 	github_organization_id
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7);
+	VALUES ($1, $2, $3, $4, $5, $6);
 `,
-		pullRequest.InternalTaskID,
 		pullRequest.NodeID,
 		pullRequest.RepositoryOwner,
 		pullRequest.RepositoryName,

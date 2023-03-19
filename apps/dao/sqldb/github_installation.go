@@ -120,6 +120,45 @@ func (g GithubAppInstallation) FindInstallationByID(
 	return installation, nil
 }
 
+func (g GithubAppInstallation) FindInstallationByTeamID(ct context.Context, teamID uint64) (entity.GithubAppInstallation, *errs.Error) {
+	installation := entity.GithubAppInstallation{}
+	err := g.db.QueryRow(`
+	SELECT
+	    id,
+	    team_id,
+	    created_at
+	FROM apps_github_app_installation
+	WHERE team_id = $1;
+`,
+		teamID).
+		Scan(
+			&installation.ID,
+			&installation.TeamID,
+			&installation.CreatedAt,
+		)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		internalErr := &errs.Error{
+			Code: errs.NotFound,
+			Message: fmt.Sprintf(
+				"GithubAppInstallation not found: teamId=%v", teamID),
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.GithubAppInstallation{}, internalErr
+	}
+
+	if err != nil {
+		internalErr := &errs.Error{
+			Code:     errs.Unknown,
+			EmbedErr: err,
+		}
+		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.GithubAppInstallation{}, internalErr
+	}
+
+	return installation, nil
+}
+
 func NewGithubAppInstallation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubAppInstallation {
 	return GithubAppInstallation{
 		dataCollector: dataCollector,

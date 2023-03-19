@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -45,19 +46,22 @@ const authProvider = "github"
 const pullRequestIconURL = "/assets/apps/pull_request_dark_green.svg"
 const pullRequestIconHoverURL = "/assets/apps/pull_request_light_green.svg"
 
+var taskIDPattern = regexp.MustCompile(`\(task:([\d]+)\)`)
+
 type AppAPI struct {
-	config                      AppConfig
-	dataCollector               telemetry.DataCollector
-	cloudClientRegistry         *cloudAPI.ClientRegistry
-	teamyClientRegistry         *api.ClientRegistry
-	githubAppInstallStateDao    dao.GithubAppInstallState
-	githubAppInstallationDao    dao.GithubAppInstallation
-	githubPullRequestDao        dao.GithubPullRequest
-	githubCodeReviewDao         dao.GithubCodeReview
-	githubRequiredUserActionDao dao.GithubRequiredUserAction
-	githubApp                   *client.GithubApp
-	githubGraphQLAPI            client.GraphQLAPI
-	githubRESTAPI               client.RESTAPI
+	config                                   AppConfig
+	dataCollector                            telemetry.DataCollector
+	cloudClientRegistry                      *cloudAPI.ClientRegistry
+	teamyClientRegistry                      *api.ClientRegistry
+	githubAppInstallStateDao                 dao.GithubAppInstallState
+	githubAppInstallationDao                 dao.GithubAppInstallation
+	githubPullRequestDao                     dao.GithubPullRequest
+	githubCodeReviewDao                      dao.GithubCodeReview
+	githubRequiredUserActionDao              dao.GithubRequiredUserAction
+	githubPullRequestInternalTaskRelationDao dao.GithubPullRequestInternalTaskRelation
+	githubApp                                *client.GithubApp
+	githubGraphQLAPI                         client.GraphQLAPI
+	githubRESTAPI                            client.RESTAPI
 	appsProto.UnimplementedGithubServer
 }
 
@@ -550,7 +554,9 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt g
 	case githubEntity.OpenedPullRequestAction, githubEntity.ReopenedPullRequestAction:
 		return a.createTaskForPullRequest(ct, teamID, evt, prEvt)
 	case githubEntity.EditedPullRequestAction:
-		return a.updateTaskForPullRequest(ct, teamID, evt, prEvt)
+		if evt.Sender.Type != entity.GithubSenderTypeBot {
+			return a.updateTaskForPullRequest(ct, teamID, evt, prEvt)
+		}
 	case githubEntity.AssignedPullRequestAction:
 	case githubEntity.ReviewRequestedPullRequestAction:
 		return a.createTaskForRequestedReviewers(ct, teamID, evt, prEvt)
@@ -559,6 +565,8 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt g
 	case githubEntity.ClosedPullRequestAction:
 		if prEvt.PullRequest.Merged {
 			return a.movePullRequestToDelivered(ct, prEvt)
+		} else {
+			return a.closePullRequest(ct, teamID, prEvt)
 		}
 	}
 
@@ -566,126 +574,517 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt g
 }
 
 func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt githubEntity.PullRequestEvent) *errs.Error {
-	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
+	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
-	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
-		TaskId: pr.InternalTaskID,
+	for _, prTaskRelation := range prTaskRelations {
+		moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+			TaskId: prTaskRelation.InternalTaskID,
+		}
+		_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
 	}
-	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
+
+	return nil
+}
+
+func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt githubEntity.PullRequestEvent) *errs.Error {
+	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prEvt.PullRequest.NodeID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	if len(prTaskRelations) > 0 {
+		body := prEvt.PullRequest.Body
+		for _, prTaskRelation := range prTaskRelations {
+			err := a.RemovePullRequestTaskRelationAndCleanup(ct, prTaskRelation)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return err
+			}
+
+			body = strings.ReplaceAll(body, fmt.Sprintf("(task:%d)", prTaskRelation.InternalTaskID), "")
+		}
+
+		githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+
+		installation := a.githubApp.GetInstallation(githubAppInstallation.ID)
+
+		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
+			PullRequestID: prEvt.PullRequest.NodeID,
+			Body:          &body,
+		})
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[uint64]*proto.TaskMsg, *errs.Error) {
+	tasks := map[uint64]*proto.TaskMsg{}
+	allMatches := taskIDPattern.FindAllStringSubmatch(body, -1)
+	for _, matches := range allMatches {
+		taskID, err := strconv.ParseUint(string(matches[1]), 10, 64)
+		if err != nil {
+			internalErr := &errs.Error{
+				Code:     errs.Unknown,
+				EmbedErr: err,
+			}
+			return nil, internalErr
+		}
+
+		getTaskReq := &proto.GetTaskRequest{
+			TaskId: taskID,
+		}
+		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			if internalErr.Code == errs.NotFound {
+				a.dataCollector.Logger.WarningWithContext(ct,
+					internalErr.String(),
+				)
+			} else {
+				return tasks, internalErr
+			}
+		} else {
+			tasks[task.TaskId] = task
+		}
+	}
+
+	return tasks, nil
+}
+
+func (a AppAPI) moveTaskToInProgress(ct context.Context, taskID uint64, teamID uint64) *errs.Error {
+	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: taskID}
+	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
+	}
+
+	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("task moved to in progress: taskID=%v", taskID))
+	err := a.tryAddTaskToCurrentSprint(ct, teamID, taskID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+	}
+
+	return nil
+}
+
+func (a AppAPI) createPullRequestTaskRelation(
+	ct context.Context,
+	taskID uint64,
+	automaticTracking bool,
+	pullRequestURL string,
+	pullRequestNodeID string) *errs.Error {
+	iconURL := pullRequestIconURL
+	iconHoverURL := pullRequestIconHoverURL
+	createTaskLinkReq := &proto.CreateTaskLinkRequest{
+		TaskId:       taskID,
+		Title:        "View pull request on Github",
+		Url:          pullRequestURL,
+		IconUrl:      &iconURL,
+		IconHoverUrl: &iconHoverURL,
+	}
+
+	createTaskLinkRes, rpcErr := a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	pullRequestInternalTaskRelation := entity.GithubPullRequestInternalTaskRelation{
+		PullRequestNodeID:  pullRequestNodeID,
+		InternalTaskID:     taskID,
+		InternalTaskLinkID: createTaskLinkRes.LinkId,
+		AutomaticTracking:  automaticTracking,
+	}
+
+	return a.githubPullRequestInternalTaskRelationDao.CreatePullRequestInternalTaskRelation(
+		ct, pullRequestInternalTaskRelation,
+	)
+}
+
+func (a AppAPI) RemovePullRequestTaskRelationAndCleanup(ct context.Context, prTaskRelation entity.GithubPullRequestInternalTaskRelation) *errs.Error {
+	if prTaskRelation.AutomaticTracking {
+		deleteTaskReq := &proto.DeleteTaskRequest{
+			TaskId: prTaskRelation.InternalTaskID,
+		}
+
+		_, rpcErr := a.teamyClientRegistry.TaskClient().DeleteTask(ct, deleteTaskReq)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
+			return internalErr
+		}
+	} else {
+		deleteTaskLinkReq := &proto.DeleteTaskLinkRequest{
+			LinkId: prTaskRelation.InternalTaskLinkID,
+		}
+
+		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+				telemetry.CauseProp: internalErr,
+			})
+			return internalErr
+		}
+	}
+
+	err := a.githubPullRequestInternalTaskRelationDao.DeletePullRequestInternalTaskRelationByNodeIDAndTaskID(ct, prTaskRelation.PullRequestNodeID, prTaskRelation.InternalTaskID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	return nil
+}
+
+func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, installation *client.Installation, teamID uint64, taskID uint64) *errs.Error {
+	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByInternalTaskID(ct, taskID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	for _, prTaskRelation := range prTaskRelations {
+		deleteTaskLinkReq := &proto.DeleteTaskLinkRequest{
+			LinkId: prTaskRelation.InternalTaskLinkID,
+		}
+
+		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
+
+		err = a.githubPullRequestInternalTaskRelationDao.DeletePullRequestInternalTaskRelationByNodeIDAndTaskID(ct, prTaskRelation.PullRequestNodeID, prTaskRelation.InternalTaskID)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+
+		remainingPrTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prTaskRelation.PullRequestNodeID)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+
+		pullRequestNode, err := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, installation, prTaskRelation.PullRequestNodeID)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+
+		var body string
+		if len(remainingPrTaskRelations) == 0 {
+			taskID, err := a.createAutomaticTrackingTask(
+				ct,
+				teamID,
+				pullRequestNode.Repository.Name,
+				pullRequestNode.Author.ID,
+				pullRequestNode.Number,
+				pullRequestNode.Title,
+				pullRequestNode.Body,
+				pullRequestNode.URL,
+				prTaskRelation.PullRequestNodeID,
+			)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return err
+			}
+
+			body = strings.ReplaceAll(
+				pullRequestNode.Body,
+				fmt.Sprintf("(task:%d)", prTaskRelation.InternalTaskID),
+				fmt.Sprintf("(task:%d)", *taskID),
+			)
+		} else {
+			body = strings.ReplaceAll(
+				pullRequestNode.Body,
+				fmt.Sprintf("(task:%d)", prTaskRelation.InternalTaskID),
+				"",
+			)
+		}
+
+		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
+			Body:          &body,
+			PullRequestID: prTaskRelation.PullRequestNodeID,
+		})
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
-	prAuthorUserID, err := a.GetInternalUserID(ct, prEvt.PullRequest.User.NodeID)
+	pr := entity.GithubPullRequest{
+		NodeID:          prEvt.PullRequest.NodeID,
+		RepositoryOwner: &evt.Repository.Owner.Login,
+		RepositoryName:  &evt.Repository.Name,
+		Number:          &prEvt.Number,
+		URL:             &prEvt.PullRequest.HtmlURL,
+	}
+	err := a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
+	mentionedTasks, err := a.tryGetValidMentionedTasks(ct, prEvt.PullRequest.Body)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	installation := a.githubApp.GetInstallation(githubAppInstallation.ID)
+	if len(mentionedTasks) == 0 {
+		taskID, err := a.createAutomaticTrackingTask(
+			ct,
+			teamID,
+			evt.Repository.Name,
+			prEvt.PullRequest.User.NodeID,
+			prEvt.Number,
+			prEvt.PullRequest.Title,
+			prEvt.PullRequest.Body,
+			*pr.URL,
+			pr.NodeID)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+
+		body := fmt.Sprintf("%v\n(task:%d)", prEvt.PullRequest.Body, *taskID)
+		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
+			PullRequestID: prEvt.PullRequest.NodeID,
+			Body:          &body,
+		})
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+	} else {
+		for _, task := range mentionedTasks {
+			err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, task.TaskId)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return err
+			}
+
+			err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return err
+			}
+
+			err = a.moveTaskToInProgress(ct, task.TaskId, teamID)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
+	githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	installation := a.githubApp.GetInstallation(githubAppInstallation.ID)
+	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prEvt.PullRequest.NodeID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	prTaskRelationMap := map[uint64]entity.GithubPullRequestInternalTaskRelation{}
+	for _, prTaskRelation := range prTaskRelations {
+		prTaskRelationMap[prTaskRelation.InternalTaskID] = prTaskRelation
+	}
+
+	mentionedTasks, err := a.tryGetValidMentionedTasks(ct, prEvt.PullRequest.Body)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	for _, task := range mentionedTasks {
+		prTaskRelation, ok := prTaskRelationMap[task.TaskId]
+		if !ok {
+			err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, task.TaskId)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return err
+			}
+
+			err = a.createPullRequestTaskRelation(
+				ct,
+				task.TaskId,
+				false,
+				prEvt.PullRequest.HtmlURL,
+				prEvt.PullRequest.NodeID)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return err
+			}
+
+			err = a.moveTaskToInProgress(ct, task.TaskId, teamID)
+			if err != nil {
+				return err
+			}
+
+		} else if prTaskRelation.AutomaticTracking {
+			updateTaskReq := &proto.UpdateTaskRequest{
+				TaskId:       task.TaskId,
+				OwningTeamId: teamID,
+				Goal:         fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
+				Context:      &prEvt.PullRequest.Body,
+				OwnerUserId:  task.OwnerUserId,
+				Effort:       task.Effort,
+				DueAt:        task.DueAt,
+			}
+
+			_, rpcErr := a.teamyClientRegistry.TaskClient().UpdateTask(ct, updateTaskReq)
+			if rpcErr != nil {
+				internalErr := errs.FromGRPCErr(rpcErr)
+				a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return internalErr
+			}
+		}
+	}
+
+	for _, prTaskRelation := range prTaskRelations {
+		_, ok := mentionedTasks[prTaskRelation.InternalTaskID]
+		if !ok {
+			err := a.RemovePullRequestTaskRelationAndCleanup(ct, prTaskRelation)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				return err
+			}
+		}
+	}
+
+	if len(mentionedTasks) == 0 {
+		taskID, err := a.createAutomaticTrackingTask(
+			ct,
+			teamID,
+			evt.Repository.Name,
+			prEvt.PullRequest.User.NodeID,
+			prEvt.PullRequest.Number,
+			prEvt.PullRequest.Title,
+			prEvt.PullRequest.Body,
+			prEvt.PullRequest.HtmlURL,
+			prEvt.PullRequest.NodeID)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+
+		body := fmt.Sprintf("%v\n(task:%d)", prEvt.PullRequest.Body, *taskID)
+		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
+			PullRequestID: prEvt.PullRequest.NodeID,
+			Body:          &body,
+		})
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (a AppAPI) createAutomaticTrackingTask(
+	ct context.Context,
+	teamID uint64,
+	repositoryName string,
+	pullRequestUserNodeID string,
+	pullRequestNumber int,
+	pullRequestTitle string,
+	pullRequestBody string,
+	pullRequestURL string,
+	pullRequestNodeID string,
+) (*uint64, *errs.Error) {
+	prAuthorUserID, err := a.GetInternalUserID(ct, pullRequestUserNodeID)
+	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		return nil, err
+	}
+
 	createTaskReq := &proto.CreateTaskRequest{
 		TeamId:      teamID,
-		Goal:        fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
-		Context:     &prEvt.PullRequest.Body,
+		Goal:        fmt.Sprintf("[%v][PR #%v] %v", repositoryName, pullRequestNumber, pullRequestTitle),
+		Context:     &pullRequestBody,
 		OwnerUserId: &prAuthorUserID,
 	}
 	createTaskRes, rpcErr := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
+			telemetry.CauseProp: internalErr,
+		})
+		return nil, internalErr
 	}
 
-	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("pull request task created: repo=%v prNumber=%v taskID=%v",
-		evt.Repository.Name,
-		prEvt.Number,
-		createTaskRes.TaskId))
-	iconURL := pullRequestIconURL
-	iconHoverURL := pullRequestIconHoverURL
-	createTaskLinkReq := &proto.CreateTaskLinkRequest{
-		TaskId:       createTaskRes.TaskId,
-		Title:        "View pull request on Github",
-		Url:          prEvt.PullRequest.HtmlURL,
-		IconUrl:      &iconURL,
-		IconHoverUrl: &iconHoverURL,
-	}
+	a.dataCollector.Logger.LogWithContext(ct, telemetry.Info, telemetry.Props{
+		telemetry.MessageProp: fmt.Sprintf("pull request task created: repo=%v prNumber=%v taskID=%v",
+			repositoryName,
+			pullRequestNumber,
+			createTaskRes.TaskId),
+	})
 
-	_, rpcErr = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
-	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
-	}
-
-	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: createTaskRes.TaskId}
-	_, rpcErr = a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
-	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
-	}
-
-	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("task moved to in progress: taskID=%v", createTaskRes.TaskId))
-	pr := entity.GithubPullRequest{
-		NodeID:          prEvt.PullRequest.NodeID,
-		InternalTaskID:  createTaskRes.TaskId,
-		RepositoryOwner: &evt.Repository.Owner.Login,
-		RepositoryName:  &evt.Repository.Name,
-		Number:          &prEvt.Number,
-		URL:             &prEvt.PullRequest.HtmlURL,
-		OrganizationID:  &evt.Organization.ID,
-	}
-	err = a.githubPullRequestDao.CreatePullRequest(ct, pr)
+	err = a.createPullRequestTaskRelation(
+		ct,
+		createTaskRes.TaskId,
+		true,
+		pullRequestURL,
+		pullRequestNodeID)
 	if err != nil {
 		a.dataCollector.Logger.ErrorWithContext(ct, err)
-		return err
+		return nil, err
 	}
 
-	return a.tryAddTaskToCurrentSprint(ct, teamID, createTaskRes.TaskId)
-}
-
-func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
-	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
+	err = a.moveTaskToInProgress(ct, createTaskRes.TaskId, teamID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
-		return err
+		return nil, err
 	}
 
-	getTaskReq := &proto.GetTaskRequest{TaskId: pr.InternalTaskID}
-	task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
-	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
-	}
-
-	updateTaskReq := &proto.UpdateTaskRequest{
-		TaskId:       pr.InternalTaskID,
-		Goal:         fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
-		Context:      &prEvt.PullRequest.Body,
-		OwningTeamId: teamID,
-		OwnerUserId:  task.OwnerUserId,
-		Effort:       task.Effort,
-		DueAt:        task.DueAt,
-	}
-
-	_, rpcErr = a.teamyClientRegistry.TaskClient().UpdateTask(ct, updateTaskReq)
-	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
-	}
-
-	return nil
+	return &createTaskRes.TaskId, nil
 }
 
 func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt githubEntity.Event, payload []byte) *errs.Error {
@@ -782,15 +1181,23 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 				return err
 			}
 
-			addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
-				AwaitingTaskId: pr.InternalTaskID,
-				AwaitForTaskId: addressFeedbackTaskID,
-			}
-			_, rpcErr = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
-			if rpcErr != nil {
-				err = errs.FromGRPCErr(rpcErr)
+			prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, pr.NodeID)
+			if err != nil {
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
+			}
+
+			for _, prTaskRelation := range prTaskRelations {
+				addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
+					AwaitingTaskId: prTaskRelation.InternalTaskID,
+					AwaitForTaskId: addressFeedbackTaskID,
+				}
+				_, rpcErr = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
+				if rpcErr != nil {
+					err = errs.FromGRPCErr(rpcErr)
+					a.dataCollector.Logger.ErrorWithContext(ct, err)
+					return err
+				}
 			}
 
 			a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("pull request is waiting for address feedback task: repo=%v, prNumber=%v, taskID=%v",
@@ -923,10 +1330,18 @@ func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint6
 	}
 
 	for _, githubReviewer := range prEvt.PullRequest.RequestedReviewers {
-		err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, pr.InternalTaskID, githubReviewer.NodeID, evt, prEvt)
+		prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, pr.NodeID)
 		if err != nil {
 			a.dataCollector.Logger.ErrorWithContext(ct, err)
-			continue
+			return err
+		}
+
+		for _, prTaskRelation := range prTaskRelations {
+			err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, prTaskRelation.InternalTaskID, githubReviewer.NodeID, evt, prEvt)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				continue
+			}
 		}
 	}
 
@@ -1115,23 +1530,26 @@ func NewAppAPI(
 	githubPullRequestDao dao.GithubPullRequest,
 	githubCodeReviewDao dao.GithubCodeReview,
 	githubRequiredUserActionDao dao.GithubRequiredUserAction,
+	githubPullRequestInternalTaskRelationDao dao.GithubPullRequestInternalTaskRelation,
 	githubGraphQLAPI client.GraphQLAPI,
 	githubRESTAPI client.RESTAPI,
 	githubApp *client.GithubApp,
 ) AppAPI {
+
 	return AppAPI{
-		config:                      cfg,
-		dataCollector:               dataCollector,
-		cloudClientRegistry:         cloudClientRegistry,
-		teamyClientRegistry:         teamyClientRegistry,
-		githubAppInstallStateDao:    githubAppInstallStateDao,
-		githubAppInstallationDao:    githubAppInstallationDao,
-		githubPullRequestDao:        githubPullRequestDao,
-		githubCodeReviewDao:         githubCodeReviewDao,
-		githubRequiredUserActionDao: githubRequiredUserActionDao,
-		githubGraphQLAPI:            githubGraphQLAPI,
-		githubRESTAPI:               githubRESTAPI,
-		githubApp:                   githubApp,
+		config:                                   cfg,
+		dataCollector:                            dataCollector,
+		cloudClientRegistry:                      cloudClientRegistry,
+		teamyClientRegistry:                      teamyClientRegistry,
+		githubAppInstallStateDao:                 githubAppInstallStateDao,
+		githubAppInstallationDao:                 githubAppInstallationDao,
+		githubPullRequestDao:                     githubPullRequestDao,
+		githubCodeReviewDao:                      githubCodeReviewDao,
+		githubRequiredUserActionDao:              githubRequiredUserActionDao,
+		githubPullRequestInternalTaskRelationDao: githubPullRequestInternalTaskRelationDao,
+		githubGraphQLAPI:                         githubGraphQLAPI,
+		githubRESTAPI:                            githubRESTAPI,
+		githubApp:                                githubApp,
 	}
 }
 

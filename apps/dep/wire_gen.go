@@ -26,6 +26,7 @@ func InitGithubAppAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegis
 	githubPullRequest := sqldb.NewGithubPullRequest(dataCollector, sqlDB)
 	githubCodeReview := sqldb.NewGithubCodeReview(dataCollector, sqlDB)
 	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
+	githubPullRequestInternalTaskRelation := sqldb.NewGithubPullRequestInternalTaskRelation(dataCollector, sqlDB)
 	gqlClient := gql.NewClient(dataCollector, httpClient)
 	graphQLAPI := client.NewGraphQLAPI(dataCollector, gqlClient)
 	restapi := client.NewRESTAPI(dataCollector, httpClient)
@@ -33,7 +34,7 @@ func InitGithubAppAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegis
 	if err != nil {
 		return github.AppAPI{}, err
 	}
-	appAPI := github.NewAppAPI(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction, graphQLAPI, restapi, githubApp)
+	appAPI := github.NewAppAPI(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction, githubPullRequestInternalTaskRelation, graphQLAPI, restapi, githubApp)
 	return appAPI, nil
 }
 

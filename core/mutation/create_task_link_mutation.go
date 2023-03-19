@@ -6,18 +6,20 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateTaskLinkMutation struct {
-	dataCollector telemetry.DataCollector
-	stateSyncer   *realtime.StateSyncer
-	taskLinkDao   dao.TaskLink
-	taskDao       dao.Task
-	id            uint64
-	taskLink      entity.TaskLink
+	dataCollector    telemetry.DataCollector
+	stateSyncer      *realtime.StateSyncer
+	taskLinkDaoV2    daov2.TaskLink
+	taskDaoV2        daov2.Task
+	id               uint64
+	taskLink         entity.TaskLink
+	clientNotifiers  []*realtime.ClientNotifier
+	notifierPrepared bool
 }
 
 var _ realtime.Mutation = (*CreateTaskLinkMutation)(nil)
@@ -27,17 +29,7 @@ func (c *CreateTaskLinkMutation) GetID() uint64 {
 }
 
 func (c *CreateTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *CreateTaskLinkMutation) Execute(ct context.Context) *errs.Error {
-	err := c.taskLinkDao.CreateTaskLink(ct, c.taskLink)
+	err := c.taskLinkDaoV2.CreateTaskLink(ct, tx, c.taskLink)
 	if err != nil {
 		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
@@ -46,23 +38,42 @@ func (c *CreateTaskLinkMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
+func (c *CreateTaskLinkMutation) Execute(ct context.Context) *errs.Error {
+	panic("deprecate me")
+}
+
+func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+	panic("deprecate me")
+}
+
+func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	if c.notifierPrepared {
+		return nil
+	}
+
+	task, err := c.taskDaoV2.FindTaskByID(ct, c.taskLink.TaskID)
+	if err != nil {
+		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		return err
+	}
+
+	var internalErr *errs.Error
+	c.clientNotifiers, internalErr = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
+	if internalErr != nil {
+		c.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	c.notifierPrepared = true
+	return nil
+}
+
 func (c *CreateTaskLinkMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	task, err := c.taskDao.FindTaskByID(ct, c.taskLink.TaskID)
-	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
-		return []*realtime.ClientNotifier{}, err
-	}
-
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
-}
-
 func (c *CreateTaskLinkMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return c.clientNotifiers
 }
 
 func (c *CreateTaskLinkMutation) ToMessage() realtime.MutationMessage {
@@ -81,16 +92,17 @@ func (c *CreateTaskLinkMutation) CleanUp(ct context.Context) *errs.Error {
 func NewCreateTaskLinkMutation(
 	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
-	taskLinkDao dao.TaskLink,
-	taskDao dao.Task,
+	taskLinkDaoV2 daov2.TaskLink,
+	taskDaoV2 daov2.Task,
 	taskLink entity.TaskLink,
 ) *CreateTaskLinkMutation {
 	return &CreateTaskLinkMutation{
-		dataCollector: dataCollector,
-		stateSyncer:   stateSyncer,
-		taskLinkDao:   taskLinkDao,
-		taskDao:       taskDao,
-		id:            stateSyncer.NextMutationID(),
-		taskLink:      taskLink,
+		dataCollector:    dataCollector,
+		stateSyncer:      stateSyncer,
+		taskLinkDaoV2:    taskLinkDaoV2,
+		taskDaoV2:        taskDaoV2,
+		id:               stateSyncer.NextMutationID(),
+		taskLink:         taskLink,
+		notifierPrepared: false,
 	}
 }

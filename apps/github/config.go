@@ -8,11 +8,11 @@ import (
 )
 
 type AppConfig struct {
-	AppID                     string        `envconfig:"APPS_GITHUB_APP_ID"`
 	AppName                   string        `envconfig:"APPS_GITHUB_APP_NAME"`
+	AppID                     string        `envconfig:"APPS_GITHUB_APP_ID"`
+	PrivateKeyPEMFilePath     string        `envconfig:"APPS_GITHUB_PRIVATE_KEY_PEM_FILE_PATH"`
 	InstallationValidDuration time.Duration `envconfig:"APPS_GITHUB_INSTALLATION_VALID_DURATION" default:"5m"`
 	WebhookSecret             string        `envconfig:"APPS_GITHUB_WEBHOOK_SECRET"`
-	PrivateKeyPEMFilePath     string        `envconfig:"APPS_GITHUB_PRIVATE_KEY_PEM_FILE_PATH"`
 }
 
 func AppConfigFromEnv() (AppConfig, *errs.Error) {

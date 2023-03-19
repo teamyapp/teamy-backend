@@ -10,8 +10,9 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -30,9 +31,10 @@ type TaskLink struct {
 	dataCollector       telemetry.DataCollector
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	authorizer          Authorizer
+	transactionFactory  transaction.Factory
 	stateSyncer         *realtime.StateSyncer
-	taskLinkDao         dao.TaskLink
-	taskDao             dao.Task
+	taskLinkDaoV2       daov2.TaskLink
+	taskDaoV2           daov2.Task
 }
 
 func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLinkInput) (entity.TaskLink, *errs.Error) {
@@ -81,23 +83,33 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		IconHoverURL: taskLinkEntity.IconHoverURL,
 		CreatedAt:    time.Now(),
 	}
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	createTaskLinkMutation := mutation.NewCreateTaskLinkMutation(t.dataCollector, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
 
-	err := realTimeTransaction.ApplyMutation(ct, createTaskLinkMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TaskLink{}, err
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
 	}
 
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TaskLink{}, err
+	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		createTaskLinkMutation := mutation.NewCreateTaskLinkMutation(t.dataCollector, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
+		internalErr := createTaskLinkMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
+
+		rtTx.AppendMutation(createTaskLinkMutation)
+		return nil
+	})
+
+	if internalErr != nil {
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.TaskLink{}, internalErr
 	}
 
 	if feature.EnableAuthorization {
-		err = t.authorizer.registerResource(ct, authorization.TaskLinkResourceType, taskLink.ID)
+		err := t.authorizer.registerResource(ct, authorization.TaskLinkResourceType, taskLink.ID)
 		if err != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.TaskLink{}, err
@@ -113,24 +125,79 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	return taskLink, nil
 }
 
+func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.TaskLink, *errs.Error) {
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
+	}
+	var taskLink entity.TaskLink
+	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		taskLink, err := t.taskLinkDaoV2.FindTaskLinkByID(ct, tx, taskLinkID)
+		if err != nil {
+			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			return err
+		}
+
+		deleteTaskLinkMutation := mutation.NewDeleteTaskLinkMutation(t.dataCollector, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
+		internalErr := deleteTaskLinkMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
+
+		rtTx.AppendMutation(deleteTaskLinkMutation)
+		return nil
+	})
+
+	if internalErr != nil {
+		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return entity.TaskLink{}, internalErr
+	}
+
+	return taskLink, nil
+}
+
 func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, *errs.Error) {
-	return t.taskLinkDao.FindLinksByTaskID(ct, taskID)
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
+	}
+
+	var taskLinks []entity.TaskLink
+	internalErr := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		taskLinks, err = t.taskLinkDaoV2.FindLinksByTaskID(ct, tx, taskID)
+		return err
+	})
+
+	if internalErr != nil {
+		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		return nil, internalErr
+	}
+
+	return taskLinks, nil
 }
 
 func NewTaskLink(
 	dataCollector telemetry.DataCollector,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
+	transactionFactory transaction.Factory,
 	authorizer Authorizer,
 	stateSyncer *realtime.StateSyncer,
-	taskLinkDao dao.TaskLink,
-	taskDao dao.Task,
+	taskLinkDaoV2 daov2.TaskLink,
+	taskDaoV2 daov2.Task,
 ) TaskLink {
 	return TaskLink{
 		dataCollector:       dataCollector,
 		cloudClientRegistry: cloudClientRegistry,
+		transactionFactory:  transactionFactory,
 		authorizer:          authorizer,
 		stateSyncer:         stateSyncer,
-		taskLinkDao:         taskLinkDao,
-		taskDao:             taskDao,
+		taskLinkDaoV2:       taskLinkDaoV2,
+		taskDaoV2:           taskDaoV2,
 	}
 }
