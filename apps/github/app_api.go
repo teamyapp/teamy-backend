@@ -775,9 +775,7 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
+			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
