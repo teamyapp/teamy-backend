@@ -42,13 +42,14 @@ func (g *GithubApp) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error)
 
 	// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps
 	expireAt := time.Now().Add(10 * time.Minute)
+	issuedAt := time.Now().Add(-1 * time.Minute)
 	payload := struct {
 		IssuedAt int64  `json:"iat"` // unix timestamp (UTC)
 		ExpireAt int64  `json:"exp"` // unix timestamp (UTC)
 		Issuer   string `json:"iss"` // GitHub App ID
 	}{
 		// To protect against clock drift between backend and GitHub, set this 1 minute in the past
-		IssuedAt: time.Now().Add(-1 * time.Minute).Unix(),
+		IssuedAt: issuedAt.Unix(),
 		// no more than 10 minutes in the future based on CURRENT time (independent of IssuedAt)
 		ExpireAt: expireAt.Unix(),
 		Issuer:   g.appID,

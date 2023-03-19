@@ -152,8 +152,10 @@ func (g GraphQLAPI) UpdatePullRequest(ct context.Context, installation *Installa
 				}
 			}
 		  }`,
-		Variables: map[string]interface{}{
-			"input": pullRequestInput,
+		Variables: struct {
+			Input UpdatePullRequestInput `json:"input"`
+		}{
+			Input: pullRequestInput,
 		},
 	}
 
