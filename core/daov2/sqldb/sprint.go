@@ -25,10 +25,11 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 		ReadOnly: true,
 	}
 	tx, err := s.transactionFactory.BeginTx(ct, &opt)
-	defer tx.Rollback()
 	if err != nil {
 		return entity.Sprint{}, err
 	}
+	
+	defer tx.Rollback()
 
 	return s.FindSprintByIDWithTx(ct, tx, sprintID)
 }
@@ -38,10 +39,11 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 		ReadOnly: true,
 	}
 	tx, err := s.transactionFactory.BeginTx(ct, &opt)
-	defer tx.Rollback()
 	if err != nil {
 		return nil, err
 	}
+	
+	defer tx.Rollback()
 
 	return s.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 }
@@ -51,10 +53,11 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error
 		ReadOnly: true,
 	}
 	tx, err := s.transactionFactory.BeginTx(ct, &opt)
-	defer tx.Rollback()
 	if err != nil {
 		return nil, err
 	}
+	
+	defer tx.Rollback()
 
 	return s.FindAllSprintsWithTx(ct, tx)
 }

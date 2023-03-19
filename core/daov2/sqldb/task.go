@@ -25,10 +25,11 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 		ReadOnly: true,
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
-	defer tx.Rollback()
 	if err != nil {
-		return entity.Task{}, err
+		return nil, err
 	}
+	
+	defer tx.Rollback()
 
 	return t.FindTaskByIDWithTx(ct, tx, taskID)
 }
@@ -38,10 +39,11 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 		ReadOnly: true,
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
-	defer tx.Rollback()
 	if err != nil {
 		return nil, err
 	}
+	
+	defer tx.Rollback()
 
 	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
 }
@@ -51,10 +53,11 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 		ReadOnly: true,
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
-	defer tx.Rollback()
 	if err != nil {
 		return nil, err
 	}
+	
+	defer tx.Rollback()
 
 	return t.FindAllTasksWithTx(ct, tx)
 }
