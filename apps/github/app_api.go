@@ -46,7 +46,7 @@ const authProvider = "github"
 const pullRequestIconURL = "/assets/apps/pull_request_dark_green.svg"
 const pullRequestIconHoverURL = "/assets/apps/pull_request_light_green.svg"
 
-var taskIdsRegexpTester = regexp.MustCompile(`\(task:([\d]+)\)`)
+var taskIDPattern = regexp.MustCompile(`\(task:([\d]+)\)`)
 
 type AppAPI struct {
 	config                                   AppConfig
@@ -605,7 +605,7 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 	if len(prTaskRelations) > 0 {
 		body := prEvt.PullRequest.Body
 		for _, prTaskRelation := range prTaskRelations {
-			err := a.RemovePullRequestTaskRelationWithTaskOrTaskLink(ct, prTaskRelation)
+			err := a.RemovePullRequestTaskRelationAndCleanup(ct, prTaskRelation)
 			if err != nil {
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
@@ -669,7 +669,7 @@ func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[
 	return tasks, nil
 }
 
-func (a AppAPI) moveTaskToCurrentProgress(ct context.Context, taskID uint64, teamID uint64) *errs.Error {
+func (a AppAPI) moveTaskToInProgress(ct context.Context, taskID uint64, teamID uint64) *errs.Error {
 	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: taskID}
 	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
 	if rpcErr != nil {

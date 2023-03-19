@@ -40,14 +40,8 @@ func (t TaskLink) CreateTaskLink(ct context.Context, tx *transaction.Transaction
 		taskLinkEntity.IconHoverURL,
 		taskLinkEntity.CreatedAt,
 	)
-
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -61,12 +55,7 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, tx *transaction.Transaction
 		taskLinkID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -99,20 +88,11 @@ func (t TaskLink) FindTaskLinkByID(ct context.Context, tx *transaction.Transacti
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("taskLink not found: id=%v", taskLinkID),
-		}
-
-		return entity.TaskLink{}, internalErr
+		return entity.TaskLink{}, errs.NewError(errs.NotFound, fmt.Sprintf("taskLink not found: id=%v", taskLinkID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		return taskLink, internalErr
+		return taskLink, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return taskLink, nil
@@ -135,12 +115,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transact
 
 	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()

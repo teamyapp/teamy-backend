@@ -31,7 +31,7 @@ func (d *DeleteTaskLinkMutation) GetID() uint64 {
 func (d *DeleteTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := d.taskLinkDaoV2.DeleteTaskLink(ct, tx, d.taskLink.ID)
 	if err != nil {
-		d.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		d.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

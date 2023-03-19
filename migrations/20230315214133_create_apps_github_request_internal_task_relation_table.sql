@@ -13,7 +13,7 @@ CREATE TABLE apps_github_pull_request_internal_task_relation
 );
 
 CREATE INDEX idx_apps_github_pull_request_internal_task_relation_internal_task_id
-ON apps_github_pull_request_internal_task_relation(internal_task_id);
+    ON apps_github_pull_request_internal_task_relation(internal_task_id);
 
 ALTER TABLE apps_github_pull_request
     DROP internal_task_id;

@@ -47,7 +47,6 @@ func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*real
 }
 
 func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-
 	if c.notifierPrepared {
 		return nil
 	}

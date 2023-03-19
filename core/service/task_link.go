@@ -93,7 +93,6 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 
 	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		createTaskLinkMutation := mutation.NewCreateTaskLinkMutation(t.dataCollector, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
-
 		internalErr := createTaskLinkMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
 			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
@@ -169,7 +168,6 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 	}
 
 	var taskLinks []entity.TaskLink
-
 	internalErr := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		taskLinks, err = t.taskLinkDaoV2.FindLinksByTaskID(ct, tx, taskID)
