@@ -637,7 +637,7 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 
 func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[uint64]*proto.TaskMsg, *errs.Error) {
 	tasks := map[uint64]*proto.TaskMsg{}
-	allMatches := taskIdsRegexpTester.FindAllStringSubmatch(body, -1)
+	allMatches := taskIDPattern.FindAllStringSubmatch(body, -1)
 	for _, matches := range allMatches {
 		taskID, err := strconv.ParseUint(string(matches[1]), 10, 64)
 		if err != nil {
@@ -722,7 +722,7 @@ func (a AppAPI) createPullRequestTaskRelation(
 	)
 }
 
-func (a AppAPI) RemovePullRequestTaskRelationWithTaskOrTaskLink(ct context.Context, prTaskRelation entity.GithubPullRequestInternalTaskRelation) *errs.Error {
+func (a AppAPI) RemovePullRequestTaskRelationAndCleanup(ct context.Context, prTaskRelation entity.GithubPullRequestInternalTaskRelation) *errs.Error {
 	if prTaskRelation.AutomaticTracking {
 		deleteTaskReq := &proto.DeleteTaskRequest{
 			TaskId: prTaskRelation.InternalTaskID,
@@ -907,7 +907,7 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 				return err
 			}
 
-			err = a.moveTaskToCurrentProgress(ct, task.TaskId, teamID)
+			err = a.moveTaskToInProgress(ct, task.TaskId, teamID)
 			if err != nil {
 				return err
 			}
@@ -963,7 +963,7 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 				return err
 			}
 
-			err = a.moveTaskToCurrentProgress(ct, task.TaskId, teamID)
+			err = a.moveTaskToInProgress(ct, task.TaskId, teamID)
 			if err != nil {
 				return err
 			}
@@ -991,7 +991,7 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 	for _, prTaskRelation := range prTaskRelations {
 		_, ok := mentionedTasks[prTaskRelation.InternalTaskID]
 		if !ok {
-			err := a.RemovePullRequestTaskRelationWithTaskOrTaskLink(ct, prTaskRelation)
+			err := a.RemovePullRequestTaskRelationAndCleanup(ct, prTaskRelation)
 			if err != nil {
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
@@ -1079,7 +1079,7 @@ func (a AppAPI) createAutomaticTrackingTask(
 		return nil, err
 	}
 
-	err = a.moveTaskToCurrentProgress(ct, createTaskRes.TaskId, teamID)
+	err = a.moveTaskToInProgress(ct, createTaskRes.TaskId, teamID)
 	if err != nil {
 		return nil, err
 	}
