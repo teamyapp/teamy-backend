@@ -4,8 +4,6 @@ on:
     branches:
       - master
     types: [synchronize]
-env:
-  GOPRIVATE: github.com/teamyapp
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -31,9 +29,8 @@ jobs:
         run: go mod download
       - name: Run tests
         run: |
-          go env -w GOPRIVATE
-          go env -w GONOPROXY
-          go env -w GONOSUMDB
+          go env -w GOPRIVATE=github.com/teamyapp/*
+          git config --global url.ssh://git@github.com/teamyapp.insteadOf https://github.com/teamyapp
           go mod download
       - name: Notify Slack
         if: always()
