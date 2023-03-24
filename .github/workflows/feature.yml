@@ -10,8 +10,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Cache Go modules
         uses: actions/cache@v2
         with:
@@ -19,14 +17,16 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v1.2.2
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: 1.18
-        env:
-          GOPRIVATE: github.com/teamyapp/*
-          GONOPROXY: github.com/teamyapp/*
-          GONOSUMDB: github.com/teamyapp/*
+          env:
+            GOPRIVATE: github.com/teamyapp
       - name: Install dependencies
         run: go mod download
       - name: Run tests
