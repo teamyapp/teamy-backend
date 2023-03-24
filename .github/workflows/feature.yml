@@ -10,10 +10,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Setup Go
-        uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Cache Go modules
         uses: actions/cache@v2
         with:
@@ -21,10 +19,22 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+          env:
+            GOPRIVATE: github.com/teamyapp/*
+            GONOPROXY: github.com/teamyapp/*
+            GONOSUMDB: github.com/teamyapp/*
       - name: Install dependencies
         run: go mod download
       - name: Run tests
-        run: go test ./...
+        run: |
+          go env -w GOPRIVATE
+          go env -w GONOPROXY
+          go env -w GONOSUMDB
+          go mod download
       - name: Notify Slack
         if: always()
         uses: 8398a7/action-slack@v3
