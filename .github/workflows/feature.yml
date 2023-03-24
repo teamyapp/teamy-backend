@@ -20,13 +20,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
-          env:
-            GOPRIVATE: github.com/teamyapp/*
-            GONOPROXY: github.com/teamyapp/*
-            GONOSUMDB: github.com/teamyapp/*
+        env:
+          GOPRIVATE: github.com/teamyapp/*
+          GONOPROXY: github.com/teamyapp/*
+          GONOSUMDB: github.com/teamyapp/*
       - name: Install dependencies
         run: go mod download
       - name: Run tests
