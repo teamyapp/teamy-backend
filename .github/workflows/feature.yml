@@ -7,6 +7,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE:github.com/teamyapp/*
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -29,7 +31,6 @@ jobs:
         run: go mod download
       - name: Run tests
         run: |
-          go env -w GOPRIVATE=github.com/teamyapp/*
           git config --global url.ssh://git@github.com/teamyapp.insteadOf https://github.com/teamyapp
           go mod download
       - name: Notify Slack
