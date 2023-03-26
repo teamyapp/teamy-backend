@@ -11,7 +11,9 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -34,38 +36,30 @@ type User struct {
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	stateSyncer                *realtime.StateSyncer
+	transactionFactory         transaction.Factory
 	userDao                    dao.User
-	userFileUploadSessionDao   dao.UserFileUploadSession
-	teamMemberDao              dao.TeamMember
+	userDaoV2                  daov2.User
+	teamMemberDaoV2            daov2.TeamMember
+	userFileUploadSessionDaoV2 daov2.UserFileUploadSession
 }
 
 func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.User{}, internalErr
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	return u.userDao.FindUserByID(ct, userID)
+	return u.userDaoV2.FindUserByID(ct, userID)
 }
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
-	return u.userDao.FindUserByID(ct, userID)
+	return u.userDaoV2.FindUserByID(ct, userID)
 }
 
 func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.User{}, internalErr
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	user := entity.User{
@@ -76,63 +70,60 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 		ProfileURL: input.ProfileURL,
 	}
 
-	err := u.userDao.CreateUser(ct, user)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.User{}, err
+	txCtx := TransactionsContext{
+		dataCollector:      u.dataCollector,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
 	}
-
-	return user, nil
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return u.userDaoV2.CreateUser(ct, tx, user)
+	})
+	return user, err
 }
 
 func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, *errs.Error) {
-	user, err := u.userDao.FindUserByID(ct, userID)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.User{}, err
+	var user entity.User
+	txCtx := TransactionsContext{
+		dataCollector:      u.dataCollector,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		user, err = u.userDaoV2.FindUserByIDWithTx(ct, tx, userID)
+		if err != nil {
+			return err
+		}
 
-	user.FirstName = input.FirstName
-	user.LastName = input.LastName
-	updatedAt := time.Now()
-	user.UpdatedAt = &updatedAt
-	realTimeTransaction := realtime.NewTransaction(u.dataCollector, u.stateSyncer)
-	userMutation := mutation.NewUpdateUserMutation(
-		u.dataCollector,
-		u.stateSyncer,
-		u.teamMemberDao,
-		u.userDao,
-		user)
-	err = realTimeTransaction.ApplyMutation(ct, userMutation)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.User{}, err
-	}
+		user.FirstName = input.FirstName
+		user.LastName = input.LastName
+		updatedAt := time.Now().UTC()
+		user.UpdatedAt = &updatedAt
+		userMutation := mutation.NewUpdateUserMutation(
+			u.dataCollector,
+			u.stateSyncer,
+			u.userDao,
+			u.userDaoV2,
+			u.teamMemberDaoV2,
+			user)
+		rtTx.AppendMutation(userMutation)
+		return userMutation.ExecuteV2(ct, tx)
+	})
 
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.User{}, err
-	}
-
-	return user, nil
+	return user, err
 }
 
 func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	res, rpcErr := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -143,11 +134,16 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	err := u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, fileUploadSession)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return 0, err
+
+	txCtx := TransactionsContext{
+		dataCollector:      u.dataCollector,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return u.userFileUploadSessionDaoV2.CreateUserFileUploadSession(ct, tx, fileUploadSession)
+	})
 
 	return res.UploadSessionId, err
 }
@@ -155,48 +151,12 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.User{}, internalErr
-	}
-
-	profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserID(
-		ct,
-		userID,
-		entity.ProfileUserFileUploadSessionType,
-		fileUploadSessionID)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.User{}, err
-	}
-
-	if profileUploadSession.IsCompleted {
-		internalErr := &errs.Error{
-			Code: errs.InvalidOperation,
-			Message: fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
-				userID,
-				fileUploadSessionID),
-		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.User{}, internalErr
-	}
-
-	now := time.Now()
-	profileUploadSession.IsCompleted = true
-	profileUploadSession.UpdatedAt = &now
-	err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, profileUploadSession)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.User{}, err
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	findUploadSessionReq := proto.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
-
 	uploadSession, rpcErr := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -204,21 +164,51 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		return entity.User{}, internalErr
 	}
 
-	user, err := u.userDao.FindUserByID(ct, userID)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.User{}, err
+	var user entity.User
+	txCtx := TransactionsContext{
+		dataCollector:      u.dataCollector,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		profileUploadSession, err := u.userFileUploadSessionDaoV2.FindUserFileUploadSessionByUserIDWithTx(
+			ct,
+			tx,
+			userID,
+			entity.ProfileUserFileUploadSessionType,
+			fileUploadSessionID)
+		if err != nil {
+			return err
+		}
 
-	profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
-	user.ProfileURL = &profileURL
-	user.UpdatedAt = &now
-	err = u.userDao.UpdateUser(ct, user)
-	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
-	}
+		if profileUploadSession.IsCompleted {
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
+				userID,
+				fileUploadSessionID))
+		}
 
-	return user, nil
+		now := time.Now().UTC()
+		profileUploadSession.IsCompleted = true
+		profileUploadSession.UpdatedAt = &now
+		err = u.userFileUploadSessionDaoV2.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
+		if err != nil {
+			return err
+		}
+
+		user, err = u.userDaoV2.FindUserByIDWithTx(ct, tx, userID)
+		if err != nil {
+			return err
+		}
+
+		profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
+		user.ProfileURL = &profileURL
+		user.UpdatedAt = &now
+		err = u.userDaoV2.UpdateUser(ct, tx, user)
+		return err
+	})
+
+	return user, err
 }
 
 func NewUser(
@@ -226,17 +216,21 @@ func NewUser(
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
+	transactionFactory transaction.Factory,
 	userDao dao.User,
-	userFileUploadSessionDao dao.UserFileUploadSession,
-	teamMemberDao dao.TeamMember,
+	userDaoV2 daov2.User,
+	teamMemberDaoV2 daov2.TeamMember,
+	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
 ) User {
 	return User{
 		dataCollector:              dataCollector,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		stateSyncer:                stateSyncer,
+		transactionFactory:         transactionFactory,
 		userDao:                    userDao,
-		userFileUploadSessionDao:   userFileUploadSessionDao,
-		teamMemberDao:              teamMemberDao,
+		userDaoV2:                  userDaoV2,
+		teamMemberDaoV2:            teamMemberDaoV2,
+		userFileUploadSessionDaoV2: userFileUploadSessionDaoV2,
 	}
 }

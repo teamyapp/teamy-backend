@@ -27,10 +27,7 @@ func (q Query) Tasks(ct context.Context, args struct {
 }) ([]Task, error) {
 	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, argErr.Error())
 		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -51,10 +48,7 @@ func (q Query) Teams(ct context.Context, args struct {
 }) ([]Team, error) {
 	filter, argErr := fromGraphQLTeamFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, argErr.Error())
 		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -75,10 +69,7 @@ func (q Query) Invitations(ct context.Context, args struct {
 }) ([]Invitation, error) {
 	filter, argErr := fromGraphQLInvitationFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, argErr.Error())
 		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -99,10 +90,7 @@ func (q Query) Sprints(ct context.Context, args struct {
 }) ([]Sprint, error) {
 	filter, argErr := fromGraphQLSprintFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, argErr.Error())
 		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -123,10 +111,7 @@ func (q Query) Apps(ct context.Context, args struct {
 }) ([]App, error) {
 	filter, argErr := fromGraphQLAppFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, argErr.Error())
 		q.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}

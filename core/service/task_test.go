@@ -11,8 +11,7 @@ import (
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
-	"github.com/teamyapp/cloud/libs/env"
-	"github.com/teamyapp/cloud/libs/metrics"
+	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
@@ -44,7 +43,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 		GoogleClientID:           "456",
 		GoogleClientSecret:       "GoogleSecret",
 		SlackClientID:            "789",
-		SlackClientSecret:        "Slack",
+		SlackClientSecret:        "SlackSecret",
 		WebServerPort:            80,
 		GRPCServerPort:           81,
 	}
@@ -56,7 +55,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
-	teamyPrometheus := metrics.NewPrometheus("teamy", "backend", env.DevelopmentEnv)
+	teamyPrometheus := metricstest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,

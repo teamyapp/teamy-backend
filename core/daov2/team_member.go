@@ -9,6 +9,7 @@ import (
 )
 
 type TeamMember interface {
+	FindTeamIDsByUserID(ct context.Context, userID uint64) ([]uint64, *errs.Error)
 	FindTeamIDsByUserIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error)
 	FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error)
 	FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error)
