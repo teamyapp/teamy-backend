@@ -84,7 +84,6 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, *errs.Error) {
 	tasks, err := t.taskDaoV2.FindAllTasks(ct)
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -98,7 +97,6 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, *errs.Error) {
 	tasks, err := t.taskDaoV2.FindTasksByTeamID(ct, teamID)
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -124,7 +122,6 @@ func (t Task) FindTasksInSprint(
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		taskIDs, internalErr := t.sprintTaskRelationDaoV2.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -133,7 +130,6 @@ func (t Task) FindTasksInSprint(
 	})
 
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -155,7 +151,6 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		taskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, awaitingTaskID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -164,7 +159,6 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	})
 
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -186,7 +180,6 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	genTaskIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
@@ -194,7 +187,6 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	genThreadIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
@@ -209,7 +201,6 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		threadID := genThreadIDRes.UniqueNumber
 		internalErr := t.threadDaoV2.CreateThread(ct, tx, threadID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -239,7 +230,6 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 
 		internalErr = createTaskMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -248,20 +238,17 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	})
 
 	if internalErr != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
 	if feature.EnableAuthorization {
 		internalErr = t.authorizer.registerResource(ct, authorization.TaskResourceType, task.ID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Task{}, internalErr
 		}
 
 		internalErr = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, teamID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.Task{}, internalErr
 		}
 	}
@@ -272,29 +259,18 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTaskInput) (entity.Task, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
+		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
 		query := authorization.NewTeamCreateTaskQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.Task{}, internalErr
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 	input := createTaskInput{
@@ -313,29 +289,18 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
+		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
 		query := authorization.NewTeamUpdateTaskQuery(userID, taskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Task{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.Task{}, internalErr
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -350,7 +315,6 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		var internalErr *errs.Error
 		task, internalErr = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -374,13 +338,11 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		rtTx.AppendMutation(updateTaskMutation)
 		internalErr = updateTaskMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
 		internalErr = t.updateUnusedBandWidth(ct, tx, rtTx, taskID, oldEffort, input.Effort, oldOwnerID, input.OwnerUserID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -402,7 +364,6 @@ func (t Task) updateUnusedBandWidth(
 ) *errs.Error {
 	internalErr := t.tryIncreaseBandwidth(ct, tx, rtTx, taskID, oldOwnerID, oldEffort)
 	if internalErr != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -410,7 +371,6 @@ func (t Task) updateUnusedBandWidth(
 		var participants []entity.SprintParticipant
 		participants, internalErr = t.findTaskOwnerInSprints(ct, tx, taskID, *newOwnerID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -428,7 +388,6 @@ func (t Task) updateUnusedBandWidth(
 			rtTx.AppendMutation(updateSprintParticipantMutation)
 			internalErr = updateSprintParticipantMutation.ExecuteV2(ct, tx)
 			if internalErr != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return internalErr
 			}
 		}
@@ -447,7 +406,6 @@ func (t Task) tryIncreaseBandwidth(
 	if oldOwnerID != nil && oldEffort != nil {
 		participants, internalErr := t.findTaskOwnerInSprints(ct, tx, taskID, *oldOwnerID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -465,7 +423,6 @@ func (t Task) tryIncreaseBandwidth(
 			rtTx.AppendMutation(updateSprintParticipantMutation)
 			internalErr = updateSprintParticipantMutation.ExecuteV2(ct, tx)
 			if internalErr != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return internalErr
 			}
 		}
@@ -477,17 +434,15 @@ func (t Task) tryIncreaseBandwidth(
 func (t Task) findTaskOwnerInSprints(ct context.Context, tx *transaction.Transaction, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	sprintIDs, err := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
 	participants := make([]entity.SprintParticipant, 0)
 	for _, sprintID := range sprintIDs {
-		participant, err := t.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, sprintID, taskOwnerUserID)
-		if err != nil {
-			if err.Code != errs.NotFound {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
-				return nil, err
+		participant, internalErr := t.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, sprintID, taskOwnerUserID)
+		if internalErr != nil {
+			if internalErr.Code != errs.NotFound {
+				return nil, internalErr
 			}
 			continue
 		}
@@ -510,13 +465,11 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		var internalErr *errs.Error
 		task, internalErr = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
 		sprintIDs, internalErr := t.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -532,14 +485,12 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			rtTx.AppendMutation(deleteSprintTaskRelationMutation)
 			internalErr = deleteSprintTaskRelationMutation.ExecuteV2(ct, tx)
 			if internalErr != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return internalErr
 			}
 		}
 
 		awaitForTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, taskID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -556,20 +507,17 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			rtTx.AppendMutation(deleteTaskAwaitForRelationMutation)
 			internalErr = deleteTaskAwaitForRelationMutation.ExecuteV2(ct, tx)
 			if internalErr != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return internalErr
 			}
 		}
 
 		awaitingTaskIDs, internalErr := t.taskAwaitForRelationDaoV2.FindAwaitingTaskIDsWithTx(ct, tx, taskID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
 		awaitingTasks, internalErr := t.taskDaoV2.FindTasksByIDsWithTx(ct, tx, awaitingTaskIDs)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -585,14 +533,12 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			rtTx.AppendMutation(deleteTaskAwaitForRelationMutation)
 			internalErr = deleteTaskAwaitForRelationMutation.ExecuteV2(ct, tx)
 			if internalErr != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return internalErr
 			}
 		}
 
 		internalErr = t.tryIncreaseBandwidth(ct, tx, rtTx, taskID, task.OwnerUserID, task.Effort)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -606,13 +552,11 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		rtTx.AppendMutation(deleteTaskMutation)
 		internalErr = deleteTaskMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
 		internalErr = t.threadDaoV2.DeleteThread(ct, tx, task.CommentsThreadID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -625,7 +569,6 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction, rtTx *realtime.Transaction, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
 	task, err := t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Task{}, err
 	}
 
@@ -650,7 +593,6 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction
 	rtTx.AppendMutation(updateTaskMutation)
 	internalErr := updateTaskMutation.ExecuteV2(ct, tx)
 	if internalErr != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Task{}, internalErr
 	}
 
@@ -669,7 +611,6 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 		var err *errs.Error
 		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -694,7 +635,6 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 		rtTx.AppendMutation(updateTaskMutation)
 		err = updateTaskMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -707,12 +647,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
+		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	var task entity.Task
@@ -726,13 +661,11 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		var err *errs.Error
 		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		tasks, err := t.taskDaoV2.FindTasksByTeamIDWithTx(ct, tx, task.OwningTeamID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -767,7 +700,6 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			rtTx.AppendMutation(updateTaskMutation)
 			err = updateTaskMutation.ExecuteV2(ct, tx)
 			if err != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 		}
@@ -784,7 +716,6 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		rtTx.AppendMutation(updateTaskMutation)
 		err = updateTaskMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -806,7 +737,6 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		var err *errs.Error
 		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -824,13 +754,11 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		rtTx.AppendMutation(updateTaskMutation)
 		err = updateTaskMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		awaitingTaskIDs, err := t.taskAwaitForRelationDaoV2.FindAwaitingTaskIDsWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -838,14 +766,12 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 			var awaitForTaskIDs []uint64
 			awaitForTaskIDs, err = t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, awaitingTaskID)
 			if err != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
 			var awaitForTasks []entity.Task
 			awaitForTasks, err = t.taskDaoV2.FindTasksByIDsWithTx(ct, tx, awaitForTaskIDs)
 			if err != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -855,7 +781,6 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 			if len(awaitForTasks) == 0 {
 				_, err = t.moveTaskToUpcoming(ct, tx, rtTx, awaitingTaskID, false)
 				if err != nil {
-					t.dataCollector.Logger.ErrorWithContext(ct, err)
 					return err
 				}
 			}
@@ -883,24 +808,17 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		var err *errs.Error
 		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, awaitingTaskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		var awaitForTask entity.Task
 		awaitForTask, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, awaitForTaskId)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		if !awaitableTaskStatuses[task.Status] {
-			internalErr := &errs.Error{
-				Code:    errs.InvalidOperation,
-				Message: fmt.Sprintf("task must be awaitable: taskID=%v", awaitingTaskID),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return internalErr
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("task must be awaitable: taskID=%v", awaitingTaskID))
 		}
 
 		now := time.Now()
@@ -921,7 +839,6 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		rtTx.AppendMutation(createTaskAwaitForRelationMutation)
 		err = createTaskAwaitForRelationMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -937,7 +854,6 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		rtTx.AppendMutation(updateTaskMutation)
 		err = updateTaskMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -959,24 +875,17 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		var err *errs.Error
 		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		var awaitForTask entity.Task
 		awaitForTask, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, awaitForTaskId)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		if task.Status != entity.TaskStatusAwaiting {
-			internalErr := &errs.Error{
-				Code:    errs.InvalidOperation,
-				Message: fmt.Sprintf("task must be awaitable: taskID=%v", taskID),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return internalErr
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("task must be awaitable: taskID=%v", taskID))
 		}
 
 		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
@@ -990,20 +899,17 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		rtTx.AppendMutation(deleteTaskAwaitForRelationMutation)
 		err = deleteTaskAwaitForRelationMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		awaitForTaskIds, err := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		if len(awaitForTaskIds) == 0 {
 			task, err = t.moveTaskToUpcoming(ct, tx, rtTx, taskID, false)
 			if err != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 		}
@@ -1017,12 +923,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint64) *errs.Error {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	txCtx := TransactionsContext{
@@ -1034,7 +935,6 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		task, err := t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -1058,7 +958,6 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		rtTx.AppendMutation(updateTaskActivityMutation)
 		err = updateTaskActivityMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -1078,7 +977,6 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		task, err := t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -1099,7 +997,6 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		rtTx.AppendMutation(updateTaskActivityMutation)
 		err = updateTaskActivityMutation.ExecuteV2(ct, tx)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 

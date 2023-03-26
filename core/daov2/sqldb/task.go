@@ -25,12 +25,11 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 		ReadOnly: true,
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+
 	if err != nil {
 		return entity.Task{}, err
 	}
-
 	defer tx.Rollback()
-
 	return t.FindTaskByIDWithTx(ct, tx, taskID)
 }
 
@@ -39,10 +38,10 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 		ReadOnly: true,
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+
 	if err != nil {
 		return nil, err
 	}
-
 	defer tx.Rollback()
 	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
 }
@@ -97,13 +96,12 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 			&task.UpdatedAt,
 			&task.DeliveredAt,
 		)
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("task not found: taskID=%v", taskID),
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: taskID=%v", taskID))
+		} else {
+			return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
 	}
 
 	return task, nil
@@ -135,17 +133,11 @@ func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transacti
 	WHERE id IN (%v);`, idsString)
 	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	var tasks []entity.Task
 	for rows.Next() {
 		var task entity.Task
@@ -167,23 +159,13 @@ func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transacti
 				&task.DeliveredAt,
 			)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	return tasks, internalErr
+	return tasks, nil
 }
 
 func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
@@ -223,22 +205,12 @@ func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transacti
 			&task.UpdatedAt,
 			&task.DeliveredAt,
 		)
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID),
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
-	}
-
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID))
+		} else {
+			return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
 	}
 
 	return task, nil
@@ -264,17 +236,11 @@ func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction
 	FROM task;
 `)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
 		task := entity.Task{}
@@ -295,23 +261,13 @@ func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
 	}
 
-	return tasks, internalErr
+	return tasks, nil
 }
 
 func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
@@ -337,17 +293,11 @@ func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transa
 `,
 		teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
 		task := entity.Task{}
@@ -368,17 +318,7 @@ func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transa
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
@@ -420,12 +360,7 @@ func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task e
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -460,12 +395,7 @@ func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task e
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -478,12 +408,7 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 		`,
 		taskID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

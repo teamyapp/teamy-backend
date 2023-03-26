@@ -53,7 +53,6 @@ func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *
 
 	task, err := c.taskDaoV2.FindTaskByIDWithTx(ct, tx, c.taskLink.TaskID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

@@ -48,7 +48,6 @@ func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 
 	task, err := c.taskDaoV2.FindTaskByIDWithTx(ct, tx, c.taskAwaitForRelation.AwaitForTaskID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
