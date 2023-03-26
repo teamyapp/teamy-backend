@@ -32,7 +32,6 @@ func (u *UpdateTaskMutation) GetID() uint64 {
 func (u *UpdateTaskMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := u.taskDaoV2.UpdateTask(ct, tx, u.task)
 	if internalErr != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
