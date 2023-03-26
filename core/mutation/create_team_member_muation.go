@@ -7,16 +7,20 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateTeamMemberMutation struct {
-	dataCollector telemetry.DataCollector
-	stateSyncer   *realtime.StateSyncer
-	teamMemberDao dao.TeamMember
-	id            uint64
-	teamMember    entity.TeamMember
+	dataCollector    telemetry.DataCollector
+	stateSyncer      *realtime.StateSyncer
+	teamMemberDao    dao.TeamMember
+	teamMemberDaoV2  daov2.TeamMember
+	id               uint64
+	teamMember       entity.TeamMember
+	clientNotifiers  []*realtime.ClientNotifier
+	notifierPrepared bool
 }
 
 var _ realtime.Mutation = (*CreateTeamMemberMutation)(nil)
@@ -26,13 +30,37 @@ func (c *CreateTeamMemberMutation) GetID() uint64 {
 }
 
 func (c *CreateTeamMemberMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	err := c.teamMemberDaoV2.CreateTeamMember(ct, tx, c.teamMember)
+	if err != nil {
+		return err
+	}
+
+	teamIDs, err := c.teamMemberDaoV2.FindTeamIDsByUserIDWithTx(ct, tx, c.teamMember.UserID)
+	if err != nil {
+		return err
+	}
+
+	userNotifier, err := c.stateSyncer.GetUserNotifierV2(ct, c.teamMember.UserID, teamIDs)
+	if err != nil {
+		return err
+	}
+
+	return c.stateSyncer.SubscribeToTeamsV2(ct, c.teamMember.UserID, userNotifier, teamIDs)
 }
 
 func (c *CreateTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	if c.notifierPrepared {
+		return nil
+	}
+
+	var err *errs.Error
+	c.clientNotifiers, err = c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamMember.TeamID)
+	if err != nil {
+		return err
+	}
+
+	c.notifierPrepared = true
+	return nil
 }
 
 func (c *CreateTeamMemberMutation) Execute(ct context.Context) *errs.Error {
@@ -66,8 +94,7 @@ func (c *CreateTeamMemberMutation) GetClientNotifiers(ct context.Context) ([]*re
 }
 
 func (c *CreateTeamMemberMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return c.clientNotifiers
 }
 
 func (c *CreateTeamMemberMutation) ToMessage() realtime.MutationMessage {
@@ -87,13 +114,16 @@ func NewCreateTeamMemberMutation(
 	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
+	teamMemberDaoV2 daov2.TeamMember,
 	teamMember entity.TeamMember,
 ) *CreateTeamMemberMutation {
 	return &CreateTeamMemberMutation{
-		dataCollector: dataCollector,
-		stateSyncer:   stateSyncer,
-		teamMemberDao: teamMemberDao,
-		id:            stateSyncer.NextMutationID(),
-		teamMember:    teamMember,
+		dataCollector:    dataCollector,
+		stateSyncer:      stateSyncer,
+		teamMemberDao:    teamMemberDao,
+		teamMemberDaoV2:  teamMemberDaoV2,
+		id:               stateSyncer.NextMutationID(),
+		teamMember:       teamMember,
+		notifierPrepared: false,
 	}
 }

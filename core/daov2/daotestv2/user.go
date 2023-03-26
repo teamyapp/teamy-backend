@@ -166,6 +166,6 @@ func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user e
 	})
 }
 
-func NewUser(db *dbtest.InMemoryDB) User {
-	return User{db: db}
+func NewUser(db *dbtest.InMemoryDB, transactionFactory transaction.Factory) User {
+	return User{db: db, transactionFactory: transactionFactory}
 }

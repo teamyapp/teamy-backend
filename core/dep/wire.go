@@ -55,6 +55,8 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(daov2.TeamMember), new(sqldbV2.TeamMember)),
 	wire.Bind(new(daov2.User), new(sqldbV2.User)),
 	wire.Bind(new(daov2.UserFileUploadSession), new(sqldbV2.UserFileUploadSession)),
+	wire.Bind(new(daov2.Team), new(sqldbV2.Team)),
+	wire.Bind(new(daov2.TeamFileUploadSession), new(sqldbV2.TeamFileUploadSession)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -82,6 +84,8 @@ var daoSet = wire.NewSet(
 	sqldbV2.NewTeamMember,
 	sqldbV2.NewUser,
 	sqldbV2.NewUserFileUploadSession,
+	sqldbV2.NewTeam,
+	sqldbV2.NewTeamFileUploadSession,
 )
 
 var serviceSet = wire.NewSet(
@@ -216,12 +220,17 @@ func newTeamService(
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer service.Authorizer,
 	stateSyncer *realtime.StateSyncer,
-	taskDao dao.Task,
+	transactionFactory transaction.Factory,
+	taskDaoV2 daov2.Task,
 	sprintDao dao.Sprint,
+	sprintDaoV2 daov2.Sprint,
+	sprintParticipantDao dao.SprintParticipant,
+	sprintParticipantDaoV2 daov2.SprintParticipant,
 	teamDao dao.Team,
+	teamDaoV2 daov2.Team,
 	teamMemberDao dao.TeamMember,
-	teamFileUploadSessionDao dao.TeamFileUploadSession,
-	sprintService service.Sprint,
+	teamMemberDaoV2 daov2.TeamMember,
+	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
 ) service.Team {
 	return service.NewTeam(
 		dataCollector,
@@ -229,12 +238,17 @@ func newTeamService(
 		cloudClientRegistry,
 		authorizer,
 		stateSyncer,
-		taskDao,
+		transactionFactory,
+		taskDaoV2,
 		sprintDao,
+		sprintDaoV2,
+		sprintParticipantDao,
+		sprintParticipantDaoV2,
 		teamDao,
+		teamDaoV2,
 		teamMemberDao,
-		teamFileUploadSessionDao,
-		sprintService)
+		teamMemberDaoV2,
+		teamFileUploadSessionDaoV2)
 }
 
 func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) cloudGQL.PrometheusTracer {

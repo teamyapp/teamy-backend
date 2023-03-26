@@ -75,18 +75,19 @@ func prepareUserService(t *testing.T) (User, bool) {
 		return User{}, false
 	}
 
+	transactionFactory := transaction.NewFactory(nil)
+
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotestv2.UserTableName)
 	teamyBackendDB.CreateTable(daotestv2.UserFileUploadSessionTableName)
 	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB)
+	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMemberDao, teamMemberDaoV2)
-	transactionFactory := transaction.NewFactory(nil)
 
 	userDao := daotest.NewUser(teamyBackendDB)
-	userDaoV2 := daotestv2.NewUser(teamyBackendDB)
+	userDaoV2 := daotestv2.NewUser(teamyBackendDB, transactionFactory)
 	userFileUploadSessionDaoV2 := daotestv2.NewUserFileUploadSession(teamyBackendDB)
 	return NewUser(
 		dataCollector,
@@ -160,6 +161,7 @@ func TestUserService_UpdateUser(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	defer tx.Rollback()
 
 	user := entity.User{
 		ID:         requesterUserID,
@@ -221,6 +223,7 @@ func TestUserService_FindUserByID(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	defer tx.Rollback()
 
 	now := time.Now().UTC()
 	user := entity.User{
@@ -265,6 +268,7 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	defer tx.Rollback()
 
 	uploadSessionID, err := userService.CreateUserProfileUploadSession(ct)
 	if !assert.Nil(t, err) {
@@ -290,7 +294,7 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 	assert.Equal(t, uploadSessionInMemory.IsCompleted, false)
 }
 
-func TestUserService_UpdateUserProfileUploadSession(t *testing.T) {
+func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
 	userService, ok := prepareUserService(t)
 	if !ok {
 		return
@@ -304,6 +308,7 @@ func TestUserService_UpdateUserProfileUploadSession(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	defer tx.Rollback()
 
 	var profileURL = "https://test"
 	now := time.Now().UTC()

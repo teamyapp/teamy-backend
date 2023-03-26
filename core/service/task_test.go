@@ -81,21 +81,22 @@ func TestTaskService_CreateTask(t *testing.T) {
 
 	authorizer := NewAuthorizer(dataCollector, cloudClientRegistry)
 
+	transactionFactory := transaction.NewFactory(nil)
+
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotestv2.ThreadTableName)
 	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB)
+	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMemberDao, teamMemberDaoV2)
-	transactionFactory := transaction.NewFactory(nil)
 	activityCache := cache.NewActivity(dataCollector)
 
 	taskDao := daotest.NewTask(teamyBackendDB)
 	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
 	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
 	sprintDao := daotest.NewSprint(teamyBackendDB)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB)
+	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
 	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
 	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)

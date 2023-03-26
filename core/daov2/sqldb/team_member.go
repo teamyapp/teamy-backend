@@ -33,6 +33,19 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 	return t.FindTeamIDsByUserIDWithTx(ct, tx, userID)
 }
 
+func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) ([]entity.TeamMember, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return t.FindTeamMembersByTeamIDWithTx(ct, tx, teamID)
+}
+
 func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
 	statement := `
 	SELECT
