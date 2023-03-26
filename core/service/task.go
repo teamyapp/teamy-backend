@@ -444,6 +444,7 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, tx *transaction.Transac
 			if internalErr.Code != errs.NotFound {
 				return nil, internalErr
 			}
+			
 			continue
 		}
 
