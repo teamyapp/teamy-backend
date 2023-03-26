@@ -96,10 +96,11 @@ var serviceSet = wire.NewSet(
 	service.NewApp,
 )
 
-func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
+func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, sqlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
+		transaction.NewFactory,
 	)
 	return nil
 }
