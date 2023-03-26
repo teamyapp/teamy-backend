@@ -25,10 +25,10 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 		ReadOnly: true,
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
-
 	if err != nil {
 		return entity.Task{}, err
 	}
+	
 	defer tx.Rollback()
 	return t.FindTaskByIDWithTx(ct, tx, taskID)
 }
@@ -38,10 +38,10 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 		ReadOnly: true,
 	}
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
-
 	if err != nil {
 		return nil, err
 	}
+	
 	defer tx.Rollback()
 	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
 }
@@ -99,9 +99,9 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: taskID=%v", taskID))
-		} else {
-			return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 		}
+		
+		return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return task, nil
@@ -208,9 +208,9 @@ func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transacti
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID))
-		} else {
-			return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 		}
+		
+		return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return task, nil
