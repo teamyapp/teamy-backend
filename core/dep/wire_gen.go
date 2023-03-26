@@ -27,9 +27,11 @@ import (
 
 // Injectors from wire.go:
 
-func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, qlDB *sql.DB) *realtime.StateSyncer {
-	teamMember := sqldb.NewTeamMember(dataCollector, qlDB)
-	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMember)
+func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, sqlDB *sql.DB) *realtime.StateSyncer {
+	teamMember := sqldb.NewTeamMember(dataCollector, sqlDB)
+	factory := transaction.NewFactory(sqlDB)
+	sqldbTeamMember := sqldb2.NewTeamMember(dataCollector, factory)
+	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMember, sqldbTeamMember)
 	return stateSyncer
 }
 

@@ -328,10 +328,12 @@ func (s *StateSyncer) GetClientNotifiersByTeamIDs(ct context.Context, teamIDs []
 func NewStateSyncer(
 	dataCollector telemetry.DataCollector,
 	teamMemberDao dao.TeamMember,
+	teamMemberDaoV2 daov2.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
 		dataCollector:           dataCollector,
 		teamMemberDao:           teamMemberDao,
+		teamMemberDaoV2:         teamMemberDaoV2,
 		teamNotifiers:           map[uint64]*TeamNotifier{},
 		userNotifiers:           map[uint64]*UserNotifier{},
 		nextClientID:            1,

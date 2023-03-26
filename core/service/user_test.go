@@ -81,12 +81,12 @@ func prepareUserService(t *testing.T) (User, bool) {
 	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
-	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMemberDao)
+	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB)
+	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMemberDao, teamMemberDaoV2)
 	transactionFactory := transaction.NewFactory(nil)
 
 	userDao := daotest.NewUser(teamyBackendDB)
 	userDaoV2 := daotestv2.NewUser(teamyBackendDB)
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB)
 	userFileUploadSessionDaoV2 := daotestv2.NewUserFileUploadSession(teamyBackendDB)
 	return NewUser(
 		dataCollector,
