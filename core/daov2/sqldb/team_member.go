@@ -30,7 +30,6 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 	}
 
 	defer tx.Rollback()
-
 	return t.FindTeamIDsByUserIDWithTx(ct, tx, userID)
 }
 

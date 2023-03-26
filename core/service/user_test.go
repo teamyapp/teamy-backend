@@ -31,7 +31,6 @@ func prepareUserService(t *testing.T) (User, bool) {
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	dataCollector := telemetry.NewDataCollector(logger)
 	virtualNetwork := networktest.NewVirtualNetwork()
-
 	cloudTestKitConfig := testkit.Config{
 		GenUniqueNumberRangeSize: 10,
 		JWTSigningKey:            "key",

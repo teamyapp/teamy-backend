@@ -79,7 +79,6 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return u.userDaoV2.CreateUser(ct, tx, user)
 	})
-
 	return user, err
 }
 
@@ -110,12 +109,7 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 			u.teamMemberDaoV2,
 			user)
 		rtTx.AppendMutation(userMutation)
-		err = userMutation.ExecuteV2(ct, tx)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return userMutation.ExecuteV2(ct, tx)
 	})
 
 	return user, err
@@ -148,12 +142,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := u.userFileUploadSessionDaoV2.CreateUserFileUploadSession(ct, tx, fileUploadSession)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return u.userFileUploadSessionDaoV2.CreateUserFileUploadSession(ct, tx, fileUploadSession)
 	})
 
 	return res.UploadSessionId, err
