@@ -581,15 +581,21 @@ func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt githubEntit
 	}
 
 	for _, prTaskRelation := range prTaskRelations {
-		moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
-			TaskId: prTaskRelation.InternalTaskID,
-		}
-		_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
-		if rpcErr != nil {
-			internalErr := errs.FromGRPCErr(rpcErr)
-			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return internalErr
-		}
+		a.moveTaskToDelivered(ct, prTaskRelation.InternalTaskID)
+	}
+
+	return nil
+}
+
+func (a AppAPI) moveTaskToDelivered(ct context.Context, taskID uint64) *errs.Error {
+	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+		TaskId: taskID,
+	}
+	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
 	}
 
 	return nil
@@ -963,9 +969,23 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 				return err
 			}
 
-			err = a.moveTaskToInProgress(ct, task.TaskId, teamID)
-			if err != nil {
-				return err
+			switch prEvt.PullRequest.State {
+			case githubEntity.OpenPullRequestState:
+				{
+					err = a.moveTaskToInProgress(ct, task.TaskId, teamID)
+					if err != nil {
+						return err
+					}
+				}
+			case githubEntity.ClosedPullRequestState:
+				{
+					if prEvt.PullRequest.Merged {
+						err = a.moveTaskToDelivered(ct, task.TaskId)
+						if err != nil {
+							return err
+						}
+					}
+				}
 			}
 
 		} else if prTaskRelation.AutomaticTracking {
