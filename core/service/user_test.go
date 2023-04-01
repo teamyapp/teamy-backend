@@ -161,6 +161,7 @@ func TestUserService_UpdateUser(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	user := entity.User{
@@ -223,6 +224,7 @@ func TestUserService_FindUserByID(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	now := time.Now().UTC()
@@ -268,6 +270,7 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	uploadSessionID, err := userService.CreateUserProfileUploadSession(ct)
@@ -308,6 +311,7 @@ func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	var profileURL = "https://test"

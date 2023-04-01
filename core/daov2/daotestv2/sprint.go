@@ -93,9 +93,9 @@ func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Trans
 				return err
 			}
 
-			sprintMap := make(map[uint64]int)
+			sprintMap := make(map[uint64]bool)
 			for _, sprintID := range sprintIDs {
-				sprintMap[sprintID]++
+				sprintMap[sprintID] = true
 			}
 
 			for _, rawRow := range table.Rows {
@@ -212,10 +212,6 @@ func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sp
 				if currSprint.ID != sprintID {
 					rows = append(rows, currSprint)
 				}
-			}
-
-			if len(rows) == len(table.Rows) {
-				return errs.NewError(errs.Unknown, fmt.Sprintf("row not exist: sprintID=%v", sprintID))
 			}
 
 			table.Rows = rows

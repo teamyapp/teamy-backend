@@ -100,9 +100,9 @@ func (t Team) FindTeamsByIDsWithTx(ct context.Context, tx *transaction.Transacti
 				return err
 			}
 
-			teamMap := make(map[uint64]int)
+			teamMap := make(map[uint64]bool)
 			for _, teamID := range teamIDs {
-				teamMap[teamID]++
+				teamMap[teamID] = true
 			}
 
 			for _, rawRow := range table.Rows {
@@ -220,9 +220,6 @@ func (t Team) DeleteTeam(ct context.Context, tx *transaction.Transaction, teamID
 				}
 			}
 
-			if len(rows) == len(table.Rows) {
-				return errs.NewError(errs.Unknown, fmt.Sprintf("row not exist: teamID=%v", teamID))
-			}
 
 			table.Rows = rows
 			return nil

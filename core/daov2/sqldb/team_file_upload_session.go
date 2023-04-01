@@ -51,9 +51,9 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamIDWithTx(
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.TeamFileUploadSession{}, errs.NewError(errs.NotFound, fmt.Sprintf(
 				"TeamFileUploadSession not found: teamID=%v, teamFileUploadSessionType=%v", teamID, teamFileUploadSessionType))
-		} else {
-			return entity.TeamFileUploadSession{}, errs.NewError(errs.Unknown, err.Error())
 		}
+		
+		return entity.TeamFileUploadSession{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return teamFileUploadSession, nil

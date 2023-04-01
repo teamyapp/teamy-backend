@@ -93,11 +93,6 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
@@ -295,7 +290,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 
 		team.Name = input.Name
 		team.OwnerUserID = input.OwnerUserID
-		updatedAt := time.Now()
+		updatedAt := time.Now().UTC()
 		team.UpdatedAt = &updatedAt
 		updateTeamMutation := mutation.NewUpdateTeamMutation(
 			t.dataCollector,
@@ -477,7 +472,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 				fileUploadSessionID))
 		}
 
-		now := time.Now()
+		now := time.Now().UTC()
 		iconUploadSession.IsCompleted = true
 		iconUploadSession.UpdatedAt = &now
 		internalErr = t.teamFileUploadSessionDaoV2.UpdateTeamFileUploadSession(ct, tx, iconUploadSession)
@@ -493,7 +488,6 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 		team.IconURL = &iconUrl
 		team.UpdatedAt = &now
-
 		return t.teamDaoV2.UpdateTeam(ct, tx, team)
 	})
 
@@ -567,6 +561,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		if internalErr != nil {
 			return internalErr
 		}
+		
 		rtTx.AppendMutation(createTeamMemberMutation)
 
 		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
@@ -742,7 +737,7 @@ func (t Team) UpdateTeamMember(
 
 		bandwidthDelta := input.WeeklyBandwidth - teamMember.WeeklyBandwidth
 		teamMember.WeeklyBandwidth = input.WeeklyBandwidth
-		now := time.Now()
+		now := time.Now().UTC()
 		teamMember.UpdatedAt = &now
 		updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
 			t.dataCollector,

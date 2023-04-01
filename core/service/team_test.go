@@ -134,6 +134,7 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	var iconURL = "https://test"
@@ -185,6 +186,7 @@ func TestTeamService_FindTeams(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	var iconURL1 = "https://test1"
@@ -255,6 +257,7 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	var iconURL1 = "https://test1"
@@ -297,18 +300,22 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team1)) {
 		return
 	}
+	
 	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team2)) {
 		return
 	}
+	
 	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team3)) {
 		return
 	}
 	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
 		return
 	}
+	
 	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
 		return
 	}
+	
 	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember3)) {
 		return
 	}
@@ -400,6 +407,7 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	// insert team into table
@@ -408,7 +416,6 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 	}
 
 	updateTeamInput := UpdateTeamInput{Name: "UpdatedTeamName", OwnerUserID: 25}
-
 	updatedTeam, internalErr := teamService.UpdateTeam(ct, team.ID, updateTeamInput)
 	if !assert.Nil(t, internalErr) {
 		return
@@ -499,11 +506,11 @@ func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
 	var teamID uint64 = 12
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
-
 	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	uploadSessionID, internalErr := teamService.CreateTeamIconUploadSession(ct, teamID)
@@ -557,6 +564,7 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	// insert team into table
@@ -618,6 +626,7 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	now := time.Now().UTC()
@@ -640,6 +649,7 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
 		return
 	}
+	
 	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
 		return
 	}
@@ -758,6 +768,7 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	if !assert.Nil(t, err) {
 		return
 	}
+	
 	defer tx.Rollback()
 
 	now := time.Now().UTC()
