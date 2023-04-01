@@ -10,7 +10,8 @@ import (
 )
 
 type SprintParticipant struct {
-	db *dbtest.InMemoryDB
+	db                 *dbtest.InMemoryDB
+	transactionFactory transaction.Factory
 }
 
 func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, *errs.Error) {
@@ -58,6 +59,6 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 	panic("implement me")
 }
 
-func NewSprintParticipant(db *dbtest.InMemoryDB) SprintParticipant {
-	return SprintParticipant{db: db}
+func NewSprintParticipant(db *dbtest.InMemoryDB, transactionFactory transaction.Factory) SprintParticipant {
+	return SprintParticipant{db: db, transactionFactory: transactionFactory}
 }
