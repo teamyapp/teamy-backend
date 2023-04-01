@@ -7,16 +7,20 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateTeamMutation struct {
-	dataCollector telemetry.DataCollector
-	stateSyncer   *realtime.StateSyncer
-	teamDao       dao.Team
-	id            uint64
-	team          entity.Team
+	dataCollector    telemetry.DataCollector
+	stateSyncer      *realtime.StateSyncer
+	teamDao          dao.Team
+	teamDaoV2        daov2.Team
+	id               uint64
+	team             entity.Team
+	clientNotifiers  []*realtime.ClientNotifier
+	notifierPrepared bool
 }
 
 var _ realtime.Mutation = (*CreateTeamMutation)(nil)
@@ -26,13 +30,22 @@ func (c *CreateTeamMutation) GetID() uint64 {
 }
 
 func (c *CreateTeamMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	return c.teamDaoV2.CreateTeam(ct, tx, c.team)
 }
 
 func (c *CreateTeamMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	if c.notifierPrepared {
+		return nil
+	}
+
+	var err *errs.Error
+	c.clientNotifiers, err = c.stateSyncer.GetClientNotifiersByTeamID(ct, c.team.ID)
+	if err != nil {
+		return err
+	}
+
+	c.notifierPrepared = true
+	return nil
 }
 
 func (c *CreateTeamMutation) Execute(ct context.Context) *errs.Error {
@@ -54,8 +67,7 @@ func (c *CreateTeamMutation) GetClientNotifiers(ct context.Context) ([]*realtime
 }
 
 func (c *CreateTeamMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return c.clientNotifiers
 }
 
 func (c *CreateTeamMutation) ToMessage() realtime.MutationMessage {
@@ -75,13 +87,16 @@ func NewCreateTeamMutation(
 	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamDao dao.Team,
+	teamDaoV2 daov2.Team,
 	team entity.Team,
 ) *CreateTeamMutation {
 	return &CreateTeamMutation{
-		dataCollector: dataCollector,
-		stateSyncer:   stateSyncer,
-		teamDao:       teamDao,
-		id:            stateSyncer.NextMutationID(),
-		team:          team,
+		dataCollector:    dataCollector,
+		stateSyncer:      stateSyncer,
+		teamDao:          teamDao,
+		teamDaoV2:        teamDaoV2,
+		id:               stateSyncer.NextMutationID(),
+		team:             team,
+		notifierPrepared: false,
 	}
 }

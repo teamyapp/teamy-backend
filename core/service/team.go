@@ -7,12 +7,15 @@ import (
 
 	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -40,23 +43,23 @@ type Team struct {
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	authorizer                 Authorizer
 	stateSyncer                *realtime.StateSyncer
-	taskDao                    dao.Task
+	transactionFactory         transaction.Factory
+	taskDaoV2                  daov2.Task
 	sprintDao                  dao.Sprint
+	sprintDaoV2                daov2.Sprint
+	sprintParticipantDao       dao.SprintParticipant
+	sprintParticipantDaoV2     daov2.SprintParticipant
 	teamDao                    dao.Team
+	teamDaoV2                  daov2.Team
 	teamMemberDao              dao.TeamMember
-	teamFileUploadSessionDao   dao.TeamFileUploadSession
-	sprintService              Sprint
+	teamMemberDaoV2            daov2.TeamMember
+	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
+		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
@@ -67,22 +70,16 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.Team{}, internalErr
+			return entity.Team{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
-	return t.teamDao.FindTeamByID(ct, teamID)
+	return t.teamDaoV2.FindTeamByID(ct, teamID)
 }
 
 func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, *errs.Error) {
-	teams, err := t.teamDao.FindAllTeams(ct)
+	teams, err := t.teamDaoV2.FindAllTeams(ct)
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -94,56 +91,54 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 }
 
 func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFilter) ([]entity.Team, *errs.Error) {
-	ids, err := t.teamMemberDao.FindTeamIDsByUserID(ct, userID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return nil, err
-	}
-
-	if len(ids) < 1 {
-		return []entity.Team{}, nil
-	}
-
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
+		return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	var teams []entity.Team
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		ids, internalErr := t.teamMemberDaoV2.FindTeamIDsByUserIDWithTx(ct, tx, userID)
+		if internalErr != nil {
+			return internalErr
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, err
-	}
 
-	teams, err := t.teamDao.FindTeamsByIDs(ct, ids)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return nil, err
-	}
+		if len(ids) < 1 {
+			return nil
+		}
 
-	if filter != nil {
-		teams = filterTeams(teams, *filter)
-	}
+		teams, internalErr = t.teamDaoV2.FindTeamsByIDsWithTx(ct, tx, ids)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		if filter != nil {
+			teams = filterTeams(teams, *filter)
+		}
+
+		return nil
+	})
 
 	// TODO: authorization - need to check permission for each team, and return list of errors
-	return teams, nil
+	return teams, err
 }
 
 func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
+		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
 	genTeamIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Team{}, internalErr
 	}
 
@@ -154,48 +149,55 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		OwnerUserID:   userID,
 		CreatedAt:     time.Now(),
 	}
-
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	// All users are authorized to create team
-	createTeamMutation := mutation.NewCreateTeamMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.teamDao,
-		team,
-	)
-	err := realTimeTransaction.ApplyMutation(ct, createTeamMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		// All users are authorized to create team
+		createTeamMutation := mutation.NewCreateTeamMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.teamDao,
+			t.teamDaoV2,
+			team,
+		)
+		internalErr := createTeamMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			return internalErr
+		}
 
-	teamMember := entity.TeamMember{
-		TeamID:    team.ID,
-		UserID:    userID,
-		CreatedAt: time.Now(),
-	}
-	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.teamMemberDao,
-		teamMember,
-	)
-	err = realTimeTransaction.ApplyMutation(ct, createTeamMemberMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
-	}
+		rtTx.AppendMutation(createTeamMutation)
+		teamMember := entity.TeamMember{
+			TeamID:    team.ID,
+			UserID:    userID,
+			CreatedAt: time.Now(),
+		}
+		createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.teamMemberDao,
+			t.teamMemberDaoV2,
+			teamMember,
+		)
+		internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			return internalErr
+		}
 
-	err = realTimeTransaction.Commit(ct)
+		rtTx.AppendMutation(createTeamMemberMutation)
+		return nil
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Team{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = t.authorizer.registerResource(ct, authorization.TeamResourceType, team.ID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Team{}, err
 		}
 
@@ -219,14 +221,13 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 			})
 		}
 
-		_, err := t.authorizer.createUserGroupAndAssignPermissions(ct,
+		_, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
 			userID,
 			teamAdminUserGroupName,
 			&teamAdminDescription,
 			teamAdminOperations,
 		)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Team{}, err
 		}
 
@@ -248,7 +249,6 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 			teamMemberOperations,
 		)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Team{}, err
 		}
 	}
@@ -259,12 +259,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInput) (entity.Team, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
+		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
@@ -275,41 +270,46 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.Team{}, internalErr
+			return entity.Team{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
-	team, err := t.teamDao.FindTeamByID(ct, teamID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
+	var team entity.Team
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
+		if internalErr != nil {
+			return internalErr
+		}
 
-	team.Name = input.Name
-	team.OwnerUserID = input.OwnerUserID
-	updatedAt := time.Now()
-	team.UpdatedAt = &updatedAt
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	updateTeamMutation := mutation.NewUpdateTeamMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.teamDao,
-		team,
-	)
-	err = realTimeTransaction.ApplyMutation(ct, updateTeamMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
-	}
+		team.Name = input.Name
+		team.OwnerUserID = input.OwnerUserID
+		updatedAt := time.Now().UTC()
+		team.UpdatedAt = &updatedAt
+		updateTeamMutation := mutation.NewUpdateTeamMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.teamDao,
+			t.teamDaoV2,
+			team,
+		)
 
-	err = realTimeTransaction.Commit(ct)
+		internalErr = updateTeamMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		rtTx.AppendMutation(updateTeamMutation)
+		return nil
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Team{}, err
 	}
 
@@ -320,54 +320,52 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.Team{}, internalErr
+			return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewDeleteTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return entity.Team{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.Team{}, internalErr
+			return entity.Team{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("authorization query: %v", query))
 		}
 	}
 
-	team, err := t.teamDao.FindTeamByID(ct, teamID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
+	var team entity.Team
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
+		if internalErr != nil {
+			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			return internalErr
+		}
 
-	deleteTeamMutation := mutation.NewDeleteTeamMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.teamDao,
-		teamID,
-	)
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	err = realTimeTransaction.ApplyMutation(ct, deleteTeamMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
-	}
+		deleteTeamMutation := mutation.NewDeleteTeamMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.teamDao,
+			t.teamDaoV2,
+			teamID,
+		)
+		internalErr = deleteTeamMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			return internalErr
+		}
 
-	err = realTimeTransaction.Commit(ct)
+		rtTx.AppendMutation(deleteTeamMutation)
+		return nil
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Team{}, err
 	}
 
@@ -377,12 +375,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (uint64, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
@@ -393,20 +386,13 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return 0, internalErr
+			return 0, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	res, rpcErr := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
 	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return 0, errs.FromGRPCErr(rpcErr)
 	}
 
 	fileUploadSession := entity.TeamFileUploadSession{
@@ -416,9 +402,17 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	err := t.teamFileUploadSessionDao.CreateTeamFileUploadSession(ct, fileUploadSession)
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return t.teamFileUploadSessionDaoV2.CreateTeamFileUploadSession(ct, tx, fileUploadSession)
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return 0, err
 	}
 
@@ -428,12 +422,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fileUploadSessionID uint64) (entity.Team, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
+		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
@@ -444,43 +433,8 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.Team{}, internalErr
+			return entity.Team{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
-	}
-
-	iconUploadSession, err := t.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamID(
-		ct,
-		teamID,
-		entity.IconTeamFileUploadSessionType,
-		fileUploadSessionID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
-	}
-
-	if iconUploadSession.IsCompleted {
-		internalErr := &errs.Error{
-			Code: errs.InvalidOperation,
-			Message: fmt.Sprintf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
-				teamID,
-				fileUploadSessionID),
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
-	}
-
-	now := time.Now()
-	iconUploadSession.IsCompleted = true
-	iconUploadSession.UpdatedAt = &now
-	err = t.teamFileUploadSessionDao.UpdateTeamFileUploadSession(ct, iconUploadSession)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.Team{}, err
 	}
 
 	findUploadSessionReq := proto.FindUploadSessionRequest{
@@ -489,63 +443,86 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	uploadSession, rpcErr := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Team{}, internalErr
 	}
 
-	team, err := t.teamDao.FindTeamByID(ct, teamID)
+	var iconUploadSession entity.TeamFileUploadSession
+	var team entity.Team
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		iconUploadSession, internalErr = t.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(
+			ct,
+			tx,
+			teamID,
+			entity.IconTeamFileUploadSessionType,
+			fileUploadSessionID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		if iconUploadSession.IsCompleted {
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("icon upload session is already completed: teamID=%v, fileUploadSessionID=%v",
+				teamID,
+				fileUploadSessionID))
+		}
+
+		now := time.Now().UTC()
+		iconUploadSession.IsCompleted = true
+		iconUploadSession.UpdatedAt = &now
+		internalErr = t.teamFileUploadSessionDaoV2.UpdateTeamFileUploadSession(ct, tx, iconUploadSession)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
+		team.IconURL = &iconUrl
+		team.UpdatedAt = &now
+		return t.teamDaoV2.UpdateTeam(ct, tx, team)
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.Team{}, err
 	}
 
-	iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
-	team.IconURL = &iconUrl
-	team.UpdatedAt = &now
-	return team, t.teamDao.UpdateTeam(ct, team)
+	return team, nil
 }
 
 func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamMember, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
 		query := authorization.NewTeamReadMemberQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return nil, internalErr
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
-	return t.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
+	return t.teamMemberDaoV2.FindTeamMembersByTeamID(ct, teamID)
 }
 
 func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamMember{}, internalErr
+		return entity.TeamMember{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
@@ -556,12 +533,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.TeamMember{}, internalErr
+			return entity.TeamMember{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -570,46 +542,69 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		UserID:    memberUserID,
 		CreatedAt: time.Now(),
 	}
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.teamMemberDao,
-		teamMember,
-	)
-	realTimeTransaction.ApplyMutation(ct, createTeamMemberMutation)
-
-	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TeamMember{}, err
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
 	}
-
-	for _, sprint := range currAndFutureSprints {
-		participant := entity.SprintParticipant{
-			SprintID:  sprint.ID,
-			UserID:    memberUserID,
-			CreatedAt: time.Now(),
-		}
-		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
 			t.dataCollector,
 			t.stateSyncer,
-			t.sprintService.sprintParticipantDao,
-			t.sprintService.sprintParticipantDaoV2,
-			t.sprintDao,
-			t.sprintService.sprintDaoV2,
-			participant,
+			t.teamMemberDao,
+			t.teamMemberDaoV2,
+			teamMember,
 		)
-		err = realTimeTransaction.ApplyMutation(ct, createSprintParticipantMutation)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return entity.TeamMember{}, err
+		internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			return internalErr
 		}
-	}
+		
+		rtTx.AppendMutation(createTeamMemberMutation)
 
-	err = realTimeTransaction.Commit(ct)
+		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		now := time.Now().UTC()
+		currAndFutureSprints := collect.Filter(sprints, func(sprint entity.Sprint) bool {
+			if sprint.EndAt.UTC().Before(now) {
+				return false
+			}
+
+			return true
+		})
+
+		for _, sprint := range currAndFutureSprints {
+			participant := entity.SprintParticipant{
+				SprintID:  sprint.ID,
+				UserID:    memberUserID,
+				CreatedAt: time.Now(),
+			}
+			createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+				t.dataCollector,
+				t.stateSyncer,
+				t.sprintParticipantDao,
+				t.sprintParticipantDaoV2,
+				t.sprintDao,
+				t.sprintDaoV2,
+				participant,
+			)
+			internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(createSprintParticipantMutation)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.TeamMember{}, err
 	}
 
@@ -619,12 +614,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamMember{}, internalErr
+		return entity.TeamMember{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
@@ -635,62 +625,74 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.TeamMember{}, internalErr
+			return entity.TeamMember{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
-	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, memberUserID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TeamMember{}, err
+	var teamMember entity.TeamMember
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
 	}
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	// TODO: ensure user is inside the team
-	deleteTeamMemberMutation := mutation.NewDeleteTeamMemberMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.teamMemberDao,
-		teamID,
-		teamMember.UserID,
-	)
-	err = realTimeTransaction.ApplyMutation(ct, deleteTeamMemberMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TeamMember{}, err
-	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		teamMember, internalErr = t.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, memberUserID)
+		if internalErr != nil {
+			return internalErr
+		}
 
-	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TeamMember{}, err
-	}
-
-	for _, sprint := range currAndFutureSprints {
-		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+		deleteTeamMemberMutation := mutation.NewDeleteTeamMemberMutation(
 			t.dataCollector,
 			t.stateSyncer,
-			t.sprintService.sprintParticipantDao,
-			t.sprintService.sprintParticipantDaoV2,
-			t.sprintDao,
-			t.sprintService.sprintDaoV2,
+			t.teamMemberDao,
+			t.teamMemberDaoV2,
+			teamID,
 			teamMember.UserID,
-			sprint.ID,
 		)
-		err = realTimeTransaction.ApplyMutation(ct, deleteSprintParticipantMutation)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return entity.TeamMember{}, err
+		internalErr = deleteTeamMemberMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			return internalErr
 		}
-	}
 
-	err = realTimeTransaction.Commit(ct)
+		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		now := time.Now().UTC()
+		currAndFutureSprints := collect.Filter(sprints, func(sprint entity.Sprint) bool {
+			if sprint.EndAt.UTC().Before(now) {
+				return false
+			}
+
+			return true
+		})
+
+		for _, sprint := range currAndFutureSprints {
+			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+				t.dataCollector,
+				t.stateSyncer,
+				t.sprintParticipantDao,
+				t.sprintParticipantDaoV2,
+				t.sprintDao,
+				t.sprintDaoV2,
+				teamMember.UserID,
+				sprint.ID,
+			)
+			internalErr = deleteSprintParticipantMutation.ExecuteV2(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(deleteSprintParticipantMutation)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.TeamMember{}, err
 	}
 
@@ -704,12 +706,7 @@ func (t Team) UpdateTeamMember(
 ) (entity.TeamMember, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamMember{}, internalErr
+		return entity.TeamMember{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
@@ -720,78 +717,89 @@ func (t Team) UpdateTeamMember(
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-			return entity.TeamMember{}, internalErr
+			return entity.TeamMember{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
-	teamMember, err := t.teamMemberDao.FindTeamMember(ct, teamID, input.UserID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TeamMember{}, err
+	var teamMember entity.TeamMember
+	txCtx := TransactionsContext{
+		dataCollector:      t.dataCollector,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
 	}
-
-	bandwidthDelta := input.WeeklyBandwidth - teamMember.WeeklyBandwidth
-	teamMember.WeeklyBandwidth = input.WeeklyBandwidth
-	now := time.Now()
-	teamMember.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(t.dataCollector, t.stateSyncer)
-	updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
-		t.dataCollector,
-		t.stateSyncer,
-		t.teamMemberDao,
-		teamMember,
-	)
-	err = realTimeTransaction.ApplyMutation(ct, updateTeamMemberMutation)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TeamMember{}, err
-	}
-
-	currAndFutureSprints, err := t.sprintService.FindCurrentAndFutureSprints(ct, teamID)
-	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
-		return entity.TeamMember{}, err
-	}
-
-	for _, sprint := range currAndFutureSprints {
-		participants, err := t.sprintService.FindParticipantsInSprint(ct, sprint.ID)
-		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
-			return entity.TeamMember{}, err
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		teamMember, internalErr = t.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, input.UserID)
+		if internalErr != nil {
+			return internalErr
 		}
 
-		for _, participant := range participants {
-			if participant.UserID != input.UserID {
-				continue
+		bandwidthDelta := input.WeeklyBandwidth - teamMember.WeeklyBandwidth
+		teamMember.WeeklyBandwidth = input.WeeklyBandwidth
+		now := time.Now().UTC()
+		teamMember.UpdatedAt = &now
+		updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
+			t.dataCollector,
+			t.stateSyncer,
+			t.teamMemberDao,
+			t.teamMemberDaoV2,
+			teamMember,
+		)
+		internalErr = updateTeamMemberMutation.ExecuteV2(ct, tx)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		now = time.Now().UTC()
+		currAndFutureSprints := collect.Filter(sprints, func(sprint entity.Sprint) bool {
+			if sprint.EndAt.UTC().Before(now) {
+				return false
 			}
 
-			participant.TotalBandwidth += bandwidthDelta
-			participant.UnusedBandwidth += bandwidthDelta
-			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-				t.dataCollector,
-				t.stateSyncer,
-				t.sprintService.sprintParticipantDao,
-				t.sprintService.sprintParticipantDaoV2,
-				t.sprintDao,
-				t.sprintService.sprintDaoV2,
-				participant,
-			)
-			err = realTimeTransaction.ApplyMutation(ct, updateSprintParticipantMutation)
+			return true
+		})
+
+		for _, sprint := range currAndFutureSprints {
+			participants, err := t.sprintParticipantDaoV2.FindParticipantsBySprintIDWithTx(ct, tx, sprint.ID)
 			if err != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, err)
-				return entity.TeamMember{}, err
+				return err
+			}
+
+			for _, participant := range participants {
+				if participant.UserID != input.UserID {
+					continue
+				}
+
+				participant.TotalBandwidth += bandwidthDelta
+				participant.UnusedBandwidth += bandwidthDelta
+				updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+					t.dataCollector,
+					t.stateSyncer,
+					t.sprintParticipantDao,
+					t.sprintParticipantDaoV2,
+					t.sprintDao,
+					t.sprintDaoV2,
+					participant,
+				)
+				internalErr = updateSprintParticipantMutation.ExecuteV2(ct, tx)
+				if internalErr != nil {
+					return internalErr
+				}
+
+				rtTx.AppendMutation(updateSprintParticipantMutation)
 			}
 		}
-	}
 
-	err = realTimeTransaction.Commit(ct)
+		return nil
+	})
+
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
 		return entity.TeamMember{}, err
 	}
 
@@ -804,12 +812,17 @@ func NewTeam(
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
 	stateSyncer *realtime.StateSyncer,
-	taskDao dao.Task,
+	transactionFactory transaction.Factory,
+	taskDaoV2 daov2.Task,
 	sprintDao dao.Sprint,
+	sprintDaoV2 daov2.Sprint,
+	sprintParticipantDao dao.SprintParticipant,
+	sprintParticipantDaoV2 daov2.SprintParticipant,
 	teamDao dao.Team,
+	teamDaoV2 daov2.Team,
 	teamMemberDao dao.TeamMember,
-	teamFileUploadSessionDao dao.TeamFileUploadSession,
-	sprintService Sprint,
+	teamMemberDaoV2 daov2.TeamMember,
+	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
 ) Team {
 	return Team{
 		dataCollector:              dataCollector,
@@ -817,11 +830,16 @@ func NewTeam(
 		cloudClientRegistry:        cloudClientRegistry,
 		authorizer:                 authorizer,
 		stateSyncer:                stateSyncer,
-		taskDao:                    taskDao,
+		transactionFactory:         transactionFactory,
+		taskDaoV2:                  taskDaoV2,
 		sprintDao:                  sprintDao,
+		sprintDaoV2:                sprintDaoV2,
+		sprintParticipantDao:       sprintParticipantDao,
+		sprintParticipantDaoV2:     sprintParticipantDaoV2,
 		teamDao:                    teamDao,
+		teamMemberDaoV2:            teamMemberDaoV2,
 		teamMemberDao:              teamMemberDao,
-		teamFileUploadSessionDao:   teamFileUploadSessionDao,
-		sprintService:              sprintService,
+		teamDaoV2:                  teamDaoV2,
+		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
 	}
 }

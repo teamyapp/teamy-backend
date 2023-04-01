@@ -7,16 +7,20 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type UpdateTeamMemberMutation struct {
-	dataCollector telemetry.DataCollector
-	stateSyncer   *realtime.StateSyncer
-	teamMemberDao dao.TeamMember
-	id            uint64
-	teamMember    entity.TeamMember
+	dataCollector    telemetry.DataCollector
+	stateSyncer      *realtime.StateSyncer
+	teamMemberDao    dao.TeamMember
+	teamMemberDaoV2  daov2.TeamMember
+	id               uint64
+	teamMember       entity.TeamMember
+	clientNotifiers  []*realtime.ClientNotifier
+	notifierPrepared bool
 }
 
 var _ realtime.Mutation = (*UpdateTeamMemberMutation)(nil)
@@ -26,13 +30,22 @@ func (u *UpdateTeamMemberMutation) GetID() uint64 {
 }
 
 func (u *UpdateTeamMemberMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	return u.teamMemberDaoV2.UpdateTeamMember(ct, tx, u.teamMember)
 }
 
 func (u *UpdateTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	if u.notifierPrepared {
+		return nil
+	}
+
+	var err *errs.Error
+	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.teamMember.TeamID)
+	if err != nil {
+		return err
+	}
+
+	u.notifierPrepared = true
+	return nil
 }
 
 func (u *UpdateTeamMemberMutation) Execute(ct context.Context) *errs.Error {
@@ -54,8 +67,7 @@ func (u *UpdateTeamMemberMutation) GetClientNotifiers(ct context.Context) ([]*re
 }
 
 func (u *UpdateTeamMemberMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return u.clientNotifiers
 }
 
 func (u *UpdateTeamMemberMutation) ToMessage() realtime.MutationMessage {
@@ -75,13 +87,16 @@ func NewUpdateTeamMemberMutation(
 	dataCollector telemetry.DataCollector,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
+	teamMemberDaoV2 daov2.TeamMember,
 	teamMember entity.TeamMember,
 ) *UpdateTeamMemberMutation {
 	return &UpdateTeamMemberMutation{
-		dataCollector: dataCollector,
-		stateSyncer:   stateSyncer,
-		teamMemberDao: teamMemberDao,
-		id:            stateSyncer.NextMutationID(),
-		teamMember:    teamMember,
+		dataCollector:    dataCollector,
+		stateSyncer:      stateSyncer,
+		teamMemberDao:    teamMemberDao,
+		teamMemberDaoV2:  teamMemberDaoV2,
+		id:               stateSyncer.NextMutationID(),
+		teamMember:       teamMember,
+		notifierPrepared: false,
 	}
 }
