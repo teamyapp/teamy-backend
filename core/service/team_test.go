@@ -22,12 +22,21 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-func prepareTeamService(t *testing.T) (Team, bool) {
+type TeamTestRef struct {
+	teamService                Team
+	teamDaoV2                  daov2.Team
+	teamMemberDaoV2            daov2.TeamMember
+	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession
+	transactionFactory         transaction.Factory
+}
+
+func prepareTeamTestRef(t *testing.T) (TeamTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	dataCollector := telemetry.NewDataCollector(logger)
@@ -48,7 +57,7 @@ func prepareTeamService(t *testing.T) (Team, bool) {
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
 	if !assert.Nil(t, internalErr) {
-		return Team{}, false
+		return TeamTestRef{}, false
 	}
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
@@ -73,7 +82,7 @@ func prepareTeamService(t *testing.T) (Team, bool) {
 			return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
 		})
 	if !assert.Nil(t, err) {
-		return Team{}, false
+		return TeamTestRef{}, false
 	}
 
 	authorizer := NewAuthorizer(dataCollector, cloudClientRegistry)
@@ -99,7 +108,7 @@ func prepareTeamService(t *testing.T) (Team, bool) {
 	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
 
-	return NewTeam(
+	teamService := NewTeam(
 		dataCollector,
 		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
@@ -116,11 +125,18 @@ func prepareTeamService(t *testing.T) (Team, bool) {
 		teamMemberDao,
 		teamMemberDaoV2,
 		teamFileUploadSessionDaoV2,
-	), true
+	)
+
+	return TeamTestRef{
+		teamService:                teamService,
+		teamDaoV2:                  teamDaoV2,
+		teamMemberDaoV2:            teamMemberDaoV2,
+		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
+	}, true
 }
 
 func TestTeamService_FindTeamByID(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -130,11 +146,11 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
 	var iconURL = "https://test"
@@ -150,11 +166,11 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 	}
 
 	// insert team into table
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team)) {
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
 		return
 	}
 
-	teamFound, internalErr := teamService.FindTeamByID(ct, team.ID)
+	teamFound, internalErr := teamRef.teamService.FindTeamByID(ct, team.ID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -170,7 +186,7 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 }
 
 func TestTeamService_FindTeams(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -182,11 +198,11 @@ func TestTeamService_FindTeams(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID1)
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
 	var iconURL1 = "https://test1"
@@ -212,10 +228,10 @@ func TestTeamService_FindTeams(t *testing.T) {
 	}
 
 	// insert teams into table
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team1)) {
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1)) {
 		return
 	}
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team2)) {
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2)) {
 		return
 	}
 
@@ -223,7 +239,7 @@ func TestTeamService_FindTeams(t *testing.T) {
 		TeamID: &teamID2,
 	}
 
-	teamsFound, internalErr := teamService.FindTeams(ct, &teamFilter)
+	teamsFound, internalErr := teamRef.teamService.FindTeams(ct, &teamFilter)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -240,7 +256,7 @@ func TestTeamService_FindTeams(t *testing.T) {
 }
 
 func TestTeamService_FindTeamsForUser(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -253,11 +269,11 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID1)
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
 	var iconURL1 = "https://test1"
@@ -297,26 +313,26 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	teamMember3 := entity.TeamMember{TeamID: teamID3, UserID: requesterUserID1, CreatedAt: now}
 
 	// insert teams and teamMembers into table
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team1)) {
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1)) {
 		return
 	}
-	
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team2)) {
+
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2)) {
 		return
 	}
-	
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team3)) {
+
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team3)) {
 		return
 	}
-	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
+	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
 		return
 	}
-	
-	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
+
+	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
 		return
 	}
-	
-	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember3)) {
+
+	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember3)) {
 		return
 	}
 
@@ -324,7 +340,7 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 		TeamID: &teamID3,
 	}
 
-	teamsFound, internalErr := teamService.FindTeamsForUser(ct, requesterUserID1, &teamFilter)
+	teamsFound, internalErr := teamRef.teamService.FindTeamsForUser(ct, requesterUserID1, &teamFilter)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -341,7 +357,7 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 }
 
 func TestTeamService_CreateTeam(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -353,7 +369,7 @@ func TestTeamService_CreateTeam(t *testing.T) {
 		Name: "TeamName",
 	}
 
-	newTeam, internalErr := teamService.CreateTeam(ct, teamInput)
+	newTeam, internalErr := teamRef.teamService.CreateTeam(ct, teamInput)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -367,7 +383,7 @@ func TestTeamService_CreateTeam(t *testing.T) {
 	assert.Nil(t, newTeam.UpdatedAt)
 
 	// verify in-memory DB
-	teamInMemory, err := teamService.teamDaoV2.FindTeamByID(ct, newTeam.ID)
+	teamInMemory, err := teamRef.teamDaoV2.FindTeamByID(ct, newTeam.ID)
 	if !assert.Nil(t, err) {
 		return
 	}
@@ -381,7 +397,7 @@ func TestTeamService_CreateTeam(t *testing.T) {
 }
 
 func TestTeamService_UpdateTeam(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -403,20 +419,20 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 		UpdatedAt:     nil,
 	}
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
 	// insert team into table
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team)) {
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
 		return
 	}
 
 	updateTeamInput := UpdateTeamInput{Name: "UpdatedTeamName", OwnerUserID: 25}
-	updatedTeam, internalErr := teamService.UpdateTeam(ct, team.ID, updateTeamInput)
+	updatedTeam, internalErr := teamRef.teamService.UpdateTeam(ct, team.ID, updateTeamInput)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -430,7 +446,7 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 	assert.NotNil(t, updatedTeam.UpdatedAt)
 
 	// verify in-memory DB
-	teamInMemory, err := teamService.teamDaoV2.FindTeamByID(ct, updatedTeam.ID)
+	teamInMemory, err := teamRef.teamDaoV2.FindTeamByID(ct, updatedTeam.ID)
 	if !assert.Nil(t, err) {
 		return
 	}
@@ -444,7 +460,7 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 }
 
 func TestTeamService_DeleteTeam(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -466,18 +482,18 @@ func TestTeamService_DeleteTeam(t *testing.T) {
 		UpdatedAt:     &now,
 	}
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
 	defer tx.Rollback()
 
 	// insert team into table
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team)) {
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
 		return
 	}
 
-	deletedTeam, internalErr := teamService.DeleteTeam(ct, team.ID)
+	deletedTeam, internalErr := teamRef.teamService.DeleteTeam(ct, team.ID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -491,13 +507,13 @@ func TestTeamService_DeleteTeam(t *testing.T) {
 	assert.Equal(t, team.UpdatedAt, deletedTeam.UpdatedAt)
 
 	// verify in-memory DB
-	_, err = teamService.teamDaoV2.FindTeamByID(ct, deletedTeam.ID)
+	_, err = teamRef.teamDaoV2.FindTeamByID(ct, deletedTeam.ID)
 	assert.NotNil(t, err)
 	assert.Equal(t, err.Code, errs.NotFound)
 }
 
 func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -506,14 +522,14 @@ func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
 	var teamID uint64 = 12
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
-	uploadSessionID, internalErr := teamService.CreateTeamIconUploadSession(ct, teamID)
+	uploadSessionID, internalErr := teamRef.teamService.CreateTeamIconUploadSession(ct, teamID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -521,7 +537,7 @@ func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
 	assert.Equal(t, uploadSessionID, uint64(1))
 
 	// verify in-memory DB
-	uploadSessionInMemory, err := teamService.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
+	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
 		tx,
 		teamID,
 		entity.IconTeamFileUploadSessionType,
@@ -538,7 +554,7 @@ func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
 }
 
 func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -560,26 +576,26 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 		UpdatedAt:     &now,
 	}
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
 	// insert team into table
-	if !assert.Nil(t, teamService.teamDaoV2.CreateTeam(ct, tx, team)) {
+	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
 		return
 	}
 
 	// create team upload session
-	uploadSessionID, internalErr := teamService.CreateTeamIconUploadSession(ct, teamID)
+	uploadSessionID, internalErr := teamRef.teamService.CreateTeamIconUploadSession(ct, teamID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
 
 	// finish upload session
-	updatedTeam, err := teamService.FinishTeamIconUploadSession(ct, team.ID, uploadSessionID)
+	updatedTeam, err := teamRef.teamService.FinishTeamIconUploadSession(ct, team.ID, uploadSessionID)
 	if !assert.Nil(t, err) {
 		return
 	}
@@ -594,7 +610,7 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 	assert.Equal(t, team.CreatorUserID, updatedTeam.CreatorUserID)
 
 	// verify in-memory DB
-	uploadSessionInMemory, err := teamService.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
+	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
 		tx,
 		teamID,
 		entity.IconTeamFileUploadSessionType,
@@ -611,7 +627,7 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 }
 
 func TestTeamService_FindTeamMembers(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -622,11 +638,11 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
 	now := time.Now().UTC()
@@ -646,15 +662,15 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 	}
 
 	// insert teams into table
-	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
-		return
-	}
-	
-	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
+	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
 		return
 	}
 
-	teamsFound, internalErr := teamService.FindTeamMembers(ct, teamMember1.TeamID)
+	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
+		return
+	}
+
+	teamsFound, internalErr := teamRef.teamService.FindTeamMembers(ct, teamMember1.TeamID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -669,7 +685,7 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 }
 
 func TestTeamService_AddMemberToTeam(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -679,13 +695,13 @@ func TestTeamService_AddMemberToTeam(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
 	defer tx.Rollback()
 
-	teamMember, internalErr := teamService.AddMemberToTeam(ct, teamID, requesterUserID)
+	teamMember, internalErr := teamRef.teamService.AddMemberToTeam(ct, teamID, requesterUserID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -695,7 +711,7 @@ func TestTeamService_AddMemberToTeam(t *testing.T) {
 	assert.Equal(t, teamMember.UserID, requesterUserID)
 
 	// verify in-memory DB
-	teamMemberInMemory, internalErr := teamService.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, requesterUserID)
+	teamMemberInMemory, internalErr := teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, requesterUserID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -705,7 +721,7 @@ func TestTeamService_AddMemberToTeam(t *testing.T) {
 }
 
 func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -715,7 +731,7 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
@@ -731,11 +747,11 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 	}
 
 	// insert teams into table
-	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember)) {
+	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember)) {
 		return
 	}
 
-	teamDeleted, internalErr := teamService.RemoveMemberFromTeam(ct, teamMember.TeamID, teamMember.UserID)
+	teamDeleted, internalErr := teamRef.teamService.RemoveMemberFromTeam(ct, teamMember.TeamID, teamMember.UserID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -748,13 +764,13 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 	assert.Equal(t, teamDeleted.UpdatedAt, teamMember.UpdatedAt)
 
 	// verify in-memory DB
-	_, internalErr = teamService.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
+	_, internalErr = teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
 	assert.NotNil(t, internalErr)
 	assert.Equal(t, internalErr.Code, errs.NotFound)
 }
 
 func TestTeamService_UpdateTeamMember(t *testing.T) {
-	teamService, ok := prepareTeamService(t)
+	teamRef, ok := prepareTeamTestRef(t)
 	if !ok {
 		return
 	}
@@ -764,11 +780,11 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
-	tx, err := teamService.transactionFactory.BeginTx(ct, nil)
+	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	
+
 	defer tx.Rollback()
 
 	now := time.Now().UTC()
@@ -781,7 +797,7 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	}
 
 	// insert teams into table
-	if !assert.Nil(t, teamService.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember)) {
+	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember)) {
 		return
 	}
 
@@ -789,7 +805,7 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 		UserID:          requesterUserID,
 		WeeklyBandwidth: timePerWeek / 7,
 	}
-	teamUpdated, internalErr := teamService.UpdateTeamMember(ct, teamMember.TeamID, updateInput)
+	teamUpdated, internalErr := teamRef.teamService.UpdateTeamMember(ct, teamMember.TeamID, updateInput)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
@@ -802,7 +818,7 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	assert.NotEqual(t, teamUpdated.UpdatedAt, teamMember.UpdatedAt)
 
 	// verify in-memory DB
-	teamMemberInMemory, internalErr := teamService.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
+	teamMemberInMemory, internalErr := teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
