@@ -29,8 +29,8 @@ const (
 type pullRequestState string
 
 const (
-	openPullRequestState   pullRequestState = "open"
-	closedPullRequestState                  = "closed"
+	OpenPullRequestState   pullRequestState = "open"
+	ClosedPullRequestState pullRequestState = "closed"
 )
 
 type pullRequest struct {
