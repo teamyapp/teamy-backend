@@ -656,7 +656,6 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 	getAwaitForTasksResponse, rpcErr := a.teamyClientRegistry.TaskClient().GetAwaitForTasks(ct, getAwaitForTasksRequest)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -667,7 +666,6 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 			})
 			if rpcErr != nil {
 				internalErr := errs.FromGRPCErr(rpcErr)
-				a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return internalErr
 			}
 		}
