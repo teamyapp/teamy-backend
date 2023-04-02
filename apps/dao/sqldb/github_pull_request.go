@@ -45,24 +45,14 @@ func (g GithubPullRequest) FindPullRequestByGithubNodeID(
 			&pullRequest.OrganizationID,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(fmt.Sprintf(
-				"GithubPullRequest not found: githubNodeID=%v",
-				githubNodeID)),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubPullRequest{}, internalErr
-	}
-
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubPullRequest{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"GithubPullRequest not found: githubNodeID=%v",
+				githubNodeID))
 		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubPullRequest{}, internalErr
+
+		return entity.GithubPullRequest{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return pullRequest, nil
@@ -93,12 +83,7 @@ func (g GithubPullRequest) CreatePullRequest(
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -123,12 +108,7 @@ func (g GithubPullRequest) UpdatePullRequest(ct context.Context, pullRequest ent
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -145,12 +125,7 @@ func (g GithubPullRequest) DeletePullRequestByInternalTaskID(
 		internalTaskID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -167,12 +142,7 @@ func (g GithubPullRequest) DeletePullRequestByGithubNodeID(
 		githubNodeID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -191,12 +161,7 @@ func (g GithubPullRequest) FindAllPullRequests(ct context.Context) ([]entity.Git
 	FROM apps_github_pull_request;`,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -215,17 +180,7 @@ func (g GithubPullRequest) FindAllPullRequests(ct context.Context) ([]entity.Git
 			&pullRequest.OrganizationID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			g.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		pullRequests = append(pullRequests, pullRequest)

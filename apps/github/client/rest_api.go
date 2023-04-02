@@ -27,7 +27,6 @@ func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Instal
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		internalErr := errs.NewError(errs.Unknown, err.Error())
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Organization{}, internalErr
 	}
 
@@ -44,7 +43,6 @@ func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Instal
 	res, err := r.httpClient.Do(req)
 	if err != nil {
 		internalErr = errs.NewError(errs.Unknown, err.Error())
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Organization{}, internalErr
 	}
 
@@ -59,7 +57,6 @@ func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Instal
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
 		internalErr = errs.NewError(errs.IO, err.Error())
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Organization{}, internalErr
 	}
 
@@ -67,7 +64,6 @@ func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Instal
 	err = json.Unmarshal(buf, &body)
 	if err != nil {
 		internalErr = errs.NewError(errs.Deserialization, err.Error())
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return entity.Organization{}, internalErr
 	}
 

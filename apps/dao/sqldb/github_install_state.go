@@ -41,23 +41,13 @@ func (g GithubAppInstallState) FindStateByID(
 			&state.CreatedAt,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"GithubAppInstallState not found: stateID=%v", stateID),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubAppInstallState{}, internalErr
-	}
-
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubAppInstallState{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"GithubAppInstallState not found: stateID=%v", stateID))
 		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubAppInstallState{}, internalErr
+
+		return entity.GithubAppInstallState{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return state, nil
@@ -84,12 +74,7 @@ func (g GithubAppInstallState) CreateState(
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -103,12 +88,7 @@ func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) *
 		stateID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

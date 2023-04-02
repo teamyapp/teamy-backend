@@ -31,10 +31,7 @@ type GithubGraphQLError struct {
 }
 
 func (e *GithubGraphQLError) internalErr() *errs.Error {
-	return &errs.Error{
-		Code:    errs.Unknown,
-		Message: fmt.Sprintf("%+v", e),
-	}
+	return errs.NewError(errs.Unknown, fmt.Sprintf("%+v", e))
 }
 
 type Location struct {
@@ -127,7 +124,6 @@ func (g GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation *Ins
 	var res gql.GraphQLResponse[Node[PullRequestNode], GithubGraphQLError]
 	err := g.query(ct, installation, queryOptions, &res)
 	if err != nil {
-		g.dataCollector.Logger.ErrorWithContext(ct, err)
 		return PullRequestNode{}, err
 	}
 
@@ -136,7 +132,6 @@ func (g GraphQLAPI) GetPullRequestByNodeID(ct context.Context, installation *Ins
 			return err.internalErr()
 		})
 		mergedInternalErrs := errs.MergeErrs(internalErrs)
-		g.dataCollector.Logger.ErrorWithContext(ct, mergedInternalErrs)
 		return PullRequestNode{}, mergedInternalErrs
 	}
 
@@ -166,7 +161,6 @@ func (g GraphQLAPI) UpdatePullRequest(ct context.Context, installation *Installa
 	var res gql.GraphQLResponse[Node[GqlMutationRes], GithubGraphQLError]
 	err := g.mutate(ct, installation, mutationOptions, &res)
 	if err != nil {
-		g.dataCollector.Logger.ErrorWithContext(ct, err)
 		return PullRequestNode{}, err
 	}
 
@@ -175,7 +169,6 @@ func (g GraphQLAPI) UpdatePullRequest(ct context.Context, installation *Installa
 			return err.internalErr()
 		})
 		mergedInternalErrs := errs.MergeErrs(internalErrs)
-		g.dataCollector.Logger.ErrorWithContext(ct, mergedInternalErrs)
 		return PullRequestNode{}, mergedInternalErrs
 	}
 
@@ -190,7 +183,6 @@ func (g GraphQLAPI) query(
 ) *errs.Error {
 	accessToken, err := installation.GetOrRefreshAccessToken(ct)
 	if err != nil {
-		g.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -206,7 +198,6 @@ func (g *GraphQLAPI) mutate(
 ) *errs.Error {
 	accessToken, err := installation.GetOrRefreshAccessToken(ct)
 	if err != nil {
-		g.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 

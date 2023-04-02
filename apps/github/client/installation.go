@@ -30,19 +30,13 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 
 	appJWT, internalErr := i.app.getOrRefreshAppJWT(ct)
 	if internalErr != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return "", internalErr
 	}
 
 	githubAppAccessTokenURL := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", i.id)
 	req, err := http.NewRequest("POST", githubAppAccessTokenURL, nil)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.Unknown, err.Error())
 	}
 
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -53,41 +47,23 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.Unknown, err.Error())
 	}
 
 	switch res.StatusCode {
 	case http.StatusUnauthorized:
-		return "", &errs.Error{
-			Code: errs.Unauthenticated,
-		}
+		return "", errs.NewError(errs.Unauthenticated, "unauthorized")
 	case http.StatusForbidden:
-		return "", &errs.Error{
-			Code: errs.PermissionDenied,
-		}
+		return "", errs.NewError(errs.PermissionDenied, "forbidden")
 	case http.StatusNotFound:
-		return "", &errs.Error{
-			Code: errs.NotFound,
-		}
+		return "", errs.NewError(errs.NotFound, "not found")
 	case http.StatusUnprocessableEntity:
-		return "", &errs.Error{
-			Code: errs.Unknown,
-		}
+		return "", errs.NewError(errs.Unknown, "unprocessable entity")
 	}
 
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.IO,
-			EmbedErr: err,
-		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.IO, err.Error())
 	}
 
 	// GitHub's authentication token format:
@@ -109,12 +85,7 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 	}
 	err = json.Unmarshal(buf, &body)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.Deserialization,
-			EmbedErr: err,
-		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.Deserialization, err.Error())
 	}
 
 	i.accessToken = &body.Token
