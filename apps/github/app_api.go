@@ -582,6 +582,9 @@ func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt githubEntit
 
 	for _, prTaskRelation := range prTaskRelations {
 		a.moveTaskToDelivered(ct, prTaskRelation.InternalTaskID)
+		if prTaskRelation.AutomaticTracking {
+			a.deleteNonDeliveredWaitForTasks(ct, prTaskRelation.InternalTaskID)
+		}
 	}
 
 	return nil
@@ -611,6 +614,10 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 	if len(prTaskRelations) > 0 {
 		body := prEvt.PullRequest.Body
 		for _, prTaskRelation := range prTaskRelations {
+			if prTaskRelation.AutomaticTracking {
+				a.deleteNonDeliveredWaitForTasks(ct, prTaskRelation.InternalTaskID)
+			}
+
 			err := a.RemovePullRequestTaskRelationAndCleanup(ct, prTaskRelation)
 			if err != nil {
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
@@ -635,6 +642,34 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 		if err != nil {
 			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskID uint64) *errs.Error {
+	getAwaitForTasksRequest := &proto.GetAwaitForTasksRequest{
+		AwaitingTaskId: awaitingTaskID,
+	}
+
+	getAwaitForTasksResponse, rpcErr := a.teamyClientRegistry.TaskClient().GetAwaitForTasks(ct, getAwaitForTasksRequest)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		return internalErr
+	}
+
+	for _, awaitForTask := range getAwaitForTasksResponse.Tasks {
+		if awaitForTask.Status != proto.TaskStatus_Delivered {
+			_, rpcErr = a.teamyClientRegistry.TaskClient().DeleteTask(ct, &proto.DeleteTaskRequest{
+				TaskId: awaitForTask.TaskId,
+			})
+			if rpcErr != nil {
+				internalErr := errs.FromGRPCErr(rpcErr)
+				a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+				return internalErr
+			}
 		}
 	}
 

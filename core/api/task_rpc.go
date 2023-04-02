@@ -4,10 +4,12 @@ import (
 	"context"
 	_ "embed"
 
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -51,6 +53,33 @@ func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.
 		CreatorUserId:   task.CreatorUserID,
 		CommentThreadId: task.CommentsThreadID,
 	}, nil
+}
+
+func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *proto.GetAwaitForTasksRequest) (*proto.GetAwaitForTasksResponse, error) {
+	tasks, err := t.taskService.FindAwaitForTasks(ct, req.AwaitingTaskId)
+	if err != nil {
+		t.dataCollector.Logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	taskMsgs := collect.Map(tasks, func(task entity.Task, _ int) *proto.TaskMsg {
+		return &proto.TaskMsg{
+			TaskId:          task.ID,
+			Goal:            task.Goal,
+			Context:         task.Context,
+			Effort:          toProtoDurationPtr(task.Effort),
+			DueAt:           toProtoTimePtr(task.DueAt),
+			Status:          protoTaskStatuses[task.Status],
+			CreatedAt:       timestamppb.New(task.CreatedAt),
+			UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
+			OwnerUserId:     task.OwnerUserID,
+			OwningTeamId:    task.OwningTeamID,
+			CreatorUserId:   task.CreatorUserID,
+			CommentThreadId: task.CommentsThreadID,
+		}
+	})
+
+	return &proto.GetAwaitForTasksResponse{Tasks: taskMsgs}, nil
 }
 
 func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*proto.CreateTaskResponse, error) {
