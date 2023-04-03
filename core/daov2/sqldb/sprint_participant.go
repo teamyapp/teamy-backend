@@ -69,17 +69,11 @@ func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context
 `,
 		sprintID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	participantUserIDs := make([]uint64, 0)
 	for rows.Next() {
 		var participantUserID uint64
@@ -87,23 +81,13 @@ func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context
 			&participantUserID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		participantUserIDs = append(participantUserIDs, participantUserID)
 	}
 
-	return participantUserIDs, internalErr
+	return participantUserIDs, nil
 }
 
 func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
@@ -121,17 +105,11 @@ func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, 
 `,
 		sprintID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	sprintParticipants := make([]entity.SprintParticipant, 0)
 	for rows.Next() {
 		sprintParticipant := entity.SprintParticipant{}
@@ -144,23 +122,13 @@ func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, 
 			&sprintParticipant.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprintParticipants = append(sprintParticipants, sprintParticipant)
 	}
 
-	return sprintParticipants, internalErr
+	return sprintParticipants, nil
 }
 
 func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
@@ -188,22 +156,12 @@ func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transac
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"participant not found: sprintID=%v, participantUserID=%v", sprintID, participantUserID),
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return entity.SprintParticipant{}, internalErr
+		return entity.SprintParticipant{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+			"participant not found: sprintID=%v, participantUserID=%v", sprintID, participantUserID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return entity.SprintParticipant{}, internalErr
+		return entity.SprintParticipant{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return participant, nil
@@ -230,12 +188,7 @@ func (s SprintParticipant) CreateSprintParticipant(ct context.Context, tx *trans
 		participant.UpdatedAt,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -263,12 +216,7 @@ func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, tx *trans
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -282,12 +230,7 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 		sprintID,
 		userID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

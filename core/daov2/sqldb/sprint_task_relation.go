@@ -26,17 +26,11 @@ func (s SprintTaskRelation) FindTaskIDsBySprintIDWithTx(ct context.Context, tx *
 `,
 		sprintID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	taskIDs := make([]uint64, 0)
 	for rows.Next() {
 		var taskID uint64
@@ -44,23 +38,13 @@ func (s SprintTaskRelation) FindTaskIDsBySprintIDWithTx(ct context.Context, tx *
 			&taskID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		taskIDs = append(taskIDs, taskID)
 	}
 
-	return taskIDs, internalErr
+	return taskIDs, nil
 }
 
 func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
@@ -73,17 +57,11 @@ func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *
 `,
 		taskID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	sprintIDs := make([]uint64, 0)
 	for rows.Next() {
 		var sprintID uint64
@@ -91,23 +69,13 @@ func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *
 			&sprintID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprintIDs = append(sprintIDs, sprintID)
 	}
 
-	return sprintIDs, internalErr
+	return sprintIDs, nil
 }
 
 func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *transaction.Transaction, relation entity.SprintTaskRelation) *errs.Error {
@@ -125,12 +93,7 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *tra
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -145,12 +108,7 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, tx *tra
 		taskID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

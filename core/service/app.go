@@ -61,7 +61,6 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 		if filter.AppID != nil {
 			app, err := a.appDao.FindAppByID(ct, *filter.AppID)
 			if err != nil {
-				a.logger.ErrorWithContext(ct, err)
 				return nil, err
 			}
 
@@ -70,22 +69,27 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 			var err *errs.Error
 			apps, err = a.appDao.FindAllApps(ct)
 			if err != nil {
-				a.logger.ErrorWithContext(ct, err)
 				return nil, err
 			}
 		}
 
+		var err *errs.Error
 		if filter.TeamID != nil {
 			// find all apps that are visible to the team
 			apps = collect.Filter(apps, func(app entity.App) bool {
-				return a.isAppVisibleToTeam(ct, app, *filter.TeamID)
+				var visible bool
+				visible, err = a.isAppVisibleToTeam(ct, app, *filter.TeamID)
+				return visible
 			})
+		}
+
+		if err != nil {
+			return nil, err
 		}
 	} else {
 		var err *errs.Error
 		apps, err = a.appDao.FindAllApps(ct)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 	}
@@ -112,7 +116,6 @@ func (a App) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uin
 func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versionNumber int32) ([]entity.Team, *errs.Error) {
 	appVersionVisibleTeams, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -121,7 +124,6 @@ func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versio
 	})
 	teams, err := a.teamDao.FindTeamsByIDs(ct, teamIDs)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -131,28 +133,19 @@ func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versio
 func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.App{}, internalErr
+		return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	genAppIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "appID"}
 	genAppIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppIDReq)
 	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.App{}, internalErr
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
 	}
 
 	genAppSecretReq := &proto.GenerateUniqueStringRequest{SequenceName: "apiSecret"}
 	genAppSecretRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueString(ct, genAppSecretReq)
 	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.App{}, internalErr
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
 	}
 
 	app := entity.App{
@@ -166,14 +159,12 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 	}
 	err := a.appDao.CreateApp(ct, app)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = a.authorizer.registerResource(ct, authorization.AppResourceType, app.ID)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 
@@ -197,14 +188,13 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 			})
 		}
 
-		_, err := a.authorizer.createUserGroupAndAssignPermissions(ct,
+		_, err = a.authorizer.createUserGroupAndAssignPermissions(ct,
 			userID,
 			appAdminUserGroupName,
 			&appAdminDescription,
 			appAdminOperations,
 		)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 
@@ -226,7 +216,6 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 			appMemberOperations,
 		)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 	}
@@ -238,34 +227,22 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.App{}, internalErr
+			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewUpdateAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.App{}, internalErr
+			return entity.App{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("authorization query: %v", query))
 		}
 	}
 
 	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -278,30 +255,19 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 	if input.ActiveVersionNumber != nil {
 		if app.ActiveVersionNumber != nil {
 			if *app.ActiveVersionNumber > *input.ActiveVersionNumber {
-				internalErr := &errs.Error{
-					Code: errs.InvalidOperation,
-					Message: fmt.Sprintf(
-						"Cannot rollback app version: appID=%v, prevAppVesion=%v newAppVersion=%v", appID, *app.ActiveVersionNumber, *input.ActiveVersionNumber),
-				}
-				a.logger.ErrorWithContext(ct, internalErr)
-				return entity.App{}, internalErr
+				return entity.App{}, errs.NewError(errs.InvalidOperation, fmt.Sprintf(
+					"Cannot rollback app version: appID=%v, prevAppVesion=%v newAppVersion=%v", appID, *app.ActiveVersionNumber, *input.ActiveVersionNumber))
 			}
 
 			if *app.ActiveVersionNumber < *input.ActiveVersionNumber {
 				appVersion, internalErr := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, *input.ActiveVersionNumber)
 				if internalErr != nil {
-					a.logger.ErrorWithContext(ct, internalErr)
 					return entity.App{}, internalErr
 				}
 
 				if !appVersion.IsPublic {
-					internalErr = &errs.Error{
-						Code: errs.InvalidOperation,
-						Message: fmt.Sprintf(
-							"Cannot activate a non-public app version: appID=%v, appVersion=%v", appID, *input.ActiveVersionNumber),
-					}
-					a.logger.ErrorWithContext(ct, internalErr)
-					return entity.App{}, internalErr
+					return entity.App{}, errs.NewError(errs.InvalidOperation, fmt.Sprintf(
+						"Cannot activate a non-public app version: appID=%v, appVersion=%v", appID, *input.ActiveVersionNumber))
 				}
 
 				// roll forward app installation automatically
@@ -316,7 +282,6 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 	app.UpdatedAt = &now
 	err = a.appDao.UpdateApp(ct, app)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -327,49 +292,34 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.App{}, internalErr
+			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewRefreshAppSecretQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.App{}, internalErr
+			return entity.App{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("authorization query: %v", query))
 		}
 	}
 
 	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
 	genAppSecretReq := &proto.GenerateUniqueStringRequest{SequenceName: "apiSecret"}
 	genAppSecretRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueString(ct, genAppSecretReq)
 	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.App{}, internalErr
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
 	}
 
 	app.APISecret = genAppSecretRes.UniqueString
 	err = a.appDao.UpdateApp(ct, app)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -380,40 +330,27 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.App{}, internalErr
+			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewDeleteAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.App{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("authorization query: %v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.App{}, internalErr
+			return entity.App{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("authorization query: %v", query))
 		}
 	}
 
 	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
 	err = a.appDao.DeleteApp(ct, appID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.App{}, err
 	}
 
@@ -425,29 +362,18 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersion, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.AppVersion{}, internalErr
+		return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
 		query := authorization.NewCreateAppVersionQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.AppVersion{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -463,7 +389,6 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 			// no version exists, start from 0
 			maxVersion = 0
 		} else {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.AppVersion{}, err
 		}
 	}
@@ -471,7 +396,6 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 	av.VersionNumber = maxVersion + 1
 	err = a.appVersionDao.CreateAppVersion(ct, av)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
@@ -482,48 +406,31 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewUpdateAppVersionQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.AppVersion{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	av, internalErr := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if internalErr != nil {
-		a.logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersion{}, internalErr
 	}
 
 	app, internalErr := a.appDao.FindAppByID(ct, appID)
 	if internalErr != nil {
-		a.logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersion{}, internalErr
 	}
 	if app.ActiveVersionNumber != nil && *app.ActiveVersionNumber == versionNumber && !input.IsPublic {
-		internalErr = &errs.Error{
-			Code:    errs.InvalidOperation,
-			Message: "cannot mark an activated version as non-public",
-		}
-		return entity.AppVersion{}, internalErr
+		return entity.AppVersion{}, errs.NewError(errs.InvalidOperation, "cannot mark an activated version as non-public")
 	}
 
 	av.HasUIExtension = input.HasUIExtension
@@ -535,7 +442,6 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 	av.UpdateAt = &now
 	internalErr = a.appVersionDao.UpdateAppVersion(ct, av)
 	if internalErr != nil {
-		a.logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersion{}, internalErr
 	}
 
@@ -546,69 +452,49 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewDeleteAppVersionQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.AppVersion{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	av, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
 	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
 	if app.ActiveVersionNumber != nil && *app.ActiveVersionNumber == versionNumber {
-		internalErr := &errs.Error{
-			Code: errs.InvalidOperation,
-			Message: fmt.Sprintf(
-				"Cannot delete active version: appID=%v", appID),
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.AppVersion{}, internalErr
+		return entity.AppVersion{}, errs.NewError(errs.InvalidOperation, fmt.Sprintf(
+			"Cannot delete active version: appID=%v", appID))
 	}
 
 	// TODO(yuhang): below operations should be atomic by wrapping in one txn. We'll implement that after adding our
 	// own transaction library.
 	err = a.appVersionDao.DeleteAppVersion(ct, appID, versionNumber)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
+		return entity.AppVersion{}, err
 	}
 
 	err = a.appTeamInstallationDao.DeleteAppTeamInstallationsByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
 	err = a.appVersionVisibleTeamDao.DeleteAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
@@ -619,28 +505,17 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewCreateAppVersionVisibleTeamQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.AppVersion{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -651,13 +526,11 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 	}
 	err := a.appVersionVisibleTeamDao.CreateAppVersionVisibleTeam(ct, av)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
 	appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
@@ -668,40 +541,27 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewDeleteAppVersionVisibleTeamQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.authorizer.logger.ErrorWithContext(ct, err)
 			return entity.AppVersion{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppVersion{}, internalErr
+			return entity.AppVersion{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	av, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeam(ct, appID, versionNumber, teamID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
 	err = a.appVersionVisibleTeamDao.DeleteAppVersionVisibleTeam(ct, appID, versionNumber, teamID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
@@ -709,14 +569,12 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 	appTeamInstallation, err := a.appTeamInstallationDao.FindAppTeamInstallationByAppIDAndTeamID(ct, appID, teamID)
 	if err != nil {
 		if err.Code != errs.NotFound {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.AppVersion{}, err
 		}
 	} else {
 		if appTeamInstallation.EnabledVersionNumber == versionNumber {
 			err = a.appTeamInstallationDao.DeleteAppTeamInstallation(ct, appID, teamID)
 			if err != nil {
-				a.logger.ErrorWithContext(ct, err)
 				return entity.AppVersion{}, err
 			}
 		}
@@ -724,7 +582,6 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 
 	appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, av.AppID, av.VersionNumber)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppVersion{}, err
 	}
 
@@ -734,35 +591,23 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint64, versionNumber int32) (entity.AppTeamInstallation, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user ID not found",
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.AppTeamInstallation{}, internalErr
+		return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	if feature.EnableAuthorization {
 		query := authorization.NewCreateAppTeamInstallationQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.AppTeamInstallation{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppTeamInstallation{}, internalErr
+			return entity.AppTeamInstallation{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	app, err := a.appDao.FindAppByID(ct, appID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
 	}
 
@@ -776,14 +621,12 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 
 	err = a.appTeamInstallationDao.CreateAppTeamInstallation(ct, ai)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
 	}
 
 	app.InstallationCount = app.InstallationCount + 1
 	err = a.appDao.UpdateApp(ct, app)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
 	}
 
@@ -794,41 +637,28 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppTeamInstallation{}, internalErr
+			return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewUpdateAppTeamInstallationQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.AppTeamInstallation{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppTeamInstallation{}, internalErr
+			return entity.AppTeamInstallation{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	ai, err := a.appTeamInstallationDao.FindAppTeamInstallationByAppIDAndTeamID(ct, appID, teamID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
 	}
 
 	ai.EnabledVersionNumber = input.EnabledVersionNumber
 	err = a.appTeamInstallationDao.UpdateAppTeamInstallation(ct, ai)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
 	}
 
@@ -839,40 +669,27 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 	if feature.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			internalErr := &errs.Error{
-				Code:    errs.Unauthenticated,
-				Message: "user ID not found",
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppTeamInstallation{}, internalErr
+			return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
 		query := authorization.NewDeleteAppTeamInstallationQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return entity.AppTeamInstallation{}, err
 		}
 
 		if !hasPermission {
-			internalErr := &errs.Error{
-				Code:    errs.PermissionDenied,
-				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
-			}
-			a.logger.ErrorWithContext(ct, internalErr)
-			return entity.AppTeamInstallation{}, internalErr
+			return entity.AppTeamInstallation{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	ai, err := a.appTeamInstallationDao.FindAppTeamInstallationByAppIDAndTeamID(ct, appID, teamID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
 	}
 
 	err = a.appTeamInstallationDao.DeleteAppTeamInstallation(ct, appID, teamID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return entity.AppTeamInstallation{}, err
 	}
 
@@ -883,7 +700,6 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 func (a App) rollForwardAppInstallations(ct context.Context, appID uint64, activeVersionNumber int32) *errs.Error {
 	appInstallations, err := a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -900,28 +716,33 @@ func (a App) rollForwardAppInstallations(ct context.Context, appID uint64, activ
 	return nil
 }
 
-func (a App) isAppVisibleToTeam(ct context.Context, app entity.App, teamID uint64) bool {
+func (a App) isAppVisibleToTeam(ct context.Context, app entity.App, teamID uint64) (bool, *errs.Error) {
 	appVersions, err := a.appVersionDao.FindAppVersionsByAppID(ct, app.ID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
-		return false
+		return false, err
 	}
 
 	appVersions = collect.Filter(appVersions, func(appVersion entity.AppVersion) bool {
-		return a.isAppVersionVisibleToTeam(ct, app, appVersion, teamID)
+		var visible bool
+		visible, err = a.isAppVersionVisibleToTeam(ct, app, appVersion, teamID)
+		return visible
 	})
 
-	if len(appVersions) > 0 {
-		return true
+	if err != nil {
+		return false, err
 	}
 
-	return false
+	if len(appVersions) > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
-func (a App) isAppVersionVisibleToTeam(ct context.Context, app entity.App, appVersion entity.AppVersion, teamID uint64) bool {
+func (a App) isAppVersionVisibleToTeam(ct context.Context, app entity.App, appVersion entity.AppVersion, teamID uint64) (bool, *errs.Error) {
 	if app.ActiveVersionNumber != nil && appVersion.VersionNumber < *app.ActiveVersionNumber {
 		// if active version has been set, we should filter all old versions
-		return false
+		return false, nil
 	}
 
 	if !appVersion.IsPublic {
@@ -929,16 +750,16 @@ func (a App) isAppVersionVisibleToTeam(ct context.Context, app entity.App, appVe
 		_, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeam(ct, app.ID, appVersion.VersionNumber, teamID)
 		if err != nil {
 			if err.Code != errs.NotFound {
-				a.logger.ErrorWithContext(ct, err)
+				return false, err
 			}
 
-			return false
+			return false, nil
 		}
 
-		return true
+		return true, nil
 	}
 
-	return true
+	return true, nil
 }
 
 func NewApp(

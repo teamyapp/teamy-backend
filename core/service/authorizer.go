@@ -26,7 +26,6 @@ func (a Authorizer) hasPermission(ct context.Context, query authorization.Query)
 	hasPermissionRes, err := a.cloudClientRegistry.AuthorizationClient().HasPermission(ct, hasPermissionReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
-		a.logger.ErrorWithContext(ct, internalErr)
 		return false, internalErr
 	}
 
@@ -41,7 +40,6 @@ func (a Authorizer) registerResource(ct context.Context, resourceType authorizat
 	_, err := a.cloudClientRegistry.AuthorizationClient().RegisterResource(ct, registerResourceReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
-		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -63,7 +61,6 @@ func (a Authorizer) assignParentResource(
 	_, err := a.cloudClientRegistry.AuthorizationClient().AssignParentResource(ct, assignParentResourceReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
-		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -78,7 +75,6 @@ func (a Authorizer) addMemberToUserGroup(ct context.Context, userGroupID uint64,
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddUserGroupMember(ct, addUserGroupMemberReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
-		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -94,14 +90,12 @@ func (a Authorizer) createUserGroup(ct context.Context, creatorUserID uint64, us
 	createUserGroupRes, err := a.cloudClientRegistry.AuthorizationClient().CreateUserGroup(ct, createUserGroupReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
-		a.logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
 	// add the group creator to the newly created userGroup
 	internalErr := a.addMemberToUserGroup(ct, createUserGroupRes.UserGroup.GroupId, creatorUserID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -123,7 +117,6 @@ func (a Authorizer) assignPermission(
 	_, err := a.cloudClientRegistry.AuthorizationClient().AddPermission(ct, addPermissionReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
-		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -139,7 +132,6 @@ func (a Authorizer) assignUserGroupPermissions(
 	for _, resourceOperation := range resourceOperations {
 		err := a.assignPermission(ct, resourceOperation, groupID)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -156,13 +148,11 @@ func (a Authorizer) createUserGroupAndAssignPermissions(
 ) (uint64, *errs.Error) {
 	userGroupID, err := a.createUserGroup(ct, creatorUserID, userGroupName, description)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return 0, err
 	}
 
 	err = a.assignUserGroupPermissions(ct, resourceOperations, userGroupID)
 	if err != nil {
-		a.logger.ErrorWithContext(ct, err)
 		return 0, err
 	}
 

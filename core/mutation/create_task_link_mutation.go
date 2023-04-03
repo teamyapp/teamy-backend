@@ -31,7 +31,6 @@ func (c *CreateTaskLinkMutation) GetID() uint64 {
 func (c *CreateTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.taskLinkDaoV2.CreateTaskLink(ct, tx, c.taskLink)
 	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -59,7 +58,6 @@ func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *
 	var internalErr *errs.Error
 	c.clientNotifiers, internalErr = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 	if internalErr != nil {
-		c.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

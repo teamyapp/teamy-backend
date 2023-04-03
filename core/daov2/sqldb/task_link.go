@@ -120,7 +120,6 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transact
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	taskLinks := make([]entity.TaskLink, 0)
 	for rows.Next() {
 		taskLink := entity.TaskLink{}
@@ -135,17 +134,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transact
 			&taskLink.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		taskLinks = append(taskLinks, taskLink)

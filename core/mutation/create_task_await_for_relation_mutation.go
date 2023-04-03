@@ -34,7 +34,6 @@ func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
 func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.taskAwaitForRelationDaoV2.CreateRelation(ct, tx, c.taskAwaitForRelation)
 	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -53,7 +52,6 @@ func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 
 	c.clientNotifiers, err = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 

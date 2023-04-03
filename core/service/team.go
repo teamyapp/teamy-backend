@@ -345,7 +345,6 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 		var internalErr *errs.Error
 		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
-			t.logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 

@@ -55,17 +55,11 @@ func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transactio
 `
 	rows, err := tx.SQLTx().Query(statement, int64(userID))
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	teamIDs := make([]uint64, 0)
 	for rows.Next() {
 		var teamID uint64
@@ -73,23 +67,13 @@ func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transactio
 			&teamID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teamIDs = append(teamIDs, teamID)
 	}
 
-	return teamIDs, internalErr
+	return teamIDs, nil
 }
 
 func (t TeamMember) FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error) {
@@ -101,17 +85,11 @@ func (t TeamMember) FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *tran
 `
 	rows, err := tx.SQLTx().Query(statement, int64(teamID))
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	teamMemberIDs := make([]uint64, 0)
 	for rows.Next() {
 		var teamMemberID uint64
@@ -119,23 +97,13 @@ func (t TeamMember) FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *tran
 			&teamMemberID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teamMemberIDs = append(teamMemberIDs, teamMemberID)
 	}
 
-	return teamMemberIDs, internalErr
+	return teamMemberIDs, nil
 }
 
 func (t TeamMember) FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error) {
@@ -150,16 +118,10 @@ func (t TeamMember) FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transa
 	WHERE team_id = $1;
 `, teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
-	var internalErr *errs.Error
 	teamMembers := make([]entity.TeamMember, 0)
 	for rows.Next() {
 		var teamMember entity.TeamMember
@@ -171,23 +133,13 @@ func (t TeamMember) FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transa
 			&teamMember.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teamMembers = append(teamMembers, teamMember)
 	}
 
-	return teamMembers, internalErr
+	return teamMembers, nil
 }
 
 func (t TeamMember) FindTeamMemberWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
@@ -214,22 +166,12 @@ func (t TeamMember) FindTeamMemberWithTx(ct context.Context, tx *transaction.Tra
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"team member not found: teamID=%v, userID=%v", teamID, userID),
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamMember{}, internalErr
+		return entity.TeamMember{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+			"team member not found: teamID=%v, userID=%v", teamID, userID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamMember{}, internalErr
+		return entity.TeamMember{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return teamMember, nil
@@ -254,12 +196,7 @@ func (t TeamMember) CreateTeamMember(ct context.Context, tx *transaction.Transac
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -279,12 +216,7 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, tx *transaction.Transac
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -298,12 +230,7 @@ func (t TeamMember) DeleteTeamMember(ct context.Context, tx *transaction.Transac
 		teamID, userID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

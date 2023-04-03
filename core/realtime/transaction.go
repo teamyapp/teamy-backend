@@ -174,7 +174,6 @@ func (t *Transaction) Notify(ct context.Context) *errs.Error {
 	for _, mutation := range t.mutations {
 		err := mutation.CleanUp(ct)
 		if err != nil {
-			t.logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
