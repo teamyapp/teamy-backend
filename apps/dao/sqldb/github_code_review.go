@@ -45,24 +45,16 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 			&codeReview.Round,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"GithubCodeReview not found: githubReviewerID=%v",
-				githubReviewerID),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubCodeReview{}, internalErr
-	}
-
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubCodeReview{}, errs.NewError(
+			    errs.NotFound, 
+			    fmt.Sprintf(
+				"GithubCodeReview not found: githubReviewerID=%v",
+				githubReviewerID))
 		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubCodeReview{}, internalErr
+
+		return entity.GithubCodeReview{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return codeReview, nil
@@ -91,24 +83,17 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
 			&codeReview.InternalAddressFeedbackTaskID,
 			&codeReview.Round,
 		)
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"GithubCodeReview not found: internalTaskID=%v",
-				internalTaskID),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubCodeReview{}, internalErr
-	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubCodeReview{}, errs.NewError(
+			    errs.NotFound, 
+			    fmt.Sprintf(
+				"GithubCodeReview not found: internalTaskID=%v",
+				internalTaskID))
 		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubCodeReview{}, internalErr
+
+		return entity.GithubCodeReview{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return codeReview, nil
@@ -137,12 +122,7 @@ func (g GithubCodeReview) CreateCodeReview(
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -171,12 +151,7 @@ func (g GithubCodeReview) UpdateCodeReview(
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -192,12 +167,7 @@ func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(
 		`,
 		internalTaskID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -213,12 +183,7 @@ func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(
 		`,
 		githubReviewerID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

@@ -38,12 +38,7 @@ func (g GithubAppInstallation) CreateGithubAppInstallation(
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -57,22 +52,14 @@ func (g GithubAppInstallation) FindInstallationIDByTeamID(ct context.Context, te
 		WHERE team_id = $1;`,
 		teamID).
 		Scan(&installationID)
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("installation not found: teamID=%d", teamID),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
-	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"installation not found: teamID=%d", teamID))
 		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+
+		return 0, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return installationID, nil
@@ -98,23 +85,13 @@ func (g GithubAppInstallation) FindInstallationByID(
 			&installation.CreatedAt,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"GithubAppInstallation not found: id=%v", installationID),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubAppInstallation{}, internalErr
-	}
-
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubAppInstallation{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"GithubAppInstallation not found: id=%v", installationID))
 		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubAppInstallation{}, internalErr
+
+		return entity.GithubAppInstallation{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return installation, nil
@@ -137,23 +114,13 @@ func (g GithubAppInstallation) FindInstallationByTeamID(ct context.Context, team
 			&installation.CreatedAt,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"GithubAppInstallation not found: teamId=%v", teamID),
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubAppInstallation{}, internalErr
-	}
-
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubAppInstallation{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"GithubAppInstallation not found: teamId=%v", teamID))
 		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return entity.GithubAppInstallation{}, internalErr
+
+		return entity.GithubAppInstallation{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return installation, nil

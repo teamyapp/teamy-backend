@@ -57,34 +57,19 @@ func (g *GithubApp) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error)
 
 	buf, err := json.Marshal(payload)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Serialization,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.Deserialization, err.Error())
 	}
 
 	payloadMap := make(map[string]interface{})
 	err = json.Unmarshal(buf, &payloadMap)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Deserialization,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.Deserialization, err.Error())
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(payloadMap))
 	signedStr, err := jwtToken.SignedString(g.appPrivateKey)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		g.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.Unknown, err.Error())
 	}
 
 	g.jwt = &signedStr
@@ -96,12 +81,7 @@ func (g *GithubApp) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error)
 func NewGithubApp(dataCollector telemetry.DataCollector, appID string, privateKeyPEM []byte) (*GithubApp, error) {
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyPEM)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: err,
-		}
-		dataCollector.Logger.Error(internalErr)
-		return nil, internalErr.ToError()
+		return nil, errs.NewError(errs.InvalidArgument, err.Error()).ToError()
 	}
 
 	return &GithubApp{

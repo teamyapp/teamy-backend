@@ -108,11 +108,7 @@ func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
 	teamIDRaw := chi.URLParam(request, teamIDParam)
 	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: err,
-			Message:  "must provide teamId",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -121,11 +117,7 @@ func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
 	query := request.URL.Query()
 	redirectURL := query.Get("redirectUrl")
 	if len(redirectURL) == 0 {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: err,
-			Message:  "must provide redirectUrl",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide redirectUrl")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -169,11 +161,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	stateIDParam := query.Get("state")
 	stateID, err := strconv.ParseUint(stateIDParam, 10, 64)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: err,
-			Message:  "fail to parse state ID",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "fail to parse state ID")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -181,11 +169,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 
 	rawInstallationID := query.Get("installation_id")
 	if len(rawInstallationID) == 0 {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: err,
-			Message:  "must provide installation_id",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide installation_id")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -193,11 +177,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 
 	installationID64, err := strconv.ParseInt(rawInstallationID, 10, 32)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: err,
-			Message:  "installation_id must be int",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "installation_id must be int")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -214,10 +194,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	expireAt := state.CreatedAt.Add(a.config.InstallationValidDuration)
 	now := time.Now().UTC()
 	if expireAt.Before(now) {
-		internalErr = &errs.Error{
-			Code:    errs.InvalidOperation,
-			Message: "install app session expired",
-		}
+		internalErr := errs.NewError(errs.InvalidOperation, "install app session expired")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -253,20 +230,14 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 	bodySignatureHeader := request.Header.Get("X-Hub-Signature-256")
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
-		internalErr := &errs.Error{
-			Code:    errs.InvalidArgument,
-			Message: "signature header must have 2 parts",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "signature header must have 2 parts")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	if bodySignatureHeaderParts[0] != "sha256" {
-		internalErr := &errs.Error{
-			Code:    errs.InvalidArgument,
-			Message: "signature header must start with sha256",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "signature header must start with sha256")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -274,11 +245,7 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 
 	buf, err := io.ReadAll(request.Body)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.IO,
-			EmbedErr: err,
-			Message:  "fail to read request payload",
-		}
+		internalErr := errs.NewError(errs.IO, "fail to read request payload")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -286,20 +253,14 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 
 	signature, err := hex.DecodeString(bodySignatureHeaderParts[1])
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:    errs.Unknown,
-			Message: "fail to decode request body signature",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "fail to decode request body signature")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	if !validateHMACSignature(buf, []byte(a.config.WebhookSecret), signature) {
-		internalErr := &errs.Error{
-			Code:    errs.InvalidArgument,
-			Message: fmt.Sprintf("invalid request body signature: signature=%v", bodySignatureHeaderParts[1]),
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, fmt.Sprintf("invalid request body signature: signature=%v", bodySignatureHeaderParts[1]))
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -321,10 +282,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	ct := request.Context()
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user id not found",
-		}
+		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -333,10 +291,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	teamIDRaw := chi.URLParam(request, teamIDParam)
 	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:    errs.InvalidArgument,
-			Message: "must provide teamId",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -368,10 +323,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	ct := request.Context()
 	requestSenderID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		internalErr := &errs.Error{
-			Code:    errs.Unauthenticated,
-			Message: "user id not found",
-		}
+		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -380,10 +332,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	teamIDRaw := chi.URLParam(request, teamIDParam)
 	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:    errs.InvalidArgument,
-			Message: "must provide teamId",
-		}
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -395,9 +344,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	}{}
 	buf, err := io.ReadAll(request.Body)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code: errs.IO,
-		}
+		internalErr := errs.NewError(errs.IO, err.Error())
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -405,9 +352,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 
 	err = json.Unmarshal(buf, &body)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code: errs.Deserialization,
-		}
+		internalErr := errs.NewError(errs.Deserialization, err.Error())
 		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
@@ -456,7 +401,6 @@ func (a AppAPI) refreshRequiredActionsStatus(
 
 		refreshedRequiredAction, err := a.refreshRequiredActionStatus(ct, userID, requiredAction)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 
@@ -477,7 +421,6 @@ func (a AppAPI) refreshRequiredActionStatus(
 		listUserLinksRes, err := a.cloudClientRegistry.IdentityClient().ListUserLinks(ct, listUserLinksReq)
 		if err != nil {
 			internalErr := errs.FromGRPCErr(err)
-			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.GithubRequiredUserAction{}, internalErr
 		}
 
@@ -491,7 +434,6 @@ func (a AppAPI) refreshRequiredActionStatus(
 		requiredAction.IsCompleted = true
 		internalErr := a.githubRequiredUserActionDao.UpdateRequiredUserAction(ct, requiredAction)
 		if internalErr != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return entity.GithubRequiredUserAction{}, internalErr
 		}
 	}
@@ -503,16 +445,12 @@ func (a AppAPI) processEvent(ct context.Context, evtType githubEntity.EventType,
 	var evt githubEntity.Event
 	err := json.Unmarshal(payload, &evt)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code: errs.Deserialization,
-		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		internalErr := errs.NewError(errs.Deserialization, err.Error())
 		return internalErr
 	}
 
 	ins, internalErr := a.githubAppInstallationDao.FindInstallationByID(ct, evt.Installation.ID)
-	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+	if internalErr != nil {
 		return internalErr
 	}
 
@@ -530,24 +468,14 @@ func (a AppAPI) processEvent(ct context.Context, evtType githubEntity.EventType,
 
 func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt githubEntity.Event, payload []byte) *errs.Error {
 	if evt.Sender.Type == githubEntity.OrganizationAccountType {
-		internalErr := &errs.Error{
-			Code:    errs.InvalidArgument,
-			Message: fmt.Sprintf("unsupported sender type: senderType=%v", evt.Sender.Type),
-		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.InvalidArgument, fmt.Sprintf("unsupported sender type: senderType=%v", evt.Sender.Type))
 	}
 
 	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
 	var prEvt githubEntity.PullRequestEvent
 	err := json.Unmarshal(payload, &prEvt)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Deserialization,
-			EmbedErr: err,
-		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Deserialization, err.Error())
 	}
 
 	switch prEvt.Action {
@@ -576,7 +504,6 @@ func (a AppAPI) processPullRequestEvent(ct context.Context, teamID uint64, evt g
 func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -597,7 +524,6 @@ func (a AppAPI) moveTaskToDelivered(ct context.Context, taskID uint64) *errs.Err
 	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -607,7 +533,6 @@ func (a AppAPI) moveTaskToDelivered(ct context.Context, taskID uint64) *errs.Err
 func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -620,7 +545,6 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 
 			err := a.RemovePullRequestTaskRelationAndCleanup(ct, prTaskRelation)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -629,7 +553,6 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 
 		githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -640,7 +563,6 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 			Body:          &body,
 		})
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -680,11 +602,7 @@ func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[
 	for _, matches := range allMatches {
 		taskID, err := strconv.ParseUint(string(matches[1]), 10, 64)
 		if err != nil {
-			internalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-			return nil, internalErr
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		getTaskReq := &proto.GetTaskRequest{
@@ -713,16 +631,11 @@ func (a AppAPI) moveTaskToInProgress(ct context.Context, taskID uint64, teamID u
 	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("task moved to in progress: taskID=%v", taskID))
-	err := a.tryAddTaskToCurrentSprint(ct, teamID, taskID)
-	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
-	}
-
+	a.tryAddTaskToCurrentSprint(ct, teamID, taskID)
 	return nil
 }
 
@@ -745,7 +658,6 @@ func (a AppAPI) createPullRequestTaskRelation(
 	createTaskLinkRes, rpcErr := a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -770,9 +682,6 @@ func (a AppAPI) RemovePullRequestTaskRelationAndCleanup(ct context.Context, prTa
 		_, rpcErr := a.teamyClientRegistry.TaskClient().DeleteTask(ct, deleteTaskReq)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
 			return internalErr
 		}
 	} else {
@@ -783,16 +692,12 @@ func (a AppAPI) RemovePullRequestTaskRelationAndCleanup(ct context.Context, prTa
 		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)
-			a.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{
-				telemetry.CauseProp: internalErr,
-			})
 			return internalErr
 		}
 	}
 
 	err := a.githubPullRequestInternalTaskRelationDao.DeletePullRequestInternalTaskRelationByNodeIDAndTaskID(ct, prTaskRelation.PullRequestNodeID, prTaskRelation.InternalTaskID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -802,7 +707,6 @@ func (a AppAPI) RemovePullRequestTaskRelationAndCleanup(ct context.Context, prTa
 func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, installation *client.Installation, teamID uint64, taskID uint64) *errs.Error {
 	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByInternalTaskID(ct, taskID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -814,25 +718,21 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)
-			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
 		err = a.githubPullRequestInternalTaskRelationDao.DeletePullRequestInternalTaskRelationByNodeIDAndTaskID(ct, prTaskRelation.PullRequestNodeID, prTaskRelation.InternalTaskID)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		remainingPrTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prTaskRelation.PullRequestNodeID)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
 		pullRequestNode, err := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, installation, prTaskRelation.PullRequestNodeID)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -850,7 +750,6 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 				prTaskRelation.PullRequestNodeID,
 			)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -872,7 +771,6 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 			PullRequestID: prTaskRelation.PullRequestNodeID,
 		})
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -890,19 +788,16 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 	}
 	err := a.githubPullRequestDao.CreatePullRequest(ct, pr)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	mentionedTasks, err := a.tryGetValidMentionedTasks(ct, prEvt.PullRequest.Body)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -919,7 +814,6 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			*pr.URL,
 			pr.NodeID)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -929,20 +823,17 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			Body:          &body,
 		})
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	} else {
 		for _, task := range mentionedTasks {
 			err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, task.TaskId)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
 			err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -960,14 +851,12 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	installation := a.githubApp.GetInstallation(githubAppInstallation.ID)
 	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -978,7 +867,6 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 
 	mentionedTasks, err := a.tryGetValidMentionedTasks(ct, prEvt.PullRequest.Body)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -987,7 +875,6 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 		if !ok {
 			err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, task.TaskId)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -998,7 +885,6 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 				prEvt.PullRequest.HtmlURL,
 				prEvt.PullRequest.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -1035,7 +921,6 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			_, rpcErr := a.teamyClientRegistry.TaskClient().UpdateTask(ct, updateTaskReq)
 			if rpcErr != nil {
 				internalErr := errs.FromGRPCErr(rpcErr)
-				a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 				return internalErr
 			}
 		}
@@ -1046,7 +931,6 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 		if !ok {
 			err := a.RemovePullRequestTaskRelationAndCleanup(ct, prTaskRelation)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 		}
@@ -1064,7 +948,6 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			prEvt.PullRequest.HtmlURL,
 			prEvt.PullRequest.NodeID)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -1074,7 +957,6 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			Body:          &body,
 		})
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -1095,7 +977,6 @@ func (a AppAPI) createAutomaticTrackingTask(
 ) (*uint64, *errs.Error) {
 	prAuthorUserID, err := a.GetInternalUserID(ct, pullRequestUserNodeID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -1128,7 +1009,6 @@ func (a AppAPI) createAutomaticTrackingTask(
 		pullRequestURL,
 		pullRequestNodeID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -1142,35 +1022,23 @@ func (a AppAPI) createAutomaticTrackingTask(
 
 func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt githubEntity.Event, payload []byte) *errs.Error {
 	if evt.Sender.Type == githubEntity.OrganizationAccountType {
-		internalErr := &errs.Error{
-			Code:    errs.InvalidArgument,
-			Message: fmt.Sprintf("unsupported sender type: senderType=%v", evt.Sender.Type),
-		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.InvalidArgument, fmt.Sprintf("unsupported sender type: senderType=%v", evt.Sender.Type))
 	}
 
 	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
 	var prReviewEvt githubEntity.PullRequestReviewEvent
 	err := json.Unmarshal(payload, &prReviewEvt)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Deserialization,
-			EmbedErr: err,
-		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Deserialization, "failed to deserialize pull request review event")
 	}
 
 	codeReview, internalErr := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, prReviewEvt.PullRequest.NodeID, prReviewEvt.Review.User.NodeID)
 	if internalErr != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	internalErr = a.processGithubCodeReviewFeedback(ct, teamID, codeReview, evt, prReviewEvt)
 	if internalErr != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -1181,7 +1049,6 @@ func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64,
 	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
 	if rpcErr != nil {
 		internalErr = errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -1195,13 +1062,11 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 		case githubEntity.CommentedPullRequestReviewState, githubEntity.ChangesRequestedPullRequestReviewState:
 			prAuthorUserID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
 			prReviewerID, err := a.GetInternalUserID(ct, prReviewEvt.PullRequest.User.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -1219,7 +1084,6 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 			createTaskRes, rpcErr := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 			if rpcErr != nil {
 				err = errs.FromGRPCErr(rpcErr)
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -1230,13 +1094,11 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 				createTaskRes.TaskId))
 			pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prReviewEvt.PullRequest.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
 			prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, pr.NodeID)
 			if err != nil {
-				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				return err
 			}
 
@@ -1248,7 +1110,6 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 				_, rpcErr = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
 				if rpcErr != nil {
 					err = errs.FromGRPCErr(rpcErr)
-					a.dataCollector.Logger.ErrorWithContext(ct, err)
 					return err
 				}
 			}
@@ -1272,7 +1133,6 @@ func (a AppAPI) GetInternalUserID(ct context.Context, githubUserNodeID string) (
 	getInternalUserIdRes, rpcErr := a.cloudClientRegistry.IdentityClient().GetInternalUserId(ct, getInternalUserIdReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -1283,7 +1143,6 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 	var err *errs.Error
 	pullRequests, err := a.githubPullRequestDao.FindAllPullRequests(ct)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
@@ -1378,14 +1237,12 @@ func (a AppAPI) BackfillPullRequestLinks(ct context.Context, request *appsProto.
 func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	for _, githubReviewer := range prEvt.PullRequest.RequestedReviewers {
 		prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, pr.NodeID)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -1395,6 +1252,7 @@ func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint6
 				a.dataCollector.Logger.ErrorWithContext(ct, err)
 				continue
 			}
+
 		}
 	}
 
@@ -1412,7 +1270,6 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 ) *errs.Error {
 	codeReview, err := a.githubCodeReviewDao.FindCodeReviewByGithubReviewerID(ct, githubPullRequestNodeID, githubReviewerNodeID)
 	if err != nil && err.Code != errs.NotFound {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -1430,7 +1287,6 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 		}
 		createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerNodeID, codeReview.Round+1, evt, prEvt)
 		if err != nil {
-			a.dataCollector.Logger.ErrorWithContext(ct, err)
 			return err
 		}
 
@@ -1440,7 +1296,6 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 		_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)
-			a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -1449,7 +1304,6 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 
 	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerNodeID, 1, evt, prEvt)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -1462,7 +1316,6 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 
 	err = a.githubCodeReviewDao.CreateCodeReview(ct, codeReview)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -1472,7 +1325,6 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerNodeID string, round int, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) (uint64, *errs.Error) {
 	codeReviewerInternalUserID, err := a.GetInternalUserID(ct, githubReviewerNodeID)
 	if err != nil {
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
 		return 0, err
 	}
 
@@ -1486,7 +1338,6 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	createTaskRes, rpcErr := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -1507,7 +1358,6 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	_, rpcErr = a.teamyClientRegistry.TaskLinkClient().CreateTaskLink(ct, createTaskLinkReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -1519,7 +1369,6 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	_, rpcErr = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return 0, internalErr
 	}
 
@@ -1539,7 +1388,6 @@ func (a AppAPI) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, tas
 			return nil
 		}
 
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -1547,7 +1395,6 @@ func (a AppAPI) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, tas
 	_, rpcErr = a.teamyClientRegistry.SprintClient().AddTaskToSprint(ct, addTaskToSprintReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -1558,13 +1405,7 @@ func (a AppAPI) getInstallGithubAppURL(ct context.Context, stateID uint64) (stri
 	urlStr := fmt.Sprintf("https://github.com/apps/%s/installations/new", a.config.AppName)
 	installURL, err := url.Parse(urlStr)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-			Message:  fmt.Sprintf("fail to parse URL: url=%v", urlStr),
-		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
-		return "", internalErr
+		return "", errs.NewError(errs.Unknown, fmt.Sprintf("fail to parse URL: url=%v", urlStr))
 	}
 
 	query := url.Values{}
