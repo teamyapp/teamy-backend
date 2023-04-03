@@ -47,7 +47,9 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return entity.GithubCodeReview{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+			return entity.GithubCodeReview{}, errs.NewError(
+			    errs.NotFound, 
+			    fmt.Sprintf(
 				"GithubCodeReview not found: githubReviewerID=%v",
 				githubReviewerID))
 		}
@@ -84,7 +86,9 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return entity.GithubCodeReview{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+			return entity.GithubCodeReview{}, errs.NewError(
+			    errs.NotFound, 
+			    fmt.Sprintf(
 				"GithubCodeReview not found: internalTaskID=%v",
 				internalTaskID))
 		}
