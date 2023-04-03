@@ -109,6 +109,7 @@ func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
 	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
 		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -117,6 +118,7 @@ func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
 	redirectURL := query.Get("redirectUrl")
 	if len(redirectURL) == 0 {
 		internalErr := errs.NewError(errs.InvalidArgument, "must provide redirectUrl")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -125,6 +127,7 @@ func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
 	genStateIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(request.Context(), genStateIDReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -137,12 +140,14 @@ func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
 	}
 	internalErr := a.githubAppInstallStateDao.CreateState(ct, state)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	installURL, internalErr := a.getInstallGithubAppURL(ct, state.ID)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -157,6 +162,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	stateID, err := strconv.ParseUint(stateIDParam, 10, 64)
 	if err != nil {
 		internalErr := errs.NewError(errs.InvalidArgument, "fail to parse state ID")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -164,6 +170,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	rawInstallationID := query.Get("installation_id")
 	if len(rawInstallationID) == 0 {
 		internalErr := errs.NewError(errs.InvalidArgument, "must provide installation_id")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -171,6 +178,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	installationID64, err := strconv.ParseInt(rawInstallationID, 10, 32)
 	if err != nil {
 		internalErr := errs.NewError(errs.InvalidArgument, "installation_id must be int")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -178,6 +186,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	installationID := int(installationID64)
 	state, internalErr := a.githubAppInstallStateDao.FindStateByID(ct, stateID)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -186,6 +195,7 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	now := time.Now().UTC()
 	if expireAt.Before(now) {
 		internalErr := errs.NewError(errs.InvalidOperation, "install app session expired")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -197,12 +207,14 @@ func (a AppAPI) webFinishInstall(writer http.ResponseWriter, request *http.Reque
 	}
 	internalErr = a.githubAppInstallationDao.CreateGithubAppInstallation(ct, ins)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	internalErr = a.githubAppInstallStateDao.DeleteState(ct, stateID)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -219,12 +231,14 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 	bodySignatureHeaderParts := strings.Split(bodySignatureHeader, "=")
 	if len(bodySignatureHeaderParts) != 2 {
 		internalErr := errs.NewError(errs.InvalidArgument, "signature header must have 2 parts")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	if bodySignatureHeaderParts[0] != "sha256" {
 		internalErr := errs.NewError(errs.InvalidArgument, "signature header must start with sha256")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -232,6 +246,7 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 	buf, err := io.ReadAll(request.Body)
 	if err != nil {
 		internalErr := errs.NewError(errs.IO, "fail to read request payload")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -239,12 +254,14 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 	signature, err := hex.DecodeString(bodySignatureHeaderParts[1])
 	if err != nil {
 		internalErr := errs.NewError(errs.InvalidArgument, "fail to decode request body signature")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	if !validateHMACSignature(buf, []byte(a.config.WebhookSecret), signature) {
 		internalErr := errs.NewError(errs.InvalidArgument, fmt.Sprintf("invalid request body signature: signature=%v", bodySignatureHeaderParts[1]))
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -253,6 +270,7 @@ func (a AppAPI) webOnEventNotify(writer http.ResponseWriter, request *http.Reque
 	a.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("received event: deliveryID=%v EventType=%v", deliveryID, evtType))
 	internalErr := a.processEvent(ct, githubEntity.EventType(evtType), buf)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -265,6 +283,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -273,6 +292,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
 		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -280,6 +300,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	requiredUserActions, internalErr := a.githubRequiredUserActionDao.
 		FindRequiredUserActionsByActionUserID(ct, teamID, userID)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -287,6 +308,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	// TODO: receive notification from cloud and update required action status
 	requiredUserActions, internalErr = a.refreshRequiredActionsStatus(ct, userID, requiredUserActions)
 	if err != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -302,6 +324,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	requestSenderID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -310,6 +333,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
 	if err != nil {
 		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -321,6 +345,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	buf, err := io.ReadAll(request.Body)
 	if err != nil {
 		internalErr := errs.NewError(errs.IO, err.Error())
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -328,6 +353,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	err = json.Unmarshal(buf, &body)
 	if err != nil {
 		internalErr := errs.NewError(errs.Deserialization, err.Error())
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -336,6 +362,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 	genActionIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActionIDReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -352,6 +379,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 
 	internalErr := a.githubRequiredUserActionDao.CreateRequiredUserAction(ct, action)
 	if internalErr != nil {
+		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -1103,7 +1131,15 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		)
 
 		getTaskReq := &proto.GetTaskRequest{TaskId: pullRequest.InternalTaskID}
-		task, _ := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
+		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
+		if rpcErr != nil {
+			if err == nil {
+				err = errs.FromGRPCErr(rpcErr)
+			}
+
+			a.dataCollector.Logger.ErrorWithContext(ct, errs.FromGRPCErr(rpcErr))
+			continue
+		}
 
 		installationID, sqlErr := a.githubAppInstallationDao.FindInstallationIDByTeamID(ct, task.OwningTeamId)
 		if sqlErr != nil {
@@ -1116,8 +1152,21 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		}
 
 		ins := a.githubApp.GetInstallation(installationID)
-		node, _ := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, ins, pullRequest.NodeID)
-		org, _ := a.githubRESTAPI.GetOrganizationByLogin(ct, ins, node.Repository.Owner.Login)
+		node, gqlErr := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, ins, pullRequest.NodeID)
+		if gqlErr != nil {
+			if err == nil {
+				err = gqlErr
+			}
+
+			a.dataCollector.Logger.ErrorWithContext(ct, gqlErr)
+			continue
+		}
+
+		org, err := a.githubRESTAPI.GetOrganizationByLogin(ct, ins, node.Repository.Owner.Login)
+		if err != nil {
+			a.dataCollector.Logger.ErrorWithContext(ct, err)
+			continue
+		}
 
 		gpr := entity.GithubPullRequest{
 			InternalTaskID:  pullRequest.InternalTaskID,
@@ -1129,7 +1178,16 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			OrganizationID:  &org.ID,
 		}
 
-		a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
+		sqlErr = a.githubPullRequestDao.UpdatePullRequest(ct, gpr)
+		if sqlErr != nil {
+			if err == nil {
+				err = sqlErr
+			}
+
+			a.dataCollector.Logger.ErrorWithContext(ct, sqlErr)
+			continue
+		}
+
 		a.dataCollector.Logger.InfoWithContext(
 			ct,
 			fmt.Sprintf("finish backfilling pull request, metadata=%v", gpr.String()))
@@ -1156,7 +1214,12 @@ func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint6
 		}
 
 		for _, prTaskRelation := range prTaskRelations {
-			a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, prTaskRelation.InternalTaskID, githubReviewer.NodeID, evt, prEvt)
+			err = a.tryCreateTaskForPullRequestReviewer(ct, teamID, prEvt.PullRequest.NodeID, prTaskRelation.InternalTaskID, githubReviewer.NodeID, evt, prEvt)
+			if err != nil {
+				a.dataCollector.Logger.ErrorWithContext(ct, err)
+				continue
+			}
+
 		}
 	}
 
