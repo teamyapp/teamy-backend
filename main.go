@@ -87,13 +87,10 @@ func main() {
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
-	dataCollector.Logger.Log(telemetry.Info, telemetry.Props{
-		telemetry.MessageProp: gitCommitLink,
-	})
+	dataCollector.Logger.Info(gitCommitLink)
 	err = sqldb.Use(dataCollector, cfg.Config, func(sqlDB *sql.DB) *errs.Error {
 		internalErr := sqldb.MigrateUp(dataCollector, sqlDB, "migrations", 0)
 		if internalErr != nil {
-			dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: internalErr})
 			return internalErr
 		}
 
@@ -101,7 +98,7 @@ func main() {
 		return startServiceRunner(dataCollector, cfg, sqlDB, realTimeStateSyncer)
 	})
 	if err != nil {
-		dataCollector.Logger.Log(telemetry.Fatal, telemetry.Props{telemetry.CauseProp: err})
+		dataCollector.Logger.Error(err)
 		panic(err)
 	}
 }

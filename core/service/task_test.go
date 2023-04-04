@@ -72,7 +72,13 @@ func TestTaskService_CreateTask(t *testing.T) {
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
-			return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
+			return retry.NewMaxCount(
+				dataCollector,
+				runtime.NewBuiltInRuntime(),
+				exponentialBackOff,
+				exponentialBackOff,
+				3,
+				nil)
 		})
 	assert.Nil(t, err)
 	if err != nil {

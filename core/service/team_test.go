@@ -79,7 +79,13 @@ func prepareTeamTestRef(t *testing.T) (TeamTestRef, bool) {
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
-			return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
+			return retry.NewMaxCount(
+				dataCollector,
+				runtime.NewBuiltInRuntime(),
+				exponentialBackOff,
+				exponentialBackOff,
+				3,
+				nil)
 		})
 	if !assert.Nil(t, err) {
 		return TeamTestRef{}, false
