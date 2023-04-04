@@ -116,7 +116,7 @@ func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.Team{}, errs.NewError(errs.NotFound, fmt.Sprintf("team not found: teamID=%v", teamID))
 		}
-		
+
 		return entity.Team{}, errs.NewError(errs.Unknown, err.Error())
 	}
 

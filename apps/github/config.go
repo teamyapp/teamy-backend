@@ -19,7 +19,7 @@ func AppConfigFromEnv() (AppConfig, *errs.Error) {
 	cfg := AppConfig{}
 	err := config.FromEnv(&cfg)
 	if err != nil {
-		return AppConfig{}, errs.NewError(errs.Unknown, err.Error())
+		return AppConfig{}, err
 	}
 
 	return cfg, nil

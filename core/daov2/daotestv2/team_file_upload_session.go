@@ -18,11 +18,11 @@ type TeamFileUploadSession struct {
 var _ daov2.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
 
 func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamIDWithTx(
-    ct context.Context, 
-    tx *transaction.Transaction, 
-    teamID uint64, 
-    teamFileUploadSessionType entity.TeamFileUploadSessionType, 
-    fileUploadSessionID uint64,
+	ct context.Context,
+	tx *transaction.Transaction,
+	teamID uint64,
+	teamFileUploadSessionType entity.TeamFileUploadSessionType,
+	fileUploadSessionID uint64,
 ) (entity.TeamFileUploadSession, *errs.Error) {
 	var uploadSession entity.TeamFileUploadSession
 	err := tx.ExecuteCommand(transaction.Command{

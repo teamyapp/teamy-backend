@@ -30,10 +30,7 @@ func AppFromEnv() (App, *errs.Error) {
 	cfg := App{}
 	err := config.FromEnv(&cfg)
 	if err != nil {
-		return App{}, &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+		return App{}, err
 	}
 
 	return cfg, nil

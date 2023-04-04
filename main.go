@@ -112,21 +112,19 @@ func startServiceRunner(
 	sqlDB *sql.DB,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) *errs.Error {
-	runnerConfig, internalErr := runner.ServiceRunnerConfigFromEnv(dataCollector)
+	runnerConfig, internalErr := runner.ServiceRunnerConfigFromEnv()
 	if internalErr != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return internalErr
 	}
 
 	githubCfg, internalErr := github.AppConfigFromEnv()
 	if internalErr != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return internalErr
 	}
 
 	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
 	nw := network.NewSocket()
-	retryFactory := makeRetryFactory(cfg)
+	retryFactory := makeRetryFactory(dataCollector, cfg)
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
 		dataCollector,
 		nw,
@@ -141,12 +139,7 @@ func startServiceRunner(
 			RequestTimeout: cfg.RequestTimeout,
 		}, retryFactory)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	teamyClientRegistry, internalErr := api.NewClientRegistry(
@@ -163,18 +156,12 @@ func startServiceRunner(
 			RequestTimeout: cfg.RequestTimeout,
 		}, retryFactory)
 	if internalErr != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return internalErr
 	}
 
 	privateKeyPEM, err := os.ReadFile(githubCfg.PrivateKeyPEMFilePath)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	githubAppAPI, err := appsDep.InitGithubAppAPI(
@@ -186,12 +173,7 @@ func startServiceRunner(
 		privateKeyPEM,
 		sqlDB)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(
@@ -207,12 +189,7 @@ func startServiceRunner(
 		realTimeStateSyncer,
 		sqlDB)
 	if err != nil {
-		internalErr = &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	taskRPCAPI := dep.InitTaskRPCAPI(
@@ -289,9 +266,16 @@ func newLineFormatter(environment env.Environment) telemetry.LineFormatter {
 	return telemetry.NewJSONLineFormatter()
 }
 
-func makeRetryFactory(cfg config.App) func() retry.Retry {
+func makeRetryFactory(dataCollector telemetry.DataCollector, cfg config.App) func() retry.Retry {
 	return func() retry.Retry {
-		exponentialBackOff := backoff.NewExponentialBuilder().Build()
-		return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, cfg.RequestRetryMaxCount)
+		shortBackOff := backoff.NewExponentialBuilder().Build()
+		longBackOff := backoff.NewExponentialBuilder().Build()
+		return retry.NewMaxCount(
+			dataCollector,
+			runtime.NewBuiltInRuntime(),
+			shortBackOff,
+			longBackOff,
+			cfg.RequestRetryMaxCount,
+			nil)
 	}
 }
