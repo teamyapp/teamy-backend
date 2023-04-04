@@ -316,7 +316,7 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	requiredUserActions = collect.Filter(requiredUserActions, func(action entity.GithubRequiredUserAction) bool {
 		return action.IsCompleted == false
 	})
-	web.WriteJSONToResponse(ct, a.dataCollector, writer, requiredUserActions)
+	web.WriteJSONToResponse(writer, requiredUserActions)
 }
 
 func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *http.Request) {

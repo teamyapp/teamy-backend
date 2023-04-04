@@ -31,7 +31,7 @@ func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 	switch input.(type) {
 	case string:
 		var err *errs.Error
-		d.Duration, err = duration.Parse(ct, dataCollector, input.(string))
+		d.Duration, err = duration.Parse(ct, input.(string))
 		if err != nil {
 			dataCollector.Logger.ErrorWithContext(ct, err)
 			return err.ToError()

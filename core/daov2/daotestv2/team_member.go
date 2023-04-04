@@ -147,8 +147,8 @@ func (t TeamMember) CreateTeamMember(ct context.Context, tx *transaction.Transac
 
 			for _, row := range table.Rows {
 				currTeamMember := row.(entity.TeamMember)
-				if currTeamMember.TeamID == teamMember.TeamID && 
-				currTeamMember.UserID == teamMember.UserID {
+				if currTeamMember.TeamID == teamMember.TeamID &&
+					currTeamMember.UserID == teamMember.UserID {
 					return errs.NewError(errs.Unknown, fmt.Sprintf("row already exist: teamID=%v, userID=%v", teamMember.TeamID, teamMember.UserID))
 				}
 			}
@@ -165,8 +165,8 @@ func (t TeamMember) CreateTeamMember(ct context.Context, tx *transaction.Transac
 			rows := make([]interface{}, 0)
 			for _, row := range table.Rows {
 				currTeamMember := row.(entity.TeamMember)
-				if currTeamMember.TeamID == teamMember.TeamID && 
-				currTeamMember.UserID == teamMember.UserID {
+				if currTeamMember.TeamID == teamMember.TeamID &&
+					currTeamMember.UserID == teamMember.UserID {
 					continue
 				}
 
@@ -194,8 +194,8 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, tx *transaction.Transac
 
 			for i, row := range table.Rows {
 				currTeamMember := row.(entity.TeamMember)
-				if currTeamMember.TeamID == teamMember.TeamID && 
-				currTeamMember.UserID == teamMember.UserID {
+				if currTeamMember.TeamID == teamMember.TeamID &&
+					currTeamMember.UserID == teamMember.UserID {
 					table.Rows[i] = teamMember
 					return nil
 				}
@@ -211,8 +211,8 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, tx *transaction.Transac
 
 			for index, row := range table.Rows {
 				currTeamMember := row.(entity.TeamMember)
-				if currTeamMember.TeamID == teamMember.TeamID && 
-				currTeamMember.UserID == teamMember.UserID {
+				if currTeamMember.TeamID == teamMember.TeamID &&
+					currTeamMember.UserID == teamMember.UserID {
 					table.Rows[index] = oldTeamMember
 				}
 			}
@@ -242,7 +242,6 @@ func (t TeamMember) DeleteTeamMember(ct context.Context, tx *transaction.Transac
 					rows = append(rows, currTeamMember)
 				}
 			}
-
 
 			table.Rows = rows
 			return nil

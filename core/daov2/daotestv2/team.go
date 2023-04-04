@@ -220,7 +220,6 @@ func (t Team) DeleteTeam(ct context.Context, tx *transaction.Transaction, teamID
 				}
 			}
 
-
 			table.Rows = rows
 			return nil
 		},

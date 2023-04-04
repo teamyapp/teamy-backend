@@ -561,7 +561,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		if internalErr != nil {
 			return internalErr
 		}
-		
+
 		rtTx.AppendMutation(createTeamMemberMutation)
 
 		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)

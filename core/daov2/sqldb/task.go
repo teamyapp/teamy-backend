@@ -28,7 +28,7 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 	if err != nil {
 		return entity.Task{}, err
 	}
-	
+
 	defer tx.Rollback()
 	return t.FindTaskByIDWithTx(ct, tx, taskID)
 }
@@ -41,7 +41,7 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer tx.Rollback()
 	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
 }
@@ -100,7 +100,7 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: taskID=%v", taskID))
 		}
-		
+
 		return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
@@ -209,7 +209,7 @@ func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transacti
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID))
 		}
-		
+
 		return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 	}
 

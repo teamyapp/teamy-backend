@@ -52,7 +52,7 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamIDWithTx(
 			return entity.TeamFileUploadSession{}, errs.NewError(errs.NotFound, fmt.Sprintf(
 				"TeamFileUploadSession not found: teamID=%v, teamFileUploadSessionType=%v", teamID, teamFileUploadSessionType))
 		}
-		
+
 		return entity.TeamFileUploadSession{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
