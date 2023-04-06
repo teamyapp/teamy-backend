@@ -30,7 +30,6 @@ import (
 func TestTaskService_CreateTask(t *testing.T) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
-	dataCollector := telemetry.NewDataCollector(logger)
 	virtualNetwork := networktest.NewVirtualNetwork()
 
 	cloudTestKitConfig := testkit.Config{
@@ -66,14 +65,14 @@ func TestTaskService_CreateTask(t *testing.T) {
 		RequestTimeout: 10 * time.Second,
 	}
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
-		dataCollector,
+		logger,
 		virtualNetwork,
 		teamyPrometheus,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
 			return retry.NewMaxCount(
-				dataCollector,
+				logger,
 				runtime.NewBuiltInRuntime(),
 				exponentialBackOff,
 				exponentialBackOff,
@@ -85,7 +84,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 		return
 	}
 
-	authorizer := NewAuthorizer(dataCollector, cloudClientRegistry)
+	authorizer := NewAuthorizer(logger, cloudClientRegistry)
 
 	transactionFactory := transaction.NewFactory(nil)
 
@@ -95,8 +94,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMemberDao, teamMemberDaoV2)
-	activityCache := cache.NewActivity(dataCollector)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	activityCache := cache.NewActivity(logger)
 
 	taskDao := daotest.NewTask(teamyBackendDB)
 	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
@@ -110,7 +109,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
 	taskService := NewTask(
-		dataCollector,
+		logger,
 		cloudClientRegistry,
 		authorizer,
 		stateSyncer,

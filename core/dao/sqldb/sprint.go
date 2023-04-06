@@ -13,8 +13,8 @@ import (
 )
 
 type Sprint struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.Sprint = (*Sprint)(nil)
@@ -45,7 +45,7 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 			Message: fmt.Sprintf(
 				"sprint not found: sprintID=%v", sprintID),
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return entity.Sprint{}, internalErr
 	}
 
@@ -54,7 +54,7 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return entity.Sprint{}, internalErr
 	}
 
@@ -82,7 +82,7 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -110,7 +110,7 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -138,7 +138,7 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -166,7 +166,7 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -191,7 +191,7 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -219,7 +219,7 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -252,7 +252,7 @@ func (s Sprint) CreateSprint(ct context.Context, sprint entity.Sprint) *errs.Err
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -271,13 +271,13 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewSprint(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Sprint {
-	return Sprint{dataCollector: dataCollector, db: sqlDB}
+func NewSprint(logger telemetry.Logger, sqlDB *sql.DB) Sprint {
+	return Sprint{logger: logger, db: sqlDB}
 }

@@ -100,7 +100,7 @@ var serviceSet = wire.NewSet(
 	service.NewApp,
 )
 
-func InitRealTimeStateSyncer(dataCollector telemetry.DataCollector, sqlDB *sql.DB) *realtime.StateSyncer {
+func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
@@ -113,7 +113,7 @@ func InitGraphQLAPI(
 	appName AppMame,
 	serviceName ServiceName,
 	environment env.Environment,
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
@@ -135,7 +135,7 @@ func InitGraphQLAPI(
 }
 
 func InitRealTimeStateSyncAPI(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) api.RealTimeStateSync {
 	wire.Build(
@@ -145,7 +145,7 @@ func InitRealTimeStateSyncAPI(
 }
 
 func InitTaskRPCAPI(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -161,7 +161,7 @@ func InitTaskRPCAPI(
 }
 
 func InitSprintRPCAPI(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -176,7 +176,7 @@ func InitSprintRPCAPI(
 }
 
 func InitTaskLinkRPCAPI(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
@@ -191,7 +191,7 @@ func InitTaskLinkRPCAPI(
 }
 
 func newUserService(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
@@ -202,7 +202,7 @@ func newUserService(
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
 ) service.User {
 	return service.NewUser(
-		dataCollector,
+		logger,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		stateSyncer,
@@ -215,7 +215,7 @@ func newUserService(
 }
 
 func newTeamService(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer service.Authorizer,
@@ -233,7 +233,7 @@ func newTeamService(
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
 ) service.Team {
 	return service.NewTeam(
-		dataCollector,
+		logger,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		authorizer,

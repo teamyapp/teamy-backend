@@ -11,7 +11,7 @@ import (
 )
 
 type SprintTaskRelation struct {
-	dataCollector telemetry.DataCollector
+	logger telemetry.Logger
 }
 
 var _ daov2.SprintTaskRelation = (*SprintTaskRelation)(nil)
@@ -30,7 +30,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintIDWithTx(ct context.Context, tx *
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -53,7 +53,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintIDWithTx(ct context.Context, tx *
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -77,7 +77,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -100,7 +100,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -129,7 +129,7 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *tra
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -149,13 +149,13 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, tx *tra
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewSprintTaskRelation(dataCollector telemetry.DataCollector) SprintTaskRelation {
-	return SprintTaskRelation{dataCollector: dataCollector}
+func NewSprintTaskRelation(logger telemetry.Logger) SprintTaskRelation {
+	return SprintTaskRelation{logger: logger}
 }

@@ -11,8 +11,8 @@ import (
 )
 
 type TaskAwaitForRelation struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
@@ -29,7 +29,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -50,7 +50,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -72,7 +72,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -93,7 +93,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -123,7 +123,7 @@ func (t TaskAwaitForRelation) CreateRelation(ct context.Context, relation entity
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -143,13 +143,13 @@ func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, waitingTaskID u
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewTaskAwaitForRelation(dataCollector telemetry.DataCollector, db *sql.DB) TaskAwaitForRelation {
-	return TaskAwaitForRelation{dataCollector: dataCollector, db: db}
+func NewTaskAwaitForRelation(logger telemetry.Logger, db *sql.DB) TaskAwaitForRelation {
+	return TaskAwaitForRelation{logger: logger, db: db}
 }

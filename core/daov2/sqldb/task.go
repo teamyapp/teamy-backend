@@ -14,7 +14,7 @@ import (
 )
 
 type Task struct {
-	dataCollector      telemetry.DataCollector
+	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -414,9 +414,9 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 	return nil
 }
 
-func NewTask(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) Task {
+func NewTask(logger telemetry.Logger, transactionFactory transaction.Factory) Task {
 	return Task{
-		dataCollector:      dataCollector,
+		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

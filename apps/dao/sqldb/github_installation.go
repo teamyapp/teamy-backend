@@ -13,8 +13,8 @@ import (
 )
 
 type GithubAppInstallation struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubAppInstallation = (*GithubAppInstallation)(nil)
@@ -126,9 +126,9 @@ func (g GithubAppInstallation) FindInstallationByTeamID(ct context.Context, team
 	return installation, nil
 }
 
-func NewGithubAppInstallation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubAppInstallation {
+func NewGithubAppInstallation(logger telemetry.Logger, sqlDB *sql.DB) GithubAppInstallation {
 	return GithubAppInstallation{
-		dataCollector: dataCollector,
-		db:            sqlDB,
+		logger: logger,
+		db:     sqlDB,
 	}
 }

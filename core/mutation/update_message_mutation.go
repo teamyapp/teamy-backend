@@ -12,12 +12,12 @@ import (
 )
 
 type UpdateMessageMutation struct {
-	dataCollector telemetry.DataCollector
-	stateSyncer   *realtime.StateSyncer
-	messageDao    dao.Message
-	taskDao       dao.Task
-	id            uint64
-	message       entity.Message
+	logger      telemetry.Logger
+	stateSyncer *realtime.StateSyncer
+	messageDao  dao.Message
+	taskDao     dao.Task
+	id          uint64
+	message     entity.Message
 }
 
 var _ realtime.Mutation = (*UpdateMessageMutation)(nil)
@@ -39,7 +39,7 @@ func (u *UpdateMessageMutation) PrepareClientNotifiers(ct context.Context, tx *t
 func (u *UpdateMessageMutation) Execute(ct context.Context) *errs.Error {
 	err := u.messageDao.UpdateMessage(ct, u.message)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (u *UpdateMessageMutation) Undo() *errs.Error {
 func (u *UpdateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := u.taskDao.FindTaskByCommentsThreadID(ct, u.message.ThreadID)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 
@@ -79,18 +79,18 @@ func (u *UpdateMessageMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewUpdateMessageMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
 	taskDao dao.Task,
 	message entity.Message,
 ) *UpdateMessageMutation {
 	return &UpdateMessageMutation{
-		dataCollector: dataCollector,
-		stateSyncer:   stateSyncer,
-		messageDao:    messageDao,
-		taskDao:       taskDao,
-		id:            stateSyncer.NextMutationID(),
-		message:       message,
+		logger:      logger,
+		stateSyncer: stateSyncer,
+		messageDao:  messageDao,
+		taskDao:     taskDao,
+		id:          stateSyncer.NextMutationID(),
+		message:     message,
 	}
 }

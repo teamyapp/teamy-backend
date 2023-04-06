@@ -17,7 +17,7 @@ type AppVersion struct {
 func (a AppVersion) App(ct context.Context) (App, error) {
 	app, err := a.deps.appService.FindAppByID(ct, a.appVersion.AppID)
 	if err != nil {
-		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		a.deps.logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 
@@ -47,7 +47,7 @@ func (a AppVersion) IsPublic() bool {
 func (a AppVersion) VisibleToTeams(ct context.Context) ([]Team, error) {
 	teams, err := a.deps.appService.FindAppVersionVisibleTeams(ct, a.appVersion.AppID, a.appVersion.VersionNumber)
 	if err != nil {
-		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		a.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

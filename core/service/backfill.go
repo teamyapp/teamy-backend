@@ -8,7 +8,7 @@ import (
 )
 
 type Backfill struct {
-	dataCollector       telemetry.DataCollector
+	logger              telemetry.Logger
 	cloudClientRegistry *api.ClientRegistry
 }
 
@@ -23,11 +23,11 @@ func (b Backfill) BackfillParticipantsBandwidth(ct context.Context, teamID strin
 }
 
 func NewBackfill(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudClientRegistry *api.ClientRegistry,
 ) Backfill {
 	return Backfill{
-		dataCollector:       dataCollector,
+		logger:              logger,
 		cloudClientRegistry: cloudClientRegistry,
 	}
 }

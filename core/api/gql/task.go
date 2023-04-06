@@ -57,7 +57,7 @@ func (t Task) Context(ct context.Context) *string {
 func (t Task) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.task.CreatorUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -71,7 +71,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 
 	owner, err := t.deps.userService.FindUserByID(ct, *t.task.OwnerUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -82,7 +82,7 @@ func (t Task) Owner(ct context.Context) (*User, error) {
 func (t Task) OwningTeam(ct context.Context) (*Team, error) {
 	team, err := t.deps.teamService.FindTeamByID(ct, t.task.OwningTeamID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -129,7 +129,7 @@ func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 	tasks, err := t.deps.taskService.FindAwaitForTasks(ct, t.task.ID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -141,7 +141,7 @@ func (t Task) AwaitForTasks(ct context.Context) ([]Task, error) {
 func (t Task) Links(ct context.Context) ([]TaskLink, error) {
 	links, err := t.deps.taskLinkService.FindLinksByTaskID(ct, t.task.ID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

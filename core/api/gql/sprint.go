@@ -39,13 +39,13 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		s.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	tasks, err := s.deps.taskService.FindTasksInSprint(ct, s.sprint.ID, filter)
 	if err != nil {
-		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -57,7 +57,7 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 	team, err := s.deps.teamService.FindTeamByID(ct, s.sprint.OwningTeamID)
 	if err != nil {
-		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.deps.logger.ErrorWithContext(ct, err)
 		return Team{}, errs.ToResolverErr(err)
 	}
 
@@ -67,7 +67,7 @@ func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 func (s Sprint) Participants(ct context.Context) ([]SprintParticipant, error) {
 	participants, err := s.deps.sprintService.FindParticipantsInSprint(ct, s.sprint.ID)
 	if err != nil {
-		s.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

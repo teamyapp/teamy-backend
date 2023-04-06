@@ -21,7 +21,7 @@ func (t Thread) ID() graphql.ID {
 func (t Thread) Messages(ct context.Context) ([]Message, error) {
 	messages, err := t.deps.threadService.FindMessages(ct, t.threadID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

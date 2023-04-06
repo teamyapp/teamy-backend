@@ -12,7 +12,7 @@ import (
 )
 
 type DeleteInvitationMutation struct {
-	dataCollector telemetry.DataCollector
+	logger        telemetry.Logger
 	stateSyncer   *realtime.StateSyncer
 	invitationDao dao.Invitation
 	id            uint64
@@ -38,7 +38,7 @@ func (d *DeleteInvitationMutation) PrepareClientNotifiers(ct context.Context, tx
 func (d *DeleteInvitationMutation) Execute(ct context.Context) *errs.Error {
 	err := d.invitationDao.DeleteInvitation(ct, d.invitation.ID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -72,13 +72,13 @@ func (d *DeleteInvitationMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewDeleteInvitationMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
 	invitation entity.Invitation,
 ) *DeleteInvitationMutation {
 	return &DeleteInvitationMutation{
-		dataCollector: dataCollector,
+		logger:        logger,
 		stateSyncer:   stateSyncer,
 		invitationDao: invitationDao,
 		id:            stateSyncer.NextMutationID(),

@@ -20,7 +20,7 @@ func (c Client) ID() graphql.ID {
 func (c Client) User(ct context.Context) (User, error) {
 	user, err := c.deps.userService.FindUserByID(ct, c.client.UserID)
 	if err != nil {
-		c.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 

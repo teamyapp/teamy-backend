@@ -9,7 +9,7 @@ import (
 )
 
 type ClientTransaction struct {
-	dataCollector  telemetry.DataCollector
+	logger         telemetry.Logger
 	id             uint64
 	mutations      []Mutation
 	clientNotifier *ClientNotifier
@@ -38,16 +38,16 @@ func (c *ClientTransaction) ToMessage() TransactionMessage {
 	}
 }
 
-func newClientTransaction(dataCollector telemetry.DataCollector, clientNotifier *ClientNotifier, id uint64) *ClientTransaction {
+func newClientTransaction(logger telemetry.Logger, clientNotifier *ClientNotifier, id uint64) *ClientTransaction {
 	return &ClientTransaction{
-		dataCollector:  dataCollector,
+		logger:         logger,
 		clientNotifier: clientNotifier,
 		id:             id,
 	}
 }
 
 type Transaction struct {
-	dataCollector     telemetry.DataCollector
+	logger            telemetry.Logger
 	stateSyncer       *StateSyncer
 	id                uint64
 	mutations         []Mutation
@@ -58,7 +58,7 @@ func (t *Transaction) rollback(ct context.Context) *errs.Error {
 	for index := t.nextMutationIndex - 1; index >= 0; index-- {
 		err := t.mutations[index].Undo()
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			t.logger.ErrorWithContext(ct, err)
 		}
 	}
 
@@ -69,10 +69,10 @@ func (t *Transaction) rollback(ct context.Context) *errs.Error {
 func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) *errs.Error {
 	err := mutation.Execute(ct)
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.logger.ErrorWithContext(ct, err)
 		undoErr := t.rollback(ct)
 		if undoErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, undoErr)
+			t.logger.ErrorWithContext(ct, undoErr)
 			return undoErr
 		}
 
@@ -101,10 +101,10 @@ func (t *Transaction) Commit(ct context.Context) *errs.Error {
 	for _, mutation := range t.mutations {
 		clientNotifiers, err := mutation.GetClientNotifiers(ct)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			t.logger.ErrorWithContext(ct, err)
 			undoErr := t.rollback(ct)
 			if undoErr != nil {
-				t.dataCollector.Logger.ErrorWithContext(ct, undoErr)
+				t.logger.ErrorWithContext(ct, undoErr)
 				return undoErr
 			}
 
@@ -117,7 +117,7 @@ func (t *Transaction) Commit(ct context.Context) *errs.Error {
 			if !ok {
 				clientTransactionID := t.stateSyncer.NextClientTransactionID()
 				clientTransactions[clientID] = newClientTransaction(
-					clientNotifier.dataCollector,
+					clientNotifier.logger,
 					clientNotifier,
 					clientTransactionID,
 				)
@@ -135,7 +135,7 @@ func (t *Transaction) Commit(ct context.Context) *errs.Error {
 	for _, mutation := range t.mutations {
 		err := mutation.CleanUp(ct)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			t.logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -156,7 +156,7 @@ func (t *Transaction) Notify(ct context.Context) *errs.Error {
 			if !ok {
 				clientTransactionID := t.stateSyncer.NextClientTransactionID()
 				clientTransactions[clientID] = newClientTransaction(
-					clientNotifier.dataCollector,
+					clientNotifier.logger,
 					clientNotifier,
 					clientTransactionID,
 				)
@@ -174,7 +174,7 @@ func (t *Transaction) Notify(ct context.Context) *errs.Error {
 	for _, mutation := range t.mutations {
 		err := mutation.CleanUp(ct)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			t.logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -182,9 +182,9 @@ func (t *Transaction) Notify(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewTransaction(dataCollector telemetry.DataCollector, stateSyncer *StateSyncer) *Transaction {
+func NewTransaction(logger telemetry.Logger, stateSyncer *StateSyncer) *Transaction {
 	return &Transaction{
-		dataCollector:     dataCollector,
+		logger:            logger,
 		stateSyncer:       stateSyncer,
 		id:                stateSyncer.NextTransactionID(),
 		mutations:         make([]Mutation, 0),

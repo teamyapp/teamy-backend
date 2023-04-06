@@ -14,7 +14,7 @@ import (
 )
 
 type Sprint struct {
-	dataCollector      telemetry.DataCollector
+	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -85,7 +85,7 @@ func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transac
 			Message: fmt.Sprintf(
 				"sprint not found: sprintID=%v", sprintID),
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return entity.Sprint{}, internalErr
 	}
 
@@ -94,7 +94,7 @@ func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transac
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return entity.Sprint{}, internalErr
 	}
 
@@ -122,7 +122,7 @@ func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Trans
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -150,7 +150,7 @@ func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Trans
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -178,7 +178,7 @@ func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Tr
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -206,7 +206,7 @@ func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Tr
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -231,7 +231,7 @@ func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transac
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -259,7 +259,7 @@ func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transac
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -292,7 +292,7 @@ func (s Sprint) CreateSprint(ct context.Context, tx *transaction.Transaction, sp
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -311,16 +311,16 @@ func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sp
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewSprint(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) Sprint {
+func NewSprint(logger telemetry.Logger, transactionFactory transaction.Factory) Sprint {
 	return Sprint{
-		dataCollector:      dataCollector,
+		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

@@ -22,7 +22,7 @@ import (
 const invitationCodeLen = 20
 
 type Invitation struct {
-	dataCollector       telemetry.DataCollector
+	logger              telemetry.Logger
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	authorizer          Authorizer
 	stateSyncer         *realtime.StateSyncer
@@ -47,7 +47,7 @@ type UpdateInvitationInput struct {
 func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, filter *InvitationFilter) ([]entity.Invitation, *errs.Error) {
 	invitations, err := i.invitationDao.FindInvitationsByTeamID(ct, teamID)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -61,7 +61,7 @@ func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, fil
 func (i Invitation) FindInvitations(ct context.Context, filter *InvitationFilter) ([]entity.Invitation, *errs.Error) {
 	invitations, err := i.invitationDao.FindAllInvitations(ct)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -79,7 +79,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
@@ -87,7 +87,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		query := authorization.NewTeamCreateInvitationQuery(userID, teamID)
 		hasPermission, err := i.authorizer.hasPermission(ct, query)
 		if err != nil {
-			i.dataCollector.Logger.ErrorWithContext(ct, err)
+			i.logger.ErrorWithContext(ct, err)
 			return entity.Invitation{}, err
 		}
 
@@ -96,7 +96,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			i.logger.ErrorWithContext(ct, internalErr)
 			return entity.Invitation{}, internalErr
 		}
 	}
@@ -105,7 +105,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	genInvitationIDRes, rpcErr := i.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genInvitationIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
@@ -122,35 +122,35 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		CreatedAt:         time.Now(),
 	}
 
-	transaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	transaction := realtime.NewTransaction(i.logger, i.stateSyncer)
 	createInvitationMutation := mutation.NewCreateInvitationMutation(
-		i.dataCollector,
+		i.logger,
 		i.stateSyncer,
 		i.invitationDao,
 		invitation,
 	)
 	err := transaction.ApplyMutation(ct, createInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
 	err = transaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
 	if feature.EnableAuthorization {
 		err = i.authorizer.registerResource(ct, authorization.InvitationResourceType, invitation.ID)
 		if err != nil {
-			i.dataCollector.Logger.ErrorWithContext(ct, err)
+			i.logger.ErrorWithContext(ct, err)
 			return entity.Invitation{}, err
 		}
 
 		err = i.authorizer.assignParentResource(ct, authorization.InvitationResourceType, invitation.ID, authorization.TeamResourceType, invitation.TeamID)
 		if err != nil {
-			i.dataCollector.Logger.ErrorWithContext(ct, err)
+			i.logger.ErrorWithContext(ct, err)
 			return entity.Invitation{}, err
 		}
 	}
@@ -161,7 +161,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, input UpdateInvitationInput) (entity.Invitation, *errs.Error) {
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -170,22 +170,22 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 	invitation.ExpireAt = input.ExpireAt
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	realTimeTransaction := realtime.NewTransaction(i.logger, i.stateSyncer)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
-		i.dataCollector,
+		i.logger,
 		i.stateSyncer,
 		i.invitationDao,
 		invitation,
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -195,13 +195,13 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (entity.Invitation, *errs.Error) {
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	realTimeTransaction := realtime.NewTransaction(i.logger, i.stateSyncer)
 	deleteInvitationMutation := mutation.NewDeleteInvitationMutation(
-		i.dataCollector,
+		i.logger,
 		i.stateSyncer,
 		i.invitationDao,
 		invitation,
@@ -209,13 +209,13 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 
 	err = realTimeTransaction.ApplyMutation(ct, deleteInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -229,13 +229,13 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -247,13 +247,13 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				invitationCode,
 			),
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
 	err = i.ensureInvitationPending(ct, invitation)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -261,35 +261,35 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	realTimeTransaction := realtime.NewTransaction(i.logger, i.stateSyncer)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
-		i.dataCollector,
+		i.logger,
 		i.stateSyncer,
 		i.invitationDao,
 		invitation,
 	)
 	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
 	_, err = i.teamMemberDao.FindTeamMember(ct, invitation.TeamID, receiverUserID)
 	if err != nil {
 		if err.Code != errs.NotFound {
-			i.dataCollector.Logger.ErrorWithContext(ct, err)
+			i.logger.ErrorWithContext(ct, err)
 			return entity.Invitation{}, err
 		}
 
 		_, err = i.teamService.AddMemberToTeam(ct, invitation.TeamID, receiverUserID)
 		if err != nil {
-			i.dataCollector.Logger.ErrorWithContext(ct, err)
+			i.logger.ErrorWithContext(ct, err)
 			return entity.Invitation{}, err
 		}
 	}
@@ -304,13 +304,13 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
 	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -322,13 +322,13 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 				invitationCode,
 			),
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return entity.Invitation{}, internalErr
 	}
 
 	err = i.ensureInvitationPending(ct, invitation)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -336,9 +336,9 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now()
 	invitation.UpdatedAt = &now
-	realTimeTransaction := realtime.NewTransaction(i.dataCollector, i.stateSyncer)
+	realTimeTransaction := realtime.NewTransaction(i.logger, i.stateSyncer)
 	updateInvitationMutation := mutation.NewUpdateInvitationMutation(
-		i.dataCollector,
+		i.logger,
 		i.stateSyncer,
 		i.invitationDao,
 		invitation,
@@ -346,13 +346,13 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 
 	err = realTimeTransaction.ApplyMutation(ct, updateInvitationMutation)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
 	err = realTimeTransaction.Commit(ct)
 	if err != nil {
-		i.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.logger.ErrorWithContext(ct, err)
 		return entity.Invitation{}, err
 	}
 
@@ -366,21 +366,21 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("invitation is expired: invitationID=%v", invitation.ID),
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	case entity.InvitationStatusInvoked:
 		internalErr := &errs.Error{
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("invitation is revoked: invitationID=%v", invitation.ID),
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
 		internalErr := &errs.Error{
 			Code:    errs.InvalidOperation,
 			Message: fmt.Sprintf("invitation is already responded: invitationID=%v", invitation.ID),
 		}
-		i.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		i.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	default:
 		return nil
@@ -388,7 +388,7 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 }
 
 func NewInvitation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
 	stateSyncer *realtime.StateSyncer,
@@ -397,7 +397,7 @@ func NewInvitation(
 	teamService Team,
 ) Invitation {
 	return Invitation{
-		dataCollector:       dataCollector,
+		logger:              logger,
 		cloudClientRegistry: cloudClientRegistry,
 		authorizer:          authorizer,
 		stateSyncer:         stateSyncer,

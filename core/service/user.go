@@ -32,7 +32,7 @@ type UpdateUserInput struct {
 }
 
 type User struct {
-	dataCollector              telemetry.DataCollector
+	logger                     telemetry.Logger
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	stateSyncer                *realtime.StateSyncer
@@ -71,7 +71,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 	}
 
 	txCtx := TransactionsContext{
-		dataCollector:      u.dataCollector,
+		logger:             u.logger,
 		transactionFactory: u.transactionFactory,
 		stateSyncer:        u.stateSyncer,
 		ct:                 ct,
@@ -85,7 +85,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, *errs.Error) {
 	var user entity.User
 	txCtx := TransactionsContext{
-		dataCollector:      u.dataCollector,
+		logger:             u.logger,
 		transactionFactory: u.transactionFactory,
 		stateSyncer:        u.stateSyncer,
 		ct:                 ct,
@@ -102,7 +102,7 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 		updatedAt := time.Now().UTC()
 		user.UpdatedAt = &updatedAt
 		userMutation := mutation.NewUpdateUserMutation(
-			u.dataCollector,
+			u.logger,
 			u.stateSyncer,
 			u.userDao,
 			u.userDaoV2,
@@ -136,7 +136,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 	}
 
 	txCtx := TransactionsContext{
-		dataCollector:      u.dataCollector,
+		logger:             u.logger,
 		transactionFactory: u.transactionFactory,
 		stateSyncer:        u.stateSyncer,
 		ct:                 ct,
@@ -160,13 +160,13 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	uploadSession, rpcErr := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
 	var user entity.User
 	txCtx := TransactionsContext{
-		dataCollector:      u.dataCollector,
+		logger:             u.logger,
 		transactionFactory: u.transactionFactory,
 		stateSyncer:        u.stateSyncer,
 		ct:                 ct,
@@ -212,7 +212,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 }
 
 func NewUser(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
@@ -223,7 +223,7 @@ func NewUser(
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
 ) User {
 	return User{
-		dataCollector:              dataCollector,
+		logger:                     logger,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		stateSyncer:                stateSyncer,

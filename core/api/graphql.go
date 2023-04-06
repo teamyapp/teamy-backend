@@ -12,6 +12,6 @@ import (
 //go:embed gql/schema.graphql
 var rawSchema string
 
-func NewGraphQL(dataCollector telemetry.DataCollector, tracer tracer.Tracer, resolver gql.Resolver) cloudGQL.Service[gql.Resolver] {
-	return cloudGQL.NewService(dataCollector, tracer, rawSchema, &resolver, graphQLPrefix)
+func NewGraphQL(logger telemetry.Logger, tracer tracer.Tracer, resolver gql.Resolver) cloudGQL.Service[gql.Resolver] {
+	return cloudGQL.NewService(logger, tracer, rawSchema, &resolver, graphQLPrefix)
 }

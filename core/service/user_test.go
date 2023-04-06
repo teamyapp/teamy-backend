@@ -37,7 +37,6 @@ type UserTestRef struct {
 func prepareUserTestRef(t *testing.T) (UserTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
-	dataCollector := telemetry.NewDataCollector(logger)
 	virtualNetwork := networktest.NewVirtualNetwork()
 	cloudTestKitConfig := testkit.Config{
 		GenUniqueNumberRangeSize: 10,
@@ -71,14 +70,14 @@ func prepareUserTestRef(t *testing.T) (UserTestRef, bool) {
 		RequestTimeout: 10 * time.Second,
 	}
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
-		dataCollector,
+		logger,
 		virtualNetwork,
 		teamyPrometheus,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
 			return retry.NewMaxCount(
-				dataCollector,
+				logger,
 				runtime.NewBuiltInRuntime(),
 				exponentialBackOff,
 				exponentialBackOff,
@@ -98,13 +97,13 @@ func prepareUserTestRef(t *testing.T) (UserTestRef, bool) {
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
 
 	userDao := daotest.NewUser(teamyBackendDB)
 	userDaoV2 := daotestv2.NewUser(teamyBackendDB, transactionFactory)
 	userFileUploadSessionDaoV2 := daotestv2.NewUserFileUploadSession(teamyBackendDB)
 	userService := NewUser(
-		dataCollector,
+		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
 		stateSyncer,

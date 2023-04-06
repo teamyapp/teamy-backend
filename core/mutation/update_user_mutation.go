@@ -13,7 +13,7 @@ import (
 )
 
 type UpdateUserMutation struct {
-	dataCollector     telemetry.DataCollector
+	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
 	userDao           dao.User
 	userDaoV2         daov2.User
@@ -80,7 +80,7 @@ func (u *UpdateUserMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewUpdateUserMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	userDao dao.User,
 	userDaoV2 daov2.User,
@@ -88,7 +88,7 @@ func NewUpdateUserMutation(
 	user entity.User,
 ) *UpdateUserMutation {
 	return &UpdateUserMutation{
-		dataCollector:     dataCollector,
+		logger:            logger,
 		stateSyncer:       stateSyncer,
 		userDao:           userDao,
 		userDaoV2:         userDaoV2,

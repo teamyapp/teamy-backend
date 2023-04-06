@@ -22,7 +22,7 @@ import (
 // 2) Clean up user and team if no subscription
 
 type StateSyncer struct {
-	dataCollector           telemetry.DataCollector
+	logger                  telemetry.Logger
 	teamMemberDao           dao.TeamMember
 	teamMemberDaoV2         daov2.TeamMember
 	teamNotifiers           map[uint64]*TeamNotifier
@@ -48,16 +48,16 @@ func (s *StateSyncer) EndTransaction() {
 
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) *errs.Error {
 	ct := ctx.WithClientID(context.Background(), s.nextClientID)
-	s.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("client connected: userID=%v", userID))
+	s.logger.InfoWithContext(ct, fmt.Sprintf("client connected: userID=%v", userID))
 	teamIDs, err := s.teamMemberDaoV2.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	userNotifier, err := s.GetUserNotifierV2(ct, userID, teamIDs)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -66,7 +66,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 	s.nextClientID++
 	s.clientIDMut.Unlock()
 
-	clientNotifier := newClientNotifier(s.dataCollector, conn, nextClientID)
+	clientNotifier := newClientNotifier(s.logger, conn, nextClientID)
 	userNotifier.registerClientNotifier(nextClientID, clientNotifier)
 	clientNotifier.sentMetadata()
 
@@ -105,7 +105,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) *errs.
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("userNotifier not found: userID=%v", userID),
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -115,7 +115,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) *errs.
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("clientNotifier not found: clientID=%v", clientID),
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -125,7 +125,7 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) *errs.
 
 // Deprecated: The old method should not be used anymore. Use newUserNotifierV2 method instead
 func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserNotifier, *errs.Error) {
-	userNotifier := newUserNotifier(s.dataCollector, userID)
+	userNotifier := newUserNotifier(s.logger, userID)
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
@@ -133,7 +133,7 @@ func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserN
 	s.userNotifiers[userID] = userNotifier
 	err := s.SubscribeToTeams(ct, userID, userNotifier)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -141,7 +141,7 @@ func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserN
 }
 
 func (s *StateSyncer) newUserNotifierV2(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
-	userNotifier := newUserNotifier(s.dataCollector, userID)
+	userNotifier := newUserNotifier(s.logger, userID)
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
@@ -149,7 +149,7 @@ func (s *StateSyncer) newUserNotifierV2(ct context.Context, userID uint64, teamI
 	s.userNotifiers[userID] = userNotifier
 	err := s.SubscribeToTeamsV2(ct, userID, userNotifier, teamIDs)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -160,7 +160,7 @@ func (s *StateSyncer) newUserNotifierV2(ct context.Context, userID uint64, teamI
 func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier) *errs.Error {
 	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -170,7 +170,7 @@ func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNo
 			teamNotifier = s.newTeamNotifier(teamID)
 		}
 
-		s.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("subscribed to team: teamID=%v, userID=%v",
+		s.logger.InfoWithContext(ct, fmt.Sprintf("subscribed to team: teamID=%v, userID=%v",
 			teamID,
 			userID))
 		teamNotifier.registerUserNotifier(userID, userNotifier)
@@ -186,7 +186,7 @@ func (s *StateSyncer) SubscribeToTeamsV2(ct context.Context, userID uint64, user
 			teamNotifier = s.newTeamNotifier(teamID)
 		}
 
-		s.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("subscribed to team: teamID=%v, userID=%v",
+		s.logger.InfoWithContext(ct, fmt.Sprintf("subscribed to team: teamID=%v, userID=%v",
 			teamID,
 			userID))
 		teamNotifier.registerUserNotifier(userID, userNotifier)
@@ -198,7 +198,7 @@ func (s *StateSyncer) SubscribeToTeamsV2(ct context.Context, userID uint64, user
 func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
-		teamNotifier = newTeamNotifier(s.dataCollector, teamID)
+		teamNotifier = newTeamNotifier(s.logger, teamID)
 		go func() {
 			<-teamNotifier.subscribeTeamDisconnect()
 			delete(s.teamNotifiers, teamID)
@@ -216,7 +216,7 @@ func (s *StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserN
 	if !ok {
 		userNotifier, err = s.newUserNotifier(ct, userID)
 		if err != nil {
-			s.dataCollector.Logger.ErrorWithContext(ct, err)
+			s.logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 	}
@@ -230,7 +230,7 @@ func (s *StateSyncer) GetUserNotifierV2(ct context.Context, userID uint64, teamI
 	if !ok {
 		userNotifier, err = s.newUserNotifierV2(ct, userID, teamIDs)
 		if err != nil {
-			s.dataCollector.Logger.ErrorWithContext(ct, err)
+			s.logger.ErrorWithContext(ct, err)
 			return nil, err
 		}
 	}
@@ -246,7 +246,7 @@ func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamN
 			Code:    errs.NotFound,
 			Message: message,
 		}
-		s.dataCollector.Logger.WarningWithContext(ct, message)
+		s.logger.WarningWithContext(ct, message)
 		return nil, internalErr
 	}
 
@@ -257,7 +257,7 @@ func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamN
 func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID uint64) ([]*ClientNotifier, *errs.Error) {
 	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return []*ClientNotifier{}, err
 	}
 
@@ -265,7 +265,7 @@ func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID u
 	for _, teamID := range teamIDs {
 		teamClientNotifiers, err := s.GetClientNotifiersByTeamID(ct, teamID)
 		if err != nil {
-			s.dataCollector.Logger.ErrorWithContext(ct, err)
+			s.logger.ErrorWithContext(ct, err)
 			return []*ClientNotifier{}, err
 		}
 
@@ -308,7 +308,7 @@ func (s *StateSyncer) GetClientNotifiersByTeamIDs(ct context.Context, teamIDs []
 	for _, teamID := range teamIDs {
 		teamClientNotifiers, err := s.GetClientNotifiersByTeamID(ct, teamID)
 		if err != nil {
-			s.dataCollector.Logger.ErrorWithContext(ct, err)
+			s.logger.ErrorWithContext(ct, err)
 			return []*ClientNotifier{}, err
 		}
 
@@ -326,12 +326,12 @@ func (s *StateSyncer) GetClientNotifiersByTeamIDs(ct context.Context, teamIDs []
 }
 
 func NewStateSyncer(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
-		dataCollector:           dataCollector,
+		logger:                  logger,
 		teamMemberDao:           teamMemberDao,
 		teamMemberDaoV2:         teamMemberDaoV2,
 		teamNotifiers:           map[uint64]*TeamNotifier{},

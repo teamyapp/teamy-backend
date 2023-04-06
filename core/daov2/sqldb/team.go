@@ -14,7 +14,7 @@ import (
 )
 
 type Team struct {
-	dataCollector      telemetry.DataCollector
+	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -233,6 +233,6 @@ func (t Team) DeleteTeam(ct context.Context, tx *transaction.Transaction, teamID
 	return nil
 }
 
-func NewTeam(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) Team {
-	return Team{dataCollector: dataCollector, transactionFactory: transactionFactory}
+func NewTeam(logger telemetry.Logger, transactionFactory transaction.Factory) Team {
+	return Team{logger: logger, transactionFactory: transactionFactory}
 }

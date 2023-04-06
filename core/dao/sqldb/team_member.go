@@ -13,8 +13,8 @@ import (
 )
 
 type TeamMember struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.TeamMember = (*TeamMember)(nil)
@@ -32,7 +32,7 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -55,7 +55,7 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -78,7 +78,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -101,7 +101,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -127,7 +127,7 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -153,7 +153,7 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -192,7 +192,7 @@ func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uin
 			Message: fmt.Sprintf(
 				"team member not found: teamID=%v, userID=%v", teamID, userID),
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TeamMember{}, internalErr
 	}
 
@@ -201,7 +201,7 @@ func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uin
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TeamMember{}, internalErr
 	}
 
@@ -231,7 +231,7 @@ func (t TeamMember) CreateTeamMember(ct context.Context, teamMember entity.TeamM
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -256,7 +256,7 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, teamMember entity.TeamM
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -275,13 +275,13 @@ func (t TeamMember) DeleteTeamMember(ct context.Context, teamID uint64, userID u
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewTeamMember(dataCollector telemetry.DataCollector, sqlDB *sql.DB) TeamMember {
-	return TeamMember{dataCollector: dataCollector, db: sqlDB}
+func NewTeamMember(logger telemetry.Logger, sqlDB *sql.DB) TeamMember {
+	return TeamMember{logger: logger, db: sqlDB}
 }

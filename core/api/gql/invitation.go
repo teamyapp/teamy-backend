@@ -20,7 +20,7 @@ func (i Invitation) ID(ct context.Context) graphql.ID {
 func (i Invitation) Sender(ct context.Context) (User, error) {
 	sender, err := i.deps.userService.FindUserByID(ct, i.invitation.SenderUserID)
 	if err != nil {
-		i.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -46,7 +46,7 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 
 	receiver, err := i.deps.userService.FindUserByID(ct, *i.invitation.ReceiverUserID)
 	if err != nil {
-		i.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.deps.logger.ErrorWithContext(ct, err)
 		return &User{}, errs.ToResolverErr(err)
 	}
 
@@ -57,7 +57,7 @@ func (i Invitation) Receiver(ct context.Context) (*User, error) {
 func (i Invitation) JoiningTeam(ct context.Context) (Team, error) {
 	team, err := i.deps.teamService.FindTeamByID(ct, i.invitation.TeamID)
 	if err != nil {
-		i.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		i.deps.logger.ErrorWithContext(ct, err)
 		return Team{}, errs.ToResolverErr(err)
 	}
 

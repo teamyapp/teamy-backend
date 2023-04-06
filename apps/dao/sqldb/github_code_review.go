@@ -13,8 +13,8 @@ import (
 )
 
 type GithubCodeReview struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubCodeReview = (*GithubCodeReview)(nil)
@@ -189,6 +189,6 @@ func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(
 	return nil
 }
 
-func NewGithubCodeReview(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubCodeReview {
-	return GithubCodeReview{dataCollector: dataCollector, db: sqlDB}
+func NewGithubCodeReview(logger telemetry.Logger, sqlDB *sql.DB) GithubCodeReview {
+	return GithubCodeReview{logger: logger, db: sqlDB}
 }

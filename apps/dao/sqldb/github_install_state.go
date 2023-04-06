@@ -13,8 +13,8 @@ import (
 )
 
 type GithubAppInstallState struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubAppInstallState = (*GithubAppInstallState)(nil)
@@ -94,9 +94,9 @@ func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) *
 	return nil
 }
 
-func NewGithubAppInstallState(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubAppInstallState {
+func NewGithubAppInstallState(logger telemetry.Logger, sqlDB *sql.DB) GithubAppInstallState {
 	return GithubAppInstallState{
-		dataCollector: dataCollector,
-		db:            sqlDB,
+		logger: logger,
+		db:     sqlDB,
 	}
 }

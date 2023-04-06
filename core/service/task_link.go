@@ -28,7 +28,7 @@ type CreateTaskLinkInput struct {
 }
 
 type TaskLink struct {
-	dataCollector       telemetry.DataCollector
+	logger              telemetry.Logger
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	authorizer          Authorizer
 	transactionFactory  transaction.Factory
@@ -44,7 +44,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 			Code:    errs.Unauthenticated,
 			Message: "user ID not found",
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TaskLink{}, internalErr
 	}
 
@@ -52,7 +52,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		query := authorization.NewCreateTaskLinkQuery(userID, taskLinkEntity.TaskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			t.logger.ErrorWithContext(ct, err)
 			return entity.TaskLink{}, err
 		}
 
@@ -61,7 +61,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 				Code:    errs.PermissionDenied,
 				Message: fmt.Sprintf("permission denied: authorization query=%v", query),
 			}
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			t.logger.ErrorWithContext(ct, internalErr)
 			return entity.TaskLink{}, internalErr
 		}
 	}
@@ -70,7 +70,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	genTaskLinkIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskLinkIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TaskLink{}, internalErr
 	}
 
@@ -85,17 +85,17 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	}
 
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
 	}
 
 	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		createTaskLinkMutation := mutation.NewCreateTaskLinkMutation(t.dataCollector, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
+		createTaskLinkMutation := mutation.NewCreateTaskLinkMutation(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
 		internalErr := createTaskLinkMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			t.logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -104,20 +104,20 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	})
 
 	if internalErr != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TaskLink{}, internalErr
 	}
 
 	if feature.EnableAuthorization {
 		err := t.authorizer.registerResource(ct, authorization.TaskLinkResourceType, taskLink.ID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			t.logger.ErrorWithContext(ct, err)
 			return entity.TaskLink{}, err
 		}
 
 		err = t.authorizer.assignParentResource(ct, authorization.TaskLinkResourceType, taskLink.ID, authorization.TaskResourceType, taskLink.TaskID)
 		if err != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, err)
+			t.logger.ErrorWithContext(ct, err)
 			return entity.TaskLink{}, err
 		}
 	}
@@ -127,7 +127,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 
 func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.TaskLink, *errs.Error) {
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -136,14 +136,14 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		taskLink, err := t.taskLinkDaoV2.FindTaskLinkByID(ct, tx, taskLinkID)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+			t.logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 			return err
 		}
 
-		deleteTaskLinkMutation := mutation.NewDeleteTaskLinkMutation(t.dataCollector, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
+		deleteTaskLinkMutation := mutation.NewDeleteTaskLinkMutation(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
 		internalErr := deleteTaskLinkMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			t.logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
@@ -152,7 +152,7 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 	})
 
 	if internalErr != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TaskLink{}, internalErr
 	}
 
@@ -161,7 +161,7 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 
 func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, *errs.Error) {
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -175,7 +175,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 	})
 
 	if internalErr != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
+		t.logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: internalErr})
 		return nil, internalErr
 	}
 
@@ -183,7 +183,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 }
 
 func NewTaskLink(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	transactionFactory transaction.Factory,
 	authorizer Authorizer,
@@ -192,7 +192,7 @@ func NewTaskLink(
 	taskDaoV2 daov2.Task,
 ) TaskLink {
 	return TaskLink{
-		dataCollector:       dataCollector,
+		logger:              logger,
 		cloudClientRegistry: cloudClientRegistry,
 		transactionFactory:  transactionFactory,
 		authorizer:          authorizer,

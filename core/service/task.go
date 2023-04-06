@@ -58,7 +58,7 @@ type UpdateTaskInput struct {
 }
 
 type Task struct {
-	dataCollector             telemetry.DataCollector
+	logger                    telemetry.Logger
 	cloudClientRegistry       *cloudAPI.ClientRegistry
 	authorizer                Authorizer
 	stateSyncer               *realtime.StateSyncer
@@ -114,7 +114,7 @@ func (t Task) FindTasksInSprint(
 ) ([]entity.Task, *errs.Error) {
 	var tasks []entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -143,7 +143,7 @@ func (t Task) FindTasksInSprint(
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, *errs.Error) {
 	var tasks []entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -192,7 +192,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -221,7 +221,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		}
 
 		createTaskMutation := mutation.NewCreateTaskMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskDao,
 			t.taskDaoV2,
@@ -306,7 +306,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -329,7 +329,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		updatedAt := time.Now().UTC()
 		task.UpdatedAt = &updatedAt
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskDao,
 			t.taskDaoV2,
@@ -377,7 +377,7 @@ func (t Task) updateUnusedBandWidth(
 		for _, participant := range participants {
 			participant.UnusedBandwidth -= *newEffort
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
@@ -412,7 +412,7 @@ func (t Task) tryIncreaseBandwidth(
 		for _, participant := range participants {
 			participant.UnusedBandwidth += *oldEffort
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
@@ -457,7 +457,7 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, tx *transaction.Transac
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -476,7 +476,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 
 		for _, sprintID := range sprintIDs {
 			deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.sprintTaskRelationDao,
 				t.sprintTaskRelationDaoV2,
@@ -497,7 +497,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 
 		for _, awaitForTaskID := range awaitForTaskIDs {
 			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.taskAwaitForRelationDao,
 				t.taskAwaitForRelationDaoV2,
@@ -524,7 +524,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 
 		for _, awaitingTask := range awaitingTasks {
 			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.taskAwaitForRelationDao,
 				t.taskAwaitForRelationDaoV2,
@@ -544,7 +544,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		}
 
 		deleteTaskMutation := mutation.NewDeleteTaskMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskDao,
 			t.taskDaoV2,
@@ -585,7 +585,7 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction
 	now := time.Now()
 	task.UpdatedAt = &now
 	updateTaskMutation := mutation.NewUpdateTaskMutation(
-		t.dataCollector,
+		t.logger,
 		t.stateSyncer,
 		t.taskDao,
 		t.taskDaoV2,
@@ -603,7 +603,7 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction
 func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -627,7 +627,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 		now := time.Now()
 		task.UpdatedAt = &now
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskDao,
 			t.taskDaoV2,
@@ -653,7 +653,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -692,7 +692,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			inProgressTask.Status = entity.TaskStatusPaused
 			inProgressTask.UpdatedAt = &now
 			updateTaskMutation := mutation.NewUpdateTaskMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.taskDao,
 				t.taskDaoV2,
@@ -708,7 +708,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		task.Status = entity.TaskStatusInProgress
 		task.UpdatedAt = &now
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskDao,
 			t.taskDaoV2,
@@ -729,7 +729,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -746,7 +746,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		task.UpdatedAt = &now
 		task.DeliveredAt = &now
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskDao,
 			t.taskDaoV2,
@@ -800,7 +800,7 @@ func (t Task) MoveTaskToBlocked(ct context.Context, taskID uint64, reason string
 func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitForTaskId uint64) (entity.Task, *errs.Error) {
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -829,7 +829,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 			CreatedAt:      now,
 		}
 		createTaskAwaitForRelationMutation := mutation.NewCreateTaskAwaitForRelationMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskAwaitForRelationDao,
 			t.taskAwaitForRelationDaoV2,
@@ -846,7 +846,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		task.Status = entity.TaskStatusAwaiting
 		task.UpdatedAt = &now
 		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskDao,
 			t.taskDaoV2,
@@ -867,7 +867,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTaskId uint64) (entity.Task, *errs.Error) {
 	var task entity.Task
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -890,7 +890,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		}
 
 		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.taskAwaitForRelationDao,
 			t.taskAwaitForRelationDaoV2,
@@ -928,7 +928,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 	}
 
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -951,7 +951,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 			}}
 
 		updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.activityCache,
 			taskActivity,
@@ -970,7 +970,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 
 func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) *errs.Error {
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -990,7 +990,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 			}}
 
 		updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.activityCache,
 			taskActivity,
@@ -1008,7 +1008,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 }
 
 func NewTask(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
 	stateSyncer *realtime.StateSyncer,
@@ -1027,7 +1027,7 @@ func NewTask(
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 ) Task {
 	return Task{
-		dataCollector:             dataCollector,
+		logger:                    logger,
 		cloudClientRegistry:       cloudClientRegistry,
 		authorizer:                authorizer,
 		stateSyncer:               stateSyncer,

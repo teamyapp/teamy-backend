@@ -10,8 +10,8 @@ import (
 )
 
 type Thread struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.Thread = (*Thread)(nil)
@@ -27,7 +27,7 @@ func (t Thread) CreateThread(ct context.Context, threadID uint64) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -45,13 +45,13 @@ func (t Thread) DeleteThread(ct context.Context, threadID uint64) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewThread(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Thread {
-	return Thread{dataCollector: dataCollector, db: sqlDB}
+func NewThread(logger telemetry.Logger, sqlDB *sql.DB) Thread {
+	return Thread{logger: logger, db: sqlDB}
 }

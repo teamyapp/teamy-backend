@@ -13,7 +13,7 @@ import (
 const githubGraphQLAPIEndpoint = "https://api.github.com/graphql"
 
 type GraphQLAPI struct {
-	dataCollector telemetry.DataCollector
+	logger        telemetry.Logger
 	graphQLClient *gql.Client
 }
 
@@ -205,9 +205,9 @@ func (g *GraphQLAPI) mutate(
 	return g.graphQLClient.Mutate(ct, githubGraphQLAPIEndpoint, headers, mutationOptions, gqlResponse)
 }
 
-func NewGraphQLAPI(dataCollector telemetry.DataCollector, graphQLClient *gql.Client) GraphQLAPI {
+func NewGraphQLAPI(logger telemetry.Logger, graphQLClient *gql.Client) GraphQLAPI {
 	return GraphQLAPI{
-		dataCollector: dataCollector,
+		logger:        logger,
 		graphQLClient: graphQLClient,
 	}
 }

@@ -18,8 +18,8 @@ const (
 )
 
 type RESTAPI struct {
-	dataCollector telemetry.DataCollector
-	httpClient    web.HTTPClient
+	logger     telemetry.Logger
+	httpClient web.HTTPClient
 }
 
 func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Installation, login string) (entity.Organization, *errs.Error) {
@@ -70,9 +70,9 @@ func (r RESTAPI) GetOrganizationByLogin(ct context.Context, installation *Instal
 	return body, nil
 }
 
-func NewRESTAPI(dataCollector telemetry.DataCollector, httpClient web.HTTPClient) RESTAPI {
+func NewRESTAPI(logger telemetry.Logger, httpClient web.HTTPClient) RESTAPI {
 	return RESTAPI{
-		dataCollector: dataCollector,
-		httpClient:    httpClient,
+		logger:     logger,
+		httpClient: httpClient,
 	}
 }

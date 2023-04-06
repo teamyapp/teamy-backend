@@ -33,7 +33,7 @@ func (t Team) CreatedAt(ct context.Context) graphql.Time {
 func (t Team) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.team.CreatorUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -43,7 +43,7 @@ func (t Team) Creator(ct context.Context) (User, error) {
 func (t Team) Owner(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.team.OwnerUserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return User{}, nil
 	}
 
@@ -53,7 +53,7 @@ func (t Team) Owner(ct context.Context) (User, error) {
 func (t Team) Members(ct context.Context) ([]TeamMember, error) {
 	teamMembers, err := t.deps.teamService.FindTeamMembers(ct, t.team.ID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -78,13 +78,13 @@ func (t Team) Tasks(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	tasks, err := t.deps.taskService.FindTasksInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -102,13 +102,13 @@ func (t Team) Invitations(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	invitations, err := t.deps.invitationService.FindInvitationsInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -126,13 +126,13 @@ func (t Team) Sprints(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	sprints, err := t.deps.sprintService.FindSprintsInTeam(ct, t.team.ID, filter)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
@@ -144,7 +144,7 @@ func (t Team) Sprints(ct context.Context, args struct {
 func (t Team) AppInstallations(ct context.Context) ([]AppTeamInstallation, error) {
 	appInstallations, err := t.deps.appService.FindAppInstallationsByTeamID(ct, t.team.ID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

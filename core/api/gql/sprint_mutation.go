@@ -23,7 +23,7 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Sprint{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -33,7 +33,7 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 	}
 	sprint, err := m.deps.sprintService.CreateSprint(ct, teamID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return Sprint{}, errs.ToResolverErr(err)
 	}
 
@@ -49,13 +49,13 @@ func (m Mutation) DeleteSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Sprint{}, errs.ToResolverErr(internalErr)
 	}
 
 	sprint, err := m.deps.sprintService.DeleteSprint(ct, sprintID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return Sprint{}, errs.ToResolverErr(err)
 	}
 
@@ -72,7 +72,7 @@ func (m Mutation) AddTaskToSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -82,13 +82,13 @@ func (m Mutation) AddTaskToSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.sprintService.AddTaskToSprint(ct, sprintID, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -105,7 +105,7 @@ func (m Mutation) RemoveTaskFromSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -115,13 +115,13 @@ func (m Mutation) RemoveTaskFromSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.sprintService.RemoveTaskFromSprint(ct, sprintID, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return Task{}, errs.ToResolverErr(err)
 	}
 
@@ -138,7 +138,7 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
@@ -150,7 +150,7 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 				Code:     errs.InvalidArgument,
 				EmbedErr: err,
 			}
-			m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			m.deps.logger.ErrorWithContext(ct, internalErr)
 			continue
 		}
 
@@ -159,7 +159,7 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 
 	tasks, err := m.deps.sprintService.CopyTasksToSprint(ct, toSprintID, taskIDs)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return []Task{}, errs.ToResolverErr(err)
 	}
 
@@ -179,7 +179,7 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
@@ -189,7 +189,7 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
@@ -201,7 +201,7 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 				Code:     errs.InvalidArgument,
 				EmbedErr: argErr,
 			}
-			m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			m.deps.logger.ErrorWithContext(ct, internalErr)
 			continue
 		}
 
@@ -210,7 +210,7 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 
 	tasks, err := m.deps.sprintService.MoveTasksToSprint(ct, fromSprintID, toSprintID, taskIDs)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return []Task{}, errs.ToResolverErr(err)
 	}
 

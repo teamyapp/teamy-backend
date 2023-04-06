@@ -13,8 +13,8 @@ import (
 )
 
 type User struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.User = (*User)(nil)
@@ -46,7 +46,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("user not found: userID=%v", userID),
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
@@ -55,7 +55,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
@@ -84,7 +84,7 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -113,7 +113,7 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 				internalErr = newInternalErr
 			}
 
-			u.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			u.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -146,7 +146,7 @@ func (u User) CreateUser(ct context.Context, user entity.User) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -174,13 +174,13 @@ func (u User) UpdateUser(ct context.Context, user entity.User) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewUser(dataCollector telemetry.DataCollector, sqlDB *sql.DB) User {
-	return User{dataCollector: dataCollector, db: sqlDB}
+func NewUser(logger telemetry.Logger, sqlDB *sql.DB) User {
+	return User{logger: logger, db: sqlDB}
 }

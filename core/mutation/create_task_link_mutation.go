@@ -12,7 +12,7 @@ import (
 )
 
 type CreateTaskLinkMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskLinkDaoV2    daov2.TaskLink
 	taskDaoV2        daov2.Task
@@ -31,7 +31,7 @@ func (c *CreateTaskLinkMutation) GetID() uint64 {
 func (c *CreateTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.taskLinkDaoV2.CreateTaskLink(ct, tx, c.taskLink)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -59,7 +59,7 @@ func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *
 	var internalErr *errs.Error
 	c.clientNotifiers, internalErr = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 	if internalErr != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		c.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -89,14 +89,14 @@ func (c *CreateTaskLinkMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewCreateTaskLinkMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskLinkDaoV2 daov2.TaskLink,
 	taskDaoV2 daov2.Task,
 	taskLink entity.TaskLink,
 ) *CreateTaskLinkMutation {
 	return &CreateTaskLinkMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskLinkDaoV2:    taskLinkDaoV2,
 		taskDaoV2:        taskDaoV2,

@@ -10,7 +10,7 @@ import (
 )
 
 type Thread struct {
-	dataCollector telemetry.DataCollector
+	logger telemetry.Logger
 }
 
 var _ daov2.Thread = (*Thread)(nil)
@@ -26,7 +26,7 @@ func (t Thread) CreateThread(ct context.Context, tx *transaction.Transaction, th
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -44,13 +44,13 @@ func (t Thread) DeleteThread(ct context.Context, tx *transaction.Transaction, th
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewThread(dataCollector telemetry.DataCollector) Thread {
-	return Thread{dataCollector: dataCollector}
+func NewThread(logger telemetry.Logger) Thread {
+	return Thread{logger: logger}
 }

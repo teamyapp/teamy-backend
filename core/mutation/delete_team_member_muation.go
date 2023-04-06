@@ -13,7 +13,7 @@ import (
 )
 
 type DeleteTeamMemberMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	teamMemberDao    dao.TeamMember
 	teamMemberDaoV2  daov2.TeamMember
@@ -52,7 +52,7 @@ func (d *DeleteTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx
 func (d *DeleteTeamMemberMutation) Execute(ct context.Context) *errs.Error {
 	err := d.teamMemberDao.DeleteTeamMember(ct, d.teamID, d.userID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (d *DeleteTeamMemberMutation) ToMessage() realtime.MutationMessage {
 func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) *errs.Error {
 	teamNotifier, err := d.stateSyncer.GetTeamNotifier(ct, d.teamID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -95,7 +95,7 @@ func (d *DeleteTeamMemberMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewDeleteTeamMemberMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
@@ -103,7 +103,7 @@ func NewDeleteTeamMemberMutation(
 	userID uint64,
 ) *DeleteTeamMemberMutation {
 	return &DeleteTeamMemberMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		teamMemberDao:    teamMemberDao,
 		teamMemberDaoV2:  teamMemberDaoV2,

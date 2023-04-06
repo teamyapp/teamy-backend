@@ -12,7 +12,7 @@ import (
 )
 
 type DeleteTaskLinkMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskLinkDaoV2    daov2.TaskLink
 	taskDaoV2        daov2.Task
@@ -31,7 +31,7 @@ func (d *DeleteTaskLinkMutation) GetID() uint64 {
 func (d *DeleteTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := d.taskLinkDaoV2.DeleteTaskLink(ct, tx, d.taskLink.ID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -51,7 +51,7 @@ func (d *DeleteTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 	if internalErr != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		d.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -89,14 +89,14 @@ func (c *DeleteTaskLinkMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewDeleteTaskLinkMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskLinkDaoV2 daov2.TaskLink,
 	taskDaoV2 daov2.Task,
 	taskLink entity.TaskLink,
 ) *DeleteTaskLinkMutation {
 	return &DeleteTaskLinkMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskLinkDaoV2:    taskLinkDaoV2,
 		taskDaoV2:        taskDaoV2,

@@ -5,7 +5,7 @@ import (
 )
 
 type TeamNotifier struct {
-	dataCollector             telemetry.DataCollector
+	logger                    telemetry.Logger
 	teamID                    uint64
 	teamDisconnectCh          chan bool
 	teamDisconnectSubscribers []chan bool
@@ -33,9 +33,9 @@ func (t *TeamNotifier) subscribeTeamDisconnect() chan bool {
 	return subscriber
 }
 
-func newTeamNotifier(dataCollector telemetry.DataCollector, teamID uint64) *TeamNotifier {
+func newTeamNotifier(logger telemetry.Logger, teamID uint64) *TeamNotifier {
 	teamNotifier := &TeamNotifier{
-		dataCollector:             dataCollector,
+		logger:                    logger,
 		teamID:                    teamID,
 		userNotifiers:             map[uint64]*UserNotifier{},
 		teamDisconnectCh:          make(chan bool),
