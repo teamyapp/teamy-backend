@@ -13,7 +13,7 @@ func (m Mutation) CreateApp(ct context.Context, args struct {
 }) (App, error) {
 	app, err := m.deps.appService.CreateApp(ct, args.Name)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 
@@ -34,7 +34,7 @@ func (m Mutation) UpdateApp(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return App{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -45,7 +45,7 @@ func (m Mutation) UpdateApp(ct context.Context, args struct {
 	}
 	app, err := m.deps.appService.UpdateApp(ct, appID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 
@@ -61,13 +61,13 @@ func (m Mutation) RefreshAppSecret(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return App{}, errs.ToResolverErr(internalErr)
 	}
 
 	app, err := m.deps.appService.RefreshAppSecret(ct, appID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 
@@ -83,13 +83,13 @@ func (m Mutation) DeleteApp(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return App{}, errs.ToResolverErr(internalErr)
 	}
 
 	app, err := m.deps.appService.DeleteApp(ct, appID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 

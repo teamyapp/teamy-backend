@@ -13,8 +13,8 @@ import (
 )
 
 type UserFileUploadSession struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.UserFileUploadSession = (*UserFileUploadSession)(nil)
@@ -53,7 +53,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 				userID,
 				userFileUploadSessionType),
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return entity.UserFileUploadSession{}, internalErr
 	}
 
@@ -62,7 +62,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return entity.UserFileUploadSession{}, internalErr
 	}
 
@@ -97,7 +97,7 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -134,13 +134,13 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewUserFileUploadSession(dataCollector telemetry.DataCollector, sqlDB *sql.DB) UserFileUploadSession {
-	return UserFileUploadSession{dataCollector: dataCollector, db: sqlDB}
+func NewUserFileUploadSession(logger telemetry.Logger, sqlDB *sql.DB) UserFileUploadSession {
+	return UserFileUploadSession{logger: logger, db: sqlDB}
 }

@@ -11,8 +11,8 @@ import (
 )
 
 type GithubPullRequestInternalTaskRelation struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubPullRequestInternalTaskRelation = (*GithubPullRequestInternalTaskRelation)(nil)
@@ -123,6 +123,6 @@ func (g GithubPullRequestInternalTaskRelation) DeletePullRequestInternalTaskRela
 	return nil
 }
 
-func NewGithubPullRequestInternalTaskRelation(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubPullRequestInternalTaskRelation {
-	return GithubPullRequestInternalTaskRelation{dataCollector: dataCollector, db: sqlDB}
+func NewGithubPullRequestInternalTaskRelation(logger telemetry.Logger, sqlDB *sql.DB) GithubPullRequestInternalTaskRelation {
+	return GithubPullRequestInternalTaskRelation{logger: logger, db: sqlDB}
 }

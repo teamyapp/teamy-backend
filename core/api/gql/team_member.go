@@ -17,7 +17,7 @@ type TeamMember struct {
 func (t TeamMember) Team(ct context.Context) (Team, error) {
 	team, err := t.deps.teamService.FindTeamByID(ct, t.teamMember.TeamID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return Team{}, errs.ToResolverErr(err)
 	}
 
@@ -27,7 +27,7 @@ func (t TeamMember) Team(ct context.Context) (Team, error) {
 func (t TeamMember) User(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.teamMember.UserID)
 	if err != nil {
-		t.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 

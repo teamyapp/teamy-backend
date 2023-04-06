@@ -13,8 +13,8 @@ import (
 )
 
 type TeamFileUploadSession struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
@@ -52,7 +52,7 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
 			Message: fmt.Sprintf(
 				"TeamFileUploadSession not found: teamID=%v, teamFileUploadSessionType=%v", teamID, teamFileUploadSessionType),
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TeamFileUploadSession{}, internalErr
 	}
 
@@ -61,7 +61,7 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.TeamFileUploadSession{}, internalErr
 	}
 
@@ -96,7 +96,7 @@ func (t TeamFileUploadSession) CreateTeamFileUploadSession(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -133,13 +133,13 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewTeamFileUploadSession(dataCollector telemetry.DataCollector, sqlDB *sql.DB) TeamFileUploadSession {
-	return TeamFileUploadSession{dataCollector: dataCollector, db: sqlDB}
+func NewTeamFileUploadSession(logger telemetry.Logger, sqlDB *sql.DB) TeamFileUploadSession {
+	return TeamFileUploadSession{logger: logger, db: sqlDB}
 }

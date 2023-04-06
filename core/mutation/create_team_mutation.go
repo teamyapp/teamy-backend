@@ -13,7 +13,7 @@ import (
 )
 
 type CreateTeamMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	teamDao          dao.Team
 	teamDaoV2        daov2.Team
@@ -51,7 +51,7 @@ func (c *CreateTeamMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 func (c *CreateTeamMutation) Execute(ct context.Context) *errs.Error {
 	err := c.teamDao.CreateTeam(ct, c.team)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -84,14 +84,14 @@ func (c *CreateTeamMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewCreateTeamMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	teamDao dao.Team,
 	teamDaoV2 daov2.Team,
 	team entity.Team,
 ) *CreateTeamMutation {
 	return &CreateTeamMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		teamDao:          teamDao,
 		teamDaoV2:        teamDaoV2,

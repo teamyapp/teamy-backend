@@ -14,7 +14,7 @@ import (
 )
 
 type TeamFileUploadSession struct {
-	dataCollector telemetry.DataCollector
+	logger telemetry.Logger
 }
 
 var _ daov2.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
@@ -123,6 +123,6 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 	return nil
 }
 
-func NewTeamFileUploadSession(dataCollector telemetry.DataCollector) TeamFileUploadSession {
-	return TeamFileUploadSession{dataCollector: dataCollector}
+func NewTeamFileUploadSession(logger telemetry.Logger) TeamFileUploadSession {
+	return TeamFileUploadSession{logger: logger}
 }

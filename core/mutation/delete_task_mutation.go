@@ -13,7 +13,7 @@ import (
 )
 
 type DeleteTaskMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskDao          dao.Task
 	taskDaoV2        daov2.Task
@@ -46,7 +46,7 @@ func (d *DeleteTaskMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		d.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -57,7 +57,7 @@ func (d *DeleteTaskMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 func (d *DeleteTaskMutation) Execute(ct context.Context) *errs.Error {
 	err := d.taskDao.DeleteTask(ct, d.task.ID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -90,14 +90,14 @@ func (d *DeleteTaskMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewDeleteTaskMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	task entity.Task,
 ) *DeleteTaskMutation {
 	return &DeleteTaskMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskDao:          taskDao,
 		taskDaoV2:        taskDaoV2,

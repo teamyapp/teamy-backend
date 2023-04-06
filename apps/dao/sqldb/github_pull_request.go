@@ -13,8 +13,8 @@ import (
 )
 
 type GithubPullRequest struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubPullRequest = (*GithubPullRequest)(nil)
@@ -189,6 +189,6 @@ func (g GithubPullRequest) FindAllPullRequests(ct context.Context) ([]entity.Git
 	return pullRequests, internalErr
 }
 
-func NewGithubPullRequest(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubPullRequest {
-	return GithubPullRequest{dataCollector: dataCollector, db: sqlDB}
+func NewGithubPullRequest(logger telemetry.Logger, sqlDB *sql.DB) GithubPullRequest {
+	return GithubPullRequest{logger: logger, db: sqlDB}
 }

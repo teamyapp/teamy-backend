@@ -10,7 +10,7 @@ import (
 )
 
 type Activity struct {
-	dataCollector  telemetry.DataCollector
+	logger         telemetry.Logger
 	teamActivities map[uint64]*entity.TeamActivity
 }
 
@@ -51,7 +51,7 @@ func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID u
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("teamActivity not found: teamID=%v", teamID),
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, err)
+		a.logger.ErrorWithContext(ct, err)
 		return nil, err
 	}
 
@@ -59,9 +59,9 @@ func (a Activity) UpdateTaskActivity(ct context.Context, teamID uint64, taskID u
 	return taskActivity, nil
 }
 
-func NewActivity(dataCollector telemetry.DataCollector) Activity {
+func NewActivity(logger telemetry.Logger) Activity {
 	return Activity{
-		dataCollector:  dataCollector,
+		logger:         logger,
 		teamActivities: map[uint64]*entity.TeamActivity{},
 	}
 }

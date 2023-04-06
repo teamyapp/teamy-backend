@@ -26,14 +26,14 @@ func (d Duration) ImplementsGraphQLType(name string) bool {
 }
 
 func (d *Duration) UnmarshalGraphQL(input interface{}) error {
-	dataCollector := inject.Injector.Get(new(telemetry.DataCollector)).(telemetry.DataCollector)
+	logger := inject.Injector.Get(new(telemetry.Logger)).(telemetry.Logger)
 	ct := context.Background()
 	switch input.(type) {
 	case string:
 		var err *errs.Error
 		d.Duration, err = duration.Parse(ct, input.(string))
 		if err != nil {
-			dataCollector.Logger.ErrorWithContext(ct, err)
+			logger.ErrorWithContext(ct, err)
 			return err.ToError()
 		}
 
@@ -42,7 +42,7 @@ func (d *Duration) UnmarshalGraphQL(input interface{}) error {
 			Code:    errs.InvalidArgument,
 			Message: fmt.Sprintf("unsupported duration dataType: dataType=%v", reflect.TypeOf(input)),
 		}
-		dataCollector.Logger.ErrorWithContext(ct, err)
+		logger.ErrorWithContext(ct, err)
 		return err.ToError()
 	}
 

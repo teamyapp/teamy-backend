@@ -74,37 +74,35 @@ func main() {
 			telemetry.ClientLogInterceptor,
 		},
 	)
-
-	dataCollector := telemetry.NewDataCollector(logger)
-	inject.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
-		return dataCollector
+	inject.Injector.BindType(new(telemetry.Logger), func() interface{} {
+		return logger
 	})
-	appsDI.Injector.BindType(new(telemetry.DataCollector), func() interface{} {
-		return dataCollector
+	appsDI.Injector.BindType(new(telemetry.Logger), func() interface{} {
+		return logger
 	})
 
 	gitCommitLink := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
 		cfg.GitRepoOwner,
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
-	dataCollector.Logger.Info(gitCommitLink)
-	err = sqldb.Use(dataCollector, cfg.Config, func(sqlDB *sql.DB) *errs.Error {
-		internalErr := sqldb.MigrateUp(dataCollector, sqlDB, "migrations", 0)
+	logger.Info(gitCommitLink)
+	err = sqldb.Use(logger, cfg.Config, func(sqlDB *sql.DB) *errs.Error {
+		internalErr := sqldb.MigrateUp(logger, sqlDB, "migrations", 0)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		realTimeStateSyncer := dep.InitRealTimeStateSyncer(dataCollector, sqlDB)
-		return startServiceRunner(dataCollector, cfg, sqlDB, realTimeStateSyncer)
+		realTimeStateSyncer := dep.InitRealTimeStateSyncer(logger, sqlDB)
+		return startServiceRunner(logger, cfg, sqlDB, realTimeStateSyncer)
 	})
 	if err != nil {
-		dataCollector.Logger.Error(err)
+		logger.Error(err)
 		panic(err)
 	}
 }
 
 func startServiceRunner(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cfg config.App,
 	sqlDB *sql.DB,
 	realTimeStateSyncer *realtime.StateSyncer,
@@ -121,9 +119,9 @@ func startServiceRunner(
 
 	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
 	nw := network.NewSocket()
-	retryFactory := makeRetryFactory(dataCollector, cfg)
+	retryFactory := makeRetryFactory(logger, cfg)
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
-		dataCollector,
+		logger,
 		nw,
 		prom,
 		rpc.ConnectionConfig{
@@ -140,7 +138,7 @@ func startServiceRunner(
 	}
 
 	teamyClientRegistry, internalErr := api.NewClientRegistry(
-		dataCollector,
+		logger,
 		nw,
 		prom,
 		rpc.ConnectionConfig{
@@ -162,7 +160,7 @@ func startServiceRunner(
 	}
 
 	githubAppAPI, err := appsDep.InitGithubAppAPI(
-		dataCollector,
+		logger,
 		cloudClientRegistry,
 		teamyClientRegistry,
 		http.DefaultClient, //TODO: add a log middleware to log outgoing request
@@ -174,13 +172,13 @@ func startServiceRunner(
 	}
 
 	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(
-		dataCollector,
+		logger,
 		realTimeStateSyncer)
 	graphQLAPI, err := dep.InitGraphQLAPI(
 		appName,
 		serviceName,
 		cfg.Environment,
-		dataCollector,
+		logger,
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		realTimeStateSyncer,
@@ -190,23 +188,23 @@ func startServiceRunner(
 	}
 
 	taskRPCAPI := dep.InitTaskRPCAPI(
-		dataCollector,
+		logger,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
 	taskLinkRPCAPI := dep.InitTaskLinkRPCAPI(
-		dataCollector,
+		logger,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB,
 	)
 	sprintRPCAPI := dep.InitSprintRPCAPI(
-		dataCollector,
+		logger,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
 	rn := runner.NewServiceRunnerBuilder(
-		dataCollector,
+		logger,
 		nw,
 		prom,
 		runnerConfig,
@@ -263,12 +261,12 @@ func newLineFormatter(environment env.Environment) telemetry.LineFormatter {
 	return telemetry.NewJSONLineFormatter()
 }
 
-func makeRetryFactory(dataCollector telemetry.DataCollector, cfg config.App) func() retry.Retry {
+func makeRetryFactory(logger telemetry.Logger, cfg config.App) func() retry.Retry {
 	return func() retry.Retry {
 		shortBackOff := backoff.NewExponentialBuilder().Build()
 		longBackOff := backoff.NewExponentialBuilder().Build()
 		return retry.NewMaxCount(
-			dataCollector,
+			logger,
 			runtime.NewBuiltInRuntime(),
 			shortBackOff,
 			longBackOff,

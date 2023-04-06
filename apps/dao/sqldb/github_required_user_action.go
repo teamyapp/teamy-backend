@@ -11,8 +11,8 @@ import (
 )
 
 type GithubRequiredUserAction struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubRequiredUserAction = (*GithubRequiredUserAction)(nil)
@@ -127,6 +127,6 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(
 	return nil
 }
 
-func NewGithubRequiredUserAction(dataCollector telemetry.DataCollector, sqlDB *sql.DB) GithubRequiredUserAction {
-	return GithubRequiredUserAction{dataCollector: dataCollector, db: sqlDB}
+func NewGithubRequiredUserAction(logger telemetry.Logger, sqlDB *sql.DB) GithubRequiredUserAction {
+	return GithubRequiredUserAction{logger: logger, db: sqlDB}
 }

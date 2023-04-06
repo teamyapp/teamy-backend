@@ -12,12 +12,12 @@ import (
 )
 
 type DeleteMessageMutation struct {
-	dataCollector telemetry.DataCollector
-	stateSyncer   *realtime.StateSyncer
-	message       entity.Message
-	messageDao    dao.Message
-	id            uint64
-	taskDao       dao.Task
+	logger      telemetry.Logger
+	stateSyncer *realtime.StateSyncer
+	message     entity.Message
+	messageDao  dao.Message
+	id          uint64
+	taskDao     dao.Task
 }
 
 var _ realtime.Mutation = (*DeleteMessageMutation)(nil)
@@ -39,7 +39,7 @@ func (d *DeleteMessageMutation) PrepareClientNotifiers(ct context.Context, tx *t
 func (d *DeleteMessageMutation) Execute(ct context.Context) *errs.Error {
 	err := d.messageDao.DeleteMessage(ct, d.message.ID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (d *DeleteMessageMutation) Undo() *errs.Error {
 func (d *DeleteMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := d.taskDao.FindTaskByCommentsThreadID(ct, d.message.ThreadID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 
@@ -79,18 +79,18 @@ func (d *DeleteMessageMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewDeleteMessageMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
 	taskDao dao.Task,
 	message entity.Message,
 ) *DeleteMessageMutation {
 	return &DeleteMessageMutation{
-		dataCollector: dataCollector,
-		stateSyncer:   stateSyncer,
-		messageDao:    messageDao,
-		taskDao:       taskDao,
-		id:            stateSyncer.NextMutationID(),
-		message:       message,
+		logger:      logger,
+		stateSyncer: stateSyncer,
+		messageDao:  messageDao,
+		taskDao:     taskDao,
+		id:          stateSyncer.NextMutationID(),
+		message:     message,
 	}
 }

@@ -20,21 +20,21 @@ import (
 
 // Injectors from wire.go:
 
-func InitGithubAppAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, httpClient web.HTTPClient, config github.AppConfig, githubAppPrivateKeyPEM GithubAppPrivateKeyPEM, sqlDB *sql.DB) (github.AppAPI, error) {
-	githubAppInstallState := sqldb.NewGithubAppInstallState(dataCollector, sqlDB)
-	githubAppInstallation := sqldb.NewGithubAppInstallation(dataCollector, sqlDB)
-	githubPullRequest := sqldb.NewGithubPullRequest(dataCollector, sqlDB)
-	githubCodeReview := sqldb.NewGithubCodeReview(dataCollector, sqlDB)
-	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(dataCollector, sqlDB)
-	githubPullRequestInternalTaskRelation := sqldb.NewGithubPullRequestInternalTaskRelation(dataCollector, sqlDB)
-	gqlClient := gql.NewClient(dataCollector, httpClient)
-	graphQLAPI := client.NewGraphQLAPI(dataCollector, gqlClient)
-	restapi := client.NewRESTAPI(dataCollector, httpClient)
-	githubApp, err := newGithubApp(dataCollector, config, githubAppPrivateKeyPEM)
+func InitGithubAppAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, httpClient web.HTTPClient, config github.AppConfig, githubAppPrivateKeyPEM GithubAppPrivateKeyPEM, sqlDB *sql.DB) (github.AppAPI, error) {
+	githubAppInstallState := sqldb.NewGithubAppInstallState(logger, sqlDB)
+	githubAppInstallation := sqldb.NewGithubAppInstallation(logger, sqlDB)
+	githubPullRequest := sqldb.NewGithubPullRequest(logger, sqlDB)
+	githubCodeReview := sqldb.NewGithubCodeReview(logger, sqlDB)
+	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(logger, sqlDB)
+	githubPullRequestInternalTaskRelation := sqldb.NewGithubPullRequestInternalTaskRelation(logger, sqlDB)
+	gqlClient := gql.NewClient(logger, httpClient)
+	graphQLAPI := client.NewGraphQLAPI(logger, gqlClient)
+	restapi := client.NewRESTAPI(logger, httpClient)
+	githubApp, err := newGithubApp(logger, config, githubAppPrivateKeyPEM)
 	if err != nil {
 		return github.AppAPI{}, err
 	}
-	appAPI := github.NewAppAPI(config, dataCollector, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction, githubPullRequestInternalTaskRelation, graphQLAPI, restapi, githubApp)
+	appAPI := github.NewAppAPI(config, logger, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction, githubPullRequestInternalTaskRelation, graphQLAPI, restapi, githubApp)
 	return appAPI, nil
 }
 
@@ -42,6 +42,6 @@ func InitGithubAppAPI(dataCollector telemetry.DataCollector, cloudAPIClientRegis
 
 type GithubAppPrivateKeyPEM []byte
 
-func newGithubApp(dataCollector telemetry.DataCollector, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client.GithubApp, error) {
-	return client.NewGithubApp(dataCollector, config.AppID, []byte(privateKeyPEM))
+func newGithubApp(logger telemetry.Logger, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client.GithubApp, error) {
+	return client.NewGithubApp(logger, config.AppID, []byte(privateKeyPEM))
 }

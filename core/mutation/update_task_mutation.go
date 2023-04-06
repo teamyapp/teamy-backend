@@ -13,7 +13,7 @@ import (
 )
 
 type UpdateTaskMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskDao          dao.Task
 	taskDaoV2        daov2.Task
@@ -46,7 +46,7 @@ func (u *UpdateTaskMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	var internalErr *errs.Error
 	u.clientNotifiers, internalErr = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.task.OwningTeamID)
 	if internalErr != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -57,7 +57,7 @@ func (u *UpdateTaskMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 func (u *UpdateTaskMutation) Execute(ct context.Context) *errs.Error {
 	err := u.taskDao.UpdateTask(ct, u.task)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -90,14 +90,14 @@ func (u *UpdateTaskMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewUpdateTaskMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	task entity.Task,
 ) *UpdateTaskMutation {
 	return &UpdateTaskMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskDao:          taskDao,
 		taskDaoV2:        taskDaoV2,

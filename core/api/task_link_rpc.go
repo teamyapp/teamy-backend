@@ -14,7 +14,7 @@ import (
 )
 
 type TaskLinkRPC struct {
-	dataCollector   telemetry.DataCollector
+	logger          telemetry.Logger
 	taskLinkService service.TaskLink
 	proto.UnimplementedTaskLinkServer
 }
@@ -40,7 +40,7 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLink
 
 	taskLink, err := t.taskLinkService.CreateTaskLink(ct, input)
 	if err != nil {
-		t.dataCollector.Logger.ErrorWithContext(ct, err)
+		t.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
@@ -50,16 +50,16 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *proto.CreateTaskLink
 func (t TaskLinkRPC) DeleteTaskLink(ct context.Context, in *proto.DeleteTaskLinkRequest) (*emptypb.Empty, error) {
 	_, err := t.taskLinkService.DeleteTaskLink(ct, in.LinkId)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		t.logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, errs.ToGRPCErr(err)
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
-func NewTaskLinkRPC(dataCollector telemetry.DataCollector, taskLinkService service.TaskLink) TaskLinkRPC {
+func NewTaskLinkRPC(logger telemetry.Logger, taskLinkService service.TaskLink) TaskLinkRPC {
 	return TaskLinkRPC{
-		dataCollector:   dataCollector,
+		logger:          logger,
 		taskLinkService: taskLinkService,
 	}
 }

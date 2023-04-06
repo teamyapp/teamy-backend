@@ -19,7 +19,7 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -29,13 +29,13 @@ func (m Mutation) AddMemberToTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamMember, err := m.deps.teamService.AddMemberToTeam(ct, teamID, memberUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return TeamMember{}, errs.ToResolverErr(err)
 	}
 
@@ -55,7 +55,7 @@ func (m Mutation) UpdateTeamMember(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -65,7 +65,7 @@ func (m Mutation) UpdateTeamMember(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -75,7 +75,7 @@ func (m Mutation) UpdateTeamMember(ct context.Context, args struct {
 	}
 	teamMember, err := m.deps.teamService.UpdateTeamMember(ct, teamID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return TeamMember{}, errs.ToResolverErr(err)
 	}
 
@@ -92,7 +92,7 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -102,13 +102,13 @@ func (m Mutation) RemoveMemberFromTeam(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return TeamMember{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamMember, err := m.deps.teamService.RemoveMemberFromTeam(ct, teamID, memberUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return TeamMember{}, errs.ToResolverErr(err)
 	}
 

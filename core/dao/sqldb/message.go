@@ -13,8 +13,8 @@ import (
 )
 
 type Message struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.Message = (*Message)(nil)
@@ -46,7 +46,7 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 			Message: fmt.Sprintf(
 				"message not found: messageID=%v", messageID),
 		}
-		m.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.logger.ErrorWithContext(ct, internalErr)
 		return entity.Message{}, internalErr
 	}
 
@@ -55,7 +55,7 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		m.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.logger.ErrorWithContext(ct, internalErr)
 		return entity.Message{}, internalErr
 	}
 
@@ -80,7 +80,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		m.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -108,7 +108,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 				internalErr = newInternalErr
 			}
 
-			m.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			m.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -141,7 +141,7 @@ func (m Message) CreateMessage(ct context.Context, message entity.Message) *errs
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		m.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -165,7 +165,7 @@ func (m Message) UpdateMessage(ct context.Context, message entity.Message) *errs
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		m.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -184,13 +184,13 @@ func (m Message) DeleteMessage(ct context.Context, messageID uint64) *errs.Error
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		m.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewMessage(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Message {
-	return Message{dataCollector: dataCollector, db: sqlDB}
+func NewMessage(logger telemetry.Logger, sqlDB *sql.DB) Message {
+	return Message{logger: logger, db: sqlDB}
 }

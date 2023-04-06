@@ -43,15 +43,15 @@ func (c *ClientRegistry) SprintClient() proto.SprintClient {
 }
 
 func NewClientRegistry(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	network network.Network,
 	clientGRPCMetrics middleware.ClientGRPCMetrics,
 	connCfg rpc.ConnectionConfig,
 	makeRetry func() retry.Retry,
 ) (*ClientRegistry, *errs.Error) {
-	conn, err := rpc.NewClientConnection(dataCollector, network, clientGRPCMetrics, connCfg, makeRetry)
+	conn, err := rpc.NewClientConnection(logger, network, clientGRPCMetrics, connCfg, makeRetry)
 	if err != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, &errs.Error{
 			Code:     errs.Unknown,
 			EmbedErr: err,

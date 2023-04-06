@@ -17,7 +17,7 @@ import (
 const clientIDParam = "clientId"
 
 type RealTimeStateSync struct {
-	dataCollector       telemetry.DataCollector
+	logger              telemetry.Logger
 	realTimeStateSyncer *realtime.StateSyncer
 }
 
@@ -47,7 +47,7 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 			Code:    errs.Unauthenticated,
 			Message: "userID not found",
 		}
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		r.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -59,14 +59,14 @@ func (r RealTimeStateSync) clientInitialStateReady(writer http.ResponseWriter, r
 			Code:    errs.InvalidArgument,
 			Message: "must provide teamId",
 		}
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		r.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
 	internalErr := r.realTimeStateSyncer.OnInitialStateReady(userID, clientID)
 	if internalErr != nil {
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		r.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -82,7 +82,7 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 			Code:    errs.Unauthenticated,
 			Message: "userID not found",
 		}
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		r.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
@@ -92,26 +92,26 @@ func (r RealTimeStateSync) connect(writer http.ResponseWriter, request *http.Req
 		internalErr := &errs.Error{
 			Code: connection.ConnErr,
 		}
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		r.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	webSocketConn := connection.NewWebSocket(r.dataCollector, conn)
+	webSocketConn := connection.NewWebSocket(r.logger, conn)
 	internalErr := r.realTimeStateSyncer.OnClientConnect(userID, webSocketConn)
 	if internalErr != nil {
-		r.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		r.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 }
 
 func NewRealTimeStateSync(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	realTimeStateSyncer *realtime.StateSyncer,
 ) RealTimeStateSync {
 	return RealTimeStateSync{
-		dataCollector:       dataCollector,
+		logger:              logger,
 		realTimeStateSyncer: realTimeStateSyncer,
 	}
 }

@@ -13,7 +13,7 @@ import (
 )
 
 type CreateSprintTaskRelationMutation struct {
-	dataCollector           telemetry.DataCollector
+	logger                  telemetry.Logger
 	stateSyncer             *realtime.StateSyncer
 	sprintTaskRelationDao   dao.SprintTaskRelation
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
@@ -34,7 +34,7 @@ func (c *CreateSprintTaskRelationMutation) GetID() uint64 {
 func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, c.sprintTaskRelation)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -48,13 +48,13 @@ func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 
 	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	c.clientNotifiers, err = c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -65,7 +65,7 @@ func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 func (c *CreateSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := c.sprintTaskRelationDao.CreateSprintTaskRelation(ct, c.sprintTaskRelation)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -79,7 +79,7 @@ func (c *CreateSprintTaskRelationMutation) Undo() *errs.Error {
 func (c *CreateSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 
@@ -104,7 +104,7 @@ func (c *CreateSprintTaskRelationMutation) CleanUp(ct context.Context) *errs.Err
 }
 
 func NewCreateSprintTaskRelationMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
@@ -118,7 +118,7 @@ func NewCreateSprintTaskRelationMutation(
 		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
 		sprintDao:               sprintDao,
 		sprintDaoV2:             sprintDaoV2,
-		dataCollector:           dataCollector,
+		logger:                  logger,
 		id:                      stateSyncer.NextMutationID(),
 		sprintTaskRelation:      sprintTaskRelation,
 		notifiersPrepared:       false,

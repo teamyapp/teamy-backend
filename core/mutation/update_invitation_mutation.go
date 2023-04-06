@@ -12,7 +12,7 @@ import (
 )
 
 type UpdateInvitationMutation struct {
-	dataCollector telemetry.DataCollector
+	logger        telemetry.Logger
 	stateSyncer   *realtime.StateSyncer
 	invitationDao dao.Invitation
 	id            uint64
@@ -38,7 +38,7 @@ func (u *UpdateInvitationMutation) PrepareClientNotifiers(ct context.Context, tx
 func (u *UpdateInvitationMutation) Execute(ct context.Context) *errs.Error {
 	err := u.invitationDao.UpdateInvitation(ct, u.invitation)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -72,13 +72,13 @@ func (u *UpdateInvitationMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewUpdateInvitationMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
 	invitation entity.Invitation,
 ) *UpdateInvitationMutation {
 	return &UpdateInvitationMutation{
-		dataCollector: dataCollector,
+		logger:        logger,
 		stateSyncer:   stateSyncer,
 		invitationDao: invitationDao,
 		id:            stateSyncer.NextMutationID(),

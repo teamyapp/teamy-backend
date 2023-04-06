@@ -14,7 +14,7 @@ type githubTime struct {
 }
 
 func (g *githubTime) UnmarshalJSON(buf []byte) (err error) {
-	dataCollector := inject.Injector.Get(new(telemetry.DataCollector)).(telemetry.DataCollector)
+	logger := inject.Injector.Get(new(telemetry.Logger)).(telemetry.Logger)
 	str := strings.Trim(string(buf), `"`)
 	unixTimestamp, err := strconv.ParseInt(str, 10, 64)
 	if err == nil {
@@ -24,7 +24,7 @@ func (g *githubTime) UnmarshalJSON(buf []byte) (err error) {
 
 	tm, err := time.Parse("2006-01-02T15:04:05Z", str)
 	if err != nil {
-		dataCollector.Logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
+		logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return err
 	}
 

@@ -13,8 +13,8 @@ import (
 )
 
 type Team struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.Team = (*Team)(nil)
@@ -37,7 +37,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -66,7 +66,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -107,7 +107,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 			Message: fmt.Sprintf(
 				"team not found: teamID=%v", teamID),
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.Team{}, internalErr
 	}
 
@@ -116,7 +116,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return entity.Team{}, internalErr
 	}
 
@@ -146,7 +146,7 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -176,7 +176,7 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -208,7 +208,7 @@ func (t Team) CreateTeam(ct context.Context, team entity.Team) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -235,7 +235,7 @@ func (t Team) UpdateTeam(ct context.Context, team entity.Team) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -253,13 +253,13 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		t.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewTeam(dataCollector telemetry.DataCollector, sqlDB *sql.DB) Team {
-	return Team{dataCollector: dataCollector, db: sqlDB}
+func NewTeam(logger telemetry.Logger, sqlDB *sql.DB) Team {
+	return Team{logger: logger, db: sqlDB}
 }

@@ -24,7 +24,7 @@ func (m Message) Body(ct context.Context) string {
 func (m Message) Author(ct context.Context) (User, error) {
 	user, err := m.deps.userService.FindUserByID(ct, m.message.AuthorUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 

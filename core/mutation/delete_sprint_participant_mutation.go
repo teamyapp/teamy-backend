@@ -12,7 +12,7 @@ import (
 )
 
 type DeleteSprintParticipantMutation struct {
-	dataCollector          telemetry.DataCollector
+	logger                 telemetry.Logger
 	stateSyncer            *realtime.StateSyncer
 	sprintParticipantDao   dao.SprintParticipant
 	sprintParticipantDaoV2 daov2.SprintParticipant
@@ -34,7 +34,7 @@ func (d *DeleteSprintParticipantMutation) GetID() uint64 {
 func (d *DeleteSprintParticipantMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := d.sprintParticipantDaoV2.DeleteSprintParticipant(ct, tx, d.sprintID, d.userID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -47,13 +47,13 @@ func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 	}
 	sprint, err := d.sprintDaoV2.FindSprintByIDWithTx(ct, tx, d.sprintID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	d.clientNotifiers, err = d.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -64,7 +64,7 @@ func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 func (d *DeleteSprintParticipantMutation) Execute(ct context.Context) *errs.Error {
 	err := d.sprintParticipantDao.DeleteSprintParticipant(ct, d.sprintID, d.userID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -78,7 +78,7 @@ func (d *DeleteSprintParticipantMutation) Undo() *errs.Error {
 func (d *DeleteSprintParticipantMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	sprint, err := d.sprintDao.FindSprintByID(ct, d.sprintID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 
@@ -109,7 +109,7 @@ func (d *DeleteSprintParticipantMutation) CleanUp(ct context.Context) *errs.Erro
 }
 
 func NewDeleteSprintParticipantMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintParticipantDaoV2 daov2.SprintParticipant,
@@ -119,7 +119,7 @@ func NewDeleteSprintParticipantMutation(
 	sprintID uint64,
 ) *DeleteSprintParticipantMutation {
 	return &DeleteSprintParticipantMutation{
-		dataCollector:          dataCollector,
+		logger:                 logger,
 		stateSyncer:            stateSyncer,
 		sprintParticipantDao:   sprintParticipantDao,
 		sprintParticipantDaoV2: sprintParticipantDaoV2,

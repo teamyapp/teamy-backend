@@ -13,7 +13,7 @@ import (
 )
 
 type DeleteSprintTaskRelationMutation struct {
-	dataCollector           telemetry.DataCollector
+	logger                  telemetry.Logger
 	stateSyncer             *realtime.StateSyncer
 	sprintTaskRelationDao   dao.SprintTaskRelation
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
@@ -33,7 +33,7 @@ func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := d.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, d.sprintID, d.task.ID)
 	if internalErr != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		d.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -48,7 +48,7 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		d.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -59,7 +59,7 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
 	if err != nil {
-		d.dataCollector.Logger.ErrorWithContext(ct, err)
+		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (d *DeleteSprintTaskRelationMutation) CleanUp(ct context.Context) *errs.Err
 }
 
 func NewDeleteSprintTaskRelationMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
@@ -106,7 +106,7 @@ func NewDeleteSprintTaskRelationMutation(
 	task entity.Task,
 ) *DeleteSprintTaskRelationMutation {
 	return &DeleteSprintTaskRelationMutation{
-		dataCollector:           dataCollector,
+		logger:                  logger,
 		stateSyncer:             stateSyncer,
 		sprintTaskRelationDao:   sprintTaskRelationDao,
 		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,

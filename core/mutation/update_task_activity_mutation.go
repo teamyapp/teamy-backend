@@ -12,7 +12,7 @@ import (
 )
 
 type UpdateTaskActivityMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	activityCache    cache.Activity
 	id               uint64
@@ -30,7 +30,7 @@ func (u *UpdateTaskActivityMutation) GetID() uint64 {
 func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -45,7 +45,7 @@ func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, 
 	var err *errs.Error
 	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -56,7 +56,7 @@ func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, 
 func (u *UpdateTaskActivityMutation) Execute(ct context.Context) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -89,13 +89,13 @@ func (u *UpdateTaskActivityMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewUpdateTaskActivityMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	activityCache cache.Activity,
 	taskActivity entity.TaskActivity,
 ) *UpdateTaskActivityMutation {
 	return &UpdateTaskActivityMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		activityCache:    activityCache,
 		id:               stateSyncer.NextMutationID(),

@@ -14,7 +14,7 @@ import (
 )
 
 type TaskLink struct {
-	dataCollector telemetry.DataCollector
+	logger telemetry.Logger
 }
 
 var _ daov2.TaskLink = (*TaskLink)(nil)
@@ -144,7 +144,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transact
 				internalErr = newInternalErr
 			}
 
-			t.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			t.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -154,6 +154,6 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transact
 	return taskLinks, nil
 }
 
-func NewTaskLink(dataCollector telemetry.DataCollector, sqlDB *sql.DB) TaskLink {
-	return TaskLink{dataCollector: dataCollector}
+func NewTaskLink(logger telemetry.Logger, sqlDB *sql.DB) TaskLink {
+	return TaskLink{logger: logger}
 }

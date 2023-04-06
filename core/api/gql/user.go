@@ -47,13 +47,13 @@ func (u User) Teams(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		u.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		u.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	teams, err := u.deps.teamService.FindTeamsForUser(ct, u.user.ID, filter)
 	if err != nil {
-		u.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

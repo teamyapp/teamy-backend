@@ -15,8 +15,8 @@ import (
 var _ dao.AppVersionVisibleTeam = (*AppVersionVisibleTeam)(nil)
 
 type AppVersionVisibleTeam struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 func (a AppVersionVisibleTeam) FindAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersionVisibleTeam, *errs.Error) {
@@ -43,7 +43,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeam(ct context.Context, app
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("app version visible team not found: appID=%v, versionNum=%v, teamID=%v", appID, versionNumber, teamID),
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersionVisibleTeam{}, internalErr
 	}
 
@@ -52,7 +52,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeam(ct context.Context, app
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return entity.AppVersionVisibleTeam{}, internalErr
 	}
 
@@ -75,7 +75,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -100,7 +100,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 				internalErr = newInternalErr
 			}
 
-			a.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			a.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -125,7 +125,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -150,7 +150,7 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByTeamID(ct context.Con
 				internalErr = newInternalErr
 			}
 
-			a.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			a.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -179,7 +179,7 @@ func (a AppVersionVisibleTeam) CreateAppVersionVisibleTeam(ct context.Context, a
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -201,7 +201,7 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeam(ct context.Context, a
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -221,13 +221,13 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamsByAppIDAndVersionNumb
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewAppVersionVisibleTeam(dataCollector telemetry.DataCollector, sqlDB *sql.DB) AppVersionVisibleTeam {
-	return AppVersionVisibleTeam{dataCollector: dataCollector, db: sqlDB}
+func NewAppVersionVisibleTeam(logger telemetry.Logger, sqlDB *sql.DB) AppVersionVisibleTeam {
+	return AppVersionVisibleTeam{logger: logger, db: sqlDB}
 }

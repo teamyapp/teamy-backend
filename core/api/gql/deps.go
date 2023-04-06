@@ -6,7 +6,7 @@ import (
 )
 
 type Dependencies struct {
-	dataCollector     telemetry.DataCollector
+	logger            telemetry.Logger
 	taskService       service.Task
 	taskLinkService   service.TaskLink
 	teamService       service.Team
@@ -18,7 +18,7 @@ type Dependencies struct {
 }
 
 func NewDependencies(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	taskService service.Task,
 	taskLinkService service.TaskLink,
 	teamService service.Team,
@@ -29,7 +29,7 @@ func NewDependencies(
 	appService service.App,
 ) *Dependencies {
 	return &Dependencies{
-		dataCollector:     dataCollector,
+		logger:            logger,
 		taskService:       taskService,
 		taskLinkService:   taskLinkService,
 		teamService:       teamService,

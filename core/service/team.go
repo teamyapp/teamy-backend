@@ -38,7 +38,7 @@ type CreateTeamInput struct {
 }
 
 type Team struct {
-	dataCollector              telemetry.DataCollector
+	logger                     telemetry.Logger
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	authorizer                 Authorizer
@@ -98,7 +98,7 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 
 	var teams []entity.Team
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -150,7 +150,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		CreatedAt:     time.Now(),
 	}
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -158,7 +158,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		// All users are authorized to create team
 		createTeamMutation := mutation.NewCreateTeamMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.teamDao,
 			t.teamDaoV2,
@@ -176,7 +176,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 			CreatedAt: time.Now(),
 		}
 		createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
 			t.teamMemberDaoV2,
@@ -276,7 +276,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 
 	var team entity.Team
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -293,7 +293,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		updatedAt := time.Now().UTC()
 		team.UpdatedAt = &updatedAt
 		updateTeamMutation := mutation.NewUpdateTeamMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.teamDao,
 			t.teamDaoV2,
@@ -336,7 +336,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 
 	var team entity.Team
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -345,12 +345,12 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 		var internalErr *errs.Error
 		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
-			t.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+			t.logger.ErrorWithContext(ct, internalErr)
 			return internalErr
 		}
 
 		deleteTeamMutation := mutation.NewDeleteTeamMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.teamDao,
 			t.teamDaoV2,
@@ -403,7 +403,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		CreatedAt:           time.Now(),
 	}
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -449,7 +449,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	var iconUploadSession entity.TeamFileUploadSession
 	var team entity.Team
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -543,7 +543,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		CreatedAt: time.Now(),
 	}
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -551,7 +551,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
 			t.teamMemberDaoV2,
@@ -585,7 +585,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 				CreatedAt: time.Now(),
 			}
 			createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
@@ -631,7 +631,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 
 	var teamMember entity.TeamMember
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -644,7 +644,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		}
 
 		deleteTeamMemberMutation := mutation.NewDeleteTeamMemberMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
 			t.teamMemberDaoV2,
@@ -672,7 +672,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 
 		for _, sprint := range currAndFutureSprints {
 			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
-				t.dataCollector,
+				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
@@ -723,7 +723,7 @@ func (t Team) UpdateTeamMember(
 
 	var teamMember entity.TeamMember
 	txCtx := TransactionsContext{
-		dataCollector:      t.dataCollector,
+		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
@@ -740,7 +740,7 @@ func (t Team) UpdateTeamMember(
 		now := time.Now().UTC()
 		teamMember.UpdatedAt = &now
 		updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
-			t.dataCollector,
+			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
 			t.teamMemberDaoV2,
@@ -779,7 +779,7 @@ func (t Team) UpdateTeamMember(
 				participant.TotalBandwidth += bandwidthDelta
 				participant.UnusedBandwidth += bandwidthDelta
 				updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-					t.dataCollector,
+					t.logger,
 					t.stateSyncer,
 					t.sprintParticipantDao,
 					t.sprintParticipantDaoV2,
@@ -807,7 +807,7 @@ func (t Team) UpdateTeamMember(
 }
 
 func NewTeam(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
@@ -825,7 +825,7 @@ func NewTeam(
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
 ) Team {
 	return Team{
-		dataCollector:              dataCollector,
+		logger:                     logger,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		authorizer:                 authorizer,

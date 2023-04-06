@@ -20,7 +20,7 @@ import (
 type GithubAppPrivateKeyPEM []byte
 
 func InitGithubAppAPI(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
 	teamyAPIClientRegistry *api.ClientRegistry,
 	httpClient web.HTTPClient,
@@ -50,6 +50,6 @@ func InitGithubAppAPI(
 	return github.AppAPI{}, nil
 }
 
-func newGithubApp(dataCollector telemetry.DataCollector, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client.GithubApp, error) {
-	return client.NewGithubApp(dataCollector, config.AppID, []byte(privateKeyPEM))
+func newGithubApp(logger telemetry.Logger, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client.GithubApp, error) {
+	return client.NewGithubApp(logger, config.AppID, []byte(privateKeyPEM))
 }

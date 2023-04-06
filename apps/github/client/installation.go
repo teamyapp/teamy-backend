@@ -13,11 +13,11 @@ import (
 )
 
 type Installation struct {
-	dataCollector telemetry.DataCollector
-	app           *GithubApp
-	id            int
-	accessToken   *string
-	expireAt      *time.Time
+	logger      telemetry.Logger
+	app         *GithubApp
+	id          int
+	accessToken *string
+	expireAt    *time.Time
 }
 
 func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *errs.Error) {
@@ -90,14 +90,14 @@ func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *err
 
 	i.accessToken = &body.Token
 	i.expireAt = &body.ExpiresAt
-	i.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("Refreshed access token expiring at %v", i.expireAt))
+	i.logger.InfoWithContext(ct, fmt.Sprintf("Refreshed access token expiring at %v", i.expireAt))
 	return body.Token, nil
 }
 
-func newInstallation(dataCollector telemetry.DataCollector, app *GithubApp, id int) *Installation {
+func newInstallation(logger telemetry.Logger, app *GithubApp, id int) *Installation {
 	return &Installation{
-		dataCollector: dataCollector,
-		app:           app,
-		id:            id,
+		logger: logger,
+		app:    app,
+		id:     id,
 	}
 }

@@ -13,7 +13,7 @@ import (
 )
 
 type GithubApp struct {
-	dataCollector telemetry.DataCollector
+	logger        telemetry.Logger
 	appID         string
 	appPrivateKey *rsa.PrivateKey
 	jwt           *string
@@ -27,7 +27,7 @@ func (g *GithubApp) GetInstallation(installationID int) *Installation {
 		return installation
 	}
 
-	installation = newInstallation(g.dataCollector, g, installationID)
+	installation = newInstallation(g.logger, g, installationID)
 	g.installations[installationID] = installation
 	return installation
 }
@@ -74,11 +74,11 @@ func (g *GithubApp) getOrRefreshAppJWT(ct context.Context) (string, *errs.Error)
 
 	g.jwt = &signedStr
 	g.jwtExpireAt = &expireAt
-	g.dataCollector.Logger.InfoWithContext(ct, fmt.Sprintf("Refreshed app JWT token expiring at %v", g.jwtExpireAt))
+	g.logger.InfoWithContext(ct, fmt.Sprintf("Refreshed app JWT token expiring at %v", g.jwtExpireAt))
 	return signedStr, nil
 }
 
-func NewGithubApp(dataCollector telemetry.DataCollector, appID string, privateKeyPEM []byte) (*GithubApp, error) {
+func NewGithubApp(logger telemetry.Logger, appID string, privateKeyPEM []byte) (*GithubApp, error) {
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyPEM)
 	if err != nil {
 		return nil, errs.NewError(errs.InvalidArgument, err.Error()).ToError()

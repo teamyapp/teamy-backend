@@ -15,7 +15,7 @@ import (
 )
 
 type SprintRPC struct {
-	dataCollector telemetry.DataCollector
+	logger        telemetry.Logger
 	sprintService service.Sprint
 	proto.UnimplementedSprintServer
 }
@@ -33,7 +33,7 @@ func (s SprintRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSprintRequest) (*proto.SprintMsg, error) {
 	sprint, err := s.sprintService.FindCurrentSprint(ct, req.TeamId)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
@@ -49,16 +49,16 @@ func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSpr
 func (s SprintRPC) AddTaskToSprint(ct context.Context, req *proto.AddTaskToSprintRequest) (*emptypb.Empty, error) {
 	_, err := s.sprintService.AddTaskToSprint(ct, req.SprintId, req.TaskId)
 	if err != nil {
-		s.dataCollector.Logger.ErrorWithContext(ct, err)
+		s.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
-func NewSprintRPC(dataCollector telemetry.DataCollector, sprintService service.Sprint) SprintRPC {
+func NewSprintRPC(logger telemetry.Logger, sprintService service.Sprint) SprintRPC {
 	return SprintRPC{
-		dataCollector: dataCollector,
+		logger:        logger,
 		sprintService: sprintService,
 	}
 }

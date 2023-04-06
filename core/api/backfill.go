@@ -14,7 +14,7 @@ import (
 )
 
 type BackFillRPC struct {
-	dataCollector   telemetry.DataCollector
+	logger          telemetry.Logger
 	backFillService service.Backfill
 	proto.UnimplementedBackFillServer
 }
@@ -34,9 +34,9 @@ func (b BackFillRPC) BackFillParticipantsBandwidth(ct context.Context, in *proto
 	return &emptypb.Empty{}, nil
 }
 
-func NewBackFillRPC(dataCollector telemetry.DataCollector, backFillService service.Backfill) BackFillRPC {
+func NewBackFillRPC(logger telemetry.Logger, backFillService service.Backfill) BackFillRPC {
 	return BackFillRPC{
-		dataCollector:   dataCollector,
+		logger:          logger,
 		backFillService: backFillService,
 	}
 }

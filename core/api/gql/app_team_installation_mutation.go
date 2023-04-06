@@ -19,7 +19,7 @@ func (m Mutation) CreateAppTeamInstallation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -29,13 +29,13 @@ func (m Mutation) CreateAppTeamInstallation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
 	appTeamInstallation, err := m.deps.appService.CreateAppInstallation(ct, teamID, appID, args.VersionNumber)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return AppTeamInstallation{}, errs.ToResolverErr(err)
 	}
 
@@ -55,7 +55,7 @@ func (m Mutation) UpdateAppTeamInstallation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -65,7 +65,7 @@ func (m Mutation) UpdateAppTeamInstallation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -74,7 +74,7 @@ func (m Mutation) UpdateAppTeamInstallation(ct context.Context, args struct {
 	}
 	appTeamInstallation, err := m.deps.appService.UpdateAppInstallation(ct, appID, teamID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return AppTeamInstallation{}, errs.ToResolverErr(err)
 	}
 
@@ -91,7 +91,7 @@ func (m Mutation) DeleteAppTeamInstallation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -101,13 +101,13 @@ func (m Mutation) DeleteAppTeamInstallation(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
 	appTeamInstallation, err := m.deps.appService.DeleteAppInstallation(ct, appID, teamID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return AppTeamInstallation{}, errs.ToResolverErr(err)
 	}
 

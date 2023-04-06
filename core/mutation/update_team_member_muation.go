@@ -13,7 +13,7 @@ import (
 )
 
 type UpdateTeamMemberMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	teamMemberDao    dao.TeamMember
 	teamMemberDaoV2  daov2.TeamMember
@@ -51,7 +51,7 @@ func (u *UpdateTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx
 func (u *UpdateTeamMemberMutation) Execute(ct context.Context) *errs.Error {
 	err := u.teamMemberDao.UpdateTeamMember(ct, u.teamMember)
 	if err != nil {
-		u.dataCollector.Logger.ErrorWithContext(ct, err)
+		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -84,14 +84,14 @@ func (u *UpdateTeamMemberMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewUpdateTeamMemberMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 	teamMember entity.TeamMember,
 ) *UpdateTeamMemberMutation {
 	return &UpdateTeamMemberMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		teamMemberDao:    teamMemberDao,
 		teamMemberDaoV2:  teamMemberDaoV2,

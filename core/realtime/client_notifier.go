@@ -13,7 +13,7 @@ import (
 const clientBufferSize = 50
 
 type ClientNotifier struct {
-	dataCollector               telemetry.DataCollector
+	logger                      telemetry.Logger
 	clientDisconnectSubscribers []chan bool
 	clientID                    uint64
 	messages                    chan Message
@@ -35,10 +35,10 @@ func (c *ClientNotifier) onInitialStateReady() {
 }
 
 func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
-	c.dataCollector.Logger.InfoWithContext(ct, "process transaction")
+	c.logger.InfoWithContext(ct, "process transaction")
 
 	if !c.acceptTransaction {
-		c.dataCollector.Logger.InfoWithContext(ct, "discard transaction")
+		c.logger.InfoWithContext(ct, "discard transaction")
 		return
 	}
 
@@ -59,7 +59,7 @@ func (c *ClientNotifier) sentMetadata() {
 	c.messages <- message
 }
 
-func newClientNotifier(dataCollector telemetry.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
+func newClientNotifier(logger telemetry.Logger, conn connection.Connection, clientID uint64) *ClientNotifier {
 	messages := make(chan Message, clientBufferSize)
 	ct := context.Background()
 	ct = ctx.WithClientID(ct, clientID)
@@ -67,19 +67,16 @@ func newClientNotifier(dataCollector telemetry.DataCollector, conn connection.Co
 		for message := range messages {
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
 			if err != nil {
-				dataCollector.Logger.ErrorWithContext(ct, &errs.Error{
-					Code:     errs.Serialization,
-					EmbedErr: err,
-				})
+				logger.ErrorWithContext(ct, errs.NewError(errs.Serialization, err.Error()))
 				continue
 			}
 
 			conn.SendMessage(jsonBuf)
-			dataCollector.Logger.InfoWithContext(ct, "notification sent")
+			logger.InfoWithContext(ct, "notification sent")
 		}
 	}()
 	clientNotifier := &ClientNotifier{
-		dataCollector:               dataCollector,
+		logger:                      logger,
 		clientDisconnectSubscribers: make([]chan bool, 0),
 		clientID:                    clientID,
 		messages:                    messages,

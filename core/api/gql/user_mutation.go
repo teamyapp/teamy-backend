@@ -23,7 +23,7 @@ func (m Mutation) CreateUser(ct context.Context, args struct {
 	}
 	user, err := m.deps.userService.CreateUser(ct, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -43,7 +43,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return User{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -53,7 +53,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 	}
 	user, err := m.deps.userService.UpdateUser(ct, userID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 
@@ -63,7 +63,7 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 func (m Mutation) CreateUserProfileUploadSession(ct context.Context) (graphql.ID, error) {
 	uploadSessionID, err := m.deps.userService.CreateUserProfileUploadSession(ct)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return "", errs.ToResolverErr(err)
 	}
 
@@ -79,13 +79,13 @@ func (m Mutation) FinishUserProfileUploadSession(ct context.Context, args struct
 			Code:     errs.InvalidArgument,
 			EmbedErr: argErr,
 		}
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return User{}, errs.ToResolverErr(internalErr)
 	}
 
 	user, err := m.deps.userService.FinishUserProfileUploadSession(ct, fileUploadSessionID)
 	if err != nil {
-		m.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
 	}
 

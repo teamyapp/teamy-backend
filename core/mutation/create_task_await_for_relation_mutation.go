@@ -13,7 +13,7 @@ import (
 )
 
 type CreateTaskAwaitForRelationMutation struct {
-	dataCollector             telemetry.DataCollector
+	logger                    telemetry.Logger
 	stateSyncer               *realtime.StateSyncer
 	taskAwaitForRelationDao   dao.TaskAwaitForRelation
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
@@ -34,7 +34,7 @@ func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
 func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.taskAwaitForRelationDaoV2.CreateRelation(ct, tx, c.taskAwaitForRelation)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 
 	c.clientNotifiers, err = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -64,7 +64,7 @@ func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := c.taskAwaitForRelationDao.CreateRelation(ct, c.taskAwaitForRelation)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -78,7 +78,7 @@ func (c *CreateTaskAwaitForRelationMutation) Undo() *errs.Error {
 func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByID(ct, c.taskAwaitForRelation.AwaitForTaskID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return []*realtime.ClientNotifier{}, err
 	}
 
@@ -103,7 +103,7 @@ func (c *CreateTaskAwaitForRelationMutation) CleanUp(ct context.Context) *errs.E
 }
 
 func NewCreateTaskAwaitForRelationMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
@@ -112,7 +112,7 @@ func NewCreateTaskAwaitForRelationMutation(
 	taskAwaitForRelation entity.TaskAwaitForRelation,
 ) *CreateTaskAwaitForRelationMutation {
 	return &CreateTaskAwaitForRelationMutation{
-		dataCollector:             dataCollector,
+		logger:                    logger,
 		stateSyncer:               stateSyncer,
 		taskAwaitForRelationDao:   taskAwaitForRelationDao,
 		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,

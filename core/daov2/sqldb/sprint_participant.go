@@ -14,7 +14,7 @@ import (
 )
 
 type SprintParticipant struct {
-	dataCollector      telemetry.DataCollector
+	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -73,7 +73,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -96,7 +96,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -125,7 +125,7 @@ func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, 
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -153,7 +153,7 @@ func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, 
 				internalErr = newInternalErr
 			}
 
-			s.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			s.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -193,7 +193,7 @@ func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transac
 			Message: fmt.Sprintf(
 				"participant not found: sprintID=%v, participantUserID=%v", sprintID, participantUserID),
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return entity.SprintParticipant{}, internalErr
 	}
 
@@ -202,7 +202,7 @@ func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transac
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return entity.SprintParticipant{}, internalErr
 	}
 
@@ -234,7 +234,7 @@ func (s SprintParticipant) CreateSprintParticipant(ct context.Context, tx *trans
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -267,7 +267,7 @@ func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, tx *trans
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -286,16 +286,16 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		s.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		s.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewSprintParticipant(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) SprintParticipant {
+func NewSprintParticipant(logger telemetry.Logger, transactionFactory transaction.Factory) SprintParticipant {
 	return SprintParticipant{
-		dataCollector:      dataCollector,
+		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

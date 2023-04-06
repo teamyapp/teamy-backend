@@ -14,7 +14,7 @@ import (
 )
 
 type User struct {
-	dataCollector      telemetry.DataCollector
+	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -168,6 +168,6 @@ func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user e
 	return nil
 }
 
-func NewUser(dataCollector telemetry.DataCollector, transactionFactory transaction.Factory) User {
-	return User{dataCollector: dataCollector, transactionFactory: transactionFactory}
+func NewUser(logger telemetry.Logger, transactionFactory transaction.Factory) User {
+	return User{logger: logger, transactionFactory: transactionFactory}
 }

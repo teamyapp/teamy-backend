@@ -16,7 +16,7 @@ type AppTeamInstallation struct {
 func (a AppTeamInstallation) App(ct context.Context) (App, error) {
 	app, err := a.deps.appService.FindAppByID(ct, a.appTeamInstallation.AppID)
 	if err != nil {
-		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		a.deps.logger.ErrorWithContext(ct, err)
 		return App{}, errs.ToResolverErr(err)
 	}
 
@@ -26,7 +26,7 @@ func (a AppTeamInstallation) App(ct context.Context) (App, error) {
 func (a AppTeamInstallation) EnabledVersion(ct context.Context) (AppVersion, error) {
 	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, a.appTeamInstallation.AppID, a.appTeamInstallation.EnabledVersionNumber)
 	if err != nil {
-		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		a.deps.logger.ErrorWithContext(ct, err)
 		return AppVersion{}, errs.ToResolverErr(err)
 	}
 
@@ -36,7 +36,7 @@ func (a AppTeamInstallation) EnabledVersion(ct context.Context) (AppVersion, err
 func (a AppTeamInstallation) InstalledTeam(ct context.Context) (Team, error) {
 	team, err := a.deps.teamService.FindTeamByID(ct, a.appTeamInstallation.InstalledTeamID)
 	if err != nil {
-		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		a.deps.logger.ErrorWithContext(ct, err)
 		return Team{}, errs.ToResolverErr(err)
 	}
 
@@ -50,7 +50,7 @@ func (a AppTeamInstallation) InstalledBy(ct context.Context) (*User, error) {
 
 	user, err := a.deps.userService.FindUserByID(ct, *a.appTeamInstallation.InstalledByUserID)
 	if err != nil {
-		a.deps.dataCollector.Logger.ErrorWithContext(ct, err)
+		a.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 

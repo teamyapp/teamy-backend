@@ -15,8 +15,8 @@ import (
 var _ dao.App = (*App)(nil)
 
 type App struct {
-	dataCollector telemetry.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
@@ -53,7 +53,7 @@ func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Er
 			Code:    errs.NotFound,
 			Message: fmt.Sprintf("app not found: appID=%v", appID),
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 
@@ -62,7 +62,7 @@ func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Er
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return entity.App{}, internalErr
 	}
 
@@ -88,7 +88,7 @@ func (a App) FindAllApps(ct context.Context) ([]entity.App, *errs.Error) {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return nil, internalErr
 	}
 
@@ -119,7 +119,7 @@ func (a App) FindAllApps(ct context.Context) ([]entity.App, *errs.Error) {
 				internalErr = newInternalErr
 			}
 
-			a.dataCollector.Logger.ErrorWithContext(ct, newInternalErr)
+			a.logger.ErrorWithContext(ct, newInternalErr)
 			continue
 		}
 
@@ -160,7 +160,7 @@ func (a App) CreateApp(ct context.Context, app entity.App) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -195,7 +195,7 @@ func (a App) UpdateApp(ct context.Context, app entity.App) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -213,13 +213,13 @@ func (a App) DeleteApp(ct context.Context, appID uint64) *errs.Error {
 			Code:     errs.Unknown,
 			EmbedErr: err,
 		}
-		a.dataCollector.Logger.ErrorWithContext(ct, internalErr)
+		a.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
 	return nil
 }
 
-func NewApp(dataCollector telemetry.DataCollector, sqlDB *sql.DB) App {
-	return App{dataCollector: dataCollector, db: sqlDB}
+func NewApp(logger telemetry.Logger, sqlDB *sql.DB) App {
+	return App{logger: logger, db: sqlDB}
 }

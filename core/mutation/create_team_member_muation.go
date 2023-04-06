@@ -13,7 +13,7 @@ import (
 )
 
 type CreateTeamMemberMutation struct {
-	dataCollector    telemetry.DataCollector
+	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	teamMemberDao    dao.TeamMember
 	teamMemberDaoV2  daov2.TeamMember
@@ -66,18 +66,18 @@ func (c *CreateTeamMemberMutation) PrepareClientNotifiers(ct context.Context, tx
 func (c *CreateTeamMemberMutation) Execute(ct context.Context) *errs.Error {
 	err := c.teamMemberDao.CreateTeamMember(ct, c.teamMember)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	userNotifier, err := c.stateSyncer.GetUserNotifier(ct, c.teamMember.UserID)
 	if err != nil {
-		c.dataCollector.Logger.ErrorWithContext(ct, err)
+		c.logger.ErrorWithContext(ct, err)
 		return err
 	} else {
 		err = c.stateSyncer.SubscribeToTeams(ct, c.teamMember.UserID, userNotifier)
 		if err != nil {
-			c.dataCollector.Logger.ErrorWithContext(ct, err)
+			c.logger.ErrorWithContext(ct, err)
 			return err
 		}
 	}
@@ -111,14 +111,14 @@ func (c *CreateTeamMemberMutation) CleanUp(ct context.Context) *errs.Error {
 }
 
 func NewCreateTeamMemberMutation(
-	dataCollector telemetry.DataCollector,
+	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 	teamMember entity.TeamMember,
 ) *CreateTeamMemberMutation {
 	return &CreateTeamMemberMutation{
-		dataCollector:    dataCollector,
+		logger:           logger,
 		stateSyncer:      stateSyncer,
 		teamMemberDao:    teamMemberDao,
 		teamMemberDaoV2:  teamMemberDaoV2,
