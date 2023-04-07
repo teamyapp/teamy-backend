@@ -51,7 +51,9 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		}
 
 		if !hasPermission {
-			return entity.TaskLink{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+			return entity.TaskLink{}, errs.NewError(
+			    errs.PermissionDenied, 
+			    fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 

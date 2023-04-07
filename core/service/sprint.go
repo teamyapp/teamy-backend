@@ -554,7 +554,9 @@ func (s Sprint) copyTaskToSprint(
 	}
 
 	if sprint.OwningTeamID != task.OwningTeamID {
-		return entity.Task{}, errs.NewError(errs.InvalidArgument, fmt.Sprintf("sprint and task must belong to the same team: sprintID=%v, taskID=%v", toSprintID, newTaskID))
+		return entity.Task{}, errs.NewError(
+		    errs.InvalidArgument, 
+		    fmt.Sprintf("sprint and task must belong to the same team: sprintID=%v, taskID=%v", toSprintID, newTaskID))
 	}
 
 	err = s.threadDaoV2.CreateThread(ct, tx, newThreadID)
@@ -650,7 +652,9 @@ func (s Sprint) moveTaskToSprint(
 		return currSprintID == fromSprintID
 	})
 	if len(foundSprintIDs) < 1 {
-		return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", fromSprintID, taskID))
+		return entity.Task{}, errs.NewError(
+		    errs.NotFound, 
+		    fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", fromSprintID, taskID))
 	}
 
 	err = s.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, fromSprintID, taskID)
@@ -697,7 +701,9 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 		return currSprintID == sprintID
 	})
 	if len(foundSprintIDs) < 1 {
-		return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", sprintID, taskID))
+		return entity.Task{}, errs.NewError(
+		    errs.NotFound, 
+		    fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", sprintID, taskID))
 	}
 
 	task, err := s.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
