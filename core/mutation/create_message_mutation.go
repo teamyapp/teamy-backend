@@ -7,17 +7,22 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateMessageMutation struct {
-	logger      telemetry.Logger
-	stateSyncer *realtime.StateSyncer
-	messageDao  dao.Message
-	taskDao     dao.Task
-	id          uint64
-	message     entity.Message
+	logger           telemetry.Logger
+	stateSyncer      *realtime.StateSyncer
+	messageDao       dao.Message
+	messageDaoV2     daov2.Message
+	taskDao          dao.Task
+	taskDaoV2        daov2.Task
+	id               uint64
+	message          entity.Message
+	clientNotifiers  []*realtime.ClientNotifier
+	notifierPrepared bool
 }
 
 var _ realtime.Mutation = (*CreateMessageMutation)(nil)
@@ -27,13 +32,27 @@ func (c *CreateMessageMutation) GetID() uint64 {
 }
 
 func (c *CreateMessageMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	return c.messageDaoV2.CreateMessage(ct, tx, c.message)
 }
 
 func (c *CreateMessageMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	if c.notifierPrepared {
+		return nil
+	}
+
+	task, err := c.taskDaoV2.FindTaskByCommentsThreadIDWithTx(ct, tx, c.message.ThreadID)
+	if err != nil {
+		return err
+	}
+
+	var internalErr *errs.Error
+	c.clientNotifiers, internalErr = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
+	if internalErr != nil {
+		return internalErr
+	}
+
+	c.notifierPrepared = true
+	return nil
 }
 
 func (c *CreateMessageMutation) Execute(ct context.Context) *errs.Error {
@@ -61,8 +80,7 @@ func (c *CreateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realt
 }
 
 func (c *CreateMessageMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return c.clientNotifiers
 }
 
 func (c *CreateMessageMutation) ToMessage() realtime.MutationMessage {
@@ -81,16 +99,21 @@ func (c *CreateMessageMutation) CleanUp(ct context.Context) *errs.Error {
 func NewCreateMessageMutation(
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
+	messageDaoV2 daov2.Message,
 	taskDao dao.Task,
+	taskDaoV2 daov2.Task,
 	logger telemetry.Logger,
 	message entity.Message,
 ) *CreateMessageMutation {
 	return &CreateMessageMutation{
-		logger:      logger,
-		stateSyncer: stateSyncer,
-		messageDao:  messageDao,
-		taskDao:     taskDao,
-		id:          stateSyncer.NextMutationID(),
-		message:     message,
+		logger:           logger,
+		stateSyncer:      stateSyncer,
+		messageDao:       messageDao,
+		messageDaoV2:     messageDaoV2,
+		taskDao:          taskDao,
+		taskDaoV2:        taskDaoV2,
+		id:               stateSyncer.NextMutationID(),
+		message:          message,
+		notifierPrepared: false,
 	}
 }

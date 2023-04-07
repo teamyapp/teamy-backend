@@ -58,6 +58,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(daov2.Team), new(sqldbV2.Team)),
 	wire.Bind(new(daov2.TeamFileUploadSession), new(sqldbV2.TeamFileUploadSession)),
 	wire.Bind(new(daov2.Invitation), new(sqldbV2.Invitation)),
+	wire.Bind(new(daov2.Message), new(sqldbV2.Message)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -88,6 +89,7 @@ var daoSet = wire.NewSet(
 	sqldbV2.NewTeam,
 	sqldbV2.NewTeamFileUploadSession,
 	sqldbV2.NewInvitation,
+	sqldbV2.NewMessage,
 )
 
 var serviceSet = wire.NewSet(

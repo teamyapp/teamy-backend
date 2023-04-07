@@ -59,8 +59,29 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
-	//TODO implement me
-	panic("implement me")
+	var task entity.Task
+	err := tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := t.db.GetTable(TaskTableName)
+			if err != nil {
+				return err
+			}
+
+			for _, rawRow := range table.Rows {
+				currTask := rawRow.(entity.Task)
+				if currTask.CommentsThreadID == commentThreadID {
+					task = currTask
+					return nil
+				}
+			}
+
+			return &errs.Error{
+				Code:    errs.NotFound,
+				Message: fmt.Sprintf("row not found: commentThreadID=%v", commentThreadID),
+			}
+		},
+	})
+	return task, err
 }
 
 func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
