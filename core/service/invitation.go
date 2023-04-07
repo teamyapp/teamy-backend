@@ -94,8 +94,8 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 
 		if !hasPermission {
 			return entity.Invitation{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -260,18 +260,18 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 
 		if !hasPermission {
 			return entity.Invitation{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	if invitation.Code != invitationCode {
 		return entity.Invitation{}, errs.NewError(
-		    errs.InvalidArgument, 
-		    fmt.Sprintf("invalid invitation code: invitationID=%v, invitationCode=%v",
-			invitationID,
-			invitationCode,
-		))
+			errs.InvalidArgument,
+			fmt.Sprintf("invalid invitation code: invitationID=%v, invitationCode=%v",
+				invitationID,
+				invitationCode,
+			))
 	}
 
 	err = i.ensureInvitationPending(ct, invitation)
@@ -439,16 +439,16 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 	switch invitation.Status {
 	case entity.InvitationStatusExpired:
 		return errs.NewError(
-		    errs.InvalidOperation, 
-		    fmt.Sprintf("invitation is expired: invitationID=%v", invitation.ID))
+			errs.InvalidOperation,
+			fmt.Sprintf("invitation is expired: invitationID=%v", invitation.ID))
 	case entity.InvitationStatusInvoked:
 		return errs.NewError(
-		    errs.InvalidOperation, 
-		    fmt.Sprintf("invitation is revoked: invitationID=%v", invitation.ID))
+			errs.InvalidOperation,
+			fmt.Sprintf("invitation is revoked: invitationID=%v", invitation.ID))
 	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
 		return errs.NewError(
-		    errs.InvalidOperation, 
-		    fmt.Sprintf("invitation is already responded: invitationID=%v", invitation.ID))
+			errs.InvalidOperation,
+			fmt.Sprintf("invitation is already responded: invitationID=%v", invitation.ID))
 	default:
 		return nil
 	}
