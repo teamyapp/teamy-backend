@@ -524,6 +524,7 @@ func TestInvitationService_DeleteInvitation(t *testing.T) {
 	if !assert.NotNil(t, err) {
 		return
 	}
+	
 	assert.Equal(t, errs.NotFound, err.Code)
 }
 
@@ -673,41 +674,41 @@ func isInvitationEqual(one entity.Invitation, other entity.Invitation) bool {
 	}
 
 	if one.ReceiverUserID == nil || other.ReceiverUserID == nil {
-		if !(one.ReceiverUserID == nil && other.ReceiverUserID == nil) {
+		if one.ReceiverUserID != nil || other.ReceiverUserID != nil {
 			return false
 		}
 	} else {
-		if *(one.ReceiverUserID) != *(other.ReceiverUserID) {
+		if *one.ReceiverUserID) != *other.ReceiverUserID {
 			return false
 		}
 	}
 
 	if one.ReceiverLastName == nil || other.ReceiverLastName == nil {
-		if !(one.ReceiverLastName == nil && other.ReceiverLastName == nil) {
+		if one.ReceiverLastName != nil || other.ReceiverLastName != nil) {
 			return false
 		}
 	} else {
-		if *(one.ReceiverLastName) != *(other.ReceiverLastName) {
+		if *one.ReceiverLastName) != *other.ReceiverLastName) {
 			return false
 		}
 	}
 
 	if one.ReceiverFirstName == nil || other.ReceiverFirstName == nil {
-		if !(one.ReceiverFirstName == nil && other.ReceiverFirstName == nil) {
+		if one.ReceiverFirstName != nil || other.ReceiverFirstName != nil) {
 			return false
 		}
 	} else {
-		if *(one.ReceiverFirstName) != *(other.ReceiverFirstName) {
+		if *one.ReceiverFirstName != *other.ReceiverFirstName {
 			return false
 		}
 	}
 
 	if one.ReceiverEmail == nil || other.ReceiverEmail == nil {
-		if !(one.ReceiverEmail == nil && other.ReceiverEmail == nil) {
+		if one.ReceiverEmail != nil || other.ReceiverEmail != nil {
 			return false
 		}
 	} else {
-		if *(one.ReceiverEmail) != *(other.ReceiverEmail) {
+		if *one.ReceiverEmail != *other.ReceiverEmail {
 			return false
 		}
 	}

@@ -188,7 +188,6 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 			i.invitationDaoV2,
 			invitation,
 		)
-
 		internalErr := updateInvitationMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
 			return internalErr
@@ -225,7 +224,6 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 			i.invitationDaoV2,
 			invitation,
 		)
-
 		internalErr := deleteInvitationMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
 			return internalErr
@@ -314,7 +312,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 			teamMember := entity.TeamMember{
 				TeamID:    invitation.TeamID,
 				UserID:    receiverUserID,
-				CreatedAt: time.Now().UTC(),
+				CreatedAt: now,
 			}
 			createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
 				i.logger,
@@ -349,7 +347,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				participant := entity.SprintParticipant{
 					SprintID:  sprint.ID,
 					UserID:    receiverUserID,
-					CreatedAt: time.Now().UTC(),
+					CreatedAt: now,
 				}
 				createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
 					i.logger,
