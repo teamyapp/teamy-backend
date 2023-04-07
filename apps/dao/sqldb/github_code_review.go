@@ -22,7 +22,7 @@ var _ dao.GithubCodeReview = (*GithubCodeReview)(nil)
 func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 	ct context.Context,
 	githubPullRequestNodeID string,
-	githubReviewerID string,
+	githubReviewerNodeID string,
 ) (entity.GithubCodeReview, *errs.Error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
@@ -33,10 +33,10 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
     	internal_address_feedback_task_id,
     	round
 	FROM apps_github_code_review
-	WHERE github_pull_request_node_id=$1 AND github_reviewer_id = $2;
+	WHERE github_pull_request_node_id=$1 AND github_reviewer_node_id = $2;
 `,
 		githubPullRequestNodeID,
-		githubReviewerID).
+		githubReviewerNodeID).
 		Scan(
 			&codeReview.GithubPullRequestNodeID,
 			&codeReview.GithubReviewerNodeID,
@@ -50,8 +50,8 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 			return entity.GithubCodeReview{}, errs.NewError(
 				errs.NotFound,
 				fmt.Sprintf(
-					"GithubCodeReview not found: githubReviewerID=%v",
-					githubReviewerID))
+					"GithubCodeReview not found: githubReviewerNodeID=%v",
+					githubReviewerNodeID))
 		}
 
 		return entity.GithubCodeReview{}, errs.NewError(errs.Unknown, err.Error())
