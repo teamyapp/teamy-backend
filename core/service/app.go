@@ -83,9 +83,6 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 			})
 		}
 
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		var err *errs.Error
 		apps, err = a.appDao.FindAllApps(ct)
