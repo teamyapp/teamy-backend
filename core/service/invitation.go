@@ -268,7 +268,9 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 	}
 
 	if invitation.Code != invitationCode {
-		return entity.Invitation{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("invalid invitation code: invitationID=%v, invitationCode=%v",
+		return entity.Invitation{}, errs.NewError(
+		    errs.InvalidArgument, 
+		    fmt.Sprintf("invalid invitation code: invitationID=%v, invitationCode=%v",
 			invitationID,
 			invitationCode,
 		))
