@@ -95,10 +95,7 @@ func (i Invitation) FindInvitationByIDWithTx(ct context.Context, tx *transaction
 				}
 			}
 
-			return &errs.Error{
-				Code:    errs.NotFound,
-				Message: fmt.Sprintf("row not found: invitationID=%v", invitationID),
-			}
+			return errs.NewError(errs.NotFound, fmt.Sprintf("row not found: invitationID=%v", invitationID))
 		},
 	})
 	return invitation, err
