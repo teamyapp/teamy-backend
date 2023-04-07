@@ -73,16 +73,20 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 			}
 		}
 
-		var err *errs.Error
 		if filter.TeamID != nil {
 			// find all apps that are visible to the team
-			apps = collect.Filter(apps, func(app entity.App) bool {
-				var visible bool
-				visible, err = a.isAppVisibleToTeam(ct, app, *filter.TeamID)
-				return visible
-			})
-		}
+			var filtered []entity.App
+			for _, app := range apps {
+				visible, err := a.isAppVisibleToTeam(ct, app, *filter.TeamID)
+				if err != nil {
+					return nil, err
+				}
 
+				if visible {
+					filtered = append(filtered, app)
+				}
+			}
+		}
 	} else {
 		var err *errs.Error
 		apps, err = a.appDao.FindAllApps(ct)
@@ -371,8 +375,8 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 
 		if !hasPermission {
 			return entity.AppVersion{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -416,8 +420,8 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 
 		if !hasPermission {
 			return entity.AppVersion{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -517,8 +521,8 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 
 		if !hasPermission {
 			return entity.AppVersion{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -555,8 +559,8 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 
 		if !hasPermission {
 			return entity.AppVersion{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -608,8 +612,8 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 
 		if !hasPermission {
 			return entity.AppTeamInstallation{}, errs.NewError(
-			     errs.PermissionDenied, 
-			     fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -655,8 +659,8 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 
 		if !hasPermission {
 			return entity.AppTeamInstallation{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -689,8 +693,8 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 
 		if !hasPermission {
 			return entity.AppTeamInstallation{}, errs.NewError(
-			    errs.PermissionDenied, 
-			    fmt.Sprintf("permission denied: authorization query=%v", query))
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -733,14 +737,17 @@ func (a App) isAppVisibleToTeam(ct context.Context, app entity.App, teamID uint6
 		return false, err
 	}
 
-	appVersions = collect.Filter(appVersions, func(appVersion entity.AppVersion) bool {
+	var filtered []entity.AppVersion
+	for _, appVersion := range appVersions {
 		var visible bool
 		visible, err = a.isAppVersionVisibleToTeam(ct, app, appVersion, teamID)
-		return visible
-	})
+		if err != nil {
+			return false, err
+		}
 
-	if err != nil {
-		return false, err
+		if visible {
+			filtered = append(filtered, appVersion)
+		}
 	}
 
 	if len(appVersions) > 0 {
