@@ -122,7 +122,6 @@ func prepareInvitationTestRef(t *testing.T) (InvitationTestRef, bool) {
 		sprintDao,
 		sprintDaoV2,
 	)
-
 	return InvitationTestRef{
 		invitationService:  invitationService,
 		invitationDaoV2:    invitationDaoV2,
@@ -233,12 +232,12 @@ func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
 	assert.Equal(t, *(invitation2.UpdatedAt), *(invitationFound[0].UpdatedAt))
 
 	filter2 := InvitationFilter{InvitationID: &invitationID2, Code: &code2}
-	invitationFound, internalErr = invitationRef.invitationService.FindInvitationsInTeam(ct, teamID1, &filter2)
+	invitationsFound, internalErr = invitationRef.invitationService.FindInvitationsInTeam(ct, teamID1, &filter2)
 	if !assert.Nil(t, internalErr) {
 		return
 	}
 
-	assert.Equal(t, 0, len(invitationFound))
+	assert.Equal(t, 0, len(invitationsFound))
 }
 
 func TestInvitationService_FindInvitations(t *testing.T) {

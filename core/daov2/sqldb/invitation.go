@@ -96,7 +96,9 @@ func (i Invitation) FindInvitationByIDWithTx(ct context.Context, tx *transaction
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return entity.Invitation{}, errs.NewError(errs.NotFound, fmt.Sprintf("invitation not found: invitationID=%v", invitationID))
+			return entity.Invitation{}, errs.NewError(
+			    errs.NotFound, 
+			    fmt.Sprintf("invitation not found: invitationID=%v", invitationID))
 		}
 
 		return entity.Invitation{}, errs.NewError(errs.Unknown, err.Error())

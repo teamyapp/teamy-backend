@@ -93,7 +93,9 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		}
 
 		if !hasPermission {
-			return entity.Invitation{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+			return entity.Invitation{}, errs.NewError(
+			    errs.PermissionDenied, 
+			    fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -259,7 +261,9 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		}
 
 		if !hasPermission {
-			return entity.Invitation{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+			return entity.Invitation{}, errs.NewError(
+			    errs.PermissionDenied, 
+			    fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
@@ -293,14 +297,12 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 			i.invitationDaoV2,
 			invitation,
 		)
-
 		internalErr := updateInvitationMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
 
 		rtTx.AppendMutation(updateInvitationMutation)
-
 		_, err = i.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, invitation.TeamID, receiverUserID)
 		if err != nil {
 			if err.Code != errs.NotFound {
@@ -312,7 +314,6 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				UserID:    receiverUserID,
 				CreatedAt: time.Now().UTC(),
 			}
-
 			createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
 				i.logger,
 				i.stateSyncer,
@@ -437,11 +438,17 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 func (i Invitation) ensureInvitationPending(ct context.Context, invitation entity.Invitation) *errs.Error {
 	switch invitation.Status {
 	case entity.InvitationStatusExpired:
-		return errs.NewError(errs.InvalidOperation, fmt.Sprintf("invitation is expired: invitationID=%v", invitation.ID))
+		return errs.NewError(
+		    errs.InvalidOperation, 
+		    fmt.Sprintf("invitation is expired: invitationID=%v", invitation.ID))
 	case entity.InvitationStatusInvoked:
-		return errs.NewError(errs.InvalidOperation, fmt.Sprintf("invitation is revoked: invitationID=%v", invitation.ID))
+		return errs.NewError(
+		    errs.InvalidOperation, 
+		    fmt.Sprintf("invitation is revoked: invitationID=%v", invitation.ID))
 	case entity.InvitationStatusAccepted, entity.InvitationStatusDeclined:
-		return errs.NewError(errs.InvalidOperation, fmt.Sprintf("invitation is already responded: invitationID=%v", invitation.ID))
+		return errs.NewError(
+		    errs.InvalidOperation, 
+		    fmt.Sprintf("invitation is already responded: invitationID=%v", invitation.ID))
 	default:
 		return nil
 	}
