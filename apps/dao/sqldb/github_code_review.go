@@ -50,8 +50,8 @@ func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
 			return entity.GithubCodeReview{}, errs.NewError(
 				errs.NotFound,
 				fmt.Sprintf(
-					"GithubCodeReview not found: githubReviewerID=%v",
-					githubReviewerID))
+					"GithubCodeReview not found: githubReviewerNodeID=%v",
+					githubReviewerNodeID))
 		}
 
 		return entity.GithubCodeReview{}, errs.NewError(errs.Unknown, err.Error())
