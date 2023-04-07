@@ -108,7 +108,7 @@ func prepareTeamTestRef(t *testing.T) (TeamTestRef, bool) {
 	sprintDao := daotest.NewSprint(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB)
+	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	teamDao := daotest.NewTeam(teamyBackendDB)
 	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)

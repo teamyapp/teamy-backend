@@ -7,16 +7,20 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteInvitationMutation struct {
-	logger        telemetry.Logger
-	stateSyncer   *realtime.StateSyncer
-	invitationDao dao.Invitation
-	id            uint64
-	invitation    entity.Invitation
+	logger            telemetry.Logger
+	stateSyncer       *realtime.StateSyncer
+	invitationDao     dao.Invitation
+	invitationDaoV2   daov2.Invitation
+	id                uint64
+	invitation        entity.Invitation
+	clientNotifiers   []*realtime.ClientNotifier
+	notifiersPrepared bool
 }
 
 var _ realtime.Mutation = (*DeleteInvitationMutation)(nil)
@@ -26,13 +30,22 @@ func (d *DeleteInvitationMutation) GetID() uint64 {
 }
 
 func (d *DeleteInvitationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	return d.invitationDaoV2.DeleteInvitation(ct, tx, d.invitation.ID)
 }
 
 func (d *DeleteInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	if d.notifiersPrepared {
+		return nil
+	}
+
+	var err *errs.Error
+	d.clientNotifiers, err = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.invitation.TeamID)
+	if err != nil {
+		return err
+	}
+
+	d.notifiersPrepared = true
+	return nil
 }
 
 func (d *DeleteInvitationMutation) Execute(ct context.Context) *errs.Error {
@@ -54,8 +67,7 @@ func (d *DeleteInvitationMutation) GetClientNotifiers(ct context.Context) ([]*re
 }
 
 func (d *DeleteInvitationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
-	//TODO implement me
-	panic("implement me")
+	return d.clientNotifiers
 }
 
 func (d *DeleteInvitationMutation) ToMessage() realtime.MutationMessage {
@@ -75,13 +87,15 @@ func NewDeleteInvitationMutation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
+	invitationDaoV2 daov2.Invitation,
 	invitation entity.Invitation,
 ) *DeleteInvitationMutation {
 	return &DeleteInvitationMutation{
-		logger:        logger,
-		stateSyncer:   stateSyncer,
-		invitationDao: invitationDao,
-		id:            stateSyncer.NextMutationID(),
-		invitation:    invitation,
+		logger:          logger,
+		stateSyncer:     stateSyncer,
+		invitationDao:   invitationDao,
+		invitationDaoV2: invitationDaoV2,
+		id:              stateSyncer.NextMutationID(),
+		invitation:      invitation,
 	}
 }

@@ -105,7 +105,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
 	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB)
+	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
 	taskService := NewTask(
