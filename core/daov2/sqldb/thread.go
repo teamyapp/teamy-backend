@@ -22,12 +22,7 @@ func (t Thread) CreateThread(ct context.Context, tx *transaction.Transaction, th
 		`,
 		threadID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -40,12 +35,7 @@ func (t Thread) DeleteThread(ct context.Context, tx *transaction.Transaction, th
 		`,
 		threadID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

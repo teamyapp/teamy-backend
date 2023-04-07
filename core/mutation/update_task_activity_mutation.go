@@ -30,7 +30,6 @@ func (u *UpdateTaskActivityMutation) GetID() uint64 {
 func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
-		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -45,7 +44,6 @@ func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, 
 	var err *errs.Error
 	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 	if err != nil {
-		u.logger.ErrorWithContext(ct, err)
 		return err
 	}
 

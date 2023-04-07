@@ -118,17 +118,11 @@ func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Trans
 	WHERE id IN (%v);`, idsString)
 	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -141,23 +135,13 @@ func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Trans
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprints = append(sprints, sprint)
 	}
 
-	return sprints, internalErr
+	return sprints, nil
 }
 
 func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
@@ -174,17 +158,11 @@ func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Tr
 `,
 		teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -197,23 +175,13 @@ func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Tr
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprints = append(sprints, sprint)
 	}
 
-	return sprints, internalErr
+	return sprints, nil
 }
 
 func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
@@ -227,17 +195,11 @@ func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transac
 	FROM sprint;
 `)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -250,23 +212,13 @@ func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transac
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprints = append(sprints, sprint)
 	}
 
-	return sprints, internalErr
+	return sprints, nil
 }
 
 func (s Sprint) CreateSprint(ct context.Context, tx *transaction.Transaction, sprint entity.Sprint) *errs.Error {
@@ -288,12 +240,7 @@ func (s Sprint) CreateSprint(ct context.Context, tx *transaction.Transaction, sp
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -307,12 +254,7 @@ func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sp
 		sprintID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil

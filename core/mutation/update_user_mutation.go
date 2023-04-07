@@ -40,7 +40,15 @@ func (u *UpdateUserMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	}
 
 	teamIDs, err := u.teamMemberDaoV2.FindTeamIDsByUserIDWithTx(ct, tx, u.user.ID)
+	if err != nil {
+		return err
+	}
+
 	u.clientNotifiers, err = u.stateSyncer.GetClientNotifiersByTeamIDs(ct, teamIDs)
+	if err != nil {
+		return err
+	}
+
 	u.notifiersPrepared = true
 	return err
 }

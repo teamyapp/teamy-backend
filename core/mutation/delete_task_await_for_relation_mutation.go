@@ -33,7 +33,6 @@ func (d *DeleteTaskAwaitForRelationMutation) GetID() uint64 {
 func (d *DeleteTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := d.taskAwaitForRelationDaoV2.DeleteRelation(ct, tx, d.awaitingTask.ID, d.awaitForTaskID)
 	if err != nil {
-		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -48,7 +47,6 @@ func (d *DeleteTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 	var err *errs.Error
 	d.clientNotifiers, err = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.awaitingTask.OwningTeamID)
 	if err != nil {
-		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 

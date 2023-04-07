@@ -46,7 +46,6 @@ func (c *CreateTaskMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	var internalErr *errs.Error
 	c.clientNotifiers, internalErr = c.stateSyncer.GetClientNotifiersByTeamID(ct, c.task.OwningTeamID)
 	if internalErr != nil {
-		c.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 

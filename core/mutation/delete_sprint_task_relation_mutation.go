@@ -33,7 +33,6 @@ func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
 func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := d.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, d.sprintID, d.task.ID)
 	if internalErr != nil {
-		d.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -48,7 +47,6 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 	var internalErr *errs.Error
 	d.clientNotifiers, internalErr = d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 	if internalErr != nil {
-		d.logger.ErrorWithContext(ct, internalErr)
 		return internalErr
 	}
 
@@ -59,7 +57,6 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
 	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
 	if err != nil {
-		d.logger.ErrorWithContext(ct, err)
 		return err
 	}
 

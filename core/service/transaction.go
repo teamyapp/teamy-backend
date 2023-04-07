@@ -32,14 +32,12 @@ func (t TransactionsContext) withTransactions(
 	tx, err := t.transactionFactory.BeginTx(t.ct, &opt)
 	defer tx.Rollback()
 	if err != nil {
-		t.logger.ErrorWithContext(t.ct, err)
 		return err
 	}
 
 	rtTx := realtime.NewTransaction(t.logger, t.stateSyncer)
 	err = execute(tx, rtTx)
 	if err != nil {
-		t.logger.ErrorWithContext(t.ct, err)
 		return err
 	}
 
@@ -47,20 +45,17 @@ func (t TransactionsContext) withTransactions(
 	for _, mutation := range mutations {
 		internalErr := mutation.PrepareClientNotifiers(t.ct, tx)
 		if internalErr != nil {
-			t.logger.ErrorWithContext(t.ct, internalErr)
 			return internalErr
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		t.logger.ErrorWithContext(t.ct, err)
 		return err
 	}
 
 	internalErr := rtTx.Notify(t.ct)
 	if internalErr != nil {
-		t.logger.ErrorWithContext(t.ct, internalErr)
 		return internalErr
 	}
 

@@ -34,7 +34,6 @@ func (c *CreateSprintParticipantMutation) GetID() uint64 {
 func (c *CreateSprintParticipantMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.sprintParticipantDaoV2.CreateSprintParticipant(ct, tx, c.sprintParticipant)
 	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
@@ -48,13 +47,11 @@ func (c *CreateSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 
 	sprint, err := c.sprintDaoV2.FindSprintByIDWithTx(ct, tx, c.sprintParticipant.SprintID)
 	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 
 	c.clientNotifiers, err = c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
 		return err
 	}
 

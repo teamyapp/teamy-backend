@@ -160,7 +160,6 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	uploadSession, rpcErr := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		u.logger.ErrorWithContext(ct, internalErr)
 		return entity.User{}, internalErr
 	}
 
