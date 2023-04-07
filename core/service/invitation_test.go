@@ -222,7 +222,7 @@ func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
 	assert.Equal(t, 1, len(invitationsFound))
 
 	assert.Equal(t, invitation2.ID, invitationsFound[0].ID)
-	assert.Equal(t, true, isInvitationEqual(invitation2, invitationsFound[0]))
+	assert.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
 
 	filter2 := InvitationFilter{InvitationID: &invitationID2, Code: &code2}
 	invitationsFound, internalErr = invitationRef.invitationService.FindInvitationsInTeam(ct, teamID1, &filter2)
@@ -324,7 +324,7 @@ func TestInvitationService_FindInvitations(t *testing.T) {
 
 	// verify return result
 	assert.Equal(t, 1, len(invitationsFound))
-	assert.Equal(t, true, isInvitationEqual(invitation2, invitationsFound[0]))
+	assert.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
 
 	filter2 := InvitationFilter{InvitationID: &invitationID2, Code: &code2}
 	invitationsFound, internalErr = invitationRef.invitationService.FindInvitations(ct, &filter2)
@@ -456,7 +456,7 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 	invitation.ExpireAt = expiredAt
 	invitation.ReceiverFirstName = &updatedFirstName
 	invitation.ReceiverLastName = &updatedLastName
-	assert.Equal(t, true, isInvitationEqual(invitation, updated))
+	assert.True(t, areInvitationsEqual(invitation, updated))
 
 	// verify in-memory DB
 	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
@@ -464,7 +464,7 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, true, isInvitationEqual(invitation, invitationInMemory))
+	assert.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
 
 func TestInvitationService_DeleteInvitation(t *testing.T) {
@@ -517,14 +517,14 @@ func TestInvitationService_DeleteInvitation(t *testing.T) {
 	}
 
 	// verify return result
-	assert.Equal(t, true, isInvitationEqual(invitation, deleted))
+	assert.True(t, areInvitationsEqual(invitation, deleted))
 
 	// verify in-memory DB
 	_, err = invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
 	if !assert.NotNil(t, err) {
 		return
 	}
-	
+
 	assert.Equal(t, errs.NotFound, err.Code)
 }
 
@@ -580,7 +580,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 	// verify return result
 	invitation.Status = entity.InvitationStatusAccepted
 	invitation.ReceiverUserID = &requesterUserID
-	assert.Equal(t, true, isInvitationEqual(invitation, accepted))
+	assert.True(t, areInvitationsEqual(invitation, accepted))
 
 	// verify in-memory DB
 	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
@@ -588,7 +588,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, true, isInvitationEqual(invitation, invitationInMemory))
+	assert.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
 
 func TestInvitationService_DeclineInvitation(t *testing.T) {
@@ -640,7 +640,7 @@ func TestInvitationService_DeclineInvitation(t *testing.T) {
 	// verify return result
 	invitation.Status = entity.InvitationStatusDeclined
 	invitation.ReceiverUserID = &requesterUserID
-	assert.Equal(t, true, isInvitationEqual(invitation, accepted))
+	assert.True(t, areInvitationsEqual(invitation, accepted))
 
 	// verify in-memory DB
 	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
@@ -648,11 +648,10 @@ func TestInvitationService_DeclineInvitation(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, true, isInvitationEqual(invitation, invitationInMemory))
+	assert.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
 
-// helper
-func isInvitationEqual(one entity.Invitation, other entity.Invitation) bool {
+func areInvitationsEqual(one entity.Invitation, other entity.Invitation) bool {
 	if one.ID != other.ID {
 		return false
 	}
@@ -677,40 +676,32 @@ func isInvitationEqual(one entity.Invitation, other entity.Invitation) bool {
 		if one.ReceiverUserID != nil || other.ReceiverUserID != nil {
 			return false
 		}
-	} else {
-		if *one.ReceiverUserID) != *other.ReceiverUserID {
-			return false
-		}
+	} else if *one.ReceiverUserID != *other.ReceiverUserID {
+		return false
 	}
 
 	if one.ReceiverLastName == nil || other.ReceiverLastName == nil {
-		if one.ReceiverLastName != nil || other.ReceiverLastName != nil) {
+		if one.ReceiverLastName != nil || other.ReceiverLastName != nil {
 			return false
 		}
-	} else {
-		if *one.ReceiverLastName) != *other.ReceiverLastName) {
-			return false
-		}
+	} else if *one.ReceiverLastName != *other.ReceiverLastName {
+		return false
 	}
 
 	if one.ReceiverFirstName == nil || other.ReceiverFirstName == nil {
-		if one.ReceiverFirstName != nil || other.ReceiverFirstName != nil) {
+		if one.ReceiverFirstName != nil || other.ReceiverFirstName != nil {
 			return false
 		}
-	} else {
-		if *one.ReceiverFirstName != *other.ReceiverFirstName {
-			return false
-		}
+	} else if *one.ReceiverFirstName != *other.ReceiverFirstName {
+		return false
 	}
 
 	if one.ReceiverEmail == nil || other.ReceiverEmail == nil {
 		if one.ReceiverEmail != nil || other.ReceiverEmail != nil {
 			return false
 		}
-	} else {
-		if *one.ReceiverEmail != *other.ReceiverEmail {
-			return false
-		}
+	} else if *one.ReceiverEmail != *other.ReceiverEmail {
+		return false
 	}
 
 	if one.SenderUserID != other.SenderUserID {
