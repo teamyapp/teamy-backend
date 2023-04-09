@@ -1229,11 +1229,6 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 	return &emptypb.Empty{}, errs.ToGRPCErr(err)
 }
 
-func (a AppAPI) BackfillPullRequestLinks(ct context.Context, request *appsProto.BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (a AppAPI) createTaskForRequestedReviewers(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prEvt.PullRequest.NodeID)
 	if err != nil {

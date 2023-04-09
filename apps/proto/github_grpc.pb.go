@@ -25,7 +25,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GithubClient interface {
 	BackfillPullRequestMetadata(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	BackfillPullRequestLinks(ctx context.Context, in *BackfillPullRequestLinksRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type githubClient struct {
@@ -45,21 +44,11 @@ func (c *githubClient) BackfillPullRequestMetadata(ctx context.Context, in *empt
 	return out, nil
 }
 
-func (c *githubClient) BackfillPullRequestLinks(ctx context.Context, in *BackfillPullRequestLinksRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/Github/BackfillPullRequestLinks", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // GithubServer is the server API for Github service.
 // All implementations must embed UnimplementedGithubServer
 // for forward compatibility
 type GithubServer interface {
 	BackfillPullRequestMetadata(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	BackfillPullRequestLinks(context.Context, *BackfillPullRequestLinksRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedGithubServer()
 }
 
@@ -69,9 +58,6 @@ type UnimplementedGithubServer struct {
 
 func (UnimplementedGithubServer) BackfillPullRequestMetadata(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BackfillPullRequestMetadata not implemented")
-}
-func (UnimplementedGithubServer) BackfillPullRequestLinks(context.Context, *BackfillPullRequestLinksRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BackfillPullRequestLinks not implemented")
 }
 func (UnimplementedGithubServer) mustEmbedUnimplementedGithubServer() {}
 
@@ -104,24 +90,6 @@ func _Github_BackfillPullRequestMetadata_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Github_BackfillPullRequestLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BackfillPullRequestLinksRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GithubServer).BackfillPullRequestLinks(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Github/BackfillPullRequestLinks",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GithubServer).BackfillPullRequestLinks(ctx, req.(*BackfillPullRequestLinksRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Github_ServiceDesc is the grpc.ServiceDesc for Github service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -132,10 +100,6 @@ var Github_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BackfillPullRequestMetadata",
 			Handler:    _Github_BackfillPullRequestMetadata_Handler,
-		},
-		{
-			MethodName: "BackfillPullRequestLinks",
-			Handler:    _Github_BackfillPullRequestLinks_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
