@@ -62,3 +62,42 @@ func GetServiceAccountAPIToken(identityService service.Identity) (string, *errs.
 
 	return apiToken, nil
 }
+
+func AddAppPermission(
+	ct context.Context,
+	authorizationService service.Authorization,
+	appID uint64,
+	groupID uint64,
+	groupOperations []authorization.ResourceTypeOperation,
+	requesterUserID uint64,
+) *errs.Error {
+	err := authorizationService.AddUserGroupMember(ct, groupID, requesterUserID)
+	if err != nil {
+		return err
+	}
+
+	for _, resourceTypeOperation := range groupOperations {
+		err = authorizationService.RegisterOperation(
+			ct,
+			string(resourceTypeOperation.ResourceType),
+			resourceTypeOperation.Operation)
+		if err != nil {
+			return err
+		}
+
+		err = authorizationService.AddPermission(
+			ct,
+			string(resourceTypeOperation.ResourceType),
+			appID,
+			resourceTypeOperation.Operation,
+			groupID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return authorizationService.RegisterResource(
+		ct,
+		string(authorization.AppResourceType),
+		appID)
+}

@@ -31,12 +31,6 @@ var TeamOwnerResourceTypeOperations = append([]ResourceTypeOperation{
 	DemoteMemberFromAdminInTeam,
 }, TeamAdminResourceTypeOperations...)
 
-var AppAdminResourceTypeOperations = []ResourceTypeOperation{
-	UpdateInApp,
-	RefreshAppSecretInApp,
-	DeleteInApp,
-}
-
 var AppMemberResourceTypeOperations = []ResourceTypeOperation{
 	ReadInApp,
 	CreateAppVersionInApp,
@@ -45,3 +39,9 @@ var AppMemberResourceTypeOperations = []ResourceTypeOperation{
 	CreateAppVersionVisibleTeamInApp,
 	DeleteAppVersionVisibleTeamInApp,
 }
+
+var AppAdminResourceTypeOperations = append([]ResourceTypeOperation{
+	UpdateInApp,
+	RefreshAppSecretInApp,
+	DeleteInApp,
+}, AppMemberResourceTypeOperations...)
