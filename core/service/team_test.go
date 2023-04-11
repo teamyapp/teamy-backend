@@ -25,6 +25,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
@@ -113,11 +114,15 @@ func prepareTeamTestRef(t *testing.T) (TeamTestRef, bool) {
 	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
 
+	toggles := feature.Toggles{
+		EnableAuthorization: false,
+	}
 	teamService := NewTeam(
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
 		authorizer,
+		toggles,
 		stateSyncer,
 		transactionFactory,
 		taskDaoV2,

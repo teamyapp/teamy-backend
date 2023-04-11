@@ -25,6 +25,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
@@ -107,10 +108,14 @@ func prepareInvitationTestRef(t *testing.T) (InvitationTestRef, bool) {
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintDao := daotest.NewSprint(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
+	toggles := feature.Toggles{
+		EnableAuthorization: false,
+	}
 	invitationService := NewInvitation(
 		logger,
 		cloudClientRegistry,
 		authorizer,
+		toggles,
 		stateSyncer,
 		transactionFactory,
 		invitationDao,
