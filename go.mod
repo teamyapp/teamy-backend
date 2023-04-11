@@ -8,7 +8,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.5.0
 	github.com/stretchr/testify v1.8.2
-	github.com/teamyapp/cloud v0.0.0-20230407005251-f77209a18d92
+	github.com/teamyapp/cloud v0.0.0-20230411060640-aac9281466d6
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.30.0
 )
@@ -16,6 +16,7 @@ require (
 //replace github.com/teamyapp/cloud => ../cloud
 
 require (
+	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -28,6 +29,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/lib/pq v1.10.7 // indirect
@@ -40,6 +42,8 @@ require (
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rubenv/sql-migrate v1.4.0 // indirect
+	github.com/spf13/cobra v1.2.1 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.14.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.14.0 // indirect
