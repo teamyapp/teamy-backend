@@ -42,6 +42,7 @@ type Team struct {
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	authorizer                 Authorizer
+	featureToggles             feature.Toggles
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
 	taskDaoV2                  daov2.Task
@@ -62,7 +63,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewReadInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -195,7 +196,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		return entity.Team{}, err
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		err = t.authorizer.registerResource(ct, authorization.TeamResourceType, team.ID)
 		if err != nil {
 			return entity.Team{}, err
@@ -262,7 +263,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -317,7 +318,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 }
 
 func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -377,7 +378,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -424,7 +425,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -503,7 +504,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 		return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewReadMembersInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -524,7 +525,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		return entity.TeamMember{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewAddMemberToInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -616,7 +617,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		return entity.TeamMember{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewRemoveMemberFromInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -708,7 +709,7 @@ func (t Team) UpdateTeamMember(
 		return entity.TeamMember{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateMembersInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -810,6 +811,7 @@ func NewTeam(
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	taskDaoV2 daov2.Task,
@@ -828,6 +830,7 @@ func NewTeam(
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		authorizer:                 authorizer,
+		featureToggles:             featureToggles,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
 		taskDaoV2:                  taskDaoV2,

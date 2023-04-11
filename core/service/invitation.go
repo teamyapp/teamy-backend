@@ -28,6 +28,7 @@ type Invitation struct {
 	logger                 telemetry.Logger
 	cloudClientRegistry    *cloudAPI.ClientRegistry
 	authorizer             Authorizer
+	featureToggles         feature.Toggles
 	stateSyncer            *realtime.StateSyncer
 	transactionFactory     transaction.Factory
 	invitationDao          dao.Invitation
@@ -85,7 +86,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		return entity.Invitation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if i.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateInvitationInTeamQuery(userID, teamID)
 		hasPermission, err := i.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -147,7 +148,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		return entity.Invitation{}, err
 	}
 
-	if feature.EnableAuthorization {
+	if i.featureToggles.EnableAuthorization {
 		err = i.authorizer.registerResource(ct, authorization.InvitationResourceType, invitation.ID)
 		if err != nil {
 			return entity.Invitation{}, err
@@ -251,7 +252,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		return entity.Invitation{}, err
 	}
 
-	if feature.EnableAuthorization {
+	if i.featureToggles.EnableAuthorization {
 		query := authorization.NewAddMemberToInTeamQuery(receiverUserID, invitation.TeamID)
 		hasPermission, internalErr := i.authorizer.hasPermission(ct, query)
 		if internalErr != nil {
@@ -458,6 +459,7 @@ func NewInvitation(
 	logger telemetry.Logger,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	invitationDao dao.Invitation,
@@ -473,6 +475,7 @@ func NewInvitation(
 		logger:                 logger,
 		cloudClientRegistry:    cloudClientRegistry,
 		authorizer:             authorizer,
+		featureToggles:         featureToggles,
 		stateSyncer:            stateSyncer,
 		transactionFactory:     transactionFactory,
 		invitationDao:          invitationDao,

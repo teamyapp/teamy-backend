@@ -61,6 +61,7 @@ type Task struct {
 	logger                    telemetry.Logger
 	cloudClientRegistry       *cloudAPI.ClientRegistry
 	authorizer                Authorizer
+	featureToggles            feature.Toggles
 	stateSyncer               *realtime.StateSyncer
 	transactionFactory        transaction.Factory
 	activityCache             cache.Activity
@@ -241,7 +242,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		return entity.Task{}, internalErr
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		internalErr = t.authorizer.registerResource(ct, authorization.TaskResourceType, task.ID)
 		if internalErr != nil {
 			return entity.Task{}, internalErr
@@ -262,7 +263,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateTaskInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -292,7 +293,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTaskQuery(userID, taskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -1011,6 +1012,7 @@ func NewTask(
 	logger telemetry.Logger,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	activityCache cache.Activity,
@@ -1030,6 +1032,7 @@ func NewTask(
 		logger:                    logger,
 		cloudClientRegistry:       cloudClientRegistry,
 		authorizer:                authorizer,
+		featureToggles:            featureToggles,
 		stateSyncer:               stateSyncer,
 		transactionFactory:        transactionFactory,
 		activityCache:             activityCache,

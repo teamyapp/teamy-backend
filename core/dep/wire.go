@@ -19,6 +19,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	sqldbV2 "github.com/teamyapp/teamy-backend/core/daov2/sqldb"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -130,6 +131,7 @@ func InitGraphQLAPI(
 		daoSet,
 		transaction.NewFactory,
 		serviceSet,
+		feature.NewStaticToggles,
 		cache.NewActivity,
 		gql.NewDependencies,
 		gql.NewResolver,
@@ -156,8 +158,9 @@ func InitTaskRPCAPI(
 ) api.TaskRPC {
 	wire.Build(
 		daoSet,
-		cache.NewActivity,
 		serviceSet,
+		feature.NewStaticToggles,
+		cache.NewActivity,
 		transaction.NewFactory,
 		api.NewTaskRPC,
 	)
@@ -173,6 +176,7 @@ func InitSprintRPCAPI(
 	wire.Build(
 		daoSet,
 		serviceSet,
+		feature.NewStaticToggles,
 		transaction.NewFactory,
 		api.NewSprintRPC,
 	)
@@ -188,6 +192,7 @@ func InitTaskLinkRPCAPI(
 	wire.Build(
 		daoSet,
 		serviceSet,
+		feature.NewStaticToggles,
 		transaction.NewFactory,
 		api.NewTaskLinkRPC,
 	)
@@ -223,6 +228,7 @@ func newTeamService(
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer service.Authorizer,
+	toggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	taskDaoV2 daov2.Task,
@@ -241,6 +247,7 @@ func newTeamService(
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		authorizer,
+		toggles,
 		stateSyncer,
 		transactionFactory,
 		taskDaoV2,
