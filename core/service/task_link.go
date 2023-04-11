@@ -31,6 +31,7 @@ type TaskLink struct {
 	logger              telemetry.Logger
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	authorizer          Authorizer
+	featureToggles      feature.Toggles
 	transactionFactory  transaction.Factory
 	stateSyncer         *realtime.StateSyncer
 	taskLinkDaoV2       daov2.TaskLink
@@ -43,7 +44,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		return entity.TaskLink{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateTaskLinkInTeamQuery(userID, taskLinkEntity.TaskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -96,7 +97,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		return entity.TaskLink{}, internalErr
 	}
 
-	if feature.EnableAuthorization {
+	if t.featureToggles.EnableAuthorization {
 		err := t.authorizer.registerResource(ct, authorization.TaskLinkResourceType, taskLink.ID)
 		if err != nil {
 			return entity.TaskLink{}, err
@@ -170,6 +171,7 @@ func NewTaskLink(
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	transactionFactory transaction.Factory,
 	authorizer Authorizer,
+	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	taskLinkDaoV2 daov2.TaskLink,
 	taskDaoV2 daov2.Task,
@@ -179,6 +181,7 @@ func NewTaskLink(
 		cloudClientRegistry: cloudClientRegistry,
 		transactionFactory:  transactionFactory,
 		authorizer:          authorizer,
+		featureToggles:      featureToggles,
 		stateSyncer:         stateSyncer,
 		taskLinkDaoV2:       taskLinkDaoV2,
 		taskDaoV2:           taskDaoV2,

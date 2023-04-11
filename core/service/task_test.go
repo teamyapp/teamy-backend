@@ -24,6 +24,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
@@ -108,10 +109,15 @@ func TestTaskService_CreateTask(t *testing.T) {
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
+
+	toggles := feature.Toggles{
+		EnableAuthorization: false,
+	}
 	taskService := NewTask(
 		logger,
 		cloudClientRegistry,
 		authorizer,
+		toggles,
 		stateSyncer,
 		transactionFactory,
 		activityCache,

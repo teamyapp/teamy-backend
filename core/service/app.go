@@ -21,6 +21,7 @@ type App struct {
 	logger                   telemetry.Logger
 	cloudClientRegistry      *cloudAPI.ClientRegistry
 	authorizer               Authorizer
+	featureToggles           feature.Toggles
 	appDao                   dao.App
 	appVersionDao            dao.AppVersion
 	appTeamInstallationDao   dao.AppTeamInstallation
@@ -163,7 +164,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 		return entity.App{}, err
 	}
 
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		err = a.authorizer.registerResource(ct, authorization.AppResourceType, app.ID)
 		if err != nil {
 			return entity.App{}, err
@@ -225,7 +226,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 }
 
 func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (entity.App, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -290,7 +291,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 }
 
 func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -328,7 +329,7 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 }
 
 func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -366,7 +367,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateAppVersionInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -406,7 +407,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 }
 
 func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber int32, input UpdateAppVersionInput) (entity.AppVersion, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -454,7 +455,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 }
 
 func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -507,7 +508,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 }
 
 func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersion, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -545,7 +546,7 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 }
 
 func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versionNumber int32, teamID uint64) (entity.AppVersion, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -603,7 +604,7 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateTeamInstallationInAppQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
@@ -645,7 +646,7 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 }
 
 func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint64, input UpdateAppTeamInstallationInput) (entity.AppTeamInstallation, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -679,7 +680,7 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 }
 
 func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint64) (entity.AppTeamInstallation, *errs.Error) {
-	if feature.EnableAuthorization {
+	if a.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -784,6 +785,7 @@ func NewApp(
 	logger telemetry.Logger,
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	authorizer Authorizer,
+	featureToggles feature.Toggles,
 	appDao dao.App,
 	appVersionDao dao.AppVersion,
 	appTeamInstallationDao dao.AppTeamInstallation,
@@ -791,13 +793,14 @@ func NewApp(
 	teamDao dao.Team,
 ) App {
 	return App{
-		logger,
-		cloudClientRegistry,
-		authorizer,
-		appDao,
-		appVersionDao,
-		appTeamInstallationDao,
-		appVersionVisibleTeamDao,
-		teamDao,
+		logger:                   logger,
+		cloudClientRegistry:      cloudClientRegistry,
+		authorizer:               authorizer,
+		featureToggles:           featureToggles,
+		appDao:                   appDao,
+		appVersionDao:            appVersionDao,
+		appTeamInstallationDao:   appTeamInstallationDao,
+		appVersionVisibleTeamDao: appVersionVisibleTeamDao,
+		teamDao:                  teamDao,
 	}
 }

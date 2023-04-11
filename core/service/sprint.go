@@ -38,6 +38,7 @@ type Sprint struct {
 	cloudClientRegistry     *cloudAPI.ClientRegistry
 	stateSyncer             *realtime.StateSyncer
 	authorizer              Authorizer
+	featureToggles          feature.Toggles
 	transactionFactory      transaction.Factory
 	taskDao                 dao.Task
 	taskDaoV2               daov2.Task
@@ -179,7 +180,7 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 }
 
 func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSprintInput) (entity.Sprint, *errs.Error) {
-	if feature.EnableAuthorization {
+	if s.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -265,7 +266,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 
 	// TODO(yuhang): if failed to register/assign resource, there will be inconsistent state. Cross-service transaction
 	// protection will be covered in stage 2
-	if feature.EnableAuthorization {
+	if s.featureToggles.EnableAuthorization {
 		err = s.authorizer.registerResource(ct, authorization.SprintResourceType, sprint.ID)
 		if err != nil {
 			return entity.Sprint{}, err
@@ -415,7 +416,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 }
 
 func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs []uint64) ([]entity.Task, *errs.Error) {
-	if feature.EnableAuthorization {
+	if s.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -828,6 +829,7 @@ func NewSprint(
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
 	authorizer Authorizer,
+	featureToggles feature.Toggles,
 	transactionFactory transaction.Factory,
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
@@ -846,6 +848,7 @@ func NewSprint(
 		cloudClientRegistry:     cloudClientRegistry,
 		stateSyncer:             stateSyncer,
 		authorizer:              authorizer,
+		featureToggles:          featureToggles,
 		transactionFactory:      transactionFactory,
 		taskDao:                 taskDao,
 		taskDaoV2:               taskDaoV2,

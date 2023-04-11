@@ -1,3 +1,11 @@
 package feature
 
-var EnableAuthorization bool = false
+type Toggles struct {
+	EnableAuthorization bool
+}
+
+func NewStaticToggles() Toggles {
+	return Toggles{
+		EnableAuthorization: false,
+	}
+}

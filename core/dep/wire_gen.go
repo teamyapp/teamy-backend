@@ -21,6 +21,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	sqldb2 "github.com/teamyapp/teamy-backend/core/daov2/sqldb"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -38,6 +39,7 @@ func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.S
 func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
 	prometheusTracer := newPrometheusTracer(appName, serviceName, environment)
 	authorizer := service.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
 	factory := transaction.NewFactory(sqlDB)
 	activity := cache.NewActivity(logger)
 	task := sqldb.NewTask(logger, sqlDB)
@@ -51,23 +53,23 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	sqldbSprintParticipant := sqldb2.NewSprintParticipant(logger, factory)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(logger, sqlDB)
 	sqldbSprintTaskRelation := sqldb2.NewSprintTaskRelation(logger)
-	serviceTask := service.NewTask(logger, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, activity, task, sqldbTask, thread, sprint, sqldbSprint, taskAwaitForRelation, sqldbTaskAwaitForRelation, sprintParticipant, sqldbSprintParticipant, sprintTaskRelation, sqldbSprintTaskRelation)
+	serviceTask := service.NewTask(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, activity, task, sqldbTask, thread, sprint, sqldbSprint, taskAwaitForRelation, sqldbTaskAwaitForRelation, sprintParticipant, sqldbSprintParticipant, sprintTaskRelation, sqldbSprintTaskRelation)
 	taskLink := sqldb2.NewTaskLink(logger, sqlDB)
-	serviceTaskLink := service.NewTaskLink(logger, cloudAPIClientRegistry, factory, authorizer, realTimeStateSyncer, taskLink, sqldbTask)
+	serviceTaskLink := service.NewTaskLink(logger, cloudAPIClientRegistry, factory, authorizer, toggles, realTimeStateSyncer, taskLink, sqldbTask)
 	team := sqldb.NewTeam(logger, sqlDB)
 	sqldbTeam := sqldb2.NewTeam(logger, factory)
 	teamMember := sqldb.NewTeamMember(logger, sqlDB)
 	sqldbTeamMember := sqldb2.NewTeamMember(logger, factory)
 	teamFileUploadSession := sqldb2.NewTeamFileUploadSession(logger)
-	serviceTeam := newTeamService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, sqldbTask, sprint, sqldbSprint, sprintParticipant, sqldbSprintParticipant, team, sqldbTeam, teamMember, sqldbTeamMember, teamFileUploadSession)
-	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, factory, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
+	serviceTeam := newTeamService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, sqldbTask, sprint, sqldbSprint, sprintParticipant, sqldbSprintParticipant, team, sqldbTeam, teamMember, sqldbTeamMember, teamFileUploadSession)
+	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
 	user := sqldb.NewUser(logger, sqlDB)
 	sqldbUser := sqldb2.NewUser(logger, factory)
 	userFileUploadSession := sqldb2.NewUserFileUploadSession(logger)
 	serviceUser := newUserService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, realTimeStateSyncer, factory, user, sqldbUser, sqldbTeamMember, userFileUploadSession)
 	invitation := sqldb.NewInvitation(logger, sqlDB)
 	sqldbInvitation := sqldb2.NewInvitation(logger, factory)
-	serviceInvitation := service.NewInvitation(logger, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, invitation, sqldbInvitation, teamMember, sqldbTeamMember, sprintParticipant, sqldbSprintParticipant, sprint, sqldbSprint)
+	serviceInvitation := service.NewInvitation(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, invitation, sqldbInvitation, teamMember, sqldbTeamMember, sprintParticipant, sqldbSprintParticipant, sprint, sqldbSprint)
 	sqldbThread := sqldb.NewThread(logger, sqlDB)
 	message := sqldb.NewMessage(logger, sqlDB)
 	sqldbMessage := sqldb2.NewMessage(logger, factory)
@@ -76,7 +78,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	appVersion := sqldb.NewAppVersion(logger, sqlDB)
 	appTeamInstallation := sqldb.NewAppTeamInstallation(logger, sqlDB)
 	appVersionVisibleTeam := sqldb.NewAppVersionVisibleTeam(logger, sqlDB)
-	serviceApp := service.NewApp(logger, cloudAPIClientRegistry, authorizer, app, appVersion, appTeamInstallation, appVersionVisibleTeam, team)
+	serviceApp := service.NewApp(logger, cloudAPIClientRegistry, authorizer, toggles, app, appVersion, appTeamInstallation, appVersionVisibleTeam, team)
 	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceInvitation, serviceThread, serviceApp)
 	resolver := gql2.NewResolver(dependencies)
 	gqlService := api2.NewGraphQL(logger, prometheusTracer, resolver)
@@ -90,6 +92,7 @@ func InitRealTimeStateSyncAPI(logger telemetry.Logger, realTimeStateSyncer *real
 
 func InitTaskRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.TaskRPC {
 	authorizer := service.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
 	factory := transaction.NewFactory(sqlDB)
 	activity := cache.NewActivity(logger)
 	task := sqldb.NewTask(logger, sqlDB)
@@ -103,13 +106,14 @@ func InitTaskRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.ClientR
 	sqldbSprintParticipant := sqldb2.NewSprintParticipant(logger, factory)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(logger, sqlDB)
 	sqldbSprintTaskRelation := sqldb2.NewSprintTaskRelation(logger)
-	serviceTask := service.NewTask(logger, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, activity, task, sqldbTask, thread, sprint, sqldbSprint, taskAwaitForRelation, sqldbTaskAwaitForRelation, sprintParticipant, sqldbSprintParticipant, sprintTaskRelation, sqldbSprintTaskRelation)
+	serviceTask := service.NewTask(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, activity, task, sqldbTask, thread, sprint, sqldbSprint, taskAwaitForRelation, sqldbTaskAwaitForRelation, sprintParticipant, sqldbSprintParticipant, sprintTaskRelation, sqldbSprintTaskRelation)
 	taskRPC := api2.NewTaskRPC(logger, serviceTask)
 	return taskRPC
 }
 
 func InitSprintRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.SprintRPC {
 	authorizer := service.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
 	factory := transaction.NewFactory(sqlDB)
 	task := sqldb.NewTask(logger, sqlDB)
 	sqldbTask := sqldb2.NewTask(logger, factory)
@@ -122,7 +126,7 @@ func InitSprintRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.Clien
 	teamMember := sqldb.NewTeamMember(logger, sqlDB)
 	sqldbTeamMember := sqldb2.NewTeamMember(logger, factory)
 	thread := sqldb2.NewThread(logger)
-	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, factory, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
+	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
 	sprintRPC := api2.NewSprintRPC(logger, serviceSprint)
 	return sprintRPC
 }
@@ -130,9 +134,10 @@ func InitSprintRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.Clien
 func InitTaskLinkRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.ClientRegistry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api2.TaskLinkRPC {
 	factory := transaction.NewFactory(sqlDB)
 	authorizer := service.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
 	taskLink := sqldb2.NewTaskLink(logger, sqlDB)
 	task := sqldb2.NewTask(logger, factory)
-	serviceTaskLink := service.NewTaskLink(logger, cloudAPIClientRegistry, factory, authorizer, realTimeStateSyncer, taskLink, task)
+	serviceTaskLink := service.NewTaskLink(logger, cloudAPIClientRegistry, factory, authorizer, toggles, realTimeStateSyncer, taskLink, task)
 	taskLinkRPC := api2.NewTaskLinkRPC(logger, serviceTaskLink)
 	return taskLinkRPC
 }
@@ -178,6 +183,7 @@ func newTeamService(
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *api.ClientRegistry,
 	authorizer service.Authorizer,
+	toggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	taskDaoV2 daov2.Task,
@@ -196,6 +202,7 @@ func newTeamService(
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		authorizer,
+		toggles,
 		stateSyncer,
 		transactionFactory,
 		taskDaoV2,
