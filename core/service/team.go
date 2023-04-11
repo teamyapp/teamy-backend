@@ -63,7 +63,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewReadTeamQuery(userID, teamID)
+		query := authorization.NewReadInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
@@ -263,7 +263,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamUpdateSettingsQuery(userID, teamID)
+		query := authorization.NewUpdateInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
@@ -323,7 +323,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 			return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewDeleteTeamQuery(userID, teamID)
+		query := authorization.NewDeleteInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
@@ -378,7 +378,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamUpdateSettingsQuery(userID, teamID)
+		query := authorization.NewUpdateInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return 0, err
@@ -425,7 +425,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamUpdateSettingsQuery(userID, teamID)
+		query := authorization.NewUpdateInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
@@ -504,7 +504,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamReadMemberQuery(userID, teamID)
+		query := authorization.NewReadMembersInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return nil, err
@@ -525,7 +525,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamAddMemberToQuery(userID, teamID)
+		query := authorization.NewAddMemberToInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.TeamMember{}, err
@@ -617,7 +617,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamRemoveMemberFromQuery(userID, teamID)
+		query := authorization.NewRemoveMemberFromInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.TeamMember{}, err
@@ -709,7 +709,7 @@ func (t Team) UpdateTeamMember(
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamUpdateMemberQuery(userID, teamID)
+		query := authorization.NewUpdateMembersInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.TeamMember{}, err

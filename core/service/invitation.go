@@ -86,7 +86,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamCreateInvitationQuery(userID, teamID)
+		query := authorization.NewCreateInvitationInTeamQuery(userID, teamID)
 		hasPermission, err := i.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Invitation{}, err
@@ -252,7 +252,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamAddMemberToQuery(receiverUserID, invitation.TeamID)
+		query := authorization.NewAddMemberToInTeamQuery(receiverUserID, invitation.TeamID)
 		hasPermission, internalErr := i.authorizer.hasPermission(ct, query)
 		if internalErr != nil {
 			return entity.Invitation{}, err

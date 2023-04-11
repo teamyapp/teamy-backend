@@ -263,7 +263,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamCreateTaskQuery(userID, teamID)
+		query := authorization.NewCreateTaskInTeamQuery(userID, teamID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Task{}, err
@@ -293,7 +293,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewTeamUpdateTaskQuery(userID, taskID)
+		query := authorization.NewUpdateInTaskQuery(userID, taskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Task{}, err

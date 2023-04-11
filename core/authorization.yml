@@ -1,4 +1,4 @@
-resourceOperations:
+resourceTypeOperations:
   - resourceType: Task
     operations:
       - Read
@@ -21,9 +21,13 @@ resourceOperations:
       - CreateTask
       - UpdateTask
       - DeleteTask
+      - CloneTask
+      - CreateTaskLink
       # Member
+      - ReadMembers
       - AddMemberTo
       - RemoveMemberFrom
+      - UpdateMembers
       # Sprint
       - ReadSprint
       - CreateSprint
@@ -34,6 +38,10 @@ resourceOperations:
       - CreateInvitation
       - UpdateInvitation
       - DeleteInvitation
+      # App
+      - CreateAppInstallation
+      - UpdateAppInstallation
+      - DeleteAppInstallation
   - resourceType: Sprint
     operations:
       - Read
@@ -44,6 +52,20 @@ resourceOperations:
       - Read
       - Create
       - Delete
+  - resourceType: App
+    operations:
+      - Read
+      - Update
+      - Delete
+      - RefreshAppSecret
+      - CreateAppVersion
+      - UpdateAppVersion
+      - DeleteAppVersion
+      - CreateAppVersionVisibleTeam
+      - DeleteAppVersionVisibleTeam
+      - CreateTeamInstallation
+      - UpdateTeamInstallation
+      - DeleteTeamInstallation
 operationRelations:
   - resourceType: Task
     operation: Read
@@ -53,7 +75,7 @@ operationRelations:
       - resourceType: Task
         operation: Delete
       - resourceType: Team
-        operation: ReadTask # TODO: confirm whether this is correct        
+        operation: ReadTask # TODO: confirm whether this is correct
   - resourceType: Task
     operation: Update
     parents:

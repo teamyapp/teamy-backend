@@ -1,1 +1,4 @@
 dbMigrationsDir = "migrations"
+[[AuthorizationOptions]]
+configFilePath = "core/authorization.yml"
+outputDir = "core/authorization"
