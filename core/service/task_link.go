@@ -44,7 +44,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewCreateTaskLinkQuery(userID, taskLinkEntity.TaskID)
+		query := authorization.NewCreateTaskLinkInTeamQuery(userID, taskLinkEntity.TaskID)
 		hasPermission, err := t.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.TaskLink{}, err

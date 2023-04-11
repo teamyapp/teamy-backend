@@ -185,7 +185,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewTeamCreateSprintQuery(userID, teamID)
+		query := authorization.NewCreateSprintInTeamQuery(userID, teamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Sprint{}, err
@@ -426,7 +426,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 			return nil, err
 		}
 
-		query := authorization.NewTeamCloneTaskQuery(userID, sprint.OwningTeamID)
+		query := authorization.NewCloneTaskInTeamQuery(userID, sprint.OwningTeamID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return nil, err

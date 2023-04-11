@@ -9,79 +9,31 @@ type Query struct {
 	UserID       uint64
 }
 
-func NewReadTeamQuery(userID uint64, teamID uint64) Query {
+func NewReadInTaskQuery(userID uint64, taskID uint64) Query {
 	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
+		ResourceType: TaskResourceType,
+		ResourceID:   taskID,
 		Operation:    "Read",
 		UserID:       userID,
 	}
 }
-
-func NewTeamUpdateSettingsQuery(userID uint64, teamID uint64) Query {
+func NewUpdateInTaskQuery(userID uint64, taskID uint64) Query {
 	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
-		Operation:    "UpdateSettings",
+		ResourceType: TaskResourceType,
+		ResourceID:   taskID,
+		Operation:    "Update",
 		UserID:       userID,
 	}
 }
-
-func NewDeleteTeamQuery(userID uint64, teamID uint64) Query {
+func NewDeleteInTaskQuery(userID uint64, taskID uint64) Query {
 	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
+		ResourceType: TaskResourceType,
+		ResourceID:   taskID,
 		Operation:    "Delete",
 		UserID:       userID,
 	}
 }
-
-func NewTeamAddMemberToQuery(userID uint64, teamID uint64) Query {
-	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
-		Operation:    "AddMemberTo",
-		UserID:       userID,
-	}
-}
-
-func NewTeamRemoveMemberFromQuery(userID uint64, teamID uint64) Query {
-	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
-		Operation:    "RemoveMemberFrom",
-		UserID:       userID,
-	}
-}
-
-func NewTeamUpdateMemberQuery(userID uint64, teamID uint64) Query {
-	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
-		Operation:    "UpdateMember",
-		UserID:       userID,
-	}
-}
-
-func NewTeamReadMemberQuery(userID uint64, teamID uint64) Query {
-	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
-		Operation:    "ReadMember",
-		UserID:       userID,
-	}
-}
-
-func NewTeamCreateTaskQuery(userID uint64, teamID uint64) Query {
-	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
-		Operation:    "CreateTask",
-		UserID:       userID,
-	}
-}
-
-func NewCreateTaskLinkQuery(userID uint64, taskID uint64) Query {
+func NewCreateLinkInTaskQuery(userID uint64, taskID uint64) Query {
 	return Query{
 		ResourceType: TaskResourceType,
 		ResourceID:   taskID,
@@ -90,34 +42,88 @@ func NewCreateTaskLinkQuery(userID uint64, taskID uint64) Query {
 	}
 }
 
-func NewTeamCreateInvitationQuery(userID uint64, teamID uint64) Query {
+func NewReadInTaskLinkQuery(userID uint64, taskLinkID uint64) Query {
 	return Query{
-		ResourceType: TeamResourceType,
-		ResourceID:   teamID,
-		Operation:    "CreateInvitation",
+		ResourceType: TaskLinkResourceType,
+		ResourceID:   taskLinkID,
+		Operation:    "Read",
+		UserID:       userID,
+	}
+}
+func NewUpdateInTaskLinkQuery(userID uint64, taskLinkID uint64) Query {
+	return Query{
+		ResourceType: TaskLinkResourceType,
+		ResourceID:   taskLinkID,
+		Operation:    "Update",
+		UserID:       userID,
+	}
+}
+func NewDeleteInTaskLinkQuery(userID uint64, taskLinkID uint64) Query {
+	return Query{
+		ResourceType: TaskLinkResourceType,
+		ResourceID:   taskLinkID,
+		Operation:    "Delete",
 		UserID:       userID,
 	}
 }
 
-func NewTeamCreateSprintQuery(userID uint64, teamID uint64) Query {
+func NewReadInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
-		Operation:    "CreateSprint",
+		Operation:    "Read",
 		UserID:       userID,
 	}
 }
-
-func NewTeamReadSprintQuery(userID uint64, teamID uint64) Query {
+func NewUpdateInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
-		Operation:    "ReadSprint",
+		Operation:    "Update",
 		UserID:       userID,
 	}
 }
-
-func NewTeamCloneTaskQuery(userID uint64, teamID uint64) Query {
+func NewDeleteInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "Delete",
+		UserID:       userID,
+	}
+}
+func NewReadTaskInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "ReadTask",
+		UserID:       userID,
+	}
+}
+func NewCreateTaskInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "CreateTask",
+		UserID:       userID,
+	}
+}
+func NewUpdateTaskInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "UpdateTask",
+		UserID:       userID,
+	}
+}
+func NewDeleteTaskInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "DeleteTask",
+		UserID:       userID,
+	}
+}
+func NewCloneTaskInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -125,17 +131,111 @@ func NewTeamCloneTaskQuery(userID uint64, teamID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewTeamUpdateTaskQuery(userID uint64, teamID uint64) Query {
+func NewCreateTaskLinkInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
-		ResourceType: TaskResourceType,
+		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
-		Operation:    "Update",
+		Operation:    "CreateTaskLink",
 		UserID:       userID,
 	}
 }
-
-func NewCreateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
+func NewReadMembersInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "ReadMembers",
+		UserID:       userID,
+	}
+}
+func NewAddMemberToInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "AddMemberTo",
+		UserID:       userID,
+	}
+}
+func NewRemoveMemberFromInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "RemoveMemberFrom",
+		UserID:       userID,
+	}
+}
+func NewUpdateMembersInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "UpdateMembers",
+		UserID:       userID,
+	}
+}
+func NewReadSprintInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "ReadSprint",
+		UserID:       userID,
+	}
+}
+func NewCreateSprintInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "CreateSprint",
+		UserID:       userID,
+	}
+}
+func NewUpdateSprintInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "UpdateSprint",
+		UserID:       userID,
+	}
+}
+func NewDeleteSprintInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "DeleteSprint",
+		UserID:       userID,
+	}
+}
+func NewReadInvitationInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "ReadInvitation",
+		UserID:       userID,
+	}
+}
+func NewCreateInvitationInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "CreateInvitation",
+		UserID:       userID,
+	}
+}
+func NewUpdateInvitationInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "UpdateInvitation",
+		UserID:       userID,
+	}
+}
+func NewDeleteInvitationInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "DeleteInvitation",
+		UserID:       userID,
+	}
+}
+func NewCreateAppInstallationInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -143,8 +243,7 @@ func NewCreateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewUpdateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
+func NewUpdateAppInstallationInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -152,8 +251,7 @@ func NewUpdateAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewDeleteAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
+func NewDeleteAppInstallationInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
@@ -162,7 +260,65 @@ func NewDeleteAppTeamInstallationQuery(userID uint64, teamID uint64) Query {
 	}
 }
 
-func NewUpdateAppQuery(userID uint64, appID uint64) Query {
+func NewReadInSprintQuery(userID uint64, sprintID uint64) Query {
+	return Query{
+		ResourceType: SprintResourceType,
+		ResourceID:   sprintID,
+		Operation:    "Read",
+		UserID:       userID,
+	}
+}
+func NewUpdateInSprintQuery(userID uint64, sprintID uint64) Query {
+	return Query{
+		ResourceType: SprintResourceType,
+		ResourceID:   sprintID,
+		Operation:    "Update",
+		UserID:       userID,
+	}
+}
+func NewDeleteInSprintQuery(userID uint64, sprintID uint64) Query {
+	return Query{
+		ResourceType: SprintResourceType,
+		ResourceID:   sprintID,
+		Operation:    "Delete",
+		UserID:       userID,
+	}
+}
+
+func NewReadInInvitationQuery(userID uint64, invitationID uint64) Query {
+	return Query{
+		ResourceType: InvitationResourceType,
+		ResourceID:   invitationID,
+		Operation:    "Read",
+		UserID:       userID,
+	}
+}
+func NewCreateInInvitationQuery(userID uint64, invitationID uint64) Query {
+	return Query{
+		ResourceType: InvitationResourceType,
+		ResourceID:   invitationID,
+		Operation:    "Create",
+		UserID:       userID,
+	}
+}
+func NewDeleteInInvitationQuery(userID uint64, invitationID uint64) Query {
+	return Query{
+		ResourceType: InvitationResourceType,
+		ResourceID:   invitationID,
+		Operation:    "Delete",
+		UserID:       userID,
+	}
+}
+
+func NewReadInAppQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "Read",
+		UserID:       userID,
+	}
+}
+func NewUpdateInAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
@@ -170,17 +326,7 @@ func NewUpdateAppQuery(userID uint64, appID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewRefreshAppSecretQuery(userID uint64, appID uint64) Query {
-	return Query{
-		ResourceType: AppResourceType,
-		ResourceID:   appID,
-		Operation:    "RefreshSecret",
-		UserID:       userID,
-	}
-}
-
-func NewDeleteAppQuery(userID uint64, appID uint64) Query {
+func NewDeleteInAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
@@ -188,8 +334,15 @@ func NewDeleteAppQuery(userID uint64, appID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewCreateAppVersionQuery(userID uint64, appID uint64) Query {
+func NewRefreshAppSecretInAppQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "RefreshAppSecret",
+		UserID:       userID,
+	}
+}
+func NewCreateAppVersionInAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
@@ -197,8 +350,7 @@ func NewCreateAppVersionQuery(userID uint64, appID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewUpdateAppVersionQuery(userID uint64, appID uint64) Query {
+func NewUpdateAppVersionInAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
@@ -206,8 +358,7 @@ func NewUpdateAppVersionQuery(userID uint64, appID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewDeleteAppVersionQuery(userID uint64, appID uint64) Query {
+func NewDeleteAppVersionInAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
@@ -215,8 +366,7 @@ func NewDeleteAppVersionQuery(userID uint64, appID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewCreateAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
+func NewCreateAppVersionVisibleTeamInAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
@@ -224,12 +374,35 @@ func NewCreateAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
 		UserID:       userID,
 	}
 }
-
-func NewDeleteAppVersionVisibleTeamQuery(userID uint64, appID uint64) Query {
+func NewDeleteAppVersionVisibleTeamInAppQuery(userID uint64, appID uint64) Query {
 	return Query{
 		ResourceType: AppResourceType,
 		ResourceID:   appID,
 		Operation:    "DeleteAppVersionVisibleTeam",
+		UserID:       userID,
+	}
+}
+func NewCreateTeamInstallationInAppQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "CreateTeamInstallation",
+		UserID:       userID,
+	}
+}
+func NewUpdateTeamInstallationInAppQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "UpdateTeamInstallation",
+		UserID:       userID,
+	}
+}
+func NewDeleteTeamInstallationInAppQuery(userID uint64, appID uint64) Query {
+	return Query{
+		ResourceType: AppResourceType,
+		ResourceID:   appID,
+		Operation:    "DeleteTeamInstallation",
 		UserID:       userID,
 	}
 }

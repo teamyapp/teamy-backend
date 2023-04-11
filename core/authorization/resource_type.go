@@ -3,12 +3,10 @@ package authorization
 type ResourceType string
 
 const (
-	TeamResourceType       ResourceType = "Team"
 	TaskResourceType       ResourceType = "Task"
 	TaskLinkResourceType   ResourceType = "TaskLink"
+	TeamResourceType       ResourceType = "Team"
 	SprintResourceType     ResourceType = "Sprint"
-	ProjectResourceType    ResourceType = "Project"
 	InvitationResourceType ResourceType = "Invitation"
 	AppResourceType        ResourceType = "App"
-	AppVersionResourceType ResourceType = "AppVersion"
 )

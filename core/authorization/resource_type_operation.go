@@ -5,230 +5,222 @@ type ResourceTypeOperation struct {
 	Operation    string
 }
 
-// Operations for Team
+// Operations for Task
 var (
-	ReadTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	ReadInTask = ResourceTypeOperation{
+		ResourceType: "Task",
 		Operation:    "Read",
 	}
-	UpdateSettingsTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "UpdateSettings",
+	UpdateInTask = ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "Update",
 	}
-	DeleteTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	DeleteInTask = ResourceTypeOperation{
+		ResourceType: "Task",
 		Operation:    "Delete",
 	}
-	AddMemberToTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "AddMemberTo",
+	CreateLinkInTask = ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "CreateLink",
 	}
-	RemoveMemberFromTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "RemoveMemberFrom",
+)
+
+// Operations for TaskLink
+var (
+	ReadInTaskLink = ResourceTypeOperation{
+		ResourceType: "TaskLink",
+		Operation:    "Read",
 	}
-	UpdateMemberTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "UpdateMember",
+	UpdateInTaskLink = ResourceTypeOperation{
+		ResourceType: "TaskLink",
+		Operation:    "Update",
 	}
-	ReadInvitationUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "ReadInvitation",
+	DeleteInTaskLink = ResourceTypeOperation{
+		ResourceType: "TaskLink",
+		Operation:    "Delete",
 	}
-	CreateInvitationUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "CreateInvitation",
+)
+
+// Operations for Team
+var (
+	ReadInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "Read",
 	}
-	UpdateInvitationUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "UpdateInvitation",
+	UpdateInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "Update",
 	}
-	DeleteInvitationUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "DeleteInvitation",
+	DeleteInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "Delete",
 	}
-	ReadSprintUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "ReadSprint",
-	}
-	CreateSprintUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "CreateSprint",
-	}
-	UpdateSprintUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "UpdateSprint",
-	}
-	DeleteSprintUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
-		Operation:    "DeleteSprint",
-	}
-	ReadTaskUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	ReadTaskInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "ReadTask",
 	}
-	CreateTaskUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	CreateTaskInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "CreateTask",
 	}
-	UpdateTaskUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	UpdateTaskInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "UpdateTask",
 	}
-	DeleteTaskUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	DeleteTaskInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "DeleteTask",
 	}
-	CloneTaskUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	CloneTaskInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "CloneTask",
 	}
-	CreateAppInstallationUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	CreateTaskLinkInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateTaskLink",
+	}
+	ReadMembersInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "ReadMembers",
+	}
+	AddMemberToInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "AddMemberTo",
+	}
+	RemoveMemberFromInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "RemoveMemberFrom",
+	}
+	UpdateMembersInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateMembers",
+	}
+	ReadSprintInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "ReadSprint",
+	}
+	CreateSprintInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateSprint",
+	}
+	UpdateSprintInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateSprint",
+	}
+	DeleteSprintInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DeleteSprint",
+	}
+	ReadInvitationInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "ReadInvitation",
+	}
+	CreateInvitationInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateInvitation",
+	}
+	UpdateInvitationInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateInvitation",
+	}
+	DeleteInvitationInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DeleteInvitation",
+	}
+	CreateAppInstallationInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "CreateAppInstallation",
 	}
-	UpdateAppInstallationUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	UpdateAppInstallationInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "UpdateAppInstallation",
 	}
-	DeleteAppInstallationUnderTeam = ResourceTypeOperation{
-		ResourceType: TeamResourceType,
+	DeleteAppInstallationInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
 		Operation:    "DeleteAppInstallation",
 	}
 )
 
 // Operations for Sprint
 var (
-	ReadSprint = ResourceTypeOperation{
-		ResourceType: SprintResourceType,
+	ReadInSprint = ResourceTypeOperation{
+		ResourceType: "Sprint",
 		Operation:    "Read",
 	}
-	UpdateSprint = ResourceTypeOperation{
-		ResourceType: SprintResourceType,
+	UpdateInSprint = ResourceTypeOperation{
+		ResourceType: "Sprint",
 		Operation:    "Update",
 	}
-	DeleteSprint = ResourceTypeOperation{
-		ResourceType: SprintResourceType,
+	DeleteInSprint = ResourceTypeOperation{
+		ResourceType: "Sprint",
 		Operation:    "Delete",
-	}
-)
-
-// Operations for Task
-var (
-	ReadTask = ResourceTypeOperation{
-		ResourceType: TaskResourceType,
-		Operation:    "Read",
-	}
-	UpdateTask = ResourceTypeOperation{
-		ResourceType: TaskResourceType,
-		Operation:    "Update",
-	}
-	DeleteTask = ResourceTypeOperation{
-		ResourceType: TaskResourceType,
-		Operation:    "Delete",
-	}
-	CreateLink = ResourceTypeOperation{
-		ResourceType: TaskResourceType,
-		Operation:    "CreateLink",
 	}
 )
 
 // Operations for Invitation
 var (
-	ReadInvitation = ResourceTypeOperation{
-		ResourceType: InvitationResourceType,
+	ReadInInvitation = ResourceTypeOperation{
+		ResourceType: "Invitation",
 		Operation:    "Read",
 	}
-	UpdateInvitation = ResourceTypeOperation{
-		ResourceType: InvitationResourceType,
-		Operation:    "Update",
+	CreateInInvitation = ResourceTypeOperation{
+		ResourceType: "Invitation",
+		Operation:    "Create",
 	}
-	DeleteInvitation = ResourceTypeOperation{
-		ResourceType: InvitationResourceType,
+	DeleteInInvitation = ResourceTypeOperation{
+		ResourceType: "Invitation",
 		Operation:    "Delete",
 	}
 )
 
-// TODO: add Team AssignAdmin operation
 // Operations for App
 var (
-	ReadApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	ReadInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "Read",
 	}
-	UpdateApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	UpdateInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "Update",
 	}
-	RefreshAppSecret = ResourceTypeOperation{
-		ResourceType: AppResourceType,
-		Operation:    "RefreshSecret",
-	}
-	DeleteApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	DeleteInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "Delete",
 	}
-	CreateAppVersionUnderApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	RefreshAppSecretInApp = ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "RefreshAppSecret",
+	}
+	CreateAppVersionInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "CreateAppVersion",
 	}
-	UpdateAppVersionUnderApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	UpdateAppVersionInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "UpdateAppVersion",
 	}
-	DeleteAppVersionUnderApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	DeleteAppVersionInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "DeleteAppVersion",
 	}
-	AddAppVersionVisibleTeamUnderApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	CreateAppVersionVisibleTeamInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "CreateAppVersionVisibleTeam",
 	}
-	DeleteAppVersionVisibleTeamUnderApp = ResourceTypeOperation{
-		ResourceType: AppResourceType,
+	DeleteAppVersionVisibleTeamInApp = ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "DeleteAppVersionVisibleTeam",
 	}
+	CreateTeamInstallationInApp = ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "CreateTeamInstallation",
+	}
+	UpdateTeamInstallationInApp = ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "UpdateTeamInstallation",
+	}
+	DeleteTeamInstallationInApp = ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "DeleteTeamInstallation",
+	}
 )
-
-var TeamAdminResourceTypeOperations = []ResourceTypeOperation{
-	AddMemberToTeam,
-	RemoveMemberFromTeam,
-	UpdateMemberTeam,
-	UpdateSettingsTeam,
-	DeleteTeam,
-	ReadInvitationUnderTeam,
-	CreateInvitationUnderTeam,
-	DeleteInvitationUnderTeam,
-	UpdateInvitationUnderTeam,
-	CreateAppInstallationUnderTeam,
-	UpdateAppInstallationUnderTeam,
-	DeleteAppInstallationUnderTeam,
-}
-
-var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
-	CreateSprintUnderTeam,
-	CreateTaskUnderTeam,
-	DeleteSprintUnderTeam,
-	DeleteTaskUnderTeam,
-	ReadTeam,
-	ReadSprintUnderTeam,
-	ReadTaskUnderTeam,
-	UpdateSprint,
-	UpdateTaskUnderTeam,
-	CloneTaskUnderTeam,
-}
-
-var AppAdminResourceTypeOperations = []ResourceTypeOperation{
-	UpdateApp,
-	RefreshAppSecret,
-	DeleteApp,
-}
-
-var AppMemberResourceTypeOperations = []ResourceTypeOperation{
-	ReadApp,
-	CreateAppVersionUnderApp,
-	UpdateAppVersionUnderApp,
-	DeleteAppVersionUnderApp,
-	AddAppVersionVisibleTeamUnderApp,
-	DeleteAppVersionVisibleTeamUnderApp,
-}

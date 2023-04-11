@@ -231,7 +231,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewUpdateAppQuery(userID, appID)
+		query := authorization.NewUpdateInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.App{}, err
@@ -296,7 +296,7 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewRefreshAppSecretQuery(userID, appID)
+		query := authorization.NewRefreshAppSecretInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.App{}, err
@@ -334,7 +334,7 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 			return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewDeleteAppQuery(userID, appID)
+		query := authorization.NewDeleteInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.App{}, err
@@ -367,7 +367,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewCreateAppVersionQuery(userID, appID)
+		query := authorization.NewCreateAppVersionInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
@@ -412,7 +412,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewUpdateAppVersionQuery(userID, appID)
+		query := authorization.NewUpdateAppVersionInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
@@ -460,7 +460,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewDeleteAppVersionQuery(userID, appID)
+		query := authorization.NewDeleteAppVersionInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
@@ -513,7 +513,7 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewCreateAppVersionVisibleTeamQuery(userID, appID)
+		query := authorization.NewCreateAppVersionVisibleTeamInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
@@ -551,7 +551,7 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 			return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewDeleteAppVersionVisibleTeamQuery(userID, appID)
+		query := authorization.NewDeleteAppVersionVisibleTeamInAppQuery(userID, appID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
@@ -604,7 +604,7 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 	}
 
 	if feature.EnableAuthorization {
-		query := authorization.NewCreateAppTeamInstallationQuery(userID, teamID)
+		query := authorization.NewCreateTeamInstallationInAppQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppTeamInstallation{}, err
@@ -651,7 +651,7 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 			return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewUpdateAppTeamInstallationQuery(userID, teamID)
+		query := authorization.NewUpdateTeamInstallationInAppQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppTeamInstallation{}, err
@@ -685,7 +685,7 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 			return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewDeleteAppTeamInstallationQuery(userID, teamID)
+		query := authorization.NewDeleteTeamInstallationInAppQuery(userID, teamID)
 		hasPermission, err := a.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.AppTeamInstallation{}, err
