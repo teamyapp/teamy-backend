@@ -27,10 +27,14 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-func TestTaskLinkService_CreateTaskLink(t *testing.T) {
+type TaskLinkTestRef struct {
+	taskService     Task
+	taskLinkService TaskLink
+}
+
+func prepareTaskLinkTestRef(t *testing.T) (TaskLinkTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
-	dataCollector := telemetry.NewDataCollector(logger)
 	virtualNetwork := networktest.NewVirtualNetwork()
 
 	cloudTestKitConfig := testkit.Config{
@@ -50,7 +54,7 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
 	assert.Nil(t, internalErr)
 	if internalErr != nil {
-		return
+		return TaskLinkTestRef{}, false
 	}
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
@@ -66,20 +70,27 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 		RequestTimeout: 10 * time.Second,
 	}
 	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
-		dataCollector,
+		logger,
 		virtualNetwork,
 		teamyPrometheus,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
-			return retry.NewMaxCount(runtime.NewBuiltInRuntime(), exponentialBackOff, 3)
+			return retry.NewMaxCount(
+				logger,
+				runtime.NewBuiltInRuntime(),
+				exponentialBackOff,
+				exponentialBackOff,
+				3,
+				nil)
 		})
 	assert.Nil(t, err)
 	if err != nil {
-		return
+		return TaskLinkTestRef{}, false
 	}
 
-	authorizer := NewAuthorizer(dataCollector, cloudClientRegistry)
+	authorizer := NewAuthorizer(logger, cloudClientRegistry)
+	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
 
@@ -87,23 +98,23 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
-	stateSyncer := realtime.NewStateSyncer(dataCollector, teamMemberDao)
-	transactionFactory := transaction.NewFactory(nil)
-	activityCache := cache.NewActivity(dataCollector)
+	teamMemberDaov2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaov2)
+	activityCache := cache.NewActivity(logger)
 
 	taskDao := daotest.NewTask(teamyBackendDB)
 	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
 	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
 	sprintDao := daotest.NewSprint(teamyBackendDB)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB)
+	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
 	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
 	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB)
+	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
 	taskService := NewTask(
-		dataCollector,
+		logger,
 		cloudClientRegistry,
 		authorizer,
 		stateSyncer,
@@ -122,6 +133,30 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 		sprintTaskRelationDaoV2,
 	)
 
+	teamyBackendDB.CreateTable(daotestv2.TaskLinkTableName)
+	taskLinkDaoV2 := daotestv2.NewTaskLink(teamyBackendDB)
+
+	taskLinkService := NewTaskLink(
+		logger,
+		cloudClientRegistry,
+		transactionFactory,
+		authorizer,
+		stateSyncer,
+		taskLinkDaoV2,
+		taskDaoV2,
+	)
+	return TaskLinkTestRef{
+		taskService:     taskService,
+		taskLinkService: taskLinkService,
+	}, true
+}
+
+func TestTaskLinkService_CreateTaskLink(t *testing.T) {
+	taskLinkTestRef, ok := prepareTaskLinkTestRef(t)
+	if !ok {
+		return
+	}
+
 	var requesterUserID uint64 = 2
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
@@ -135,24 +170,11 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 		IsPlanned:   true,
 		DueAt:       &now,
 	}
-	newTask, internalErr := taskService.CreateTask(ct, teamID, taskInput)
+	newTask, internalErr := taskLinkTestRef.taskService.CreateTask(ct, teamID, taskInput)
 	assert.Nil(t, internalErr)
 	if internalErr != nil {
 		return
 	}
-
-	teamyBackendDB.CreateTable(daotestv2.TaskLinkTableName)
-	taskLinkDaoV2 := daotestv2.NewTaskLink(teamyBackendDB)
-
-	taskLinkService := NewTaskLink(
-		dataCollector,
-		cloudClientRegistry,
-		transactionFactory,
-		authorizer,
-		stateSyncer,
-		taskLinkDaoV2,
-		taskDaoV2,
-	)
 
 	IconURL := "task link icon url"
 	IconHoverURL := "task link hover url"
@@ -164,7 +186,7 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 		IconURL:      &IconURL,
 		IconHoverURL: &IconHoverURL,
 	}
-	newTaskLink, internalErr := taskLinkService.CreateTaskLink(ct, taskLinkInput)
+	newTaskLink, internalErr := taskLinkTestRef.taskLinkService.CreateTaskLink(ct, taskLinkInput)
 	assert.Nil(t, internalErr)
 	if internalErr != nil {
 		return
