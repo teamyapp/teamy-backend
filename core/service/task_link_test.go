@@ -53,8 +53,7 @@ func prepareTaskLinkTestRef(t *testing.T) (TaskLinkTestRef, bool) {
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	assert.Nil(t, internalErr)
-	if internalErr != nil {
+	if !assert.Nil(t, internalErr) {
 		return TaskLinkTestRef{}, false
 	}
 
@@ -85,8 +84,7 @@ func prepareTaskLinkTestRef(t *testing.T) (TaskLinkTestRef, bool) {
 				3,
 				nil)
 		})
-	assert.Nil(t, err)
-	if err != nil {
+	if !assert.Nil(t, err) {
 		return TaskLinkTestRef{}, false
 	}
 
@@ -180,8 +178,8 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 		DueAt:       &now,
 	}
 	newTask, internalErr := taskLinkTestRef.taskService.CreateTask(ct, teamID, taskInput)
-	assert.Nil(t, internalErr)
-	if internalErr != nil {
+
+	if !assert.Nil(t, internalErr) {
 		return
 	}
 
@@ -196,8 +194,7 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 		IconHoverURL: &IconHoverURL,
 	}
 	newTaskLink, internalErr := taskLinkTestRef.taskLinkService.CreateTaskLink(ct, taskLinkInput)
-	assert.Nil(t, internalErr)
-	if internalErr != nil {
+	if !assert.Nil(t, internalErr) {
 		return
 	}
 
