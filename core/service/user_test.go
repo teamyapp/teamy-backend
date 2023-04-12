@@ -24,6 +24,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
@@ -34,7 +35,7 @@ type UserTestRef struct {
 	transactionFactory         transaction.Factory
 }
 
-func prepareUserTestRef(t *testing.T) (UserTestRef, bool) {
+func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	virtualNetwork := networktest.NewVirtualNetwork()
@@ -108,6 +109,7 @@ func prepareUserTestRef(t *testing.T) (UserTestRef, bool) {
 		cloudClientRegistry,
 		stateSyncer,
 		transactionFactory,
+		toggles,
 		userDao,
 		userDaoV2,
 		teamMemberDaoV2,
@@ -123,7 +125,9 @@ func prepareUserTestRef(t *testing.T) (UserTestRef, bool) {
 }
 
 func TestUserService_CreateUser(t *testing.T) {
-	userTestRef, ok := prepareUserTestRef(t)
+	userTestRef, ok := prepareUserTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -166,7 +170,9 @@ func TestUserService_CreateUser(t *testing.T) {
 }
 
 func TestUserService_UpdateUser(t *testing.T) {
-	userTestRef, ok := prepareUserTestRef(t)
+	userTestRef, ok := prepareUserTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -230,7 +236,9 @@ func TestUserService_UpdateUser(t *testing.T) {
 }
 
 func TestUserService_FindUserByID(t *testing.T) {
-	userTestRef, ok := prepareUserTestRef(t)
+	userTestRef, ok := prepareUserTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -277,7 +285,9 @@ func TestUserService_FindUserByID(t *testing.T) {
 }
 
 func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
-	userTestRef, ok := prepareUserTestRef(t)
+	userTestRef, ok := prepareUserTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -318,7 +328,9 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 }
 
 func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
-	userTestRef, ok := prepareUserTestRef(t)
+	userTestRef, ok := prepareUserTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}

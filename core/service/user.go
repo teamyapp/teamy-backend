@@ -15,6 +15,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -37,6 +38,7 @@ type User struct {
 	cloudClientRegistry        *cloudAPI.ClientRegistry
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
+	toggles                    feature.Toggles
 	userDao                    dao.User
 	userDaoV2                  daov2.User
 	teamMemberDaoV2            daov2.TeamMember
@@ -216,6 +218,7 @@ func NewUser(
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
+	toggles feature.Toggles,
 	userDao dao.User,
 	userDaoV2 daov2.User,
 	teamMemberDaoV2 daov2.TeamMember,
@@ -227,6 +230,7 @@ func NewUser(
 		cloudClientRegistry:        cloudClientRegistry,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
+		toggles:                    toggles,
 		userDao:                    userDao,
 		userDaoV2:                  userDaoV2,
 		teamMemberDaoV2:            teamMemberDaoV2,

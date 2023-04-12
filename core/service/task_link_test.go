@@ -33,7 +33,7 @@ type TaskLinkTestRef struct {
 	taskLinkService TaskLink
 }
 
-func prepareTaskLinkTestRef(t *testing.T) (TaskLinkTestRef, bool) {
+func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	virtualNetwork := networktest.NewVirtualNetwork()
@@ -112,9 +112,6 @@ func prepareTaskLinkTestRef(t *testing.T) (TaskLinkTestRef, bool) {
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
-	toggles := feature.Toggles{
-		EnableAuthorization: false,
-	}
 	taskService := NewTask(
 		logger,
 		cloudClientRegistry,
@@ -159,7 +156,9 @@ func prepareTaskLinkTestRef(t *testing.T) (TaskLinkTestRef, bool) {
 }
 
 func TestTaskLinkService_CreateTaskLink(t *testing.T) {
-	taskLinkTestRef, ok := prepareTaskLinkTestRef(t)
+	taskLinkTestRef, ok := prepareTaskLinkTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}

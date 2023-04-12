@@ -28,7 +28,11 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-func TestTaskService_CreateTask(t *testing.T) {
+type TaskTestRef struct {
+	taskService Task
+}
+
+func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	virtualNetwork := networktest.NewVirtualNetwork()
@@ -49,11 +53,10 @@ func TestTaskService_CreateTask(t *testing.T) {
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
 	if !assert.Nil(t, internalErr) {
-		return
+		return TaskTestRef{}, false
 	}
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
-
 	teamyPrometheus := metricstest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
@@ -80,11 +83,10 @@ func TestTaskService_CreateTask(t *testing.T) {
 				nil)
 		})
 	if !assert.Nil(t, err) {
-		return
+		return TaskTestRef{}, false
 	}
 
 	authorizer := NewAuthorizer(logger, cloudClientRegistry)
-
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
@@ -107,10 +109,6 @@ func TestTaskService_CreateTask(t *testing.T) {
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
-
-	toggles := feature.Toggles{
-		EnableAuthorization: false,
-	}
 	taskService := NewTask(
 		logger,
 		cloudClientRegistry,
@@ -131,6 +129,18 @@ func TestTaskService_CreateTask(t *testing.T) {
 		sprintTaskRelationDao,
 		sprintTaskRelationDaoV2,
 	)
+	return TaskTestRef{
+		taskService: taskService,
+	}, true
+}
+
+func TestTaskService_CreateTask(t *testing.T) {
+	taskTestRef, ok := prepareTaskTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
+	if !ok {
+		return
+	}
 
 	var requesterUserID uint64 = 2
 	ct := context.Background()
@@ -145,7 +155,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 		IsPlanned:   true,
 		DueAt:       &now,
 	}
-	newTask, internalErr := taskService.CreateTask(ct, teamID, taskInput)
+	newTask, internalErr := taskTestRef.taskService.CreateTask(ct, teamID, taskInput)
 	if !assert.Nil(t, internalErr) {
 		return
 	}

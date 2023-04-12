@@ -37,7 +37,7 @@ type TeamTestRef struct {
 	transactionFactory         transaction.Factory
 }
 
-func prepareTeamTestRef(t *testing.T) (TeamTestRef, bool) {
+func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	virtualNetwork := networktest.NewVirtualNetwork()
@@ -113,10 +113,6 @@ func prepareTeamTestRef(t *testing.T) (TeamTestRef, bool) {
 	teamDao := daotest.NewTeam(teamyBackendDB)
 	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
-
-	toggles := feature.Toggles{
-		EnableAuthorization: false,
-	}
 	teamService := NewTeam(
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
@@ -146,7 +142,9 @@ func prepareTeamTestRef(t *testing.T) (TeamTestRef, bool) {
 }
 
 func TestTeamService_FindTeamByID(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -196,7 +194,9 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 }
 
 func TestTeamService_FindTeams(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -266,7 +266,9 @@ func TestTeamService_FindTeams(t *testing.T) {
 }
 
 func TestTeamService_FindTeamsForUser(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -367,7 +369,9 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 }
 
 func TestTeamService_CreateTeam(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -407,7 +411,9 @@ func TestTeamService_CreateTeam(t *testing.T) {
 }
 
 func TestTeamService_UpdateTeam(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -470,7 +476,9 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 }
 
 func TestTeamService_DeleteTeam(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -523,7 +531,9 @@ func TestTeamService_DeleteTeam(t *testing.T) {
 }
 
 func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -564,7 +574,9 @@ func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
 }
 
 func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -637,7 +649,9 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 }
 
 func TestTeamService_FindTeamMembers(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -695,7 +709,9 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 }
 
 func TestTeamService_AddMemberToTeam(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -731,7 +747,9 @@ func TestTeamService_AddMemberToTeam(t *testing.T) {
 }
 
 func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -780,7 +798,9 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 }
 
 func TestTeamService_UpdateTeamMember(t *testing.T) {
-	teamRef, ok := prepareTeamTestRef(t)
+	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}

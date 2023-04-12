@@ -25,6 +25,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
@@ -36,7 +37,7 @@ type ThreadTestRef struct {
 	transactionFactory transaction.Factory
 }
 
-func prepareThreadTestRef(t *testing.T) (ThreadTestRef, bool) {
+func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	virtualNetwork := networktest.NewVirtualNetwork()
@@ -113,6 +114,7 @@ func prepareThreadTestRef(t *testing.T) (ThreadTestRef, bool) {
 		cloudClientRegistry,
 		stateSyncer,
 		transactionFactory,
+		toggles,
 		taskDao,
 		taskDaoV2,
 		threadDao,
@@ -120,7 +122,6 @@ func prepareThreadTestRef(t *testing.T) (ThreadTestRef, bool) {
 		messageDao,
 		messageDaoV2,
 	)
-
 	return ThreadTestRef{
 		threadService: threadService,
 		threadDaoV2:   threadDaoV2,
@@ -130,7 +131,9 @@ func prepareThreadTestRef(t *testing.T) (ThreadTestRef, bool) {
 }
 
 func TestTeamService_CreateThread(t *testing.T) {
-	threadRef, ok := prepareThreadTestRef(t)
+	threadRef, ok := prepareThreadTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -154,7 +157,9 @@ func TestTeamService_CreateThread(t *testing.T) {
 }
 
 func TestTeamService_FindMessages(t *testing.T) {
-	threadRef, ok := prepareThreadTestRef(t)
+	threadRef, ok := prepareThreadTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -213,7 +218,9 @@ func TestTeamService_FindMessages(t *testing.T) {
 }
 
 func TestTeamService_CreateMessage(t *testing.T) {
-	threadRef, ok := prepareThreadTestRef(t)
+	threadRef, ok := prepareThreadTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -278,7 +285,9 @@ func TestTeamService_CreateMessage(t *testing.T) {
 }
 
 func TestTeamService_UpdateMessage(t *testing.T) {
-	threadRef, ok := prepareThreadTestRef(t)
+	threadRef, ok := prepareThreadTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -358,7 +367,9 @@ func TestTeamService_UpdateMessage(t *testing.T) {
 }
 
 func TestTeamService_DeleteMessage(t *testing.T) {
-	threadRef, ok := prepareThreadTestRef(t)
+	threadRef, ok := prepareThreadTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
