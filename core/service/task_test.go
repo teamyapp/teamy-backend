@@ -48,8 +48,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	assert.Nil(t, internalErr)
-	if internalErr != nil {
+	if !assert.Nil(t, internalErr) {
 		return
 	}
 
@@ -80,8 +79,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 				3,
 				nil)
 		})
-	assert.Nil(t, err)
-	if err != nil {
+	if !assert.Nil(t, err) {
 		return
 	}
 
@@ -148,8 +146,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 		DueAt:       &now,
 	}
 	newTask, internalErr := taskService.CreateTask(ct, teamID, taskInput)
-	assert.Nil(t, internalErr)
-	if internalErr != nil {
+	if !assert.Nil(t, internalErr) {
 		return
 	}
 
