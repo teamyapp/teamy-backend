@@ -32,8 +32,8 @@ import (
 )
 
 type TaskTestRef struct {
-	taskService          Task
-	authorizationService service.Authorization
+	taskService  Task
+	cloudTestKit testkit.TestKit
 }
 
 func TestTaskService_CreateTask(t *testing.T) {
@@ -54,14 +54,17 @@ func TestTaskService_CreateTask(t *testing.T) {
 			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
 				ct = ctx.NewContextWithUserID(ct, 1)
-				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Owner", nil)
+				group, err := taskTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
 				if err != nil {
 					return err
 				}
 
 				return addTeamPermission(
 					ct,
-					taskTestRef.authorizationService,
+					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
 					teamID,
 					authorization.TeamOwnerResourceTypeOperations,
@@ -78,14 +81,17 @@ func TestTaskService_CreateTask(t *testing.T) {
 			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
 				ct = ctx.NewContextWithUserID(ct, 1)
-				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Admin", nil)
+				group, err := taskTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Admin", nil)
 				if err != nil {
 					return err
 				}
 
 				return addTeamPermission(
 					ct,
-					taskTestRef.authorizationService,
+					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
 					teamID,
 					authorization.TeamAdminResourceTypeOperations,
@@ -102,14 +108,17 @@ func TestTaskService_CreateTask(t *testing.T) {
 			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
 				ct = ctx.NewContextWithUserID(ct, 1)
-				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Member", nil)
+				group, err := taskTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Member", nil)
 				if err != nil {
 					return err
 				}
 
 				return addTeamPermission(
 					ct,
-					taskTestRef.authorizationService,
+					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
 					teamID,
 					authorization.TeamAdminResourceTypeOperations,
@@ -126,14 +135,17 @@ func TestTaskService_CreateTask(t *testing.T) {
 			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
 				ct = ctx.NewContextWithUserID(ct, 1)
-				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Member", nil)
+				group, err := taskTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Member", nil)
 				if err != nil {
 					return err
 				}
 
 				return addTeamPermission(
 					ct,
-					taskTestRef.authorizationService,
+					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
 					teamID,
 					authorization.TeamMemberResourceTypeOperations,
@@ -222,12 +234,12 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 
 	ct := context.Background()
 	var accountOwner uint64 = 0
-	serviceAccountID, internalErr := cloudTestKit.Refs.IdentityService.CreateServiceAccount(ct, accountOwner, "test")
+	serviceAccountID, internalErr := cloudTestKit.IdentityService.CreateServiceAccount(ct, accountOwner, "test")
 	if !assert.Nil(t, internalErr) {
 		return TaskTestRef{}, false
 	}
 
-	apiToken, internalErr := cloudTestKit.Refs.IdentityService.GenerateServiceToken(ct, accountOwner, serviceAccountID)
+	apiToken, internalErr := cloudTestKit.IdentityService.GenerateServiceToken(ct, accountOwner, serviceAccountID)
 	if !assert.Nil(t, internalErr) {
 		return TaskTestRef{}, false
 	}
@@ -306,8 +318,8 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		sprintTaskRelationDaoV2,
 	)
 	return TaskTestRef{
-		taskService:          taskService,
-		authorizationService: cloudTestKit.Refs.AuthorizationService,
+		taskService:  taskService,
+		cloudTestKit: cloudTestKit,
 	}, true
 }
 
