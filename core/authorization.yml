@@ -24,6 +24,8 @@ resourceTypeOperations:
       - CloneTask
       - CreateTaskLink
       # Member
+      - PromoteMemberToAdmin
+      - DemoteMemberFromAdmin
       - ReadMembers
       - AddMemberTo
       - RemoveMemberFrom
