@@ -35,7 +35,7 @@ type InvitationTestRef struct {
 	transactionFactory transaction.Factory
 }
 
-func prepareInvitationTestRef(t *testing.T) (InvitationTestRef, bool) {
+func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (InvitationTestRef, bool) {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	virtualNetwork := networktest.NewVirtualNetwork()
@@ -108,9 +108,6 @@ func prepareInvitationTestRef(t *testing.T) (InvitationTestRef, bool) {
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintDao := daotest.NewSprint(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	toggles := feature.Toggles{
-		EnableAuthorization: false,
-	}
 	invitationService := NewInvitation(
 		logger,
 		cloudClientRegistry,
@@ -135,7 +132,9 @@ func prepareInvitationTestRef(t *testing.T) (InvitationTestRef, bool) {
 }
 
 func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t)
+	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -239,7 +238,9 @@ func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
 }
 
 func TestInvitationService_FindInvitations(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t)
+	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -341,7 +342,9 @@ func TestInvitationService_FindInvitations(t *testing.T) {
 }
 
 func TestInvitationService_CreateInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t)
+	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -401,7 +404,9 @@ func TestInvitationService_CreateInvitation(t *testing.T) {
 }
 
 func TestInvitationService_UpdateInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t)
+	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -473,7 +478,9 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 }
 
 func TestInvitationService_DeleteInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t)
+	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -534,7 +541,9 @@ func TestInvitationService_DeleteInvitation(t *testing.T) {
 }
 
 func TestInvitationService_AcceptInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t)
+	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}
@@ -597,7 +606,9 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 }
 
 func TestInvitationService_DeclineInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t)
+	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: false,
+	})
 	if !ok {
 		return
 	}

@@ -66,14 +66,14 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	user := sqldb.NewUser(sqlDB)
 	sqldbUser := sqldb2.NewUser(logger, factory)
 	userFileUploadSession := sqldb2.NewUserFileUploadSession(logger)
-	serviceUser := newUserService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, realTimeStateSyncer, factory, user, sqldbUser, sqldbTeamMember, userFileUploadSession)
+	serviceUser := newUserService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, realTimeStateSyncer, factory, toggles, user, sqldbUser, sqldbTeamMember, userFileUploadSession)
 	invitation := sqldb.NewInvitation(sqlDB)
 	sqldbInvitation := sqldb2.NewInvitation(logger, factory)
 	serviceInvitation := service.NewInvitation(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, invitation, sqldbInvitation, teamMember, sqldbTeamMember, sprintParticipant, sqldbSprintParticipant, sprint, sqldbSprint)
 	sqldbThread := sqldb.NewThread(sqlDB)
 	message := sqldb.NewMessage(sqlDB)
 	sqldbMessage := sqldb2.NewMessage(logger, factory)
-	serviceThread := service.NewThread(logger, cloudAPIClientRegistry, realTimeStateSyncer, factory, task, sqldbTask, sqldbThread, thread, message, sqldbMessage)
+	serviceThread := service.NewThread(logger, cloudAPIClientRegistry, realTimeStateSyncer, factory, toggles, task, sqldbTask, sqldbThread, thread, message, sqldbMessage)
 	app := sqldb.NewApp(sqlDB)
 	appVersion := sqldb.NewAppVersion(sqlDB)
 	appTeamInstallation := sqldb.NewAppTeamInstallation(sqlDB)
@@ -160,6 +160,7 @@ func newUserService(
 	cloudClientRegistry *api.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
+	toggles feature.Toggles,
 	userDao dao.User,
 	userDaoV2 daov2.User,
 	teamMemberV2 daov2.TeamMember,
@@ -171,6 +172,7 @@ func newUserService(
 		cloudClientRegistry,
 		stateSyncer,
 		transactionFactory,
+		toggles,
 		userDao,
 		userDaoV2,
 		teamMemberV2,

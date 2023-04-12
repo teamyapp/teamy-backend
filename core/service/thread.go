@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -30,6 +31,7 @@ type Thread struct {
 	cloudClientRegistry *cloudAPI.ClientRegistry
 	stateSyncer         *realtime.StateSyncer
 	transactionFactory  transaction.Factory
+	toggles             feature.Toggles
 	taskDao             dao.Task
 	taskDaoV2           daov2.Task
 	threadDao           dao.Thread
@@ -56,7 +58,6 @@ func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return t.threadDaoV2.CreateThread(ct, tx, threadID)
 	})
-
 	return threadID, err
 }
 
@@ -197,6 +198,7 @@ func NewThread(
 	cloudClientRegistry *cloudAPI.ClientRegistry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
+	toggles feature.Toggles,
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	threadDao dao.Thread,
@@ -209,6 +211,7 @@ func NewThread(
 		cloudClientRegistry: cloudClientRegistry,
 		stateSyncer:         stateSyncer,
 		transactionFactory:  transactionFactory,
+		toggles:             toggles,
 		taskDao:             taskDao,
 		taskDaoV2:           taskDaoV2,
 		threadDao:           threadDao,
