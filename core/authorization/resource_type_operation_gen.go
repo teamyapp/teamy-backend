@@ -80,6 +80,14 @@ var (
 		ResourceType: "Team",
 		Operation:    "CreateTaskLink",
 	}
+	PromoteMemberToAdminInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "PromoteMemberToAdmin",
+	}
+	DemoteMemberFromAdminInTeam = ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DemoteMemberFromAdmin",
+	}
 	ReadMembersInTeam = ResourceTypeOperation{
 		ResourceType: "Team",
 		Operation:    "ReadMembers",

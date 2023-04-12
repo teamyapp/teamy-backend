@@ -140,6 +140,22 @@ func NewCreateTaskLinkInTeamQuery(userID uint64, teamID uint64) Query {
 		UserID:       userID,
 	}
 }
+func NewPromoteMemberToAdminInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "PromoteMemberToAdmin",
+		UserID:       userID,
+	}
+}
+func NewDemoteMemberFromAdminInTeamQuery(userID uint64, teamID uint64) Query {
+	return Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "DemoteMemberFromAdmin",
+		UserID:       userID,
+	}
+}
 func NewReadMembersInTeamQuery(userID uint64, teamID uint64) Query {
 	return Query{
 		ResourceType: TeamResourceType,

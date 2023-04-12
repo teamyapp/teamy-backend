@@ -1,20 +1,5 @@
 package authorization
 
-var TeamAdminResourceTypeOperations = []ResourceTypeOperation{
-	AddMemberToInTeam,
-	RemoveMemberFromInTeam,
-	UpdateMembersInTeam,
-	UpdateInTeam,
-	DeleteInTeam,
-	ReadInvitationInTeam,
-	CreateInvitationInTeam,
-	DeleteInvitationInTeam,
-	UpdateInvitationInTeam,
-	CreateAppInstallationInTeam,
-	UpdateAppInstallationInTeam,
-	DeleteAppInstallationInTeam,
-}
-
 var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
 	CreateSprintInTeam,
 	CreateTaskInTeam,
@@ -26,6 +11,24 @@ var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
 	UpdateTaskInTeam,
 	CloneTaskInTeam,
 }
+
+var TeamAdminResourceTypeOperations = append([]ResourceTypeOperation{
+	AddMemberToInTeam,
+	RemoveMemberFromInTeam,
+	UpdateMembersInTeam,
+	ReadInvitationInTeam,
+	CreateInvitationInTeam,
+	DeleteInvitationInTeam,
+	UpdateInvitationInTeam,
+	CreateAppInstallationInTeam,
+	UpdateAppInstallationInTeam,
+	DeleteAppInstallationInTeam,
+}, TeamMemberResourceTypeOperations...)
+
+var TeamOwnerResourceTypeOperations = append([]ResourceTypeOperation{
+	PromoteMemberToAdminInTeam,
+	DemoteMemberFromAdminInTeam,
+}, TeamAdminResourceTypeOperations...)
 
 var AppAdminResourceTypeOperations = []ResourceTypeOperation{
 	UpdateInApp,

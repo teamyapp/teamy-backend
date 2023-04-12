@@ -9,8 +9,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/service"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
@@ -20,6 +22,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
@@ -29,7 +32,168 @@ import (
 )
 
 type TaskTestRef struct {
-	taskService Task
+	taskService          Task
+	authorizationService service.Authorization
+}
+
+func TestTaskService_CreateTask(t *testing.T) {
+	var teamID uint64 = 1
+	var ownerUserID uint64 = 3
+	testCases := []struct {
+		name            string
+		toggles         feature.Toggles
+		prepareData     func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID uint64
+		expectedErr     *errs.Error
+	}{
+		{
+			name: "succeed when user is team owner",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
+
+				return addTeamPermission(
+					ct,
+					taskTestRef.authorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 3,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team admin",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return addTeamPermission(
+					ct,
+					taskTestRef.authorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 3,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return addTeamPermission(
+					ct,
+					taskTestRef.authorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 3,
+			expectedErr:     nil,
+		},
+		{
+			name: "permission denied when user is not in team",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(taskTestRef TaskTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := taskTestRef.authorizationService.CreateUserGroup(ct, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return addTeamPermission(
+					ct,
+					taskTestRef.authorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamMemberResourceTypeOperations,
+					3)
+			},
+			requesterUserID: 4,
+			expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			taskTestRef, ok := prepareTaskTestRef(t, feature.Toggles{
+				EnableAuthorization: true,
+			})
+			if !ok {
+				return
+			}
+
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(taskTestRef, testCase.requesterUserID)
+				if !assert.Nil(t, err) {
+					return
+				}
+			}
+
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
+
+			now := time.Now()
+			taskInput := CreateTaskInput{
+				Goal:        "Unit test",
+				OwnerUserID: &ownerUserID,
+				IsPlanned:   true,
+				DueAt:       &now,
+			}
+			newTask, internalErr := taskTestRef.taskService.CreateTask(ct, teamID, taskInput)
+			if testCase.expectedErr != nil {
+				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				return
+			} else if !assert.Nil(t, internalErr) {
+				return
+			}
+
+			assert.Equal(t, uint64(1), newTask.ID)
+			assert.Equal(t, taskInput.Goal, newTask.Goal)
+			assert.Equal(t, taskInput.Context, newTask.Context)
+			assert.Equal(t, teamID, newTask.OwningTeamID)
+			assert.Equal(t, taskInput.OwnerUserID, newTask.OwnerUserID)
+			assert.Equal(t, taskInput.DueAt, newTask.DueAt)
+			assert.Nil(t, newTask.Effort)
+			assert.Equal(t, taskInput.IsPlanned, newTask.IsPlanned)
+			assert.Equal(t, entity.TaskStatusTodo, newTask.Status)
+			assert.Equal(t, uint64(1), newTask.CommentsThreadID)
+			assert.NotNil(t, newTask.CreatedAt)
+			assert.Nil(t, newTask.UpdatedAt)
+			assert.Nil(t, newTask.DeliveredAt)
+		})
+	}
 }
 
 func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, bool) {
@@ -56,6 +220,18 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		return TaskTestRef{}, false
 	}
 
+	ct := context.Background()
+	var accountOwner uint64 = 0
+	serviceAccountID, internalErr := cloudTestKit.Refs.IdentityService.CreateServiceAccount(ct, accountOwner, "test")
+	if !assert.Nil(t, internalErr) {
+		return TaskTestRef{}, false
+	}
+
+	apiToken, internalErr := cloudTestKit.Refs.IdentityService.GenerateServiceToken(ct, accountOwner, serviceAccountID)
+	if !assert.Nil(t, internalErr) {
+		return TaskTestRef{}, false
+	}
+
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 	teamyPrometheus := metricstest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
@@ -63,7 +239,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		Port:          testkit.GRPCServerPort,
 		ShouldEncrypt: false,
 		GetAccessToken: func() string {
-			return "accessToken"
+			return apiToken
 		},
 		RequestTimeout: 10 * time.Second,
 	}
@@ -130,47 +306,46 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		sprintTaskRelationDaoV2,
 	)
 	return TaskTestRef{
-		taskService: taskService,
+		taskService:          taskService,
+		authorizationService: cloudTestKit.Refs.AuthorizationService,
 	}, true
 }
 
-func TestTaskService_CreateTask(t *testing.T) {
-	taskTestRef, ok := prepareTaskTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
-	})
-	if !ok {
-		return
+func addTeamPermission(
+	ct context.Context,
+	authorizationService service.Authorization,
+	teamID uint64,
+	groupID uint64,
+	groupOperations []authorization.ResourceTypeOperation,
+	requesterUserID uint64,
+) *errs.Error {
+	err := authorizationService.AddUserGroupMember(ct, groupID, requesterUserID)
+	if err != nil {
+		return err
 	}
 
-	var requesterUserID uint64 = 2
-	ct := context.Background()
-	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	for _, resourceTypeOperation := range groupOperations {
+		err = authorizationService.RegisterOperation(
+			ct,
+			string(resourceTypeOperation.ResourceType),
+			resourceTypeOperation.Operation)
+		if err != nil {
+			return err
+		}
 
-	var teamID uint64 = 1
-	var ownerUserID uint64 = 2
-	now := time.Now()
-	taskInput := CreateTaskInput{
-		Goal:        "Unit test",
-		OwnerUserID: &ownerUserID,
-		IsPlanned:   true,
-		DueAt:       &now,
-	}
-	newTask, internalErr := taskTestRef.taskService.CreateTask(ct, teamID, taskInput)
-	if !assert.Nil(t, internalErr) {
-		return
+		err = authorizationService.AddPermission(
+			ct,
+			string(resourceTypeOperation.ResourceType),
+			teamID,
+			resourceTypeOperation.Operation,
+			groupID)
+		if err != nil {
+			return err
+		}
 	}
 
-	assert.Equal(t, uint64(1), newTask.ID)
-	assert.Equal(t, taskInput.Goal, newTask.Goal)
-	assert.Equal(t, taskInput.Context, newTask.Context)
-	assert.Equal(t, teamID, newTask.OwningTeamID)
-	assert.Equal(t, taskInput.OwnerUserID, newTask.OwnerUserID)
-	assert.Equal(t, taskInput.DueAt, newTask.DueAt)
-	assert.Nil(t, newTask.Effort)
-	assert.Equal(t, taskInput.IsPlanned, newTask.IsPlanned)
-	assert.Equal(t, entity.TaskStatusTodo, newTask.Status)
-	assert.Equal(t, uint64(1), newTask.CommentsThreadID)
-	assert.NotNil(t, newTask.CreatedAt)
-	assert.Nil(t, newTask.UpdatedAt)
-	assert.Nil(t, newTask.DeliveredAt)
+	return authorizationService.RegisterResource(
+		ct,
+		string(authorization.TeamResourceType),
+		teamID)
 }
