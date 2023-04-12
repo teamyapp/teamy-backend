@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Team struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.Team = (*Team)(nil)
@@ -33,17 +31,11 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 `
 	rows, err := t.db.Query(statement)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	teams := make([]entity.Team, 0)
 	for rows.Next() {
 		team := entity.Team{}
@@ -57,17 +49,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 			&team.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teams = append(teams, team)
@@ -102,22 +84,14 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"team not found: teamID=%v", teamID),
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
+		return entity.Team{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf(
+				"team not found: teamID=%v", teamID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.Team{}, internalErr
+		return entity.Team{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return team, nil
@@ -142,17 +116,11 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 	WHERE id IN (%v);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	var teams []entity.Team
 	for rows.Next() {
 		var team entity.Team
@@ -167,17 +135,7 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 				&team.UpdatedAt,
 			)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teams = append(teams, team)
@@ -204,12 +162,7 @@ func (t Team) CreateTeam(ct context.Context, team entity.Team) *errs.Error {
 		team.CreatedAt,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -231,12 +184,7 @@ func (t Team) UpdateTeam(ct context.Context, team entity.Team) *errs.Error {
 		team.ID,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -249,17 +197,12 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) *errs.Error {
 		teamID,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewTeam(logger telemetry.Logger, sqlDB *sql.DB) Team {
-	return Team{logger: logger, db: sqlDB}
+func NewTeam(sqlDB *sql.DB) Team {
+	return Team{db: sqlDB}
 }

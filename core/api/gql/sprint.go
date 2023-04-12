@@ -35,10 +35,10 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 }) ([]Task, error) {
 	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		s.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}

@@ -16,10 +16,10 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 }) (Message, error) {
 	threadID, argErr := fromGraphQLID(args.ThreadID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Message{}, errs.ToResolverErr(internalErr)
 	}
@@ -42,10 +42,10 @@ func (m Mutation) UpdateMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, argErr := fromGraphQLID(args.MessageID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Message{}, errs.ToResolverErr(internalErr)
 	}
@@ -65,10 +65,10 @@ func (m Mutation) DeleteMessage(ct context.Context, args struct {
 }) (Message, error) {
 	messageID, argErr := fromGraphQLID(args.MessageID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Message{}, errs.ToResolverErr(internalErr)
 	}

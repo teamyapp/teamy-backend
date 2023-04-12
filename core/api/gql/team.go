@@ -74,10 +74,10 @@ func (t Team) Tasks(ct context.Context, args struct {
 }) ([]Task, error) {
 	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		t.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -98,10 +98,10 @@ func (t Team) Invitations(ct context.Context, args struct {
 }) ([]Invitation, error) {
 	filter, argErr := fromGraphQLInvitationFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		t.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -122,10 +122,10 @@ func (t Team) Sprints(ct context.Context, args struct {
 }) ([]Sprint, error) {
 	filter, argErr := fromGraphQLSprintFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		t.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}

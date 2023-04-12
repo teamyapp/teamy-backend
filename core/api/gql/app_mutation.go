@@ -30,10 +30,10 @@ func (m Mutation) UpdateApp(ct context.Context, args struct {
 }) (App, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return App{}, errs.ToResolverErr(internalErr)
 	}
@@ -57,10 +57,10 @@ func (m Mutation) RefreshAppSecret(ct context.Context, args struct {
 }) (App, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return App{}, errs.ToResolverErr(internalErr)
 	}
@@ -79,10 +79,10 @@ func (m Mutation) DeleteApp(ct context.Context, args struct {
 }) (App, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return App{}, errs.ToResolverErr(internalErr)
 	}

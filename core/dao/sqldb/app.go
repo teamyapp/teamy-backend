@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -15,8 +14,7 @@ import (
 var _ dao.App = (*App)(nil)
 
 type App struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
@@ -49,21 +47,11 @@ func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Er
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("app not found: appID=%v", appID),
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.App{}, internalErr
+		return entity.App{}, errs.NewError(errs.NotFound, fmt.Sprintf("app not found: appID=%v", appID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.App{}, internalErr
+		return entity.App{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return app, nil
@@ -84,17 +72,11 @@ func (a App) FindAllApps(ct context.Context) ([]entity.App, *errs.Error) {
 	FROM app
 `)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	apps := make([]entity.App, 0)
 	for rows.Next() {
 		app := entity.App{}
@@ -110,17 +92,7 @@ func (a App) FindAllApps(ct context.Context) ([]entity.App, *errs.Error) {
 			&app.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			a.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		apps = append(apps, app)
@@ -156,12 +128,7 @@ func (a App) CreateApp(ct context.Context, app entity.App) *errs.Error {
 		app.UpdatedAt,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -191,12 +158,7 @@ func (a App) UpdateApp(ct context.Context, app entity.App) *errs.Error {
 		app.ID,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -209,17 +171,12 @@ func (a App) DeleteApp(ct context.Context, appID uint64) *errs.Error {
 		`,
 		appID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewApp(logger telemetry.Logger, sqlDB *sql.DB) App {
-	return App{logger: logger, db: sqlDB}
+func NewApp(sqlDB *sql.DB) App {
+	return App{db: sqlDB}
 }

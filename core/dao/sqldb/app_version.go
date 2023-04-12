@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -15,8 +14,7 @@ import (
 var _ dao.AppVersion = (*AppVersion)(nil)
 
 type AppVersion struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 func (a AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, *errs.Error) {
@@ -50,21 +48,13 @@ func (a AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, ap
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("app version not found: appID=%v, versionNum=%v", appID, versionNumber),
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.AppVersion{}, internalErr
+		return entity.AppVersion{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("app version not found: appID=%v, versionNum=%v", appID, versionNumber))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.AppVersion{}, internalErr
+		return entity.AppVersion{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return appVersion, nil
@@ -87,17 +77,11 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 `,
 		appID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	appVersions := make([]entity.AppVersion, 0)
 	for rows.Next() {
 		appVersion := entity.AppVersion{}
@@ -113,17 +97,7 @@ func (a AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]
 			&appVersion.Changes,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			a.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		appVersions = append(appVersions, appVersion)
@@ -162,12 +136,7 @@ func (a AppVersion) CreateAppVersion(ct context.Context, appVersion entity.AppVe
 		appVersion.Changes,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -194,12 +163,7 @@ func (a AppVersion) UpdateAppVersion(ct context.Context, appVersion entity.AppVe
 		appVersion.VersionNumber,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -217,31 +181,18 @@ func (a AppVersion) FindMaxVersionNumber(ct context.Context, appID uint64) (int3
 
 	err := row.Err()
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("max VersionNumber not found: appID=%v", appID),
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return 0, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("max VersionNumber not found: appID=%v", appID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return 0, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	err = row.Scan(&maxVersion)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return 0, internalErr
+		return 0, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return maxVersion, nil
@@ -256,17 +207,12 @@ func (a AppVersion) DeleteAppVersion(ct context.Context, appID uint64, versionNu
 		appID,
 		versionNumber)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewAppVersion(logger telemetry.Logger, sqlDB *sql.DB) AppVersion {
-	return AppVersion{logger: logger, db: sqlDB}
+func NewAppVersion(sqlDB *sql.DB) AppVersion {
+	return AppVersion{db: sqlDB}
 }

@@ -5,13 +5,11 @@ import (
 	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 type Thread struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.Thread = (*Thread)(nil)
@@ -23,12 +21,7 @@ func (t Thread) CreateThread(ct context.Context, threadID uint64) *errs.Error {
 		`,
 		threadID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -41,17 +34,12 @@ func (t Thread) DeleteThread(ct context.Context, threadID uint64) *errs.Error {
 		`,
 		threadID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewThread(logger telemetry.Logger, sqlDB *sql.DB) Thread {
-	return Thread{logger: logger, db: sqlDB}
+func NewThread(sqlDB *sql.DB) Thread {
+	return Thread{db: sqlDB}
 }

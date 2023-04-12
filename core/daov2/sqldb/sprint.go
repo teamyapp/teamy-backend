@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Sprint struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -80,22 +78,14 @@ func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transac
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"sprint not found: sprintID=%v", sprintID),
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return entity.Sprint{}, internalErr
+		return entity.Sprint{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf(
+				"sprint not found: sprintID=%v", sprintID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return entity.Sprint{}, internalErr
+		return entity.Sprint{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return sprint, nil
@@ -260,9 +250,8 @@ func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sp
 	return nil
 }
 
-func NewSprint(logger telemetry.Logger, transactionFactory transaction.Factory) Sprint {
+func NewSprint(transactionFactory transaction.Factory) Sprint {
 	return Sprint{
-		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

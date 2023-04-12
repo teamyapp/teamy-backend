@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Message struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.Message = (*Message)(nil)
@@ -41,22 +39,13 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 			&message.UpdatedAt,
 		)
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"message not found: messageID=%v", messageID),
-		}
-		m.logger.ErrorWithContext(ct, internalErr)
-		return entity.Message{}, internalErr
+		return entity.Message{}, errs.NewError(errs.NotFound,
+			fmt.Sprintf(
+				"message not found: messageID=%v", messageID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		m.logger.ErrorWithContext(ct, internalErr)
-		return entity.Message{}, internalErr
+		return entity.Message{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return message, nil
@@ -76,12 +65,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 `
 	rows, err := m.db.Query(statement, threadID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		m.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -99,17 +83,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 			&message.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			m.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		messages = append(messages, message)
@@ -137,12 +111,7 @@ func (m Message) CreateMessage(ct context.Context, message entity.Message) *errs
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		m.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -161,12 +130,7 @@ func (m Message) UpdateMessage(ct context.Context, message entity.Message) *errs
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		m.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -180,17 +144,12 @@ func (m Message) DeleteMessage(ct context.Context, messageID uint64) *errs.Error
 		messageID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		m.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewMessage(logger telemetry.Logger, sqlDB *sql.DB) Message {
-	return Message{logger: logger, db: sqlDB}
+func NewMessage(sqlDB *sql.DB) Message {
+	return Message{db: sqlDB}
 }

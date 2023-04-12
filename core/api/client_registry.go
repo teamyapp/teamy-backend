@@ -51,11 +51,7 @@ func NewClientRegistry(
 ) (*ClientRegistry, *errs.Error) {
 	conn, err := rpc.NewClientConnection(logger, network, clientGRPCMetrics, connCfg, makeRetry)
 	if err != nil {
-		logger.Log(telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
-		return nil, &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return &ClientRegistry{

@@ -39,10 +39,10 @@ func (m Mutation) UpdateUser(ct context.Context, args struct {
 }) (User, error) {
 	userID, argErr := fromGraphQLID(args.UserID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return User{}, errs.ToResolverErr(internalErr)
 	}
@@ -75,10 +75,10 @@ func (m Mutation) FinishUserProfileUploadSession(ct context.Context, args struct
 }) (User, error) {
 	fileUploadSessionID, argErr := fromGraphQLID(args.FileUploadSessionID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return User{}, errs.ToResolverErr(internalErr)
 	}

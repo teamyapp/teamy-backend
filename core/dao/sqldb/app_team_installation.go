@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type AppTeamInstallation struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.AppTeamInstallation = (*AppTeamInstallation)(nil)
@@ -32,17 +30,11 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 `,
 		appID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	appTeamInstallations := make([]entity.AppTeamInstallation, 0)
 	for rows.Next() {
 		appTeamInstallation := entity.AppTeamInstallation{}
@@ -54,23 +46,13 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByAppID(ct context.Context,
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			a.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	return appTeamInstallations, internalErr
+	return appTeamInstallations, nil
 }
 
 func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
@@ -86,17 +68,11 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 `,
 		teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	appTeamInstallations := make([]entity.AppTeamInstallation, 0)
 	for rows.Next() {
 		appTeamInstallation := entity.AppTeamInstallation{}
@@ -108,23 +84,13 @@ func (a AppTeamInstallation) FindAppTeamInstallationsByTeamID(ct context.Context
 			&appTeamInstallation.InstalledAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			a.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		appTeamInstallations = append(appTeamInstallations, appTeamInstallation)
 	}
 
-	return appTeamInstallations, internalErr
+	return appTeamInstallations, nil
 }
 
 func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.Context, appID uint64, teamID uint64) (entity.AppTeamInstallation, *errs.Error) {
@@ -150,21 +116,15 @@ func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamID(ct context.
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("app installation not found: appID=%v, teamID=%v", appID, teamID),
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.AppTeamInstallation{}, internalErr
+		return entity.AppTeamInstallation{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("app installation not found: appID=%v, teamID=%v",
+				appID,
+				teamID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return entity.AppTeamInstallation{}, internalErr
+		return entity.AppTeamInstallation{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return appTeamInstallation, nil
@@ -190,12 +150,7 @@ func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, appTe
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -213,12 +168,7 @@ func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, appTe
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -233,12 +183,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, appID
 		appID,
 		teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -252,17 +197,12 @@ func (a AppTeamInstallation) DeleteAppTeamInstallationsByAppIDAndVersionNumber(c
 		appID,
 		versionNumber)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		a.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewAppTeamInstallation(logger telemetry.Logger, sqlDB *sql.DB) AppTeamInstallation {
-	return AppTeamInstallation{logger: logger, db: sqlDB}
+func NewAppTeamInstallation(sqlDB *sql.DB) AppTeamInstallation {
+	return AppTeamInstallation{db: sqlDB}
 }
