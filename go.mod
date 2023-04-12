@@ -8,7 +8,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.5.0
 	github.com/stretchr/testify v1.8.2
-	github.com/teamyapp/cloud v0.0.0-20230411060640-aac9281466d6
+	github.com/teamyapp/cloud v0.0.0-20230412001256-5998be9367f3
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.30.0
 )

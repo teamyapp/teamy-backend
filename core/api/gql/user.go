@@ -43,10 +43,10 @@ func (u User) Teams(ct context.Context, args struct {
 }) ([]Team, error) {
 	filter, argErr := fromGraphQLTeamFilterPtr(args.Filter)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		u.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}

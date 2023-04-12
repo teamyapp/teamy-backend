@@ -5,14 +5,12 @@ import (
 	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TaskAwaitForRelation struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
@@ -25,33 +23,17 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDs(ct context.Context, waitForTas
 	WHERE await_for_task_id = $1;
 `, waitForTaskID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	waitingTaskIDs := make([]uint64, 0)
 	for rows.Next() {
 		var waitingTaskID uint64
 		err = rows.Scan(&waitingTaskID)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		waitingTaskIDs = append(waitingTaskIDs, waitingTaskID)
@@ -68,33 +50,17 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDs(ct context.Context, waitingTas
 	WHERE awaiting_task_id = $1;
 `, waitingTaskID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	waitForTaskIDs := make([]uint64, 0)
 	for rows.Next() {
 		var waitForTaskID uint64
 		err = rows.Scan(&waitForTaskID)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		waitForTaskIDs = append(waitForTaskIDs, waitForTaskID)
@@ -119,12 +85,7 @@ func (t TaskAwaitForRelation) CreateRelation(ct context.Context, relation entity
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -139,17 +100,12 @@ func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, waitingTaskID u
 		awaitForTaskID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewTaskAwaitForRelation(logger telemetry.Logger, db *sql.DB) TaskAwaitForRelation {
-	return TaskAwaitForRelation{logger: logger, db: db}
+func NewTaskAwaitForRelation(db *sql.DB) TaskAwaitForRelation {
+	return TaskAwaitForRelation{db: db}
 }

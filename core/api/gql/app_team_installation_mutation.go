@@ -15,20 +15,20 @@ func (m Mutation) CreateAppTeamInstallation(ct context.Context, args struct {
 }) (AppTeamInstallation, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
@@ -51,20 +51,20 @@ func (m Mutation) UpdateAppTeamInstallation(ct context.Context, args struct {
 }) (AppTeamInstallation, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
@@ -87,20 +87,20 @@ func (m Mutation) DeleteAppTeamInstallation(ct context.Context, args struct {
 }) (AppTeamInstallation, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppTeamInstallation{}, errs.ToResolverErr(internalErr)
 	}

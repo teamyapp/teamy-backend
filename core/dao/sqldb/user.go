@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type User struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.User = (*User)(nil)
@@ -42,21 +40,13 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 			&user.UpdatedAt,
 		)
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("user not found: userID=%v", userID),
-		}
-		u.logger.ErrorWithContext(ct, internalErr)
-		return entity.User{}, internalErr
+		return entity.User{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("user not found: userID=%v", userID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		u.logger.ErrorWithContext(ct, internalErr)
-		return entity.User{}, internalErr
+		return entity.User{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return user, nil
@@ -80,12 +70,7 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 	WHERE id IN (%v)`, idsString)
 	rows, err := u.db.Query(query)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		u.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -104,17 +89,7 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 				&user.UpdatedAt,
 			)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			u.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		users = append(users, user)
@@ -142,12 +117,7 @@ func (u User) CreateUser(ct context.Context, user entity.User) *errs.Error {
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		u.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -170,17 +140,12 @@ func (u User) UpdateUser(ct context.Context, user entity.User) *errs.Error {
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		u.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewUser(logger telemetry.Logger, sqlDB *sql.DB) User {
-	return User{logger: logger, db: sqlDB}
+func NewUser(sqlDB *sql.DB) User {
+	return User{db: sqlDB}
 }

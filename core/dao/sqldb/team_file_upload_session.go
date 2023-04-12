@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamFileUploadSession struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
@@ -47,22 +45,16 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"TeamFileUploadSession not found: teamID=%v, teamFileUploadSessionType=%v", teamID, teamFileUploadSessionType),
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamFileUploadSession{}, internalErr
+		return entity.TeamFileUploadSession{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf(
+				"TeamFileUploadSession not found: teamID=%v, teamFileUploadSessionType=%v",
+				teamID,
+				teamFileUploadSessionType))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamFileUploadSession{}, internalErr
+		return entity.TeamFileUploadSession{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return teamFileUploadSession, nil
@@ -92,12 +84,7 @@ func (t TeamFileUploadSession) CreateTeamFileUploadSession(
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -129,17 +116,12 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewTeamFileUploadSession(logger telemetry.Logger, sqlDB *sql.DB) TeamFileUploadSession {
-	return TeamFileUploadSession{logger: logger, db: sqlDB}
+func NewTeamFileUploadSession(sqlDB *sql.DB) TeamFileUploadSession {
+	return TeamFileUploadSession{db: sqlDB}
 }

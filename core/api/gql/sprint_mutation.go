@@ -19,10 +19,10 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 }) (Sprint, error) {
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Sprint{}, errs.ToResolverErr(internalErr)
 	}
@@ -45,10 +45,10 @@ func (m Mutation) DeleteSprint(ct context.Context, args struct {
 }) (Sprint, error) {
 	sprintID, argErr := fromGraphQLID(args.SprintID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Sprint{}, errs.ToResolverErr(internalErr)
 	}
@@ -68,20 +68,20 @@ func (m Mutation) AddTaskToSprint(ct context.Context, args struct {
 }) (Task, error) {
 	sprintID, argErr := fromGraphQLID(args.SprintID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	taskID, argErr := fromGraphQLID(args.TaskID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
@@ -101,20 +101,20 @@ func (m Mutation) RemoveTaskFromSprint(ct context.Context, args struct {
 }) (Task, error) {
 	sprintID, argErr := fromGraphQLID(args.SprintID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	taskID, argErr := fromGraphQLID(args.TaskID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
@@ -134,10 +134,10 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 }) ([]Task, error) {
 	toSprintID, argErr := fromGraphQLID(args.ToSprintID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -146,10 +146,10 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 	for _, TaskID := range args.TaskIDs {
 		taskID, err := fromGraphQLID(TaskID)
 		if err != nil {
-			internalErr := &errs.Error{
-				Code:     errs.InvalidArgument,
-				EmbedErr: err,
-			}
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				argErr.Error(),
+			)
 			m.deps.logger.ErrorWithContext(ct, internalErr)
 			continue
 		}
@@ -175,20 +175,20 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 }) ([]Task, error) {
 	fromSprintID, argErr := fromGraphQLID(args.FromSprintID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	toSprintID, argErr := fromGraphQLID(args.ToSprintID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return nil, errs.ToResolverErr(internalErr)
 	}
@@ -197,10 +197,10 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 	for _, TaskID := range args.TaskIDs {
 		taskID, err := fromGraphQLID(TaskID)
 		if err != nil {
-			internalErr := &errs.Error{
-				Code:     errs.InvalidArgument,
-				EmbedErr: argErr,
-			}
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				argErr.Error(),
+			)
 			m.deps.logger.ErrorWithContext(ct, internalErr)
 			continue
 		}

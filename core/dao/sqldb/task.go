@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Task struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.Task = (*Task)(nil)
@@ -57,12 +55,9 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 			&task.DeliveredAt,
 		)
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("task not found: taskID=%v", taskID),
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
+		return entity.Task{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("task not found: taskID=%v", taskID))
 	}
 
 	return task, nil
@@ -94,12 +89,7 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 	WHERE id IN (%v);`, idsString)
 	rows, err := t.db.Query(query)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -126,17 +116,7 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 				&task.DeliveredAt,
 			)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
@@ -183,21 +163,13 @@ func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uin
 			&task.DeliveredAt,
 		)
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID),
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
+		return entity.Task{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.Task{}, internalErr
+		return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return task, nil
@@ -223,12 +195,7 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 	FROM task;
 `)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -254,17 +221,7 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
@@ -296,17 +253,11 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 `,
 		teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
 		task := entity.Task{}
@@ -327,17 +278,7 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
@@ -379,12 +320,7 @@ func (t Task) CreateTask(ct context.Context, task entity.Task) *errs.Error {
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -419,12 +355,7 @@ func (t Task) UpdateTask(ct context.Context, task entity.Task) *errs.Error {
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -437,17 +368,12 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) *errs.Error {
 		`,
 		taskID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewTask(logger telemetry.Logger, sqlDB *sql.DB) Task {
-	return Task{logger: logger, db: sqlDB}
+func NewTask(sqlDB *sql.DB) Task {
+	return Task{db: sqlDB}
 }

@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamMember struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.TeamMember = (*TeamMember)(nil)
@@ -28,12 +26,7 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 `
 	rows, err := t.db.Query(statement, int64(userID))
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -46,17 +39,7 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 			&teamID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teamIDs = append(teamIDs, teamID)
@@ -74,12 +57,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 `
 	rows, err := t.db.Query(statement, int64(teamID))
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -92,17 +70,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamID(ct context.Context, teamID uint64)
 			&teamMemberID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teamMemberIDs = append(teamMemberIDs, teamMemberID)
@@ -123,12 +91,7 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 	WHERE team_id = $1;
 `, teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -144,17 +107,7 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 			&teamMember.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			t.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teamMembers = append(teamMembers, teamMember)
@@ -187,22 +140,14 @@ func (t TeamMember) FindTeamMember(ct context.Context, teamID uint64, userID uin
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"team member not found: teamID=%v, userID=%v", teamID, userID),
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamMember{}, internalErr
+		return entity.TeamMember{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf(
+				"team member not found: teamID=%v, userID=%v", teamID, userID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return entity.TeamMember{}, internalErr
+		return entity.TeamMember{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return teamMember, nil
@@ -227,12 +172,7 @@ func (t TeamMember) CreateTeamMember(ct context.Context, teamMember entity.TeamM
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -252,12 +192,7 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, teamMember entity.TeamM
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -271,17 +206,12 @@ func (t TeamMember) DeleteTeamMember(ct context.Context, teamID uint64, userID u
 		teamID, userID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		t.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewTeamMember(logger telemetry.Logger, sqlDB *sql.DB) TeamMember {
-	return TeamMember{logger: logger, db: sqlDB}
+func NewTeamMember(sqlDB *sql.DB) TeamMember {
+	return TeamMember{db: sqlDB}
 }

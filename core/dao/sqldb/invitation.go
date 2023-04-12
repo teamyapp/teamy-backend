@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Invitation struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.Invitation = (*Invitation)(nil)
@@ -55,21 +53,13 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code:    errs.NotFound,
-			Message: fmt.Sprintf("invitation not found: invitationID=%v", invitationID),
-		}
-		i.logger.ErrorWithContext(ct, internalErr)
-		return entity.Invitation{}, internalErr
+		return entity.Invitation{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("invitation not found: invitationID=%v", invitationID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.logger.ErrorWithContext(ct, internalErr)
-		return entity.Invitation{}, internalErr
+		return entity.Invitation{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return invitation, nil
@@ -95,17 +85,11 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 `,
 		teamID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
 
-	var internalErr *errs.Error
 	invitations := make([]entity.Invitation, 0)
 	for rows.Next() {
 		invitation := entity.Invitation{}
@@ -124,23 +108,13 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 			&invitation.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			i.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		invitations = append(invitations, invitation)
 	}
 
-	return invitations, internalErr
+	return invitations, nil
 }
 
 func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, *errs.Error) {
@@ -161,12 +135,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 	FROM invitation;
 `)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -190,17 +159,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 			&invitation.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			i.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		invitations = append(invitations, invitation)
@@ -238,12 +197,7 @@ func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invit
 		invitation.CreatedAt,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -272,12 +226,7 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invit
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -291,17 +240,12 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) *e
 		invitationID)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		i.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewInvitation(logger telemetry.Logger, sqlDB *sql.DB) Invitation {
-	return Invitation{logger: logger, db: sqlDB}
+func NewInvitation(sqlDB *sql.DB) Invitation {
+	return Invitation{db: sqlDB}
 }

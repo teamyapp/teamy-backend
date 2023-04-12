@@ -13,10 +13,10 @@ func (m Mutation) CreateAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
@@ -43,10 +43,10 @@ func (m Mutation) UpdateAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
@@ -73,10 +73,10 @@ func (m Mutation) DeleteAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
@@ -97,20 +97,20 @@ func (m Mutation) AddVisibleTeamToAppVersion(ct context.Context, args struct {
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
@@ -131,20 +131,20 @@ func (m Mutation) RemoveVisibleTeamFromAppVersion(ct context.Context, args struc
 }) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}

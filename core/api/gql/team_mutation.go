@@ -34,20 +34,20 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 }) (Team, error) {
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Team{}, errs.ToResolverErr(internalErr)
 	}
 
 	ownerUserID, argErr := fromGraphQLID(args.Input.OwnerUserID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Team{}, errs.ToResolverErr(internalErr)
 	}
@@ -70,10 +70,10 @@ func (m Mutation) DeleteTeam(ct context.Context, args struct {
 }) (Team, error) {
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Team{}, errs.ToResolverErr(internalErr)
 	}
@@ -92,10 +92,10 @@ func (m Mutation) CreateTeamIconUploadSession(ct context.Context, args struct {
 }) (graphql.ID, error) {
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return "", errs.ToResolverErr(internalErr)
 	}
@@ -115,20 +115,20 @@ func (m Mutation) FinishTeamIconUploadSession(ct context.Context, args struct {
 }) (Team, error) {
 	fileUploadSessionID, argErr := fromGraphQLID(args.FileUploadSessionID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Team{}, errs.ToResolverErr(internalErr)
 	}
 
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Team{}, errs.ToResolverErr(internalErr)
 	}

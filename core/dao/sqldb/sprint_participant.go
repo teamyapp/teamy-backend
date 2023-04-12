@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type SprintParticipant struct {
-	logger telemetry.Logger
-	db     *sql.DB
+	db *sql.DB
 }
 
 var _ dao.SprintParticipant = (*SprintParticipant)(nil)
@@ -29,12 +27,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 `,
 		sprintID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -47,17 +40,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 			&participantUserID,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		participantUserIDs = append(participantUserIDs, participantUserID)
@@ -81,12 +64,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 `,
 		sprintID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return nil, internalErr
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -104,17 +82,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 			&sprintParticipant.UpdatedAt,
 		)
 		if err != nil {
-			newInternalErr := &errs.Error{
-				Code:     errs.Unknown,
-				EmbedErr: err,
-			}
-
-			if internalErr == nil {
-				internalErr = newInternalErr
-			}
-
-			s.logger.ErrorWithContext(ct, newInternalErr)
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprintParticipants = append(sprintParticipants, sprintParticipant)
@@ -148,22 +116,16 @@ func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, 
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		internalErr := &errs.Error{
-			Code: errs.NotFound,
-			Message: fmt.Sprintf(
-				"participant not found: sprintID=%v, participantUserID=%v", sprintID, participantUserID),
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return entity.SprintParticipant{}, internalErr
+		return entity.SprintParticipant{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf(
+				"participant not found: sprintID=%v, participantUserID=%v",
+				sprintID,
+				participantUserID))
 	}
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return entity.SprintParticipant{}, internalErr
+		return entity.SprintParticipant{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return participant, nil
@@ -190,12 +152,7 @@ func (s SprintParticipant) CreateSprintParticipant(ct context.Context, participa
 		participant.UpdatedAt,
 	)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -223,12 +180,7 @@ func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, participa
 	)
 
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
@@ -242,20 +194,14 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, sprintID 
 		sprintID,
 		userID)
 	if err != nil {
-		internalErr := &errs.Error{
-			Code:     errs.Unknown,
-			EmbedErr: err,
-		}
-		s.logger.ErrorWithContext(ct, internalErr)
-		return internalErr
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return nil
 }
 
-func NewSprintParticipant(logger telemetry.Logger, sqlDB *sql.DB) SprintParticipant {
+func NewSprintParticipant(sqlDB *sql.DB) SprintParticipant {
 	return SprintParticipant{
-		logger: logger,
-		db:     sqlDB,
+		db: sqlDB,
 	}
 }

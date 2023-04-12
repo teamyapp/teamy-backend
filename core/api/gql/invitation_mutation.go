@@ -19,10 +19,10 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 }) (Invitation, error) {
 	teamID, argErr := fromGraphQLID(args.TeamID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
@@ -51,10 +51,10 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 }) (Invitation, error) {
 	invitationID, argErr := fromGraphQLID(args.InvitationID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
@@ -77,10 +77,10 @@ func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 }) (Invitation, error) {
 	invitationID, argErr := fromGraphQLID(args.InvitationID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
@@ -100,10 +100,10 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 }) (Invitation, error) {
 	invitationID, argErr := fromGraphQLID(args.InvitationID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
@@ -123,10 +123,10 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 }) (Invitation, error) {
 	invitationID, argErr := fromGraphQLID(args.InvitationID)
 	if argErr != nil {
-		internalErr := &errs.Error{
-			Code:     errs.InvalidArgument,
-			EmbedErr: argErr,
-		}
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
