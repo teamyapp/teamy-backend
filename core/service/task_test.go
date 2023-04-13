@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	cloudAPI "github.com/teamyapp/cloud/app/api"
-	"github.com/teamyapp/cloud/app/service"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -29,6 +28,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/service/servicetest"
 )
 
 type TaskTestRef struct {
@@ -62,7 +62,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 					return err
 				}
 
-				return addTeamPermission(
+				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
@@ -89,7 +89,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 					return err
 				}
 
-				return addTeamPermission(
+				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
@@ -116,7 +116,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 					return err
 				}
 
-				return addTeamPermission(
+				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
@@ -143,7 +143,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 					return err
 				}
 
-				return addTeamPermission(
+				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
@@ -159,6 +159,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			taskTestRef, ok := prepareTaskTestRef(t, feature.Toggles{
 				EnableAuthorization: true,
 			})
@@ -321,43 +322,4 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		taskService:  taskService,
 		cloudTestKit: cloudTestKit,
 	}, true
-}
-
-func addTeamPermission(
-	ct context.Context,
-	authorizationService service.Authorization,
-	teamID uint64,
-	groupID uint64,
-	groupOperations []authorization.ResourceTypeOperation,
-	requesterUserID uint64,
-) *errs.Error {
-	err := authorizationService.AddUserGroupMember(ct, groupID, requesterUserID)
-	if err != nil {
-		return err
-	}
-
-	for _, resourceTypeOperation := range groupOperations {
-		err = authorizationService.RegisterOperation(
-			ct,
-			string(resourceTypeOperation.ResourceType),
-			resourceTypeOperation.Operation)
-		if err != nil {
-			return err
-		}
-
-		err = authorizationService.AddPermission(
-			ct,
-			string(resourceTypeOperation.ResourceType),
-			teamID,
-			resourceTypeOperation.Operation,
-			groupID)
-		if err != nil {
-			return err
-		}
-	}
-
-	return authorizationService.RegisterResource(
-		ct,
-		string(authorization.TeamResourceType),
-		teamID)
 }
