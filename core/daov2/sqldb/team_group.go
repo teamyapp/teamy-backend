@@ -18,6 +18,8 @@ type TeamGroup struct {
 	transactionFactory transaction.Factory
 }
 
+var _ daov2.TeamGroup = (*TeamGroup)(nil)
+
 func (t TeamGroup) FindGroupByTeamIDAndLabel(
 	ct context.Context,
 	teamID uint64,
@@ -118,8 +120,6 @@ func (t TeamGroup) DeleteGroup(
 
 	return nil
 }
-
-var _ daov2.TeamGroup = (*TeamGroup)(nil)
 
 func NewTeamGroup(logger telemetry.Logger, transactionFactory transaction.Factory) TeamGroup {
 	return TeamGroup{logger: logger, transactionFactory: transactionFactory}
