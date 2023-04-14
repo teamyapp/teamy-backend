@@ -46,3 +46,19 @@ func AddTeamPermission(
 		string(authorization.TeamResourceType),
 		teamID)
 }
+
+func GetServiceAccountAPIToken(identityService service.Identity) (string, *errs.Error) {
+	ct := context.Background()
+	var accountOwner uint64 = 0
+	serviceAccountID, internalErr := identityService.CreateServiceAccount(ct, accountOwner, "test")
+	if internalErr != nil {
+		return "", internalErr
+	}
+
+	apiToken, internalErr := identityService.GenerateServiceToken(ct, accountOwner, serviceAccountID)
+	if internalErr != nil {
+		return "", internalErr
+	}
+
+	return apiToken, nil
+}

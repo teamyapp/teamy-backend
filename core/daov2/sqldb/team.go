@@ -120,10 +120,6 @@ func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction
 		return entity.Team{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	if err != nil {
-		return entity.Team{}, errs.NewError(errs.Unknown, err.Error())
-	}
-
 	return team, nil
 }
 

@@ -8,6 +8,7 @@ const (
 	InvitationCollectionType           CollectionType = "Invitation"
 	MessageCollectionType              CollectionType = "Message"
 	TeamCollectionType                 CollectionType = "Team"
+	TeamGroupCollectionType            CollectionType = "TeamGroup"
 	UserCollectionType                 CollectionType = "User"
 	ThreadCollectionType               CollectionType = "Thread"
 	TeamMemberCollectionType           CollectionType = "TeamMember"

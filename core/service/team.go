@@ -55,6 +55,7 @@ type Team struct {
 	teamMemberDao              dao.TeamMember
 	teamMemberDaoV2            daov2.TeamMember
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession
+	teamGroupDaoV2             daov2.TeamGroup
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
@@ -143,8 +144,82 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		return entity.Team{}, internalErr
 	}
 
+	teamID := genTeamIDRes.UniqueNumber
+	var ownerGroupID uint64
+	var adminGroupID uint64
+	var memberGroupID uint64
+	var err *errs.Error
+	if t.featureToggles.EnableAuthorization {
+		err = t.authorizer.registerResource(ct, authorization.TeamResourceType, teamID)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		teamOwnerUserGroupName := fmt.Sprintf("Team%d/Owner", teamID)
+		teamOwnerDescription := fmt.Sprintf("Owners for %s", teamOwnerUserGroupName)
+		teamOwnerOperations := make([]authorization.ResourceOperation, 0)
+		for _, teamOwnerResourceTypeOperation := range authorization.TeamOwnerResourceTypeOperations {
+			teamOwnerOperations = append(teamOwnerOperations, authorization.ResourceOperation{
+				ResourceType: teamOwnerResourceTypeOperation.ResourceType,
+				Operation:    teamOwnerResourceTypeOperation.Operation,
+				ResourceID:   teamID,
+			})
+		}
+		ownerGroupID, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
+			userID,
+			teamOwnerUserGroupName,
+			&teamOwnerDescription,
+			teamOwnerOperations,
+		)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		teamAdminUserGroupName := fmt.Sprintf("Team%d/Admin", teamID)
+		teamAdminDescription := fmt.Sprintf("Admins for %s", teamAdminUserGroupName)
+		teamAdminOperations := make([]authorization.ResourceOperation, 0)
+		for _, teamAdminResourceTypeOperation := range authorization.TeamAdminResourceTypeOperations {
+			teamAdminOperations = append(teamAdminOperations, authorization.ResourceOperation{
+				ResourceType: teamAdminResourceTypeOperation.ResourceType,
+				Operation:    teamAdminResourceTypeOperation.Operation,
+				ResourceID:   teamID,
+			})
+		}
+
+		adminGroupID, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
+			userID,
+			teamAdminUserGroupName,
+			&teamAdminDescription,
+			teamAdminOperations,
+		)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		teamMemberUserGroupName := fmt.Sprintf("Team%d/Member", teamID)
+		teamMemberDescription := fmt.Sprintf("Members for %s", teamMemberUserGroupName)
+		teamMemberOperations := make([]authorization.ResourceOperation, 0)
+		for _, teamMemberResourceTypeOperation := range authorization.TeamMemberResourceTypeOperations {
+			teamMemberOperations = append(teamMemberOperations, authorization.ResourceOperation{
+				ResourceType: teamMemberResourceTypeOperation.ResourceType,
+				Operation:    teamMemberResourceTypeOperation.Operation,
+				ResourceID:   teamID,
+			})
+		}
+
+		memberGroupID, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
+			userID,
+			teamMemberUserGroupName,
+			&teamMemberDescription,
+			teamMemberOperations,
+		)
+		if err != nil {
+			return entity.Team{}, err
+		}
+	}
+
 	team := entity.Team{
-		ID:            genTeamIDRes.UniqueNumber,
+		ID:            teamID,
 		Name:          input.Name,
 		CreatorUserID: userID,
 		OwnerUserID:   userID,
@@ -156,7 +231,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
 	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		// All users are authorized to create team
 		createTeamMutation := mutation.NewCreateTeamMutation(
 			t.logger,
@@ -189,72 +264,50 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		}
 
 		rtTx.AppendMutation(createTeamMemberMutation)
+
+		if t.featureToggles.EnableAuthorization {
+			teamGroups := []entity.TeamGroup{
+				{
+					TeamID:      teamID,
+					Label:       entity.OwnerTeamGroupLabel,
+					UserGroupID: ownerGroupID,
+					CreatedAt:   time.Now().UTC(),
+				},
+				{
+					TeamID:      teamID,
+					Label:       entity.AdminTeamGroupLabel,
+					UserGroupID: adminGroupID,
+					CreatedAt:   time.Now().UTC(),
+				},
+				{
+					TeamID:      teamID,
+					Label:       entity.MemberTeamGroupLabel,
+					UserGroupID: memberGroupID,
+					CreatedAt:   time.Now().UTC(),
+				},
+			}
+			for _, teamGroup := range teamGroups {
+				teamGroupMutation := mutation.NewCreateTeamGroupMutation(
+					t.logger,
+					t.stateSyncer,
+					t.teamGroupDaoV2,
+					teamGroup,
+				)
+				internalErr = teamGroupMutation.ExecuteV2(ct, tx)
+				if internalErr != nil {
+					return internalErr
+				}
+
+				rtTx.AppendMutation(teamGroupMutation)
+			}
+
+			return nil
+		}
+
 		return nil
 	})
 
-	if err != nil {
-		return entity.Team{}, err
-	}
-
-	if t.featureToggles.EnableAuthorization {
-		err = t.authorizer.registerResource(ct, authorization.TeamResourceType, team.ID)
-		if err != nil {
-			return entity.Team{}, err
-		}
-
-		// When create a new team,
-		// 1) Resource: register team resource
-		// 2) UserGroup: create TeamAdmin and TeamMember userGroups
-		// 3) UserGroupMember:
-		// 		add team owner to TeamAdmin group
-		// 		add team owner to TeamMember group
-		// 4) Permissions:
-		//		assign TeamAdmin permissions to team owner
-		// 		assign TeamMember permissions to team owner
-		teamAdminUserGroupName := fmt.Sprintf("Team%d/Admin", team.ID)
-		teamAdminDescription := fmt.Sprintf("Admins for %s", teamAdminUserGroupName)
-		teamAdminOperations := make([]authorization.ResourceOperation, 0)
-		for _, teamAdminResourceTypeOperation := range authorization.TeamAdminResourceTypeOperations {
-			teamAdminOperations = append(teamAdminOperations, authorization.ResourceOperation{
-				ResourceType: teamAdminResourceTypeOperation.ResourceType,
-				Operation:    teamAdminResourceTypeOperation.Operation,
-				ResourceID:   team.ID,
-			})
-		}
-
-		_, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
-			userID,
-			teamAdminUserGroupName,
-			&teamAdminDescription,
-			teamAdminOperations,
-		)
-		if err != nil {
-			return entity.Team{}, err
-		}
-
-		teamMemberUserGroupName := fmt.Sprintf("Team%d/Member", team.ID)
-		teamMemberDescription := fmt.Sprintf("Members for %s", teamMemberUserGroupName)
-		teamMemberOperations := make([]authorization.ResourceOperation, 0)
-		for _, teamMemberResourceTypeOperation := range authorization.TeamMemberResourceTypeOperations {
-			teamMemberOperations = append(teamMemberOperations, authorization.ResourceOperation{
-				ResourceType: teamMemberResourceTypeOperation.ResourceType,
-				Operation:    teamMemberResourceTypeOperation.Operation,
-				ResourceID:   team.ID,
-			})
-		}
-
-		_, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
-			userID,
-			teamMemberUserGroupName,
-			&teamMemberDescription,
-			teamMemberOperations,
-		)
-		if err != nil {
-			return entity.Team{}, err
-		}
-	}
-
-	return team, nil
+	return team, err
 }
 
 func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInput) (entity.Team, *errs.Error) {
@@ -824,6 +877,7 @@ func NewTeam(
 	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
+	teamGroupDaoV2 daov2.TeamGroup,
 ) Team {
 	return Team{
 		logger:                     logger,
@@ -843,5 +897,6 @@ func NewTeam(
 		teamMemberDao:              teamMemberDao,
 		teamDaoV2:                  teamDaoV2,
 		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
+		teamGroupDaoV2:             teamGroupDaoV2,
 	}
 }
