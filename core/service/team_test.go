@@ -855,7 +855,6 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	}
 
 	authorizer := NewAuthorizer(logger, cloudClientRegistry)
-
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
