@@ -4,9 +4,9 @@ import (
 	"time"
 )
 
-const OwnerTeamGroupLabel = "OWNER"
-const AdminTeamGroupLabel = "ADMIN"
-const MemberTeamGroupLabel = "MEMBER"
+const OwnerTeamGroupLabel = "Owner"
+const AdminTeamGroupLabel = "Admin"
+const MemberTeamGroupLabel = "Member"
 
 type TeamGroup struct {
 	TeamID      uint64
