@@ -21,124 +21,24 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/service/servicetest"
 )
 
 type TeamTestRef struct {
+	transactionFactory         transaction.Factory
 	teamService                Team
 	teamDaoV2                  daov2.Team
 	teamMemberDaoV2            daov2.TeamMember
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession
-	transactionFactory         transaction.Factory
-}
-
-func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, bool) {
-	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
-	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
-	virtualNetwork := networktest.NewVirtualNetwork()
-	cloudTestKitConfig := testkit.Config{
-		GenUniqueNumberRangeSize: 10,
-		JWTSigningKey:            "key",
-		AccessTokenTTL:           2 * time.Hour,
-		WebAPIBaseURL:            fmt.Sprintf("http://%s:%d", testkit.WebServerHost, testkit.WebServerPort),
-		GithubClientID:           "123",
-		GithubClientSecret:       "GithubSecret",
-		GoogleClientID:           "456",
-		GoogleClientSecret:       "GoogleSecret",
-		SlackClientID:            "789",
-		SlackClientSecret:        "SlackSecret",
-		WebServerPort:            80,
-		GRPCServerPort:           81,
-	}
-	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return TeamTestRef{}, false
-	}
-
-	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
-
-	teamyPrometheus := metricstest.NewNoopMetrics()
-	cloudClientCfg := rpc.ConnectionConfig{
-		Host:          testkit.GRPCServerHost,
-		Port:          testkit.GRPCServerPort,
-		ShouldEncrypt: false,
-		GetAccessToken: func() string {
-			return "accessToken"
-		},
-		RequestTimeout: 10 * time.Second,
-	}
-	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
-		logger,
-		virtualNetwork,
-		teamyPrometheus,
-		cloudClientCfg,
-		func() retry.Retry {
-			exponentialBackOff := backoff.NewExponentialBuilder().Build()
-			return retry.NewMaxCount(
-				logger,
-				runtime.NewBuiltInRuntime(),
-				exponentialBackOff,
-				exponentialBackOff,
-				3,
-				nil)
-		})
-	if !assert.Nil(t, err) {
-		return TeamTestRef{}, false
-	}
-
-	authorizer := NewAuthorizer(logger, cloudClientRegistry)
-
-	transactionFactory := transaction.NewFactory(nil)
-
-	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamFileUploadSessionTableName)
-	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
-
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
-
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
-	sprintDao := daotest.NewSprint(teamyBackendDB)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	teamDao := daotest.NewTeam(teamyBackendDB)
-	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
-	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
-	teamService := NewTeam(
-		logger,
-		cloudTestKitConfig.WebAPIBaseURL,
-		cloudClientRegistry,
-		authorizer,
-		toggles,
-		stateSyncer,
-		transactionFactory,
-		taskDaoV2,
-		sprintDao,
-		sprintDaoV2,
-		sprintParticipantDao,
-		sprintParticipantDaoV2,
-		teamDao,
-		teamDaoV2,
-		teamMemberDao,
-		teamMemberDaoV2,
-		teamFileUploadSessionDaoV2,
-	)
-
-	return TeamTestRef{
-		teamService:                teamService,
-		teamDaoV2:                  teamDaoV2,
-		teamMemberDaoV2:            teamMemberDaoV2,
-		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
-	}, true
+	teamGroupDaoV2             daov2.TeamGroup
+	cloudTestKit               testkit.TestKit
 }
 
 func TestTeamService_FindTeamByID(t *testing.T) {
@@ -370,7 +270,7 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 
 func TestTeamService_CreateTeam(t *testing.T) {
 	teamRef, ok := prepareTeamTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
+		EnableAuthorization: true,
 	})
 	if !ok {
 		return
@@ -408,6 +308,42 @@ func TestTeamService_CreateTeam(t *testing.T) {
 	assert.Nil(t, teamInMemory.IconURL)
 	assert.NotNil(t, teamInMemory.CreatedAt)
 	assert.Nil(t, teamInMemory.UpdatedAt)
+
+	if !assertTeamGroupAndUserPermissions(
+		t,
+		teamRef,
+		ct,
+		newTeam.ID,
+		entity.OwnerTeamGroupLabel,
+		requesterUserID,
+		authorization.TeamOwnerResourceTypeOperations,
+	) {
+		return
+	}
+
+	if !assertTeamGroupAndUserPermissions(
+		t,
+		teamRef,
+		ct,
+		newTeam.ID,
+		entity.AdminTeamGroupLabel,
+		requesterUserID,
+		authorization.TeamAdminResourceTypeOperations,
+	) {
+		return
+	}
+
+	if !assertTeamGroupAndUserPermissions(
+		t,
+		teamRef,
+		ct,
+		newTeam.ID,
+		entity.MemberTeamGroupLabel,
+		requesterUserID,
+		authorization.TeamMemberResourceTypeOperations,
+	) {
+		return
+	}
 }
 
 func TestTeamService_UpdateTeam(t *testing.T) {
@@ -858,4 +794,147 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	assert.Equal(t, teamMemberInMemory.WeeklyBandwidth, updateInput.WeeklyBandwidth)
 	assert.Equal(t, teamMemberInMemory.CreatedAt, teamMember.CreatedAt)
 	assert.NotEqual(t, teamMemberInMemory.UpdatedAt, teamMember.UpdatedAt)
+}
+
+func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, bool) {
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	virtualNetwork := networktest.NewVirtualNetwork()
+	cloudTestKitConfig := testkit.Config{
+		GenUniqueNumberRangeSize: 10,
+		JWTSigningKey:            "key",
+		AccessTokenTTL:           2 * time.Hour,
+		WebAPIBaseURL:            fmt.Sprintf("http://%s:%d", testkit.WebServerHost, testkit.WebServerPort),
+		GithubClientID:           "123",
+		GithubClientSecret:       "GithubSecret",
+		GoogleClientID:           "456",
+		GoogleClientSecret:       "GoogleSecret",
+		SlackClientID:            "789",
+		SlackClientSecret:        "SlackSecret",
+		WebServerPort:            80,
+		GRPCServerPort:           81,
+	}
+	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
+	if !assert.Nil(t, internalErr) {
+		return TeamTestRef{}, false
+	}
+
+	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
+
+	teamyPrometheus := metricstest.NewNoopMetrics()
+	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
+	if !assert.Nil(t, internalErr) {
+		return TeamTestRef{}, false
+	}
+	cloudClientCfg := rpc.ConnectionConfig{
+		Host:          testkit.GRPCServerHost,
+		Port:          testkit.GRPCServerPort,
+		ShouldEncrypt: false,
+		GetAccessToken: func() string {
+			return apiToken
+		},
+		RequestTimeout: 10 * time.Second,
+	}
+	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
+		logger,
+		virtualNetwork,
+		teamyPrometheus,
+		cloudClientCfg,
+		func() retry.Retry {
+			exponentialBackOff := backoff.NewExponentialBuilder().Build()
+			return retry.NewMaxCount(
+				logger,
+				runtime.NewBuiltInRuntime(),
+				exponentialBackOff,
+				exponentialBackOff,
+				3,
+				nil)
+		})
+	if !assert.Nil(t, err) {
+		return TeamTestRef{}, false
+	}
+
+	authorizer := NewAuthorizer(logger, cloudClientRegistry)
+	transactionFactory := transaction.NewFactory(nil)
+
+	teamyBackendDB := dbtest.NewInMemoryDB()
+	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
+	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
+	teamyBackendDB.CreateTable(daotestv2.TeamFileUploadSessionTableName)
+	teamyBackendDB.CreateTable(daotestv2.TeamGroupTableName)
+	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
+
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
+	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+
+	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
+	sprintDao := daotest.NewSprint(teamyBackendDB)
+	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
+	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
+	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
+	teamDao := daotest.NewTeam(teamyBackendDB)
+	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
+	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
+	teamGroupDaoV2 := daotestv2.NewTeamGroup(teamyBackendDB, transactionFactory)
+	teamService := NewTeam(
+		logger,
+		cloudTestKitConfig.WebAPIBaseURL,
+		cloudClientRegistry,
+		authorizer,
+		toggles,
+		stateSyncer,
+		transactionFactory,
+		taskDaoV2,
+		sprintDao,
+		sprintDaoV2,
+		sprintParticipantDao,
+		sprintParticipantDaoV2,
+		teamDao,
+		teamDaoV2,
+		teamMemberDao,
+		teamMemberDaoV2,
+		teamFileUploadSessionDaoV2,
+		teamGroupDaoV2,
+	)
+	return TeamTestRef{
+		teamService:                teamService,
+		teamDaoV2:                  teamDaoV2,
+		teamMemberDaoV2:            teamMemberDaoV2,
+		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
+		teamGroupDaoV2:             teamGroupDaoV2,
+		cloudTestKit:               cloudTestKit,
+	}, true
+}
+
+func assertTeamGroupAndUserPermissions(
+	t *testing.T,
+	teamRef TeamTestRef,
+	ct context.Context,
+	teamID uint64,
+	groupLabel string,
+	requesterUserID uint64,
+	resourceTypeOperations []authorization.ResourceTypeOperation,
+) bool {
+	_, err := teamRef.teamGroupDaoV2.FindGroupByTeamIDAndLabel(ct, teamID, groupLabel)
+	if !assert.Nil(t, err) {
+		return false
+	}
+
+	for _, resourceTypeOperation := range resourceTypeOperations {
+		hasPermission, err := teamRef.cloudTestKit.AuthorizationService.HasPermission(
+			ct,
+			string(resourceTypeOperation.ResourceType),
+			teamID,
+			resourceTypeOperation.Operation,
+			requesterUserID,
+		)
+		if !assert.Nil(t, err) {
+			return false
+		}
+
+		assert.True(t, hasPermission)
+	}
+
+	return true
 }

@@ -54,6 +54,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(daov2.SprintTaskRelation), new(sqldbV2.SprintTaskRelation)),
 	wire.Bind(new(daov2.Thread), new(sqldbV2.Thread)),
 	wire.Bind(new(daov2.TeamMember), new(sqldbV2.TeamMember)),
+	wire.Bind(new(daov2.TeamGroup), new(sqldbV2.TeamGroup)),
 	wire.Bind(new(daov2.User), new(sqldbV2.User)),
 	wire.Bind(new(daov2.UserFileUploadSession), new(sqldbV2.UserFileUploadSession)),
 	wire.Bind(new(daov2.Team), new(sqldbV2.Team)),
@@ -85,6 +86,7 @@ var daoSet = wire.NewSet(
 	sqldbV2.NewSprintTaskRelation,
 	sqldbV2.NewThread,
 	sqldbV2.NewTeamMember,
+	sqldbV2.NewTeamGroup,
 	sqldbV2.NewUser,
 	sqldbV2.NewUserFileUploadSession,
 	sqldbV2.NewTeam,
@@ -243,6 +245,7 @@ func newTeamService(
 	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
+	teamGroupDaoV2 daov2.TeamGroup,
 ) service.Team {
 	return service.NewTeam(
 		logger,
@@ -261,7 +264,8 @@ func newTeamService(
 		teamDaoV2,
 		teamMemberDao,
 		teamMemberDaoV2,
-		teamFileUploadSessionDaoV2)
+		teamFileUploadSessionDaoV2,
+		teamGroupDaoV2)
 }
 
 func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) cloudGQL.PrometheusTracer {

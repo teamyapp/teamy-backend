@@ -233,14 +233,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		return TaskTestRef{}, false
 	}
 
-	ct := context.Background()
-	var accountOwner uint64 = 0
-	serviceAccountID, internalErr := cloudTestKit.IdentityService.CreateServiceAccount(ct, accountOwner, "test")
-	if !assert.Nil(t, internalErr) {
-		return TaskTestRef{}, false
-	}
-
-	apiToken, internalErr := cloudTestKit.IdentityService.GenerateServiceToken(ct, accountOwner, serviceAccountID)
+	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
 	if !assert.Nil(t, internalErr) {
 		return TaskTestRef{}, false
 	}
