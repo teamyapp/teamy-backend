@@ -9,4 +9,3 @@ CREATE TABLE team_group (
 
 -- +migrate Down
 DROP TABLE team_group;
-
