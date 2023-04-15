@@ -63,7 +63,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	teamFileUploadSession := sqldb2.NewTeamFileUploadSession(logger)
 	teamGroup := sqldb2.NewTeamGroup(logger, factory)
 	serviceTeam := newTeamService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, sqldbTask, sprint, sqldbSprint, sprintParticipant, sqldbSprintParticipant, team, sqldbTeam, teamMember, sqldbTeamMember, teamFileUploadSession, teamGroup)
-	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
+	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sqldbTask, sprint, sqldbSprint, sqldbTeam, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
 	user := sqldb.NewUser(sqlDB)
 	sqldbUser := sqldb2.NewUser(logger, factory)
 	userFileUploadSession := sqldb2.NewUserFileUploadSession(logger)
@@ -120,6 +120,7 @@ func InitSprintRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.Clien
 	sqldbTask := sqldb2.NewTask(logger, factory)
 	sprint := sqldb.NewSprint(sqlDB)
 	sqldbSprint := sqldb2.NewSprint(factory)
+	team := sqldb2.NewTeam(logger, factory)
 	sprintTaskRelation := sqldb.NewSprintTaskRelation(sqlDB)
 	sqldbSprintTaskRelation := sqldb2.NewSprintTaskRelation(logger)
 	sprintParticipant := sqldb.NewSprintParticipant(sqlDB)
@@ -127,7 +128,7 @@ func InitSprintRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.Clien
 	teamMember := sqldb.NewTeamMember(sqlDB)
 	sqldbTeamMember := sqldb2.NewTeamMember(logger, factory)
 	thread := sqldb2.NewThread(logger)
-	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sqldbTask, sprint, sqldbSprint, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
+	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sqldbTask, sprint, sqldbSprint, team, sprintTaskRelation, sqldbSprintTaskRelation, sprintParticipant, sqldbSprintParticipant, teamMember, sqldbTeamMember, thread)
 	sprintRPC := api2.NewSprintRPC(logger, serviceSprint)
 	return sprintRPC
 }

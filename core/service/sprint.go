@@ -44,6 +44,8 @@ type Sprint struct {
 	taskDaoV2               daov2.Task
 	sprintDao               dao.Sprint
 	sprintDaoV2             daov2.Sprint
+	teamDao                 dao.Team
+	teamDaoV2               daov2.Team
 	sprintTaskRelationDao   dao.SprintTaskRelation
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
 	sprintParticipantDao    dao.SprintParticipant
@@ -84,45 +86,121 @@ func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.
 	return sprints, nil
 }
 
-func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Sprint, *errs.Error) {
-	var sprint entity.Sprint
+func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Sprint, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	txCtx := TransactionsContext{
 		logger:             s.logger,
 		transactionFactory: s.transactionFactory,
 		stateSyncer:        s.stateSyncer,
 		ct:                 ct,
 	}
+	var sprint *entity.Sprint
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		sprints, err := s.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		var err *errs.Error
+		team, err := s.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
 		if err != nil {
 			return err
 		}
 
-		now := time.Now().UTC()
-		sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
-			if now.Before(sprint.StartAt.UTC()) || now.After(sprint.EndAt.UTC()) {
-				return false
-			}
-
-			return true
-		})
-		if len(sprints) < 1 {
-			return errs.NewError(errs.NotFound, fmt.Sprintf("team has no active sprint: teamID=%v, currentTime=%v", teamID, now.UTC()))
+		if team.ActiveSprintID == nil {
+			return nil
 		}
 
-		if len(sprints) > 1 {
-			return errs.NewError(TooManySprints, fmt.Sprintf("team has more than one current sprint: teamID=%v, currentTime=%v", teamID, now.UTC()))
+		sprintRes, err := s.sprintDaoV2.FindSprintByID(ct, *team.ActiveSprintID)
+		if err != nil {
+			return err
 		}
 
-		sprint = sprints[0]
+		sprint = &sprintRes
 		return nil
 	})
 
 	if err != nil {
-		return entity.Sprint{}, err
+		return nil, err
 	}
 
 	return sprint, nil
+}
+
+func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID uint64) (entity.Team, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewUpdateInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		if !hasPermission {
+			return entity.Team{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	var team entity.Team
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		team, err = s.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
+		sprint, err := s.sprintDaoV2.FindSprintByIDWithTx(ct, tx, sprintID)
+
+		if err != nil {
+			return err
+		}
+
+		if sprint.OwningTeamID != teamID {
+			return errs.NewError(errs.InvalidArgument, "Sprint does not belong to team")
+		}
+
+		team.ActiveSprintID = &sprintID
+		updatedAt := time.Now().UTC()
+		team.UpdatedAt = &updatedAt
+
+		updateTeamMutation := mutation.NewUpdateTeam(
+			s.logger,
+			s.stateSyncer,
+			s.teamDao,
+			s.teamDaoV2,
+			team,
+		)
+
+		rtTx.AppendMutation(updateTeamMutation)
+		return updateTeamMutation.ExecuteV2(ct, tx)
+	})
+
+	if err != nil {
+		return entity.Team{}, err
+	}
+
+	return team, nil
 }
 
 func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
@@ -843,6 +921,7 @@ func NewSprint(
 	taskDaoV2 daov2.Task,
 	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
+	teamDaoV2 daov2.Team,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 	sprintParticipantDao dao.SprintParticipant,
@@ -862,6 +941,7 @@ func NewSprint(
 		taskDaoV2:               taskDaoV2,
 		sprintDao:               sprintDao,
 		sprintDaoV2:             sprintDaoV2,
+		teamDaoV2:               teamDaoV2,
 		sprintTaskRelationDao:   sprintTaskRelationDao,
 		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
 		sprintParticipantDao:    sprintParticipantDao,

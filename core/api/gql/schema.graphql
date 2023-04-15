@@ -34,6 +34,7 @@ type Mutation {
 	# Team
 	createTeam(team: CreateTeamInput!): Team!
 	updateTeam(teamId: ID!, input: UpdateTeamInput!): Team!
+	updateTeamActiveSprint(teamId: ID!, sprintId: ID!): Team!
 	createTeamIconUploadSession(teamId: ID!): ID!
 	finishTeamIconUploadSession(teamId: ID!, fileUploadSessionId: ID!): Team!
 	addMemberToTeam(teamId: ID!, memberUserId: ID!): TeamMember!
@@ -187,6 +188,7 @@ type Team {
 	sprints(filter: SprintFilter): [Sprint!]!
 	appInstallations: [AppTeamInstallation!]!
 	taskActivities: [TaskActivity!]!
+	activeSprint: Sprint
 }
 
 type TeamMember {

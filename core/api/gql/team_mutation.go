@@ -65,6 +65,39 @@ func (m Mutation) UpdateTeam(ct context.Context, args struct {
 	return newTeam(m.deps, team), nil
 }
 
+func (m Mutation) UpdateTeamActiveSprint(ct context.Context, args struct {
+	TeamID   graphql.ID
+	SprintID graphql.ID
+}) (Team, error) {
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Team{}, errs.ToResolverErr(internalErr)
+	}
+
+	sprintID, argErr := fromGraphQLID(args.SprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Team{}, errs.ToResolverErr(internalErr)
+	}
+
+	team, err := m.deps.sprintService.SetTeamActiveSprint(ct, teamID, sprintID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Team{}, errs.ToResolverErr(err)
+	}
+
+	return newTeam(m.deps, team), nil
+}
+
 func (m Mutation) DeleteTeam(ct context.Context, args struct {
 	TeamID graphql.ID
 }) (Team, error) {
