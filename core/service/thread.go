@@ -92,7 +92,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		createMessageMutation := mutation.NewCreateMessageMutation(
+		createMessageMutation := mutation.NewCreateMessage(
 			t.stateSyncer,
 			t.messageDao,
 			t.messageDaoV2,
@@ -132,7 +132,7 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 		ct:                 ct,
 	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		updateMessageMutation := mutation.NewUpdateMessageMutation(
+		updateMessageMutation := mutation.NewUpdateMessage(
 			t.logger,
 			t.stateSyncer,
 			t.messageDao,
@@ -169,7 +169,7 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		ct:                 ct,
 	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		deleteMessageMutation := mutation.NewDeleteMessageMutation(
+		deleteMessageMutation := mutation.NewDeleteMessage(
 			t.logger,
 			t.stateSyncer,
 			t.messageDao,

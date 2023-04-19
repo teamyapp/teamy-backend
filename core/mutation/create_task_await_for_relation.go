@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type CreateTaskAwaitForRelationMutation struct {
+type CreateTaskAwaitForRelation struct {
 	logger                    telemetry.Logger
 	stateSyncer               *realtime.StateSyncer
 	taskAwaitForRelationDao   dao.TaskAwaitForRelation
@@ -25,13 +25,13 @@ type CreateTaskAwaitForRelationMutation struct {
 	notifiersPrepared         bool
 }
 
-var _ realtime.Mutation = (*CreateTaskAwaitForRelationMutation)(nil)
+var _ realtime.Mutation = (*CreateTaskAwaitForRelation)(nil)
 
-func (c *CreateTaskAwaitForRelationMutation) GetID() uint64 {
+func (c *CreateTaskAwaitForRelation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateTaskAwaitForRelation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.taskAwaitForRelationDaoV2.CreateRelation(ct, tx, c.taskAwaitForRelation)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (c *CreateTaskAwaitForRelationMutation) ExecuteV2(ct context.Context, tx *t
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateTaskAwaitForRelation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifiersPrepared {
 		return nil
 	}
@@ -59,7 +59,7 @@ func (c *CreateTaskAwaitForRelationMutation) PrepareClientNotifiers(ct context.C
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.Error {
+func (c *CreateTaskAwaitForRelation) Execute(ct context.Context) *errs.Error {
 	err := c.taskAwaitForRelationDao.CreateRelation(ct, c.taskAwaitForRelation)
 	if err != nil {
 		c.logger.ErrorWithContext(ct, err)
@@ -69,11 +69,11 @@ func (c *CreateTaskAwaitForRelationMutation) Execute(ct context.Context) *errs.E
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelationMutation) Undo() *errs.Error {
+func (c *CreateTaskAwaitForRelation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateTaskAwaitForRelation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByID(ct, c.taskAwaitForRelation.AwaitForTaskID)
 	if err != nil {
 		c.logger.ErrorWithContext(ct, err)
@@ -83,11 +83,11 @@ func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiers(ct context.Conte
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
-func (c *CreateTaskAwaitForRelationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateTaskAwaitForRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
-func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessage {
+func (c *CreateTaskAwaitForRelation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
 		CollectionType: realtime.TaskAwaitForRelationCollectionType,
@@ -96,11 +96,11 @@ func (c *CreateTaskAwaitForRelationMutation) ToMessage() realtime.MutationMessag
 	}
 }
 
-func (c *CreateTaskAwaitForRelationMutation) CleanUp(ct context.Context) *errs.Error {
+func (c *CreateTaskAwaitForRelation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewCreateTaskAwaitForRelationMutation(
+func NewCreateTaskAwaitForRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
@@ -108,8 +108,8 @@ func NewCreateTaskAwaitForRelationMutation(
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	taskAwaitForRelation entity.TaskAwaitForRelation,
-) *CreateTaskAwaitForRelationMutation {
-	return &CreateTaskAwaitForRelationMutation{
+) *CreateTaskAwaitForRelation {
+	return &CreateTaskAwaitForRelation{
 		logger:                    logger,
 		stateSyncer:               stateSyncer,
 		taskAwaitForRelationDao:   taskAwaitForRelationDao,

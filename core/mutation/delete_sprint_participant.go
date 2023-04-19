@@ -11,7 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type DeleteSprintParticipantMutation struct {
+type DeleteSprintParticipant struct {
 	logger                 telemetry.Logger
 	stateSyncer            *realtime.StateSyncer
 	sprintParticipantDao   dao.SprintParticipant
@@ -25,13 +25,13 @@ type DeleteSprintParticipantMutation struct {
 	notifiersPrepared      bool
 }
 
-var _ realtime.Mutation = (*DeleteSprintParticipantMutation)(nil)
+var _ realtime.Mutation = (*DeleteSprintParticipant)(nil)
 
-func (d *DeleteSprintParticipantMutation) GetID() uint64 {
+func (d *DeleteSprintParticipant) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteSprintParticipantMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteSprintParticipant) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := d.sprintParticipantDaoV2.DeleteSprintParticipant(ct, tx, d.sprintID, d.userID)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (d *DeleteSprintParticipantMutation) ExecuteV2(ct context.Context, tx *tran
 	return nil
 }
 
-func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteSprintParticipant) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifiersPrepared {
 		return nil
 	}
@@ -58,7 +58,7 @@ func (d *DeleteSprintParticipantMutation) PrepareClientNotifiers(ct context.Cont
 	return nil
 }
 
-func (d *DeleteSprintParticipantMutation) Execute(ct context.Context) *errs.Error {
+func (d *DeleteSprintParticipant) Execute(ct context.Context) *errs.Error {
 	err := d.sprintParticipantDao.DeleteSprintParticipant(ct, d.sprintID, d.userID)
 	if err != nil {
 		d.logger.ErrorWithContext(ct, err)
@@ -68,11 +68,11 @@ func (d *DeleteSprintParticipantMutation) Execute(ct context.Context) *errs.Erro
 	return nil
 }
 
-func (d *DeleteSprintParticipantMutation) Undo() *errs.Error {
+func (d *DeleteSprintParticipant) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteSprintParticipantMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteSprintParticipant) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	sprint, err := d.sprintDao.FindSprintByID(ct, d.sprintID)
 	if err != nil {
 		d.logger.ErrorWithContext(ct, err)
@@ -82,11 +82,11 @@ func (d *DeleteSprintParticipantMutation) GetClientNotifiers(ct context.Context)
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
-func (d *DeleteSprintParticipantMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteSprintParticipant) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteSprintParticipantMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteSprintParticipant) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,
 		CollectionType: realtime.SprintParticipantCollectionType,
@@ -101,11 +101,11 @@ func (d *DeleteSprintParticipantMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (d *DeleteSprintParticipantMutation) CleanUp(ct context.Context) *errs.Error {
+func (d *DeleteSprintParticipant) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewDeleteSprintParticipantMutation(
+func NewDeleteSprintParticipant(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	sprintParticipantDao dao.SprintParticipant,
@@ -114,8 +114,8 @@ func NewDeleteSprintParticipantMutation(
 	sprintDaoV2 daov2.Sprint,
 	userID uint64,
 	sprintID uint64,
-) *DeleteSprintParticipantMutation {
-	return &DeleteSprintParticipantMutation{
+) *DeleteSprintParticipant {
+	return &DeleteSprintParticipant{
 		logger:                 logger,
 		stateSyncer:            stateSyncer,
 		sprintParticipantDao:   sprintParticipantDao,

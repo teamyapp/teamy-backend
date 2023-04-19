@@ -11,7 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type CreateTeamGroupMutation struct {
+type CreateTeamGroup struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
 	teamGroupDaoV2    daov2.TeamGroup
@@ -21,17 +21,17 @@ type CreateTeamGroupMutation struct {
 	notifiersPrepared bool
 }
 
-var _ realtime.Mutation = (*CreateTeamGroupMutation)(nil)
+var _ realtime.Mutation = (*CreateTeamGroup)(nil)
 
-func (c *CreateTeamGroupMutation) GetID() uint64 {
+func (c *CreateTeamGroup) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTeamGroupMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateTeamGroup) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	return c.teamGroupDaoV2.CreateGroup(ct, tx, c.teamGroup)
 }
 
-func (c *CreateTeamGroupMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateTeamGroup) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifiersPrepared {
 		return nil
 	}
@@ -46,23 +46,23 @@ func (c *CreateTeamGroupMutation) PrepareClientNotifiers(ct context.Context, tx 
 	return nil
 }
 
-func (c *CreateTeamGroupMutation) Execute(ct context.Context) *errs.Error {
+func (c *CreateTeamGroup) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (c *CreateTeamGroupMutation) Undo() *errs.Error {
+func (c *CreateTeamGroup) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTeamGroupMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateTeamGroup) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamGroup.TeamID)
 }
 
-func (c *CreateTeamGroupMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateTeamGroup) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
-func (c *CreateTeamGroupMutation) ToMessage() realtime.MutationMessage {
+func (c *CreateTeamGroup) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
 		CollectionType: realtime.TeamGroupCollectionType,
@@ -71,17 +71,17 @@ func (c *CreateTeamGroupMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (c *CreateTeamGroupMutation) CleanUp(ct context.Context) *errs.Error {
+func (c *CreateTeamGroup) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewCreateTeamGroupMutation(
+func NewCreateTeamGroup(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	teamGroupDaoV2 daov2.TeamGroup,
 	teamGroup entity.TeamGroup,
-) *CreateTeamGroupMutation {
-	return &CreateTeamGroupMutation{
+) *CreateTeamGroup {
+	return &CreateTeamGroup{
 		logger:            logger,
 		stateSyncer:       stateSyncer,
 		teamGroupDaoV2:    teamGroupDaoV2,

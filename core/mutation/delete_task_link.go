@@ -11,7 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type DeleteTaskLinkMutation struct {
+type DeleteTaskLink struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskLinkDaoV2    daov2.TaskLink
@@ -22,13 +22,13 @@ type DeleteTaskLinkMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*DeleteTaskMutation)(nil)
+var _ realtime.Mutation = (*DeleteTask)(nil)
 
-func (d *DeleteTaskLinkMutation) GetID() uint64 {
+func (d *DeleteTaskLink) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteTaskLink) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := d.taskLinkDaoV2.DeleteTaskLink(ct, tx, d.taskLink.ID)
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (d *DeleteTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.T
 	return nil
 }
 
-func (d *DeleteTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteTaskLink) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifierPrepared {
 		return nil
 	}
@@ -57,23 +57,23 @@ func (d *DeleteTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *
 	return nil
 }
 
-func (d *DeleteTaskLinkMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteTaskLink) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteTaskLinkMutation) Execute(ct context.Context) *errs.Error {
+func (d *DeleteTaskLink) Execute(ct context.Context) *errs.Error {
 	panic("deprecate me")
 }
 
-func (d *DeleteTaskLinkMutation) Undo() *errs.Error {
+func (d *DeleteTaskLink) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteTaskLink) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	panic("deprecate me")
 }
 
-func (d *DeleteTaskLinkMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteTaskLink) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,
 		CollectionType: realtime.TaskLinkCollectionType,
@@ -82,18 +82,18 @@ func (d *DeleteTaskLinkMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (c *DeleteTaskLinkMutation) CleanUp(ct context.Context) *errs.Error {
+func (c *DeleteTaskLink) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewDeleteTaskLinkMutation(
+func NewDeleteTaskLink(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskLinkDaoV2 daov2.TaskLink,
 	taskDaoV2 daov2.Task,
 	taskLink entity.TaskLink,
-) *DeleteTaskLinkMutation {
-	return &DeleteTaskLinkMutation{
+) *DeleteTaskLink {
+	return &DeleteTaskLink{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskLinkDaoV2:    taskLinkDaoV2,

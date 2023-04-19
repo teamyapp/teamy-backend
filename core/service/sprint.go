@@ -242,7 +242,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 				UnusedBandwidth: totalBandwidth,
 				CreatedAt:       time.Now(),
 			}
-			createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 				s.logger,
 				s.stateSyncer,
 				s.sprintParticipantDao,
@@ -313,7 +313,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		}
 
 		for _, participantUserID := range participantUserIDs {
-			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
 				s.logger,
 				s.stateSyncer,
 				s.sprintParticipantDao,
@@ -371,7 +371,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			TaskID:    taskID,
 			CreatedAt: time.Now().UTC(),
 		}
-		createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelationMutation(
+		createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
 			s.logger,
 			s.stateSyncer,
 			s.sprintTaskRelationDao,
@@ -387,7 +387,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 
 		if !task.IsPlanned {
 			task.IsPlanned = true
-			updateTaskMutation := mutation.NewUpdateTaskMutation(
+			updateTaskMutation := mutation.NewUpdateTask(
 				s.logger,
 				s.stateSyncer,
 				s.taskDao,
@@ -581,7 +581,7 @@ func (s Sprint) copyTaskToSprint(
 		DeliveredAt:      task.DeliveredAt,
 	}
 
-	createTaskMutation := mutation.NewCreateTaskMutation(
+	createTaskMutation := mutation.NewCreateTask(
 		s.logger,
 		s.stateSyncer,
 		s.taskDao,
@@ -599,7 +599,7 @@ func (s Sprint) copyTaskToSprint(
 		TaskID:    newTaskID,
 		CreatedAt: time.Now().UTC(),
 	}
-	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelationMutation(
+	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
 		s.logger,
 		s.stateSyncer,
 		s.sprintTaskRelationDao,
@@ -615,7 +615,7 @@ func (s Sprint) copyTaskToSprint(
 
 	if !task.IsPlanned {
 		task.IsPlanned = true
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
+		updateTaskMutation := mutation.NewUpdateTask(
 			s.logger,
 			s.stateSyncer,
 			s.taskDao,
@@ -712,7 +712,7 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 		return entity.Task{}, err
 	}
 
-	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
+	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelation(
 		s.logger,
 		s.stateSyncer,
 		s.sprintTaskRelationDao,
@@ -729,7 +729,7 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
+		updateTaskMutation := mutation.NewUpdateTask(
 			s.logger,
 			s.stateSyncer,
 			s.taskDao,
@@ -769,7 +769,7 @@ func (s Sprint) tryReduceBandwidth(
 		}
 
 		newSprintParticipant.UnusedBandwidth -= *task.Effort
-		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 			s.logger,
 			s.stateSyncer,
 			s.sprintParticipantDao,
@@ -806,7 +806,7 @@ func (s Sprint) tryIncreaseBandwidth(
 		}
 
 		oldSprintParticipant.UnusedBandwidth += *task.Effort
-		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 			s.logger,
 			s.stateSyncer,
 			s.sprintParticipantDao,

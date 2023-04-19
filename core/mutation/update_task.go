@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type UpdateTaskMutation struct {
+type UpdateTask struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskDao          dao.Task
@@ -23,13 +23,13 @@ type UpdateTaskMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*UpdateTaskMutation)(nil)
+var _ realtime.Mutation = (*UpdateTask)(nil)
 
-func (u *UpdateTaskMutation) GetID() uint64 {
+func (u *UpdateTask) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTaskMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (u *UpdateTask) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := u.taskDaoV2.UpdateTask(ct, tx, u.task)
 	if internalErr != nil {
 		return internalErr
@@ -38,7 +38,7 @@ func (u *UpdateTaskMutation) ExecuteV2(ct context.Context, tx *transaction.Trans
 	return nil
 }
 
-func (u *UpdateTaskMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (u *UpdateTask) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if u.notifierPrepared {
 		return nil
 	}
@@ -53,7 +53,7 @@ func (u *UpdateTaskMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	return nil
 }
 
-func (u *UpdateTaskMutation) Execute(ct context.Context) *errs.Error {
+func (u *UpdateTask) Execute(ct context.Context) *errs.Error {
 	err := u.taskDao.UpdateTask(ct, u.task)
 	if err != nil {
 		u.logger.ErrorWithContext(ct, err)
@@ -63,19 +63,19 @@ func (u *UpdateTaskMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (u *UpdateTaskMutation) Undo() *errs.Error {
+func (u *UpdateTask) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateTaskMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (u *UpdateTask) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.task.OwningTeamID)
 }
 
-func (u *UpdateTaskMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateTask) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 
-func (u *UpdateTaskMutation) ToMessage() realtime.MutationMessage {
+func (u *UpdateTask) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             u.id,
 		CollectionType: realtime.TaskCollectionType,
@@ -84,18 +84,18 @@ func (u *UpdateTaskMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (u *UpdateTaskMutation) CleanUp(ct context.Context) *errs.Error {
+func (u *UpdateTask) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewUpdateTaskMutation(
+func NewUpdateTask(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	task entity.Task,
-) *UpdateTaskMutation {
-	return &UpdateTaskMutation{
+) *UpdateTask {
+	return &UpdateTask{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskDao:          taskDao,

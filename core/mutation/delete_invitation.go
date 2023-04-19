@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type DeleteInvitationMutation struct {
+type DeleteInvitation struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
 	invitationDao     dao.Invitation
@@ -23,17 +23,17 @@ type DeleteInvitationMutation struct {
 	notifiersPrepared bool
 }
 
-var _ realtime.Mutation = (*DeleteInvitationMutation)(nil)
+var _ realtime.Mutation = (*DeleteInvitation)(nil)
 
-func (d *DeleteInvitationMutation) GetID() uint64 {
+func (d *DeleteInvitation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteInvitationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteInvitation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	return d.invitationDaoV2.DeleteInvitation(ct, tx, d.invitation.ID)
 }
 
-func (d *DeleteInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteInvitation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifiersPrepared {
 		return nil
 	}
@@ -48,7 +48,7 @@ func (d *DeleteInvitationMutation) PrepareClientNotifiers(ct context.Context, tx
 	return nil
 }
 
-func (d *DeleteInvitationMutation) Execute(ct context.Context) *errs.Error {
+func (d *DeleteInvitation) Execute(ct context.Context) *errs.Error {
 	err := d.invitationDao.DeleteInvitation(ct, d.invitation.ID)
 	if err != nil {
 		d.logger.ErrorWithContext(ct, err)
@@ -58,19 +58,19 @@ func (d *DeleteInvitationMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (d *DeleteInvitationMutation) Undo() *errs.Error {
+func (d *DeleteInvitation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteInvitationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteInvitation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.invitation.TeamID)
 }
 
-func (d *DeleteInvitationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteInvitation) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteInvitationMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteInvitation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,
 		CollectionType: realtime.InvitationCollectionType,
@@ -79,18 +79,18 @@ func (d *DeleteInvitationMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (d *DeleteInvitationMutation) CleanUp(ct context.Context) *errs.Error {
+func (d *DeleteInvitation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewDeleteInvitationMutation(
+func NewDeleteInvitation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
 	invitationDaoV2 daov2.Invitation,
 	invitation entity.Invitation,
-) *DeleteInvitationMutation {
-	return &DeleteInvitationMutation{
+) *DeleteInvitation {
+	return &DeleteInvitation{
 		logger:          logger,
 		stateSyncer:     stateSyncer,
 		invitationDao:   invitationDao,

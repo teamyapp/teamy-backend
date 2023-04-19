@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type DeleteMessageMutation struct {
+type DeleteMessage struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	message          entity.Message
@@ -25,17 +25,17 @@ type DeleteMessageMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*DeleteMessageMutation)(nil)
+var _ realtime.Mutation = (*DeleteMessage)(nil)
 
-func (d *DeleteMessageMutation) GetID() uint64 {
+func (d *DeleteMessage) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteMessageMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteMessage) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	return d.messageDaoV2.DeleteMessage(ct, tx, d.message.ID)
 }
 
-func (d *DeleteMessageMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteMessage) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifierPrepared {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (d *DeleteMessageMutation) PrepareClientNotifiers(ct context.Context, tx *t
 	return nil
 }
 
-func (d *DeleteMessageMutation) Execute(ct context.Context) *errs.Error {
+func (d *DeleteMessage) Execute(ct context.Context) *errs.Error {
 	err := d.messageDao.DeleteMessage(ct, d.message.ID)
 	if err != nil {
 		d.logger.ErrorWithContext(ct, err)
@@ -65,11 +65,11 @@ func (d *DeleteMessageMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (d *DeleteMessageMutation) Undo() *errs.Error {
+func (d *DeleteMessage) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteMessage) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := d.taskDao.FindTaskByCommentsThreadID(ct, d.message.ThreadID)
 	if err != nil {
 		d.logger.ErrorWithContext(ct, err)
@@ -79,11 +79,11 @@ func (d *DeleteMessageMutation) GetClientNotifiers(ct context.Context) ([]*realt
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
-func (d *DeleteMessageMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteMessage) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteMessageMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteMessage) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,
 		CollectionType: realtime.MessageCollectionType,
@@ -92,11 +92,11 @@ func (d *DeleteMessageMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (d *DeleteMessageMutation) CleanUp(ct context.Context) *errs.Error {
+func (d *DeleteMessage) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewDeleteMessageMutation(
+func NewDeleteMessage(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
@@ -104,8 +104,8 @@ func NewDeleteMessageMutation(
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	message entity.Message,
-) *DeleteMessageMutation {
-	return &DeleteMessageMutation{
+) *DeleteMessage {
+	return &DeleteMessage{
 		logger:       logger,
 		stateSyncer:  stateSyncer,
 		messageDao:   messageDao,

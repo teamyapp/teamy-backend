@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type DeleteTaskMutation struct {
+type DeleteTask struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskDao          dao.Task
@@ -23,13 +23,13 @@ type DeleteTaskMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*DeleteTaskMutation)(nil)
+var _ realtime.Mutation = (*DeleteTask)(nil)
 
-func (d *DeleteTaskMutation) GetID() uint64 {
+func (d *DeleteTask) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTaskMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteTask) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := d.taskDaoV2.DeleteTask(ct, tx, d.task.ID)
 	if internalErr != nil {
 		return internalErr
@@ -38,7 +38,7 @@ func (d *DeleteTaskMutation) ExecuteV2(ct context.Context, tx *transaction.Trans
 	return nil
 }
 
-func (d *DeleteTaskMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteTask) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifierPrepared {
 		return nil
 	}
@@ -53,7 +53,7 @@ func (d *DeleteTaskMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	return nil
 }
 
-func (d *DeleteTaskMutation) Execute(ct context.Context) *errs.Error {
+func (d *DeleteTask) Execute(ct context.Context) *errs.Error {
 	err := d.taskDao.DeleteTask(ct, d.task.ID)
 	if err != nil {
 		d.logger.ErrorWithContext(ct, err)
@@ -63,19 +63,19 @@ func (d *DeleteTaskMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (d *DeleteTaskMutation) Undo() *errs.Error {
+func (d *DeleteTask) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteTaskMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteTask) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 }
 
-func (d *DeleteTaskMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteTask) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteTaskMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteTask) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,
 		CollectionType: realtime.TaskCollectionType,
@@ -84,18 +84,18 @@ func (d *DeleteTaskMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (d *DeleteTaskMutation) CleanUp(ct context.Context) *errs.Error {
+func (d *DeleteTask) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewDeleteTaskMutation(
+func NewDeleteTask(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	task entity.Task,
-) *DeleteTaskMutation {
-	return &DeleteTaskMutation{
+) *DeleteTask {
+	return &DeleteTask{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskDao:          taskDao,

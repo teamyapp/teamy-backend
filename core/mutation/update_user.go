@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type UpdateUserMutation struct {
+type UpdateUser struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
 	userDao           dao.User
@@ -24,17 +24,17 @@ type UpdateUserMutation struct {
 	notifiersPrepared bool
 }
 
-var _ realtime.Mutation = (*UpdateUserMutation)(nil)
+var _ realtime.Mutation = (*UpdateUser)(nil)
 
-func (u *UpdateUserMutation) GetID() uint64 {
+func (u *UpdateUser) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateUserMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (u *UpdateUser) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	return u.userDaoV2.UpdateUser(ct, tx, u.user)
 }
 
-func (u *UpdateUserMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (u *UpdateUser) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if u.notifiersPrepared {
 		return nil
 	}
@@ -53,7 +53,7 @@ func (u *UpdateUserMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	return err
 }
 
-func (u *UpdateUserMutation) Execute(ct context.Context) *errs.Error {
+func (u *UpdateUser) Execute(ct context.Context) *errs.Error {
 	err := u.userDao.UpdateUser(ct, u.user)
 	if err != nil {
 		return err
@@ -62,19 +62,19 @@ func (u *UpdateUserMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (u *UpdateUserMutation) Undo() *errs.Error {
+func (u *UpdateUser) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateUserMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (u *UpdateUser) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return u.stateSyncer.GetAllClientNotifiersByUserID(ct, u.user.ID)
 }
 
-func (u *UpdateUserMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateUser) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 
-func (u *UpdateUserMutation) ToMessage() realtime.MutationMessage {
+func (u *UpdateUser) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             u.id,
 		CollectionType: realtime.UserCollectionType,
@@ -83,19 +83,19 @@ func (u *UpdateUserMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (u *UpdateUserMutation) CleanUp(ct context.Context) *errs.Error {
+func (u *UpdateUser) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewUpdateUserMutation(
+func NewUpdateUser(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	userDao dao.User,
 	userDaoV2 daov2.User,
 	teamMemberDaoV2 daov2.TeamMember,
 	user entity.User,
-) *UpdateUserMutation {
-	return &UpdateUserMutation{
+) *UpdateUser {
+	return &UpdateUser{
 		logger:            logger,
 		stateSyncer:       stateSyncer,
 		userDao:           userDao,

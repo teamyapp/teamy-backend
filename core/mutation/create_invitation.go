@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type CreateInvitationMutation struct {
+type CreateInvitation struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
 	invitationDao     dao.Invitation
@@ -23,17 +23,17 @@ type CreateInvitationMutation struct {
 	notifiersPrepared bool
 }
 
-var _ realtime.Mutation = (*CreateInvitationMutation)(nil)
+var _ realtime.Mutation = (*CreateInvitation)(nil)
 
-func (c *CreateInvitationMutation) GetID() uint64 {
+func (c *CreateInvitation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateInvitationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateInvitation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	return c.invitationDaoV2.CreateInvitation(ct, tx, c.invitation)
 }
 
-func (c *CreateInvitationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateInvitation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifiersPrepared {
 		return nil
 	}
@@ -48,7 +48,7 @@ func (c *CreateInvitationMutation) PrepareClientNotifiers(ct context.Context, tx
 	return nil
 }
 
-func (c *CreateInvitationMutation) Execute(ct context.Context) *errs.Error {
+func (c *CreateInvitation) Execute(ct context.Context) *errs.Error {
 	err := c.invitationDao.CreateInvitation(ct, c.invitation)
 	if err != nil {
 		c.logger.ErrorWithContext(ct, err)
@@ -58,19 +58,19 @@ func (c *CreateInvitationMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (c *CreateInvitationMutation) Undo() *errs.Error {
+func (c *CreateInvitation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateInvitationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateInvitation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.invitation.TeamID)
 }
 
-func (c *CreateInvitationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateInvitation) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
-func (c *CreateInvitationMutation) ToMessage() realtime.MutationMessage {
+func (c *CreateInvitation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
 		CollectionType: realtime.InvitationCollectionType,
@@ -79,18 +79,18 @@ func (c *CreateInvitationMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (c *CreateInvitationMutation) CleanUp(ct context.Context) *errs.Error {
+func (c *CreateInvitation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewCreateInvitationMutation(
+func NewCreateInvitation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	invitationDao dao.Invitation,
 	invitationDaoV2 daov2.Invitation,
 	invitation entity.Invitation,
-) *CreateInvitationMutation {
-	return &CreateInvitationMutation{
+) *CreateInvitation {
+	return &CreateInvitation{
 		logger:            logger,
 		stateSyncer:       stateSyncer,
 		invitationDao:     invitationDao,

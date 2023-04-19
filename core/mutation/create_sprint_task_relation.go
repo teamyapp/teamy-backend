@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type CreateSprintTaskRelationMutation struct {
+type CreateSprintTaskRelation struct {
 	logger                  telemetry.Logger
 	stateSyncer             *realtime.StateSyncer
 	sprintTaskRelationDao   dao.SprintTaskRelation
@@ -25,13 +25,13 @@ type CreateSprintTaskRelationMutation struct {
 	notifiersPrepared       bool
 }
 
-var _ realtime.Mutation = (*CreateSprintTaskRelationMutation)(nil)
+var _ realtime.Mutation = (*CreateSprintTaskRelation)(nil)
 
-func (c *CreateSprintTaskRelationMutation) GetID() uint64 {
+func (c *CreateSprintTaskRelation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateSprintTaskRelation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, c.sprintTaskRelation)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (c *CreateSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *tra
 	return nil
 }
 
-func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateSprintTaskRelation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifiersPrepared {
 		return nil
 	}
@@ -59,7 +59,7 @@ func (c *CreateSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 	return nil
 }
 
-func (c *CreateSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
+func (c *CreateSprintTaskRelation) Execute(ct context.Context) *errs.Error {
 	err := c.sprintTaskRelationDao.CreateSprintTaskRelation(ct, c.sprintTaskRelation)
 	if err != nil {
 		c.logger.ErrorWithContext(ct, err)
@@ -69,11 +69,11 @@ func (c *CreateSprintTaskRelationMutation) Execute(ct context.Context) *errs.Err
 	return nil
 }
 
-func (c *CreateSprintTaskRelationMutation) Undo() *errs.Error {
+func (c *CreateSprintTaskRelation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateSprintTaskRelation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
 	if err != nil {
 		c.logger.ErrorWithContext(ct, err)
@@ -83,11 +83,11 @@ func (c *CreateSprintTaskRelationMutation) GetClientNotifiers(ct context.Context
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
-func (c *CreateSprintTaskRelationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateSprintTaskRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
-func (c *CreateSprintTaskRelationMutation) ToMessage() realtime.MutationMessage {
+func (c *CreateSprintTaskRelation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
 		CollectionType: realtime.SprintTaskRelationCollectionType,
@@ -96,11 +96,11 @@ func (c *CreateSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 	}
 }
 
-func (c *CreateSprintTaskRelationMutation) CleanUp(ct context.Context) *errs.Error {
+func (c *CreateSprintTaskRelation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewCreateSprintTaskRelationMutation(
+func NewCreateSprintTaskRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
@@ -108,8 +108,8 @@ func NewCreateSprintTaskRelationMutation(
 	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
 	sprintTaskRelation entity.SprintTaskRelation,
-) *CreateSprintTaskRelationMutation {
-	return &CreateSprintTaskRelationMutation{
+) *CreateSprintTaskRelation {
+	return &CreateSprintTaskRelation{
 		stateSyncer:             stateSyncer,
 		sprintTaskRelationDao:   sprintTaskRelationDao,
 		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
