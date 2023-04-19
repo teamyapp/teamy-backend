@@ -233,7 +233,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		// All users are authorized to create team
-		createTeamMutation := mutation.NewCreateTeamMutation(
+		createTeamMutation := mutation.NewCreateTeam(
 			t.logger,
 			t.stateSyncer,
 			t.teamDao,
@@ -251,7 +251,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 			UserID:    userID,
 			CreatedAt: time.Now(),
 		}
-		createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+		createTeamMemberMutation := mutation.NewCreateTeamMember(
 			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
@@ -287,7 +287,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 				},
 			}
 			for _, teamGroup := range teamGroups {
-				teamGroupMutation := mutation.NewCreateTeamGroupMutation(
+				teamGroupMutation := mutation.NewCreateTeamGroup(
 					t.logger,
 					t.stateSyncer,
 					t.teamGroupDaoV2,
@@ -346,7 +346,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		team.OwnerUserID = input.OwnerUserID
 		updatedAt := time.Now().UTC()
 		team.UpdatedAt = &updatedAt
-		updateTeamMutation := mutation.NewUpdateTeamMutation(
+		updateTeamMutation := mutation.NewUpdateTeam(
 			t.logger,
 			t.stateSyncer,
 			t.teamDao,
@@ -402,7 +402,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 			return internalErr
 		}
 
-		deleteTeamMutation := mutation.NewDeleteTeamMutation(
+		deleteTeamMutation := mutation.NewDeleteTeam(
 			t.logger,
 			t.stateSyncer,
 			t.teamDao,
@@ -603,7 +603,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+		createTeamMemberMutation := mutation.NewCreateTeamMember(
 			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
@@ -637,7 +637,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 				UserID:    memberUserID,
 				CreatedAt: time.Now(),
 			}
-			createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
@@ -696,7 +696,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 			return internalErr
 		}
 
-		deleteTeamMemberMutation := mutation.NewDeleteTeamMemberMutation(
+		deleteTeamMemberMutation := mutation.NewDeleteTeamMember(
 			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
@@ -724,7 +724,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		})
 
 		for _, sprint := range currAndFutureSprints {
-			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
+			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
 				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
@@ -792,7 +792,7 @@ func (t Team) UpdateTeamMember(
 		teamMember.WeeklyBandwidth = input.WeeklyBandwidth
 		now := time.Now().UTC()
 		teamMember.UpdatedAt = &now
-		updateTeamMemberMutation := mutation.NewUpdateTeamMemberMutation(
+		updateTeamMemberMutation := mutation.NewUpdateTeamMember(
 			t.logger,
 			t.stateSyncer,
 			t.teamMemberDao,
@@ -831,7 +831,7 @@ func (t Team) UpdateTeamMember(
 
 				participant.TotalBandwidth += bandwidthDelta
 				participant.UnusedBandwidth += bandwidthDelta
-				updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+				updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 					t.logger,
 					t.stateSyncer,
 					t.sprintParticipantDao,

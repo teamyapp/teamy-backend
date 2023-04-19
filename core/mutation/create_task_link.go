@@ -11,7 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type CreateTaskLinkMutation struct {
+type CreateTaskLink struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	taskLinkDaoV2    daov2.TaskLink
@@ -22,13 +22,13 @@ type CreateTaskLinkMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*CreateTaskLinkMutation)(nil)
+var _ realtime.Mutation = (*CreateTaskLink)(nil)
 
-func (c *CreateTaskLinkMutation) GetID() uint64 {
+func (c *CreateTaskLink) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateTaskLink) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	err := c.taskLinkDaoV2.CreateTaskLink(ct, tx, c.taskLink)
 	if err != nil {
 		return err
@@ -37,15 +37,15 @@ func (c *CreateTaskLinkMutation) ExecuteV2(ct context.Context, tx *transaction.T
 	return nil
 }
 
-func (c *CreateTaskLinkMutation) Execute(ct context.Context) *errs.Error {
+func (c *CreateTaskLink) Execute(ct context.Context) *errs.Error {
 	panic("deprecate me")
 }
 
-func (c *CreateTaskLinkMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateTaskLink) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	panic("deprecate me")
 }
 
-func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateTaskLink) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifierPrepared {
 		return nil
 	}
@@ -65,15 +65,15 @@ func (c *CreateTaskLinkMutation) PrepareClientNotifiers(ct context.Context, tx *
 	return nil
 }
 
-func (c *CreateTaskLinkMutation) Undo() *errs.Error {
+func (c *CreateTaskLink) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTaskLinkMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateTaskLink) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
-func (c *CreateTaskLinkMutation) ToMessage() realtime.MutationMessage {
+func (c *CreateTaskLink) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
 		CollectionType: realtime.TaskLinkCollectionType,
@@ -82,18 +82,18 @@ func (c *CreateTaskLinkMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (c *CreateTaskLinkMutation) CleanUp(ct context.Context) *errs.Error {
+func (c *CreateTaskLink) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewCreateTaskLinkMutation(
+func NewCreateTaskLink(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	taskLinkDaoV2 daov2.TaskLink,
 	taskDaoV2 daov2.Task,
 	taskLink entity.TaskLink,
-) *CreateTaskLinkMutation {
-	return &CreateTaskLinkMutation{
+) *CreateTaskLink {
+	return &CreateTaskLink{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
 		taskLinkDaoV2:    taskLinkDaoV2,

@@ -103,7 +103,7 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 		user.LastName = input.LastName
 		updatedAt := time.Now().UTC()
 		user.UpdatedAt = &updatedAt
-		userMutation := mutation.NewUpdateUserMutation(
+		userMutation := mutation.NewUpdateUser(
 			u.logger,
 			u.stateSyncer,
 			u.userDao,

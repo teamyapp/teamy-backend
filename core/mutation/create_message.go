@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type CreateMessageMutation struct {
+type CreateMessage struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	messageDao       dao.Message
@@ -25,17 +25,17 @@ type CreateMessageMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*CreateMessageMutation)(nil)
+var _ realtime.Mutation = (*CreateMessage)(nil)
 
-func (c *CreateMessageMutation) GetID() uint64 {
+func (c *CreateMessage) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateMessageMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateMessage) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	return c.messageDaoV2.CreateMessage(ct, tx, c.message)
 }
 
-func (c *CreateMessageMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateMessage) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifierPrepared {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (c *CreateMessageMutation) PrepareClientNotifiers(ct context.Context, tx *t
 	return nil
 }
 
-func (c *CreateMessageMutation) Execute(ct context.Context) *errs.Error {
+func (c *CreateMessage) Execute(ct context.Context) *errs.Error {
 	err := c.messageDao.CreateMessage(ct, c.message)
 	if err != nil {
 		c.logger.ErrorWithContext(ct, err)
@@ -65,11 +65,11 @@ func (c *CreateMessageMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (c *CreateMessageMutation) Undo() *errs.Error {
+func (c *CreateMessage) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (c *CreateMessage) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	task, err := c.taskDao.FindTaskByCommentsThreadID(ct, c.message.ThreadID)
 	if err != nil {
 		c.logger.ErrorWithContext(ct, err)
@@ -79,11 +79,11 @@ func (c *CreateMessageMutation) GetClientNotifiers(ct context.Context) ([]*realt
 	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
-func (c *CreateMessageMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateMessage) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
-func (c *CreateMessageMutation) ToMessage() realtime.MutationMessage {
+func (c *CreateMessage) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
 		CollectionType: realtime.MessageCollectionType,
@@ -92,11 +92,11 @@ func (c *CreateMessageMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (c *CreateMessageMutation) CleanUp(ct context.Context) *errs.Error {
+func (c *CreateMessage) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewCreateMessageMutation(
+func NewCreateMessage(
 	stateSyncer *realtime.StateSyncer,
 	messageDao dao.Message,
 	messageDaoV2 daov2.Message,
@@ -104,8 +104,8 @@ func NewCreateMessageMutation(
 	taskDaoV2 daov2.Task,
 	logger telemetry.Logger,
 	message entity.Message,
-) *CreateMessageMutation {
-	return &CreateMessageMutation{
+) *CreateMessage {
+	return &CreateMessage{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
 		messageDao:       messageDao,

@@ -11,7 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type UpdateTaskActivityMutation struct {
+type UpdateTaskActivity struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	activityCache    cache.Activity
@@ -21,13 +21,13 @@ type UpdateTaskActivityMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*UpdateTaskActivityMutation)(nil)
+var _ realtime.Mutation = (*UpdateTaskActivity)(nil)
 
-func (u *UpdateTaskActivityMutation) GetID() uint64 {
+func (u *UpdateTaskActivity) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (u *UpdateTaskActivity) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (u *UpdateTaskActivityMutation) ExecuteV2(ct context.Context, tx *transacti
 	return nil
 }
 
-func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (u *UpdateTaskActivity) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if u.notifierPrepared {
 		return nil
 	}
@@ -51,7 +51,7 @@ func (u *UpdateTaskActivityMutation) PrepareClientNotifiers(ct context.Context, 
 	return err
 }
 
-func (u *UpdateTaskActivityMutation) Execute(ct context.Context) *errs.Error {
+func (u *UpdateTaskActivity) Execute(ct context.Context) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
 		u.logger.ErrorWithContext(ct, err)
@@ -61,19 +61,19 @@ func (u *UpdateTaskActivityMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (u *UpdateTaskActivityMutation) Undo() *errs.Error {
+func (u *UpdateTaskActivity) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateTaskActivityMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (u *UpdateTaskActivity) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 }
 
-func (u *UpdateTaskActivityMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateTaskActivity) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 
-func (u *UpdateTaskActivityMutation) ToMessage() realtime.MutationMessage {
+func (u *UpdateTaskActivity) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             u.id,
 		CollectionType: realtime.TaskActivityCollectionType,
@@ -82,17 +82,17 @@ func (u *UpdateTaskActivityMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (u *UpdateTaskActivityMutation) CleanUp(ct context.Context) *errs.Error {
+func (u *UpdateTaskActivity) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewUpdateTaskActivityMutation(
+func NewUpdateTaskActivity(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	activityCache cache.Activity,
 	taskActivity entity.TaskActivity,
-) *UpdateTaskActivityMutation {
-	return &UpdateTaskActivityMutation{
+) *UpdateTaskActivity {
+	return &UpdateTaskActivity{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
 		activityCache:    activityCache,

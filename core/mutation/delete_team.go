@@ -11,7 +11,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type DeleteTeamMutation struct {
+type DeleteTeam struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	teamDao          dao.Team
@@ -22,17 +22,17 @@ type DeleteTeamMutation struct {
 	notifierPrepared bool
 }
 
-var _ realtime.Mutation = (*DeleteTeamMutation)(nil)
+var _ realtime.Mutation = (*DeleteTeam)(nil)
 
-func (d *DeleteTeamMutation) GetID() uint64 {
+func (d *DeleteTeam) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTeamMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteTeam) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	return d.teamDaoV2.DeleteTeam(ct, tx, d.teamID)
 }
 
-func (d *DeleteTeamMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteTeam) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifierPrepared {
 		return nil
 	}
@@ -47,7 +47,7 @@ func (d *DeleteTeamMutation) PrepareClientNotifiers(ct context.Context, tx *tran
 	return nil
 }
 
-func (d *DeleteTeamMutation) Execute(ct context.Context) *errs.Error {
+func (d *DeleteTeam) Execute(ct context.Context) *errs.Error {
 	err := d.teamDao.DeleteTeam(ct, d.teamID)
 	if err != nil {
 		d.logger.ErrorWithContext(ct, err)
@@ -57,19 +57,19 @@ func (d *DeleteTeamMutation) Execute(ct context.Context) *errs.Error {
 	return nil
 }
 
-func (d *DeleteTeamMutation) Undo() *errs.Error {
+func (d *DeleteTeam) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteTeamMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteTeam) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
 }
 
-func (d *DeleteTeamMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteTeam) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteTeamMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteTeam) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,
 		CollectionType: realtime.TeamCollectionType,
@@ -78,18 +78,18 @@ func (d *DeleteTeamMutation) ToMessage() realtime.MutationMessage {
 	}
 }
 
-func (d *DeleteTeamMutation) CleanUp(ct context.Context) *errs.Error {
+func (d *DeleteTeam) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewDeleteTeamMutation(
+func NewDeleteTeam(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	teamDao dao.Team,
 	teamDaoV2 daov2.Team,
 	teamID uint64,
-) *DeleteTeamMutation {
-	return &DeleteTeamMutation{
+) *DeleteTeam {
+	return &DeleteTeam{
 		logger:      logger,
 		stateSyncer: stateSyncer,
 		teamDao:     teamDao,

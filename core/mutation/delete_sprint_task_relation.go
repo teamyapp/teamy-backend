@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type DeleteSprintTaskRelationMutation struct {
+type DeleteSprintTaskRelation struct {
 	logger                  telemetry.Logger
 	stateSyncer             *realtime.StateSyncer
 	sprintTaskRelationDao   dao.SprintTaskRelation
@@ -24,13 +24,13 @@ type DeleteSprintTaskRelationMutation struct {
 	notifierPrepared        bool
 }
 
-var _ realtime.Mutation = (*DeleteSprintTaskRelationMutation)(nil)
+var _ realtime.Mutation = (*DeleteSprintTaskRelation)(nil)
 
-func (d *DeleteSprintTaskRelationMutation) GetID() uint64 {
+func (d *DeleteSprintTaskRelation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteSprintTaskRelation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := d.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, d.sprintID, d.task.ID)
 	if internalErr != nil {
 		return internalErr
@@ -39,7 +39,7 @@ func (d *DeleteSprintTaskRelationMutation) ExecuteV2(ct context.Context, tx *tra
 	return nil
 }
 
-func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (d *DeleteSprintTaskRelation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if d.notifierPrepared {
 		return nil
 	}
@@ -54,7 +54,7 @@ func (d *DeleteSprintTaskRelationMutation) PrepareClientNotifiers(ct context.Con
 	return nil
 }
 
-func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Error {
+func (d *DeleteSprintTaskRelation) Execute(ct context.Context) *errs.Error {
 	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
 	if err != nil {
 		return err
@@ -63,19 +63,19 @@ func (d *DeleteSprintTaskRelationMutation) Execute(ct context.Context) *errs.Err
 	return nil
 }
 
-func (d *DeleteSprintTaskRelationMutation) Undo() *errs.Error {
+func (d *DeleteSprintTaskRelation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteSprintTaskRelationMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
+func (d *DeleteSprintTaskRelation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
 	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 }
 
-func (d *DeleteSprintTaskRelationMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteSprintTaskRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage {
+func (d *DeleteSprintTaskRelation) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             d.id,
 		CollectionType: realtime.SprintTaskRelationCollectionType,
@@ -90,19 +90,19 @@ func (d *DeleteSprintTaskRelationMutation) ToMessage() realtime.MutationMessage 
 	}
 }
 
-func (d *DeleteSprintTaskRelationMutation) CleanUp(ct context.Context) *errs.Error {
+func (d *DeleteSprintTaskRelation) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewDeleteSprintTaskRelationMutation(
+func NewDeleteSprintTaskRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 	sprintID uint64,
 	task entity.Task,
-) *DeleteSprintTaskRelationMutation {
-	return &DeleteSprintTaskRelationMutation{
+) *DeleteSprintTaskRelation {
+	return &DeleteSprintTaskRelation{
 		logger:                  logger,
 		stateSyncer:             stateSyncer,
 		sprintTaskRelationDao:   sprintTaskRelationDao,

@@ -221,7 +221,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 			DeliveredAt:      taskInput.DeliveredAt,
 		}
 
-		createTaskMutation := mutation.NewCreateTaskMutation(
+		createTaskMutation := mutation.NewCreateTask(
 			t.logger,
 			t.stateSyncer,
 			t.taskDao,
@@ -329,7 +329,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		task.DueAt = input.DueAt
 		updatedAt := time.Now().UTC()
 		task.UpdatedAt = &updatedAt
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
+		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
 			t.taskDao,
@@ -377,7 +377,7 @@ func (t Task) updateUnusedBandWidth(
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth -= *newEffort
-			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
@@ -412,7 +412,7 @@ func (t Task) tryIncreaseBandwidth(
 
 		for _, participant := range participants {
 			participant.UnusedBandwidth += *oldEffort
-			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
+			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 				t.logger,
 				t.stateSyncer,
 				t.sprintParticipantDao,
@@ -476,7 +476,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		}
 
 		for _, sprintID := range sprintIDs {
-			deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
+			deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelation(
 				t.logger,
 				t.stateSyncer,
 				t.sprintTaskRelationDao,
@@ -497,7 +497,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		}
 
 		for _, awaitForTaskID := range awaitForTaskIDs {
-			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelation(
 				t.logger,
 				t.stateSyncer,
 				t.taskAwaitForRelationDao,
@@ -524,7 +524,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		}
 
 		for _, awaitingTask := range awaitingTasks {
-			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelation(
 				t.logger,
 				t.stateSyncer,
 				t.taskAwaitForRelationDao,
@@ -544,7 +544,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			return internalErr
 		}
 
-		deleteTaskMutation := mutation.NewDeleteTaskMutation(
+		deleteTaskMutation := mutation.NewDeleteTask(
 			t.logger,
 			t.stateSyncer,
 			t.taskDao,
@@ -585,7 +585,7 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction
 
 	now := time.Now()
 	task.UpdatedAt = &now
-	updateTaskMutation := mutation.NewUpdateTaskMutation(
+	updateTaskMutation := mutation.NewUpdateTask(
 		t.logger,
 		t.stateSyncer,
 		t.taskDao,
@@ -627,7 +627,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 
 		now := time.Now()
 		task.UpdatedAt = &now
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
+		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
 			t.taskDao,
@@ -692,7 +692,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			inProgressTask := inProgressTasks[0]
 			inProgressTask.Status = entity.TaskStatusPaused
 			inProgressTask.UpdatedAt = &now
-			updateTaskMutation := mutation.NewUpdateTaskMutation(
+			updateTaskMutation := mutation.NewUpdateTask(
 				t.logger,
 				t.stateSyncer,
 				t.taskDao,
@@ -708,7 +708,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 
 		task.Status = entity.TaskStatusInProgress
 		task.UpdatedAt = &now
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
+		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
 			t.taskDao,
@@ -746,7 +746,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		now := time.Now()
 		task.UpdatedAt = &now
 		task.DeliveredAt = &now
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
+		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
 			t.taskDao,
@@ -829,7 +829,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 			AwaitForTaskID: awaitForTask.ID,
 			CreatedAt:      now,
 		}
-		createTaskAwaitForRelationMutation := mutation.NewCreateTaskAwaitForRelationMutation(
+		createTaskAwaitForRelationMutation := mutation.NewCreateTaskAwaitForRelation(
 			t.logger,
 			t.stateSyncer,
 			t.taskAwaitForRelationDao,
@@ -846,7 +846,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 
 		task.Status = entity.TaskStatusAwaiting
 		task.UpdatedAt = &now
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
+		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
 			t.taskDao,
@@ -890,7 +890,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("task must be awaitable: taskID=%v", taskID))
 		}
 
-		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelationMutation(
+		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelation(
 			t.logger,
 			t.stateSyncer,
 			t.taskAwaitForRelationDao,
@@ -951,7 +951,7 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 				},
 			}}
 
-		updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
+		updateTaskActivityMutation := mutation.NewUpdateTaskActivity(
 			t.logger,
 			t.stateSyncer,
 			t.activityCache,
@@ -990,7 +990,7 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 				Client:     nil,
 			}}
 
-		updateTaskActivityMutation := mutation.NewUpdateTaskActivityMutation(
+		updateTaskActivityMutation := mutation.NewUpdateTaskActivity(
 			t.logger,
 			t.stateSyncer,
 			t.activityCache,

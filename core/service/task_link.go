@@ -83,7 +83,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	}
 
 	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		createTaskLinkMutation := mutation.NewCreateTaskLinkMutation(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
+		createTaskLinkMutation := mutation.NewCreateTaskLink(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
 		internalErr := createTaskLinkMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
 			return internalErr
@@ -127,7 +127,7 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 			return err
 		}
 
-		deleteTaskLinkMutation := mutation.NewDeleteTaskLinkMutation(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
+		deleteTaskLinkMutation := mutation.NewDeleteTaskLink(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
 		internalErr := deleteTaskLinkMutation.ExecuteV2(ct, tx)
 		if internalErr != nil {
 			return internalErr

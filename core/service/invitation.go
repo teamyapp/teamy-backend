@@ -127,7 +127,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		createInvitationMutation := mutation.NewCreateInvitationMutation(
+		createInvitationMutation := mutation.NewCreateInvitation(
 			i.logger,
 			i.stateSyncer,
 			i.invitationDao,
@@ -182,7 +182,7 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 		ct:                 ct,
 	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
 			i.invitationDao,
@@ -218,7 +218,7 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 		ct:                 ct,
 	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		deleteInvitationMutation := mutation.NewDeleteInvitationMutation(
+		deleteInvitationMutation := mutation.NewDeleteInvitation(
 			i.logger,
 			i.stateSyncer,
 			i.invitationDao,
@@ -291,7 +291,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		ct:                 ct,
 	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
 			i.invitationDao,
@@ -315,7 +315,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				UserID:    receiverUserID,
 				CreatedAt: now,
 			}
-			createTeamMemberMutation := mutation.NewCreateTeamMemberMutation(
+			createTeamMemberMutation := mutation.NewCreateTeamMember(
 				i.logger,
 				i.stateSyncer,
 				i.teamMemberDao,
@@ -350,7 +350,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 					UserID:    receiverUserID,
 					CreatedAt: now,
 				}
-				createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
+				createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 					i.logger,
 					i.stateSyncer,
 					i.sprintParticipantDao,
@@ -412,7 +412,7 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 		ct:                 ct,
 	}
 	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		updateInvitationMutation := mutation.NewUpdateInvitationMutation(
+		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
 			i.invitationDao,
