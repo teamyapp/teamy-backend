@@ -296,14 +296,6 @@ func TestSprintService_CreateSprint(t *testing.T) {
 
 			defer tx.Rollback()
 
-			// user := entity.User{
-			// 	ID: testCase.requesterUserID,
-			// }
-
-			// err = sprintTestRef.userDaoV2.CreateUser(ct, tx, user)
-			// if !assert.Nil(t, err) {
-			// 	return
-			// }
 
 			team := entity.Team{
 				ID:            teamID,
