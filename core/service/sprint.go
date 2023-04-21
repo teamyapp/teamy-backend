@@ -219,7 +219,15 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 			CreatedAt:    time.Now().UTC(),
 			OwningTeamID: teamID,
 		}
-		err := s.sprintDaoV2.CreateSprint(ct, tx, sprint)
+
+		createSprintMutation := mutation.NewCreateSprintMutation(
+			s.logger,
+			s.stateSyncer,
+			s.sprintDaoV2,
+			sprint)
+
+		rtTx.AppendMutation(createSprintMutation)
+		err := createSprintMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			return err
 		}
