@@ -105,7 +105,6 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
 	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
 	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
-	// teamyBackendDB.CreateTable(daotestv2.UserTableName)
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
 	taskDao := daotest.NewTask(teamyBackendDB)
@@ -295,7 +294,6 @@ func TestSprintService_CreateSprint(t *testing.T) {
 			}
 
 			defer tx.Rollback()
-
 
 			team := entity.Team{
 				ID:            teamID,

@@ -29,11 +29,7 @@ func (c *CreateSprintMutation) GetID() uint64 {
 
 func (c *CreateSprintMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	internalErr := c.sprintDaoV2.CreateSprint(ct, tx, c.sprint)
-	if internalErr != nil {
-		return internalErr
-	}
-
-	return nil
+	return internalErr
 }
 
 func (c *CreateSprintMutation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
