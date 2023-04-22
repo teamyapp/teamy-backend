@@ -182,7 +182,6 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 		team.ActiveSprintID = &sprintID
 		updatedAt := time.Now().UTC()
 		team.UpdatedAt = &updatedAt
-
 		updateTeamMutation := mutation.NewUpdateTeam(
 			s.logger,
 			s.stateSyncer,
