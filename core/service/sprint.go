@@ -191,7 +191,6 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 			s.teamDaoV2,
 			team,
 		)
-
 		rtTx.AppendMutation(updateTeamMutation)
 		return updateTeamMutation.ExecuteV2(ct, tx)
 	})
