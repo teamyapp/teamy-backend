@@ -131,6 +131,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 		taskDaoV2,
 		sprintDao,
 		sprintDaoV2,
+		teamDaoV2,
 		sprintTaskRelationDao,
 		sprintTaskRelationDaoV2,
 		sprintParticipantDao,
@@ -346,7 +347,7 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 			},
 			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
-				ct = ctx.NewContextWithUserID(ct, requesterUserID)
+				ct = ctx.NewContextWithUserID(ct, 1)
 				group, err := sprintTestRef.
 					cloudTestKit.
 					AuthorizationService.
@@ -467,7 +468,7 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
-			now := time.Now()
+			now := time.Now().UTC()
 			tx, err := sprintTestRef.transactionFactory.BeginTx(ct, nil)
 			if !assert.Nil(t, err) {
 				return
@@ -554,7 +555,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 			},
 			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
-				ct = ctx.NewContextWithUserID(ct, requesterUserID)
+				ct = ctx.NewContextWithUserID(ct, 1)
 				group, err := sprintTestRef.
 					cloudTestKit.
 					AuthorizationService.
@@ -675,7 +676,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
-			now := time.Now()
+			now := time.Now().UTC()
 			tx, err := sprintTestRef.transactionFactory.BeginTx(ct, nil)
 			if !assert.Nil(t, err) {
 				return
