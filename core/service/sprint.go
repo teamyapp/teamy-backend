@@ -171,7 +171,6 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 		}
 
 		sprint, err := s.sprintDaoV2.FindSprintByIDWithTx(ct, tx, sprintID)
-
 		if err != nil {
 			return err
 		}
