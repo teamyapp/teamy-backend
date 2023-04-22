@@ -6,6 +6,7 @@ var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
 	DeleteSprintInTeam,
 	DeleteTaskInTeam,
 	ReadInTeam,
+	UpdateInTeam,
 	ReadSprintInTeam,
 	ReadTaskInTeam,
 	UpdateTaskInTeam,

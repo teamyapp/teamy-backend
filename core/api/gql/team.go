@@ -50,6 +50,21 @@ func (t Team) Owner(ct context.Context) (User, error) {
 	return newUser(t.deps, user), nil
 }
 
+func (t Team) ActiveSprint(ct context.Context) (*Sprint, error) {
+	sprint, err := t.deps.sprintService.GetActiveSprint(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	if sprint == nil {
+		return nil, nil
+	}
+
+	gqlSprint := newSprint(t.deps, *sprint)
+	return &gqlSprint, nil
+}
+
 func (t Team) Members(ct context.Context) ([]TeamMember, error) {
 	teamMembers, err := t.deps.teamService.FindTeamMembers(ct, t.team.ID)
 	if err != nil {

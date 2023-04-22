@@ -95,6 +95,7 @@ func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction
 		icon_url,
 		creator_id,
 		owner_id,
+		active_sprint_id,
 		created_at,
 		updated_at
 	FROM team
@@ -108,6 +109,7 @@ func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction
 			&team.IconURL,
 			&team.CreatorUserID,
 			&team.OwnerUserID,
+			&team.ActiveSprintID,
 			&team.CreatedAt,
 			&team.UpdatedAt,
 		)
@@ -201,11 +203,13 @@ func (t Team) UpdateTeam(ct context.Context, tx *transaction.Transaction, team e
 			name = $1,
 			icon_url = $2,
 			owner_id = $3,
-			updated_at = $4
-		WHERE id = $5;`,
+			active_sprint_id = $4,
+			updated_at = $5
+		WHERE id = $6;`,
 		team.Name,
 		team.IconURL,
 		team.OwnerUserID,
+		team.ActiveSprintID,
 		team.UpdatedAt,
 		team.ID,
 	)

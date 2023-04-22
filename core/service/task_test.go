@@ -121,7 +121,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 					taskTestRef.cloudTestKit.AuthorizationService,
 					group.ID,
 					teamID,
-					authorization.TeamAdminResourceTypeOperations,
+					authorization.TeamMemberResourceTypeOperations,
 					requesterUserID)
 			},
 			requesterUserID: 3,
@@ -160,9 +160,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			taskTestRef, ok := prepareTaskTestRef(t, feature.Toggles{
-				EnableAuthorization: true,
-			})
+			taskTestRef, ok := prepareTaskTestRef(t, testCase.toggles)
 			if !ok {
 				return
 			}
