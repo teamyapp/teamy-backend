@@ -63,7 +63,7 @@ type Mutation {
 
 	# Sprint
 	createSprint(teamId: ID!, sprint: CreateSprintInput!): Sprint!
-	deleteSprint(sprintId: ID!): Sprint!
+	deleteSprint(sprintId: ID!, teamId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
 	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
 	moveTasksToSprint(

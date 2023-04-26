@@ -100,7 +100,7 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
+	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
 	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
 	messageDaoV2 := daotestv2.NewMessage(teamyBackendDB, transactionFactory)
 

@@ -354,7 +354,24 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 	return sprint, nil
 }
 
-func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64, teamID uint64) (entity.Sprint, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewDeleteSprintInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		if err != nil {
+			return entity.Sprint{}, err
+		}
+
+		if !hasPermission {
+			return entity.Sprint{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var sprint entity.Sprint
 	txCtx := TransactionsContext{
 		logger:             s.logger,
@@ -403,7 +420,15 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 			deleteSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
 		}
 
-		return s.sprintDaoV2.DeleteSprint(ct, tx, sprintID)
+		deleteSprintMutation := mutation.NewDeleteSprint(
+			s.logger,
+			s.stateSyncer,
+			s.sprintDaoV2,
+			sprint,
+		)
+
+		rtTx.AppendMutation(deleteSprintMutation)
+		return deleteSprintMutation.ExecuteV2(ct, tx)
 	})
 
 	if err != nil {
@@ -873,6 +898,9 @@ func (s Sprint) tryIncreaseBandwidth(
 			s.sprintDaoV2,
 			oldSprintParticipant)
 		rtTx.AppendMutation(updateSprintParticipantMutation)
+
+		// we need to prepare notifier in advance since sprint will be actually deleted later
+		updateSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
 		err = updateSprintParticipantMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			return err
