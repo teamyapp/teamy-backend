@@ -354,14 +354,14 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 	return sprint, nil
 }
 
-func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64, teamID uint64) (entity.Sprint, *errs.Error) {
+func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
 	if s.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewDeleteSprintInTeamQuery(userID, teamID)
+		query := authorization.NewDeleteInSprintQuery(userID, sprintID)
 		hasPermission, err := s.authorizer.hasPermission(ct, query)
 		if err != nil {
 			return entity.Sprint{}, err
