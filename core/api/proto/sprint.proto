@@ -6,11 +6,11 @@ import "google/protobuf/empty.proto";
 option go_package = "github.com/teamy-backend/core/api/proto";
 
 service Sprint {
-	rpc GetCurrentSprint(GetCurrentSprintRequest) returns (SprintMsg);
+	rpc GetActiveSprint(GetActiveSprintRequest) returns (SprintMsg);
 	rpc AddTaskToSprint(AddTaskToSprintRequest) returns (google.protobuf.Empty);
 }
 
-message GetCurrentSprintRequest {
+message GetActiveSprintRequest {
 	uint64 teamId = 1;
 }
 

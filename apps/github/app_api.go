@@ -1375,8 +1375,8 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 }
 
 func (a AppAPI) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, taskID uint64) *errs.Error {
-	getCurrentSprintReq := &proto.GetCurrentSprintRequest{TeamId: teamID}
-	getCurrentSprintRes, rpcErr := a.teamyClientRegistry.SprintClient().GetCurrentSprint(ct, getCurrentSprintReq)
+	getCurrentSprintReq := &proto.GetActiveSprintRequest{TeamId: teamID}
+	getCurrentSprintRes, rpcErr := a.teamyClientRegistry.SprintClient().GetActiveSprint(ct, getCurrentSprintReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
 		if internalErr.Code == errs.NotFound {
