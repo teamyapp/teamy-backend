@@ -42,7 +42,6 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 
 func (m Mutation) DeleteSprint(ct context.Context, args struct {
 	SprintID graphql.ID
-	TeamID   graphql.ID
 }) (Sprint, error) {
 	sprintID, argErr := fromGraphQLID(args.SprintID)
 	if argErr != nil {
@@ -54,17 +53,7 @@ func (m Mutation) DeleteSprint(ct context.Context, args struct {
 		return Sprint{}, errs.ToResolverErr(internalErr)
 	}
 
-	TeamID, argErr := fromGraphQLID(args.TeamID)
-	if argErr != nil {
-		internalErr := errs.NewError(
-			errs.InvalidArgument,
-			argErr.Error(),
-		)
-		m.deps.logger.ErrorWithContext(ct, internalErr)
-		return Sprint{}, errs.ToResolverErr(internalErr)
-	}
-
-	sprint, err := m.deps.sprintService.DeleteSprint(ct, sprintID, TeamID)
+	sprint, err := m.deps.sprintService.DeleteSprint(ct, sprintID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Sprint{}, errs.ToResolverErr(err)
