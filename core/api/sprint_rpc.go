@@ -30,7 +30,7 @@ func (s SprintRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	return nil
 }
 
-func (s SprintRPC) GetCurrentSprint(ct context.Context, req *proto.GetCurrentSprintRequest) (*proto.SprintMsg, error) {
+func (s SprintRPC) GetActiveSprint(ct context.Context, req *proto.GetActiveSprintRequest) (*proto.SprintMsg, error) {
 	sprint, err := s.sprintService.GetActiveSprint(ct, req.TeamId)
 	if err != nil {
 		s.logger.ErrorWithContext(ct, err)
