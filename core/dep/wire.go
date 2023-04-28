@@ -61,6 +61,10 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(daov2.TeamFileUploadSession), new(sqldbV2.TeamFileUploadSession)),
 	wire.Bind(new(daov2.Invitation), new(sqldbV2.Invitation)),
 	wire.Bind(new(daov2.Message), new(sqldbV2.Message)),
+	wire.Bind(new(daov2.App), new(sqldbV2.App)),
+	wire.Bind(new(daov2.AppVersion), new(sqldbV2.AppVersion)),
+	wire.Bind(new(daov2.AppVersionVisibleTeam), new(sqldbV2.AppVersionVisibleTeam)),
+	wire.Bind(new(daov2.AppTeamInstallation), new(sqldbV2.AppTeamInstallation)),
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewTask,
@@ -93,6 +97,10 @@ var daoSet = wire.NewSet(
 	sqldbV2.NewTeamFileUploadSession,
 	sqldbV2.NewInvitation,
 	sqldbV2.NewMessage,
+	sqldbV2.NewApp,
+	sqldbV2.NewAppVersion,
+	sqldbV2.NewAppVersionVisibleTeam,
+	sqldbV2.NewAppTeamInstallation,
 )
 
 var serviceSet = wire.NewSet(
