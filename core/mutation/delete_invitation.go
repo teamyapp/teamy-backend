@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -15,7 +14,6 @@ import (
 type DeleteInvitation struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
-	invitationDao     dao.Invitation
 	invitationDaoV2   daov2.Invitation
 	id                uint64
 	invitation        entity.Invitation
@@ -48,22 +46,8 @@ func (d *DeleteInvitation) PrepareClientNotifiers(ct context.Context, tx *transa
 	return nil
 }
 
-func (d *DeleteInvitation) Execute(ct context.Context) *errs.Error {
-	err := d.invitationDao.DeleteInvitation(ct, d.invitation.ID)
-	if err != nil {
-		d.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (d *DeleteInvitation) Undo() *errs.Error {
 	return nil
-}
-
-func (d *DeleteInvitation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.invitation.TeamID)
 }
 
 func (d *DeleteInvitation) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -86,14 +70,12 @@ func (d *DeleteInvitation) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteInvitation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	invitationDao dao.Invitation,
 	invitationDaoV2 daov2.Invitation,
 	invitation entity.Invitation,
 ) *DeleteInvitation {
 	return &DeleteInvitation{
 		logger:          logger,
 		stateSyncer:     stateSyncer,
-		invitationDao:   invitationDao,
 		invitationDaoV2: invitationDaoV2,
 		id:              stateSyncer.NextMutationID(),
 		invitation:      invitation,

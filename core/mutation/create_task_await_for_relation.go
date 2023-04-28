@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -15,9 +14,7 @@ import (
 type CreateTaskAwaitForRelation struct {
 	logger                    telemetry.Logger
 	stateSyncer               *realtime.StateSyncer
-	taskAwaitForRelationDao   dao.TaskAwaitForRelation
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
-	taskDao                   dao.Task
 	taskDaoV2                 daov2.Task
 	id                        uint64
 	taskAwaitForRelation      entity.TaskAwaitForRelation
@@ -59,28 +56,8 @@ func (c *CreateTaskAwaitForRelation) PrepareClientNotifiers(ct context.Context, 
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelation) Execute(ct context.Context) *errs.Error {
-	err := c.taskAwaitForRelationDao.CreateRelation(ct, c.taskAwaitForRelation)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (c *CreateTaskAwaitForRelation) Undo() *errs.Error {
 	return nil
-}
-
-func (c *CreateTaskAwaitForRelation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	task, err := c.taskDao.FindTaskByID(ct, c.taskAwaitForRelation.AwaitForTaskID)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return []*realtime.ClientNotifier{}, err
-	}
-
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
 func (c *CreateTaskAwaitForRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -103,18 +80,14 @@ func (c *CreateTaskAwaitForRelation) CleanUp(ct context.Context) *errs.Error {
 func NewCreateTaskAwaitForRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
-	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	taskAwaitForRelation entity.TaskAwaitForRelation,
 ) *CreateTaskAwaitForRelation {
 	return &CreateTaskAwaitForRelation{
 		logger:                    logger,
 		stateSyncer:               stateSyncer,
-		taskAwaitForRelationDao:   taskAwaitForRelationDao,
 		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,
-		taskDao:                   taskDao,
 		taskDaoV2:                 taskDaoV2,
 		id:                        stateSyncer.NextMutationID(),
 		taskAwaitForRelation:      taskAwaitForRelation,

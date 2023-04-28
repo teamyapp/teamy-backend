@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -15,9 +14,7 @@ import (
 type CreateSprintTaskRelation struct {
 	logger                  telemetry.Logger
 	stateSyncer             *realtime.StateSyncer
-	sprintTaskRelationDao   dao.SprintTaskRelation
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
-	sprintDao               dao.Sprint
 	sprintDaoV2             daov2.Sprint
 	id                      uint64
 	sprintTaskRelation      entity.SprintTaskRelation
@@ -45,7 +42,7 @@ func (c *CreateSprintTaskRelation) PrepareClientNotifiers(ct context.Context, tx
 		return nil
 	}
 
-	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
+	sprint, err := c.sprintDaoV2.FindSprintByIDWithTx(ct, tx, c.sprintTaskRelation.SprintID)
 	if err != nil {
 		return err
 	}
@@ -59,28 +56,8 @@ func (c *CreateSprintTaskRelation) PrepareClientNotifiers(ct context.Context, tx
 	return nil
 }
 
-func (c *CreateSprintTaskRelation) Execute(ct context.Context) *errs.Error {
-	err := c.sprintTaskRelationDao.CreateSprintTaskRelation(ct, c.sprintTaskRelation)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (c *CreateSprintTaskRelation) Undo() *errs.Error {
 	return nil
-}
-
-func (c *CreateSprintTaskRelation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintTaskRelation.SprintID)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return []*realtime.ClientNotifier{}, err
-	}
-
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
 func (c *CreateSprintTaskRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -103,17 +80,13 @@ func (c *CreateSprintTaskRelation) CleanUp(ct context.Context) *errs.Error {
 func NewCreateSprintTaskRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
-	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
 	sprintTaskRelation entity.SprintTaskRelation,
 ) *CreateSprintTaskRelation {
 	return &CreateSprintTaskRelation{
 		stateSyncer:             stateSyncer,
-		sprintTaskRelationDao:   sprintTaskRelationDao,
 		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
-		sprintDao:               sprintDao,
 		sprintDaoV2:             sprintDaoV2,
 		logger:                  logger,
 		id:                      stateSyncer.NextMutationID(),

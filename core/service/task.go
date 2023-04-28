@@ -14,7 +14,6 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -65,16 +64,11 @@ type Task struct {
 	stateSyncer               *realtime.StateSyncer
 	transactionFactory        transaction.Factory
 	activityCache             cache.Activity
-	taskDao                   dao.Task
 	taskDaoV2                 daov2.Task
-	sprintDao                 dao.Sprint
 	sprintDaoV2               daov2.Sprint
 	threadDaoV2               daov2.Thread
-	taskAwaitForRelationDao   dao.TaskAwaitForRelation
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
-	sprintParticipantDao      dao.SprintParticipant
 	sprintParticipantDaoV2    daov2.SprintParticipant
-	sprintTaskRelationDao     dao.SprintTaskRelation
 	sprintTaskRelationDaoV2   daov2.SprintTaskRelation
 }
 
@@ -224,7 +218,6 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		createTaskMutation := mutation.NewCreateTask(
 			t.logger,
 			t.stateSyncer,
-			t.taskDao,
 			t.taskDaoV2,
 			task,
 		)
@@ -332,7 +325,6 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
-			t.taskDao,
 			t.taskDaoV2,
 			task,
 		)
@@ -380,9 +372,7 @@ func (t Task) updateUnusedBandWidth(
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 				t.logger,
 				t.stateSyncer,
-				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
-				t.sprintDao,
 				t.sprintDaoV2,
 				participant,
 			)
@@ -415,9 +405,7 @@ func (t Task) tryIncreaseBandwidth(
 			updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 				t.logger,
 				t.stateSyncer,
-				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
-				t.sprintDao,
 				t.sprintDaoV2,
 				participant,
 			)
@@ -479,7 +467,6 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelation(
 				t.logger,
 				t.stateSyncer,
-				t.sprintTaskRelationDao,
 				t.sprintTaskRelationDaoV2,
 				sprintID,
 				task,
@@ -500,7 +487,6 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelation(
 				t.logger,
 				t.stateSyncer,
-				t.taskAwaitForRelationDao,
 				t.taskAwaitForRelationDaoV2,
 				task,
 				awaitForTaskID,
@@ -527,7 +513,6 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelation(
 				t.logger,
 				t.stateSyncer,
-				t.taskAwaitForRelationDao,
 				t.taskAwaitForRelationDaoV2,
 				awaitingTask,
 				taskID,
@@ -547,7 +532,6 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		deleteTaskMutation := mutation.NewDeleteTask(
 			t.logger,
 			t.stateSyncer,
-			t.taskDao,
 			t.taskDaoV2,
 			task,
 		)
@@ -588,7 +572,6 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction
 	updateTaskMutation := mutation.NewUpdateTask(
 		t.logger,
 		t.stateSyncer,
-		t.taskDao,
 		t.taskDaoV2,
 		task,
 	)
@@ -630,7 +613,6 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
-			t.taskDao,
 			t.taskDaoV2,
 			task,
 		)
@@ -695,7 +677,6 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			updateTaskMutation := mutation.NewUpdateTask(
 				t.logger,
 				t.stateSyncer,
-				t.taskDao,
 				t.taskDaoV2,
 				inProgressTask,
 			)
@@ -711,7 +692,6 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
-			t.taskDao,
 			t.taskDaoV2,
 			task,
 		)
@@ -749,7 +729,6 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
-			t.taskDao,
 			t.taskDaoV2,
 			task,
 		)
@@ -832,9 +811,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		createTaskAwaitForRelationMutation := mutation.NewCreateTaskAwaitForRelation(
 			t.logger,
 			t.stateSyncer,
-			t.taskAwaitForRelationDao,
 			t.taskAwaitForRelationDaoV2,
-			t.taskDao,
 			t.taskDaoV2,
 			taskAwaitForRelation,
 		)
@@ -849,7 +826,6 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
 			t.stateSyncer,
-			t.taskDao,
 			t.taskDaoV2,
 			task,
 		)
@@ -893,7 +869,6 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelation(
 			t.logger,
 			t.stateSyncer,
-			t.taskAwaitForRelationDao,
 			t.taskAwaitForRelationDaoV2,
 			task,
 			awaitForTask.ID,
@@ -1016,16 +991,11 @@ func NewTask(
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	activityCache cache.Activity,
-	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	threadDaoV2 daov2.Thread,
-	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
-	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
-	sprintParticipantDao dao.SprintParticipant,
 	sprintParticipantDaoV2 daov2.SprintParticipant,
-	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 ) Task {
 	return Task{
@@ -1036,16 +1006,11 @@ func NewTask(
 		stateSyncer:               stateSyncer,
 		transactionFactory:        transactionFactory,
 		activityCache:             activityCache,
-		taskDao:                   taskDao,
 		taskDaoV2:                 taskDaoV2,
 		threadDaoV2:               threadDaoV2,
-		sprintDao:                 sprintDao,
 		sprintDaoV2:               sprintDaoV2,
-		taskAwaitForRelationDao:   taskAwaitForRelationDao,
 		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,
-		sprintParticipantDao:      sprintParticipantDao,
 		sprintParticipantDaoV2:    sprintParticipantDaoV2,
-		sprintTaskRelationDao:     sprintTaskRelationDao,
 		sprintTaskRelationDaoV2:   sprintTaskRelationDaoV2,
 	}
 }

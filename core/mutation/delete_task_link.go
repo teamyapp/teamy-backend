@@ -61,16 +61,8 @@ func (d *DeleteTaskLink) GetClientNotifiersV2() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
-func (d *DeleteTaskLink) Execute(ct context.Context) *errs.Error {
-	panic("deprecate me")
-}
-
 func (d *DeleteTaskLink) Undo() *errs.Error {
 	return nil
-}
-
-func (d *DeleteTaskLink) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	panic("deprecate me")
 }
 
 func (d *DeleteTaskLink) ToMessage() realtime.MutationMessage {

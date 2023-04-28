@@ -22,7 +22,6 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -864,16 +863,12 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	teamyBackendDB.CreateTable(daotestv2.TeamGroupTableName)
 	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
 
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 
 	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
-	sprintDao := daotest.NewSprint(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	teamDao := daotest.NewTeam(teamyBackendDB)
 	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
 	teamGroupDaoV2 := daotestv2.NewTeamGroup(teamyBackendDB, transactionFactory)
@@ -886,13 +881,9 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		stateSyncer,
 		transactionFactory,
 		taskDaoV2,
-		sprintDao,
 		sprintDaoV2,
-		sprintParticipantDao,
 		sprintParticipantDaoV2,
-		teamDao,
 		teamDaoV2,
-		teamMemberDao,
 		teamMemberDaoV2,
 		teamFileUploadSessionDaoV2,
 		teamGroupDaoV2,

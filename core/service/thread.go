@@ -10,7 +10,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -32,11 +31,8 @@ type Thread struct {
 	stateSyncer         *realtime.StateSyncer
 	transactionFactory  transaction.Factory
 	toggles             feature.Toggles
-	taskDao             dao.Task
 	taskDaoV2           daov2.Task
-	threadDao           dao.Thread
 	threadDaoV2         daov2.Thread
-	messageDao          dao.Message
 	messageDaoV2        daov2.Message
 }
 
@@ -94,9 +90,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		createMessageMutation := mutation.NewCreateMessage(
 			t.stateSyncer,
-			t.messageDao,
 			t.messageDaoV2,
-			t.taskDao,
 			t.taskDaoV2,
 			t.logger,
 			message)
@@ -135,9 +129,7 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 		updateMessageMutation := mutation.NewUpdateMessage(
 			t.logger,
 			t.stateSyncer,
-			t.messageDao,
 			t.messageDaoV2,
-			t.taskDao,
 			t.taskDaoV2,
 			message)
 		err = updateMessageMutation.ExecuteV2(ct, tx)
@@ -172,9 +164,7 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		deleteMessageMutation := mutation.NewDeleteMessage(
 			t.logger,
 			t.stateSyncer,
-			t.messageDao,
 			t.messageDaoV2,
-			t.taskDao,
 			t.taskDaoV2,
 			message)
 		err = deleteMessageMutation.ExecuteV2(ct, tx)
@@ -199,11 +189,8 @@ func NewThread(
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	toggles feature.Toggles,
-	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
-	threadDao dao.Thread,
 	threadDaoV2 daov2.Thread,
-	messageDao dao.Message,
 	messageDaoV2 daov2.Message,
 ) Thread {
 	return Thread{
@@ -212,11 +199,8 @@ func NewThread(
 		stateSyncer:         stateSyncer,
 		transactionFactory:  transactionFactory,
 		toggles:             toggles,
-		taskDao:             taskDao,
 		taskDaoV2:           taskDaoV2,
-		threadDao:           threadDao,
 		threadDaoV2:         threadDaoV2,
-		messageDao:          messageDao,
 		messageDaoV2:        messageDaoV2,
 	}
 }

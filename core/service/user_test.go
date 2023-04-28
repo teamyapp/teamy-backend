@@ -20,7 +20,6 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
-	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -96,11 +95,9 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 	teamyBackendDB.CreateTable(daotestv2.UserFileUploadSessionTableName)
 	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
 
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 
-	userDao := daotest.NewUser(teamyBackendDB)
 	userDaoV2 := daotestv2.NewUser(teamyBackendDB, transactionFactory)
 	userFileUploadSessionDaoV2 := daotestv2.NewUserFileUploadSession(teamyBackendDB)
 	userService := NewUser(
@@ -110,7 +107,6 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 		stateSyncer,
 		transactionFactory,
 		toggles,
-		userDao,
 		userDaoV2,
 		teamMemberDaoV2,
 		userFileUploadSessionDaoV2,

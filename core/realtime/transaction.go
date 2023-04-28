@@ -65,82 +65,12 @@ func (t *Transaction) rollback(ct context.Context) *errs.Error {
 	return nil
 }
 
-// Deprecated: The old method should not be used anymore. Use AppendMutation instead
-func (t *Transaction) ApplyMutation(ct context.Context, mutation Mutation) *errs.Error {
-	err := mutation.Execute(ct)
-	if err != nil {
-		t.logger.ErrorWithContext(ct, err)
-		undoErr := t.rollback(ct)
-		if undoErr != nil {
-			t.logger.ErrorWithContext(ct, undoErr)
-			return undoErr
-		}
-
-		return err
-	}
-
-	t.mutations = append(t.mutations, mutation)
-	t.nextMutationIndex++
-	return nil
-}
-
 func (t *Transaction) AppendMutation(mutation Mutation) {
 	t.mutations = append(t.mutations, mutation)
 }
 
 func (t *Transaction) GetMutations() []Mutation {
 	return t.mutations
-}
-
-// Deprecated: The old method should not be used anymore. Use Notify instead
-func (t *Transaction) Commit(ct context.Context) *errs.Error {
-	t.stateSyncer.BeginTransaction()
-	defer t.stateSyncer.EndTransaction()
-
-	clientTransactions := make(map[uint64]*ClientTransaction)
-	for _, mutation := range t.mutations {
-		clientNotifiers, err := mutation.GetClientNotifiers(ct)
-		if err != nil {
-			t.logger.ErrorWithContext(ct, err)
-			undoErr := t.rollback(ct)
-			if undoErr != nil {
-				t.logger.ErrorWithContext(ct, undoErr)
-				return undoErr
-			}
-
-			return err
-		}
-
-		for _, clientNotifier := range clientNotifiers {
-			clientID := clientNotifier.getClientID()
-			_, ok := clientTransactions[clientID]
-			if !ok {
-				clientTransactionID := t.stateSyncer.NextClientTransactionID()
-				clientTransactions[clientID] = newClientTransaction(
-					clientNotifier.logger,
-					clientNotifier,
-					clientTransactionID,
-				)
-			}
-
-			clientTransaction := clientTransactions[clientID]
-			clientTransaction.addMutation(mutation)
-		}
-	}
-
-	for _, clientTransaction := range clientTransactions {
-		clientTransaction.commit(ct)
-	}
-
-	for _, mutation := range t.mutations {
-		err := mutation.CleanUp(ct)
-		if err != nil {
-			t.logger.ErrorWithContext(ct, err)
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (t *Transaction) Notify(ct context.Context) *errs.Error {

@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -15,9 +14,7 @@ import (
 type CreateMessage struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	messageDao       dao.Message
 	messageDaoV2     daov2.Message
-	taskDao          dao.Task
 	taskDaoV2        daov2.Task
 	id               uint64
 	message          entity.Message
@@ -55,28 +52,8 @@ func (c *CreateMessage) PrepareClientNotifiers(ct context.Context, tx *transacti
 	return nil
 }
 
-func (c *CreateMessage) Execute(ct context.Context) *errs.Error {
-	err := c.messageDao.CreateMessage(ct, c.message)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (c *CreateMessage) Undo() *errs.Error {
 	return nil
-}
-
-func (c *CreateMessage) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	task, err := c.taskDao.FindTaskByCommentsThreadID(ct, c.message.ThreadID)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return []*realtime.ClientNotifier{}, err
-	}
-
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
 }
 
 func (c *CreateMessage) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -98,9 +75,7 @@ func (c *CreateMessage) CleanUp(ct context.Context) *errs.Error {
 
 func NewCreateMessage(
 	stateSyncer *realtime.StateSyncer,
-	messageDao dao.Message,
 	messageDaoV2 daov2.Message,
-	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
 	logger telemetry.Logger,
 	message entity.Message,
@@ -108,9 +83,7 @@ func NewCreateMessage(
 	return &CreateMessage{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		messageDao:       messageDao,
 		messageDaoV2:     messageDaoV2,
-		taskDao:          taskDao,
 		taskDaoV2:        taskDaoV2,
 		id:               stateSyncer.NextMutationID(),
 		message:          message,

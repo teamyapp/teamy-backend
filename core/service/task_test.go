@@ -23,7 +23,6 @@ import (
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -273,21 +272,15 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	teamyBackendDB.CreateTable(daotestv2.ThreadTableName)
 	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
 
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 	activityCache := cache.NewActivity(logger)
 
-	taskDao := daotest.NewTask(teamyBackendDB)
 	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
 	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
-	sprintDao := daotest.NewSprint(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
 	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)
-	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
 	taskService := NewTask(
 		logger,
@@ -297,16 +290,11 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		stateSyncer,
 		transactionFactory,
 		activityCache,
-		taskDao,
 		taskDaoV2,
 		threadDaoV2,
-		sprintDao,
 		sprintDaoV2,
-		taskAwaitForRelationDao,
 		taskAwaitForRelationDaoV2,
-		sprintParticipantDao,
 		sprintParticipantDaoV2,
-		sprintTaskRelationDao,
 		sprintTaskRelationDaoV2,
 	)
 	return TaskTestRef{

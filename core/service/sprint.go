@@ -14,7 +14,6 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -40,17 +39,11 @@ type Sprint struct {
 	authorizer              Authorizer
 	featureToggles          feature.Toggles
 	transactionFactory      transaction.Factory
-	taskDao                 dao.Task
 	taskDaoV2               daov2.Task
-	sprintDao               dao.Sprint
 	sprintDaoV2             daov2.Sprint
-	teamDao                 dao.Team
 	teamDaoV2               daov2.Team
-	sprintTaskRelationDao   dao.SprintTaskRelation
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
-	sprintParticipantDao    dao.SprintParticipant
 	sprintParticipantDaoV2  daov2.SprintParticipant
-	teamMemberDao           dao.TeamMember
 	teamMemberDaoV2         daov2.TeamMember
 	threadDaoV2             daov2.Thread
 	db                      *sql.DB
@@ -185,7 +178,6 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 		updateTeamMutation := mutation.NewUpdateTeam(
 			s.logger,
 			s.stateSyncer,
-			s.teamDao,
 			s.teamDaoV2,
 			team,
 		)
@@ -328,9 +320,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 				s.logger,
 				s.stateSyncer,
-				s.sprintParticipantDao,
 				s.sprintParticipantDaoV2,
-				s.sprintDao,
 				s.sprintDaoV2,
 				participant)
 			rtTx.AppendMutation(createSprintParticipantMutation)
@@ -399,9 +389,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
 				s.logger,
 				s.stateSyncer,
-				s.sprintParticipantDao,
 				s.sprintParticipantDaoV2,
-				s.sprintDao,
 				s.sprintDaoV2,
 				participantUserID,
 				sprintID)
@@ -457,9 +445,7 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
 			s.logger,
 			s.stateSyncer,
-			s.sprintTaskRelationDao,
 			s.sprintTaskRelationDaoV2,
-			s.sprintDao,
 			s.sprintDaoV2,
 			relation)
 		rtTx.AppendMutation(createSprintTaskRelationMutation)
@@ -473,7 +459,6 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			updateTaskMutation := mutation.NewUpdateTask(
 				s.logger,
 				s.stateSyncer,
-				s.taskDao,
 				s.taskDaoV2,
 				task)
 			rtTx.AppendMutation(updateTaskMutation)
@@ -667,7 +652,6 @@ func (s Sprint) copyTaskToSprint(
 	createTaskMutation := mutation.NewCreateTask(
 		s.logger,
 		s.stateSyncer,
-		s.taskDao,
 		s.taskDaoV2,
 		newTask,
 	)
@@ -685,9 +669,7 @@ func (s Sprint) copyTaskToSprint(
 	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
 		s.logger,
 		s.stateSyncer,
-		s.sprintTaskRelationDao,
 		s.sprintTaskRelationDaoV2,
-		s.sprintDao,
 		s.sprintDaoV2,
 		relation)
 	rtTx.AppendMutation(createSprintTaskRelationMutation)
@@ -701,7 +683,6 @@ func (s Sprint) copyTaskToSprint(
 		updateTaskMutation := mutation.NewUpdateTask(
 			s.logger,
 			s.stateSyncer,
-			s.taskDao,
 			s.taskDaoV2,
 			task)
 		rtTx.AppendMutation(updateTaskMutation)
@@ -798,7 +779,6 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelation(
 		s.logger,
 		s.stateSyncer,
-		s.sprintTaskRelationDao,
 		s.sprintTaskRelationDaoV2,
 		sprintID,
 		task,
@@ -815,7 +795,6 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 		updateTaskMutation := mutation.NewUpdateTask(
 			s.logger,
 			s.stateSyncer,
-			s.taskDao,
 			s.taskDaoV2,
 			task)
 		rtTx.AppendMutation(updateTaskMutation)
@@ -855,9 +834,7 @@ func (s Sprint) tryReduceBandwidth(
 		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 			s.logger,
 			s.stateSyncer,
-			s.sprintParticipantDao,
 			s.sprintParticipantDaoV2,
-			s.sprintDao,
 			s.sprintDaoV2,
 			newSprintParticipant)
 		rtTx.AppendMutation(updateSprintParticipantMutation)
@@ -892,9 +869,7 @@ func (s Sprint) tryIncreaseBandwidth(
 		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 			s.logger,
 			s.stateSyncer,
-			s.sprintParticipantDao,
 			s.sprintParticipantDaoV2,
-			s.sprintDao,
 			s.sprintDaoV2,
 			oldSprintParticipant)
 		rtTx.AppendMutation(updateSprintParticipantMutation)
@@ -914,16 +889,11 @@ func NewSprint(
 	authorizer Authorizer,
 	featureToggles feature.Toggles,
 	transactionFactory transaction.Factory,
-	taskDao dao.Task,
 	taskDaoV2 daov2.Task,
-	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
 	teamDaoV2 daov2.Team,
-	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
-	sprintParticipantDao dao.SprintParticipant,
 	sprintParticipantDaoV2 daov2.SprintParticipant,
-	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 	threadDaoV2 daov2.Thread,
 ) Sprint {
@@ -934,16 +904,11 @@ func NewSprint(
 		authorizer:              authorizer,
 		featureToggles:          featureToggles,
 		transactionFactory:      transactionFactory,
-		taskDao:                 taskDao,
 		taskDaoV2:               taskDaoV2,
-		sprintDao:               sprintDao,
 		sprintDaoV2:             sprintDaoV2,
 		teamDaoV2:               teamDaoV2,
-		sprintTaskRelationDao:   sprintTaskRelationDao,
 		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
-		sprintParticipantDao:    sprintParticipantDao,
 		sprintParticipantDaoV2:  sprintParticipantDaoV2,
-		teamMemberDao:           teamMemberDao,
 		teamMemberDaoV2:         teamMemberDaoV2,
 		threadDaoV2:             threadDaoV2,
 	}

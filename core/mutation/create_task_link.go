@@ -37,14 +37,6 @@ func (c *CreateTaskLink) ExecuteV2(ct context.Context, tx *transaction.Transacti
 	return nil
 }
 
-func (c *CreateTaskLink) Execute(ct context.Context) *errs.Error {
-	panic("deprecate me")
-}
-
-func (c *CreateTaskLink) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	panic("deprecate me")
-}
-
 func (c *CreateTaskLink) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifierPrepared {
 		return nil

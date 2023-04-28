@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -15,9 +14,7 @@ import (
 type CreateSprintParticipant struct {
 	logger                 telemetry.Logger
 	stateSyncer            *realtime.StateSyncer
-	sprintParticipantDao   dao.SprintParticipant
 	sprintParticipantDaoV2 daov2.SprintParticipant
-	sprintDao              dao.Sprint
 	sprintDaoV2            daov2.Sprint
 	id                     uint64
 	sprintParticipant      entity.SprintParticipant
@@ -59,28 +56,8 @@ func (c *CreateSprintParticipant) PrepareClientNotifiers(ct context.Context, tx 
 	return nil
 }
 
-func (c *CreateSprintParticipant) Execute(ct context.Context) *errs.Error {
-	err := c.sprintParticipantDao.CreateSprintParticipant(ct, c.sprintParticipant)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (c *CreateSprintParticipant) Undo() *errs.Error {
 	return nil
-}
-
-func (c *CreateSprintParticipant) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	sprint, err := c.sprintDao.FindSprintByID(ct, c.sprintParticipant.SprintID)
-	if err != nil {
-		c.logger.ErrorWithContext(ct, err)
-		return []*realtime.ClientNotifier{}, err
-	}
-
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, sprint.OwningTeamID)
 }
 
 func (c *CreateSprintParticipant) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -103,18 +80,14 @@ func (c *CreateSprintParticipant) CleanUp(ct context.Context) *errs.Error {
 func NewCreateSprintParticipant(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	sprintParticipantDao dao.SprintParticipant,
 	sprintParticipantDaoV2 daov2.SprintParticipant,
-	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
 	sprintParticipant entity.SprintParticipant,
 ) *CreateSprintParticipant {
 	return &CreateSprintParticipant{
 		logger:                 logger,
 		stateSyncer:            stateSyncer,
-		sprintParticipantDao:   sprintParticipantDao,
 		sprintParticipantDaoV2: sprintParticipantDaoV2,
-		sprintDao:              sprintDao,
 		sprintDaoV2:            sprintDaoV2,
 		id:                     stateSyncer.NextMutationID(),
 		sprintParticipant:      sprintParticipant,
