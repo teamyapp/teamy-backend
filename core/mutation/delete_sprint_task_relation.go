@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -15,7 +14,6 @@ import (
 type DeleteSprintTaskRelation struct {
 	logger                  telemetry.Logger
 	stateSyncer             *realtime.StateSyncer
-	sprintTaskRelationDao   dao.SprintTaskRelation
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
 	id                      uint64
 	sprintID                uint64
@@ -54,21 +52,8 @@ func (d *DeleteSprintTaskRelation) PrepareClientNotifiers(ct context.Context, tx
 	return nil
 }
 
-func (d *DeleteSprintTaskRelation) Execute(ct context.Context) *errs.Error {
-	err := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, d.sprintID, d.task.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (d *DeleteSprintTaskRelation) Undo() *errs.Error {
 	return nil
-}
-
-func (d *DeleteSprintTaskRelation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.task.OwningTeamID)
 }
 
 func (d *DeleteSprintTaskRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -97,7 +82,6 @@ func (d *DeleteSprintTaskRelation) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteSprintTaskRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
 	sprintID uint64,
 	task entity.Task,
@@ -105,7 +89,6 @@ func NewDeleteSprintTaskRelation(
 	return &DeleteSprintTaskRelation{
 		logger:                  logger,
 		stateSyncer:             stateSyncer,
-		sprintTaskRelationDao:   sprintTaskRelationDao,
 		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
 		id:                      stateSyncer.NextMutationID(),
 		sprintID:                sprintID,

@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -15,7 +14,6 @@ import (
 type DeleteTaskAwaitForRelation struct {
 	logger                    telemetry.Logger
 	stateSyncer               *realtime.StateSyncer
-	taskAwaitForRelationDao   dao.TaskAwaitForRelation
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
 	id                        uint64
 	awaitingTask              entity.Task
@@ -54,22 +52,8 @@ func (d *DeleteTaskAwaitForRelation) PrepareClientNotifiers(ct context.Context, 
 	return nil
 }
 
-func (d *DeleteTaskAwaitForRelation) Execute(ct context.Context) *errs.Error {
-	err := d.taskAwaitForRelationDao.DeleteRelation(ct, d.awaitingTask.ID, d.awaitForTaskID)
-	if err != nil {
-		d.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (d *DeleteTaskAwaitForRelation) Undo() *errs.Error {
 	return nil
-}
-
-func (d *DeleteTaskAwaitForRelation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.awaitingTask.OwningTeamID)
 }
 
 func (d *DeleteTaskAwaitForRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -98,7 +82,6 @@ func (d *DeleteTaskAwaitForRelation) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteTaskAwaitForRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
 	awaitingTask entity.Task,
 	awaitForTaskID uint64,
@@ -106,7 +89,6 @@ func NewDeleteTaskAwaitForRelation(
 	return &DeleteTaskAwaitForRelation{
 		logger:                    logger,
 		stateSyncer:               stateSyncer,
-		taskAwaitForRelationDao:   taskAwaitForRelationDao,
 		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,
 		id:                        stateSyncer.NextMutationID(),
 		awaitingTask:              awaitingTask,

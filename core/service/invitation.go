@@ -14,7 +14,6 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -31,13 +30,9 @@ type Invitation struct {
 	featureToggles         feature.Toggles
 	stateSyncer            *realtime.StateSyncer
 	transactionFactory     transaction.Factory
-	invitationDao          dao.Invitation
 	invitationDaoV2        daov2.Invitation
-	teamMemberDao          dao.TeamMember
 	teamMemberDaoV2        daov2.TeamMember
-	sprintParticipantDao   dao.SprintParticipant
 	sprintParticipantDaoV2 daov2.SprintParticipant
-	sprintDao              dao.Sprint
 	sprintDaoV2            daov2.Sprint
 }
 
@@ -130,7 +125,6 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		createInvitationMutation := mutation.NewCreateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDao,
 			i.invitationDaoV2,
 			invitation,
 		)
@@ -185,7 +179,6 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDao,
 			i.invitationDaoV2,
 			invitation,
 		)
@@ -221,7 +214,6 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 		deleteInvitationMutation := mutation.NewDeleteInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDao,
 			i.invitationDaoV2,
 			invitation,
 		)
@@ -294,7 +286,6 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDao,
 			i.invitationDaoV2,
 			invitation,
 		)
@@ -318,7 +309,6 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 			createTeamMemberMutation := mutation.NewCreateTeamMember(
 				i.logger,
 				i.stateSyncer,
-				i.teamMemberDao,
 				i.teamMemberDaoV2,
 				teamMember,
 			)
@@ -353,9 +343,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 					i.logger,
 					i.stateSyncer,
-					i.sprintParticipantDao,
 					i.sprintParticipantDaoV2,
-					i.sprintDao,
 					i.sprintDaoV2,
 					participant,
 				)
@@ -415,7 +403,6 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDao,
 			i.invitationDaoV2,
 			invitation,
 		)
@@ -462,13 +449,9 @@ func NewInvitation(
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	invitationDao dao.Invitation,
 	invitationDaoV2 daov2.Invitation,
-	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
-	sprintParticipantDao dao.SprintParticipant,
 	sprintParticipantDaoV2 daov2.SprintParticipant,
-	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
 ) Invitation {
 	return Invitation{
@@ -478,13 +461,9 @@ func NewInvitation(
 		featureToggles:         featureToggles,
 		stateSyncer:            stateSyncer,
 		transactionFactory:     transactionFactory,
-		invitationDao:          invitationDao,
 		invitationDaoV2:        invitationDaoV2,
-		teamMemberDao:          teamMemberDao,
 		teamMemberDaoV2:        teamMemberDaoV2,
-		sprintParticipantDao:   sprintParticipantDao,
 		sprintParticipantDaoV2: sprintParticipantDaoV2,
-		sprintDao:              sprintDao,
 		sprintDaoV2:            sprintDaoV2,
 	}
 }

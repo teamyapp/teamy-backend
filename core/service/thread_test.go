@@ -21,7 +21,6 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
-	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -98,15 +97,11 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 	teamyBackendDB.CreateTable(daotestv2.MessageTableName)
 	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
 
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 
-	taskDao := daotest.NewTask(teamyBackendDB)
 	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
-	threadDao := daotest.NewThread(teamyBackendDB)
 	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
-	messageDao := daotest.NewMessage(teamyBackendDB)
 	messageDaoV2 := daotestv2.NewMessage(teamyBackendDB, transactionFactory)
 
 	threadService := NewThread(
@@ -115,11 +110,8 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 		stateSyncer,
 		transactionFactory,
 		toggles,
-		taskDao,
 		taskDaoV2,
-		threadDao,
 		threadDaoV2,
-		messageDao,
 		messageDaoV2,
 	)
 	return ThreadTestRef{

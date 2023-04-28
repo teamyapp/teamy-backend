@@ -21,7 +21,6 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
-	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -98,15 +97,11 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
 	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
 
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 
-	invitationDao := daotest.NewInvitation(teamyBackendDB)
 	invitationDaoV2 := daotestv2.NewInvitation(teamyBackendDB, transactionFactory)
-	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	sprintDao := daotest.NewSprint(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
 	invitationService := NewInvitation(
 		logger,
@@ -115,13 +110,9 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 		toggles,
 		stateSyncer,
 		transactionFactory,
-		invitationDao,
 		invitationDaoV2,
-		teamMemberDao,
 		teamMemberDaoV2,
-		sprintParticipantDao,
 		sprintParticipantDaoV2,
-		sprintDao,
 		sprintDaoV2,
 	)
 	return InvitationTestRef{

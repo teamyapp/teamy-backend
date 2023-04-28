@@ -6,7 +6,6 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +13,6 @@ import (
 type DeleteTeam struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	teamDao          dao.Team
 	teamDaoV2        daov2.Team
 	id               uint64
 	teamID           uint64
@@ -47,22 +45,8 @@ func (d *DeleteTeam) PrepareClientNotifiers(ct context.Context, tx *transaction.
 	return nil
 }
 
-func (d *DeleteTeam) Execute(ct context.Context) *errs.Error {
-	err := d.teamDao.DeleteTeam(ct, d.teamID)
-	if err != nil {
-		d.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (d *DeleteTeam) Undo() *errs.Error {
 	return nil
-}
-
-func (d *DeleteTeam) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return d.stateSyncer.GetClientNotifiersByTeamID(ct, d.teamID)
 }
 
 func (d *DeleteTeam) GetClientNotifiersV2() []*realtime.ClientNotifier {
@@ -85,14 +69,12 @@ func (d *DeleteTeam) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteTeam(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	teamDao dao.Team,
 	teamDaoV2 daov2.Team,
 	teamID uint64,
 ) *DeleteTeam {
 	return &DeleteTeam{
 		logger:      logger,
 		stateSyncer: stateSyncer,
-		teamDao:     teamDao,
 		teamDaoV2:   teamDaoV2,
 		id:          stateSyncer.NextMutationID(),
 		teamID:      teamID,

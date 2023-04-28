@@ -22,7 +22,6 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -119,9 +118,8 @@ func prepareAppTestRef(t *testing.T, toggles feature.Toggles) (AppTestRef, bool)
 	teamyBackendDB.CreateTable(daotestv2.AppTeamInstallationTableName)
 	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
 
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 
 	appDaoV2 := daotestv2.NewApp(teamyBackendDB, transactionFactory)
 	appVersionDaoV2 := daotestv2.NewAppVersion(teamyBackendDB, transactionFactory)
@@ -638,7 +636,7 @@ func TestAppService_FindApp(t *testing.T) {
 			if !assert.Equal(t, 1, len(found)) {
 				return
 			}
-			
+
 			assert.True(t, areAppsEqual(app1, found[0]))
 
 			filter2 := AppFilter{

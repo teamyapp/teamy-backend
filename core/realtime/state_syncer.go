@@ -9,7 +9,6 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 )
 
@@ -23,7 +22,6 @@ import (
 
 type StateSyncer struct {
 	logger                  telemetry.Logger
-	teamMemberDao           dao.TeamMember
 	teamMemberDaoV2         daov2.TeamMember
 	teamNotifiers           map[uint64]*TeamNotifier
 	userNotifiers           map[uint64]*UserNotifier
@@ -110,22 +108,6 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) *errs.
 	return nil
 }
 
-// Deprecated: The old method should not be used anymore. Use newUserNotifierV2 method instead
-func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserNotifier, *errs.Error) {
-	userNotifier := newUserNotifier(s.logger, userID)
-	go func() {
-		<-userNotifier.subscribeUserDisconnect()
-		delete(s.userNotifiers, userID)
-	}()
-	s.userNotifiers[userID] = userNotifier
-	err := s.SubscribeToTeams(ct, userID, userNotifier)
-	if err != nil {
-		return nil, err
-	}
-
-	return userNotifier, nil
-}
-
 func (s *StateSyncer) newUserNotifierV2(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
 	userNotifier := newUserNotifier(s.logger, userID)
 	go func() {
@@ -139,28 +121,6 @@ func (s *StateSyncer) newUserNotifierV2(ct context.Context, userID uint64, teamI
 	}
 
 	return userNotifier, nil
-}
-
-// Deprecated: The old method should not be used anymore. Use SubscribeToTeamsV2 method instead
-func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier) *errs.Error {
-	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
-	if err != nil {
-		return err
-	}
-
-	for _, teamID := range teamIDs {
-		teamNotifier, ok := s.teamNotifiers[teamID]
-		if !ok {
-			teamNotifier = s.newTeamNotifier(teamID)
-		}
-
-		s.logger.InfoWithContext(ct, fmt.Sprintf("subscribed to team: teamID=%v, userID=%v",
-			teamID,
-			userID))
-		teamNotifier.registerUserNotifier(userID, userNotifier)
-	}
-
-	return nil
 }
 
 func (s *StateSyncer) SubscribeToTeamsV2(ct context.Context, userID uint64, userNotifier *UserNotifier, teamIDs []uint64) *errs.Error {
@@ -193,20 +153,6 @@ func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	return teamNotifier
 }
 
-// Deprecated: The old method should not be used anymore. Use GetUserNotifierWithTx method instead
-func (s *StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserNotifier, *errs.Error) {
-	userNotifier, ok := s.userNotifiers[userID]
-	var err *errs.Error
-	if !ok {
-		userNotifier, err = s.newUserNotifier(ct, userID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return userNotifier, nil
-}
-
 func (s *StateSyncer) GetUserNotifierV2(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
 	userNotifier, ok := s.userNotifiers[userID]
 	var err *errs.Error
@@ -227,33 +173,6 @@ func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamN
 	}
 
 	return teamNotifier, nil
-}
-
-// Deprecated: The old method should not be used anymore. Use GetClientNotifiersByTeamID method instead
-func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID uint64) ([]*ClientNotifier, *errs.Error) {
-	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
-	if err != nil {
-		return []*ClientNotifier{}, err
-	}
-
-	clientNotifiersMap := make(map[uint64]*ClientNotifier)
-	for _, teamID := range teamIDs {
-		teamClientNotifiers, err := s.GetClientNotifiersByTeamID(ct, teamID)
-		if err != nil {
-			return []*ClientNotifier{}, err
-		}
-
-		for _, clientNotifier := range teamClientNotifiers {
-			clientNotifiersMap[clientNotifier.clientID] = clientNotifier
-		}
-	}
-
-	clientNotifiers := make([]*ClientNotifier, 0)
-	for _, clientNotifier := range clientNotifiersMap {
-		clientNotifiers = append(clientNotifiers, clientNotifier)
-	}
-
-	return clientNotifiers, nil
 }
 
 func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, *errs.Error) {
@@ -300,12 +219,10 @@ func (s *StateSyncer) GetClientNotifiersByTeamIDs(ct context.Context, teamIDs []
 
 func NewStateSyncer(
 	logger telemetry.Logger,
-	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
 		logger:                  logger,
-		teamMemberDao:           teamMemberDao,
 		teamMemberDaoV2:         teamMemberDaoV2,
 		teamNotifiers:           map[uint64]*TeamNotifier{},
 		userNotifiers:           map[uint64]*UserNotifier{},

@@ -47,16 +47,8 @@ func (c *CreateSprintMutation) PrepareClientNotifiers(ct context.Context, tx *tr
 	return nil
 }
 
-func (c *CreateSprintMutation) Execute(ct context.Context) *errs.Error {
-	return nil
-}
-
 func (c *CreateSprintMutation) Undo() *errs.Error {
 	return nil
-}
-
-func (c *CreateSprintMutation) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.sprint.OwningTeamID)
 }
 
 func (c *CreateSprintMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {

@@ -51,22 +51,8 @@ func (u *UpdateTaskActivity) PrepareClientNotifiers(ct context.Context, tx *tran
 	return err
 }
 
-func (u *UpdateTaskActivity) Execute(ct context.Context) *errs.Error {
-	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
-	if err != nil {
-		u.logger.ErrorWithContext(ct, err)
-		return err
-	}
-
-	return nil
-}
-
 func (u *UpdateTaskActivity) Undo() *errs.Error {
 	return nil
-}
-
-func (u *UpdateTaskActivity) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return u.stateSyncer.GetClientNotifiersByTeamID(ct, u.taskActivity.TeamID)
 }
 
 func (u *UpdateTaskActivity) GetClientNotifiersV2() []*realtime.ClientNotifier {

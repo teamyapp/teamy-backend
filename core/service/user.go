@@ -12,7 +12,6 @@ import (
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -39,7 +38,6 @@ type User struct {
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
 	toggles                    feature.Toggles
-	userDao                    dao.User
 	userDaoV2                  daov2.User
 	teamMemberDaoV2            daov2.TeamMember
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession
@@ -106,7 +104,6 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 		userMutation := mutation.NewUpdateUser(
 			u.logger,
 			u.stateSyncer,
-			u.userDao,
 			u.userDaoV2,
 			u.teamMemberDaoV2,
 			user)
@@ -219,7 +216,6 @@ func NewUser(
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	toggles feature.Toggles,
-	userDao dao.User,
 	userDaoV2 daov2.User,
 	teamMemberDaoV2 daov2.TeamMember,
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
@@ -231,7 +227,6 @@ func NewUser(
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
 		toggles:                    toggles,
-		userDao:                    userDao,
 		userDaoV2:                  userDaoV2,
 		teamMemberDaoV2:            teamMemberDaoV2,
 		userFileUploadSessionDaoV2: userFileUploadSessionDaoV2,

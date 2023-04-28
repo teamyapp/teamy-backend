@@ -22,7 +22,6 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -105,17 +104,12 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
 	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
 	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
-	teamMemberDao := daotest.NewTeamMember(teamyBackendDB)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	taskDao := daotest.NewTask(teamyBackendDB)
-	sprintDao := daotest.NewSprint(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
 	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao, teamMemberDaoV2)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
-	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
-	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB)
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
 	userDaoV2 := daotestv2.NewUser(teamyBackendDB, transactionFactory)
@@ -127,16 +121,11 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 		authorizer,
 		toggles,
 		transactionFactory,
-		taskDao,
 		taskDaoV2,
-		sprintDao,
 		sprintDaoV2,
 		teamDaoV2,
-		sprintTaskRelationDao,
 		sprintTaskRelationDaoV2,
-		sprintParticipantDao,
 		sprintParticipantDaoV2,
-		teamMemberDao,
 		teamMemberDaoV2,
 		threadDaoV2,
 	)

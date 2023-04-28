@@ -46,16 +46,8 @@ func (c *CreateTeamGroup) PrepareClientNotifiers(ct context.Context, tx *transac
 	return nil
 }
 
-func (c *CreateTeamGroup) Execute(ct context.Context) *errs.Error {
-	return nil
-}
-
 func (c *CreateTeamGroup) Undo() *errs.Error {
 	return nil
-}
-
-func (c *CreateTeamGroup) GetClientNotifiers(ct context.Context) ([]*realtime.ClientNotifier, *errs.Error) {
-	return c.stateSyncer.GetClientNotifiersByTeamID(ct, c.teamGroup.TeamID)
 }
 
 func (c *CreateTeamGroup) GetClientNotifiersV2() []*realtime.ClientNotifier {

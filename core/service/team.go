@@ -14,7 +14,6 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -46,13 +45,9 @@ type Team struct {
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
 	taskDaoV2                  daov2.Task
-	sprintDao                  dao.Sprint
 	sprintDaoV2                daov2.Sprint
-	sprintParticipantDao       dao.SprintParticipant
 	sprintParticipantDaoV2     daov2.SprintParticipant
-	teamDao                    dao.Team
 	teamDaoV2                  daov2.Team
-	teamMemberDao              dao.TeamMember
 	teamMemberDaoV2            daov2.TeamMember
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession
 	teamGroupDaoV2             daov2.TeamGroup
@@ -236,7 +231,6 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		createTeamMutation := mutation.NewCreateTeam(
 			t.logger,
 			t.stateSyncer,
-			t.teamDao,
 			t.teamDaoV2,
 			team,
 		)
@@ -254,7 +248,6 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		createTeamMemberMutation := mutation.NewCreateTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDao,
 			t.teamMemberDaoV2,
 			teamMember,
 		)
@@ -349,7 +342,6 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		updateTeamMutation := mutation.NewUpdateTeam(
 			t.logger,
 			t.stateSyncer,
-			t.teamDao,
 			t.teamDaoV2,
 			team,
 		)
@@ -405,7 +397,6 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 		deleteTeamMutation := mutation.NewDeleteTeam(
 			t.logger,
 			t.stateSyncer,
-			t.teamDao,
 			t.teamDaoV2,
 			teamID,
 		)
@@ -606,7 +597,6 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		createTeamMemberMutation := mutation.NewCreateTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDao,
 			t.teamMemberDaoV2,
 			teamMember,
 		)
@@ -640,9 +630,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 				t.logger,
 				t.stateSyncer,
-				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
-				t.sprintDao,
 				t.sprintDaoV2,
 				participant,
 			)
@@ -699,7 +687,6 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		deleteTeamMemberMutation := mutation.NewDeleteTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDao,
 			t.teamMemberDaoV2,
 			teamID,
 			teamMember.UserID,
@@ -727,9 +714,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
 				t.logger,
 				t.stateSyncer,
-				t.sprintParticipantDao,
 				t.sprintParticipantDaoV2,
-				t.sprintDao,
 				t.sprintDaoV2,
 				teamMember.UserID,
 				sprint.ID,
@@ -795,7 +780,6 @@ func (t Team) UpdateTeamMember(
 		updateTeamMemberMutation := mutation.NewUpdateTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDao,
 			t.teamMemberDaoV2,
 			teamMember,
 		)
@@ -834,9 +818,7 @@ func (t Team) UpdateTeamMember(
 				updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 					t.logger,
 					t.stateSyncer,
-					t.sprintParticipantDao,
 					t.sprintParticipantDaoV2,
-					t.sprintDao,
 					t.sprintDaoV2,
 					participant,
 				)
@@ -868,13 +850,9 @@ func NewTeam(
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	taskDaoV2 daov2.Task,
-	sprintDao dao.Sprint,
 	sprintDaoV2 daov2.Sprint,
-	sprintParticipantDao dao.SprintParticipant,
 	sprintParticipantDaoV2 daov2.SprintParticipant,
-	teamDao dao.Team,
 	teamDaoV2 daov2.Team,
-	teamMemberDao dao.TeamMember,
 	teamMemberDaoV2 daov2.TeamMember,
 	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
 	teamGroupDaoV2 daov2.TeamGroup,
@@ -888,13 +866,9 @@ func NewTeam(
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
 		taskDaoV2:                  taskDaoV2,
-		sprintDao:                  sprintDao,
 		sprintDaoV2:                sprintDaoV2,
-		sprintParticipantDao:       sprintParticipantDao,
 		sprintParticipantDaoV2:     sprintParticipantDaoV2,
-		teamDao:                    teamDao,
 		teamMemberDaoV2:            teamMemberDaoV2,
-		teamMemberDao:              teamMemberDao,
 		teamDaoV2:                  teamDaoV2,
 		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
 		teamGroupDaoV2:             teamGroupDaoV2,
