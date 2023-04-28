@@ -30,8 +30,8 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamWithTx(ct context.Contex
 			for _, rawRow := range table.Rows {
 				currAppVersionVisibleTeam := rawRow.(entity.AppVersionVisibleTeam)
 				if currAppVersionVisibleTeam.AppID == appID &&
-					currAppVersionVisibleTeam.VersionNumber == versionNumber &&
-					currAppVersionVisibleTeam.TeamID == teamID {
+				   currAppVersionVisibleTeam.VersionNumber == versionNumber &&
+				   currAppVersionVisibleTeam.TeamID == teamID {
 					appVersionVisibleTeam = currAppVersionVisibleTeam
 					return nil
 				}
@@ -55,7 +55,8 @@ func (a AppVersionVisibleTeam) FindAppVersionVisibleTeamsByAppIDAndVersionNumber
 
 			for _, rawRow := range table.Rows {
 				currAppVersionVisibleTeam := rawRow.(entity.AppVersionVisibleTeam)
-				if currAppVersionVisibleTeam.AppID == appID && currAppVersionVisibleTeam.VersionNumber == versionNumber {
+				if currAppVersionVisibleTeam.AppID == appID && 
+				   currAppVersionVisibleTeam.VersionNumber == versionNumber {
 					appVersionVisibleTeams = append(appVersionVisibleTeams, currAppVersionVisibleTeam)
 				}
 			}
@@ -98,9 +99,9 @@ func (a AppVersionVisibleTeam) CreateAppVersionVisibleTeam(ct context.Context, t
 
 			for _, row := range table.Rows {
 				currAppVersionVisibleTeam := row.(entity.AppVersionVisibleTeam)
-				if currAppVersionVisibleTeam.AppID == appVersionVisibleTeam.AppID &&
-					currAppVersionVisibleTeam.VersionNumber == appVersionVisibleTeam.VersionNumber &&
-					currAppVersionVisibleTeam.TeamID == appVersionVisibleTeam.TeamID {
+				if currAppVersionVisibleTeam.AppID == appVersionVisibleTeam.AppID && 
+				   currAppVersionVisibleTeam.VersionNumber == appVersionVisibleTeam.VersionNumber && 
+				   currAppVersionVisibleTeam.TeamID == appVersionVisibleTeam.TeamID {
 					return errs.NewError(errs.Unknown, fmt.Sprintf("row already exist: appID=%v, versionNumber=%v, teamID=%v",
 						appVersionVisibleTeam.AppID, appVersionVisibleTeam.VersionNumber, appVersionVisibleTeam.TeamID))
 				}
@@ -148,8 +149,8 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeam(ct context.Context, t
 			for _, row := range table.Rows {
 				currAppVersionVisibleTeam := row.(entity.AppVersionVisibleTeam)
 				if currAppVersionVisibleTeam.AppID != appID &&
-					currAppVersionVisibleTeam.TeamID == teamID &&
-					currAppVersionVisibleTeam.VersionNumber == versionNumber {
+				   currAppVersionVisibleTeam.TeamID == teamID &&
+				   currAppVersionVisibleTeam.VersionNumber == versionNumber {
 					rows = append(rows, currAppVersionVisibleTeam)
 				}
 			}
@@ -178,7 +179,7 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamsByAppIDAndVersionNumb
 	for _, row := range table.Rows {
 		currAppVersionVisibleTeam := row.(entity.AppVersionVisibleTeam)
 		if currAppVersionVisibleTeam.AppID == appID &&
-			currAppVersionVisibleTeam.VersionNumber == versionNumber {
+		   currAppVersionVisibleTeam.VersionNumber == versionNumber {
 			oldAppVersionVisibleTeams = append(oldAppVersionVisibleTeams, currAppVersionVisibleTeam)
 		}
 	}
@@ -194,7 +195,7 @@ func (a AppVersionVisibleTeam) DeleteAppVersionVisibleTeamsByAppIDAndVersionNumb
 			for _, row := range table.Rows {
 				currAppVersionVisibleTeam := row.(entity.AppVersionVisibleTeam)
 				if currAppVersionVisibleTeam.AppID != appID ||
-					currAppVersionVisibleTeam.VersionNumber != versionNumber {
+				   currAppVersionVisibleTeam.VersionNumber != versionNumber {
 					rows = append(rows, currAppVersionVisibleTeam)
 				}
 			}

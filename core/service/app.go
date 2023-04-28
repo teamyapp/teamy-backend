@@ -554,7 +554,9 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 			return internalErr
 		}
 
-		if app.ActiveVersionNumber != nil && *app.ActiveVersionNumber == versionNumber && !input.IsPublic {
+		if app.ActiveVersionNumber != nil && 
+		   *app.ActiveVersionNumber == versionNumber && 
+		   !input.IsPublic {
 			return errs.NewError(errs.InvalidOperation, "cannot mark an activated version as non-public")
 		}
 
@@ -795,7 +797,7 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		InstalledTeamID:      teamID,
 		InstalledByUserID:    &userID,
 		EnabledVersionNumber: versionNumber,
-		InstalledAt:          time.Now(),
+		InstalledAt:          time.Now().UTC(),
 	}
 	txCtx := TransactionsContext{
 		logger:             a.logger,
@@ -949,8 +951,12 @@ func (a App) rollForwardAppInstallations(ct context.Context, tx *transaction.Tra
 	return nil
 }
 
-func (a App) isAppVisibleToTeam(ct context.Context, tx *transaction.Transaction, app entity.App,
-	teamID uint64) (bool, *errs.Error) {
+func (a App) isAppVisibleToTeam(
+    ct context.Context, 
+    tx *transaction.Transaction, 
+    app entity.App,
+    teamID uint64,
+) (bool, *errs.Error) {
 	appVersions, err := a.appVersionDaoV2.FindAppVersionsByAppIDWithTx(ct, tx, app.ID)
 	if err != nil {
 		return false, err
@@ -976,8 +982,13 @@ func (a App) isAppVisibleToTeam(ct context.Context, tx *transaction.Transaction,
 	return false, nil
 }
 
-func (a App) isAppVersionVisibleToTeam(ct context.Context, tx *transaction.Transaction, app entity.App,
-	appVersion entity.AppVersion, teamID uint64) (bool, *errs.Error) {
+func (a App) isAppVersionVisibleToTeam(
+    ct context.Context, 
+    tx *transaction.Transaction, 
+    app entity.App,
+    appVersion entity.AppVersion, 
+    teamID uint64,
+) (bool, *errs.Error) {
 	if app.ActiveVersionNumber != nil && appVersion.VersionNumber < *app.ActiveVersionNumber {
 		// if active version has been set, we should filter all old versions
 		return false, nil

@@ -638,6 +638,7 @@ func TestAppService_FindApp(t *testing.T) {
 			if !assert.Equal(t, 1, len(found)) {
 				return
 			}
+			
 			assert.True(t, areAppsEqual(app1, found[0]))
 
 			filter2 := AppFilter{

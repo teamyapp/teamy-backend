@@ -100,7 +100,8 @@ func (a AppTeamInstallation) FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct co
 
 			for _, rawRow := range table.Rows {
 				currAppTeamInstallation := rawRow.(entity.AppTeamInstallation)
-				if currAppTeamInstallation.AppID == appID && currAppTeamInstallation.InstalledTeamID == teamID {
+				if currAppTeamInstallation.AppID == appID && 
+				    currAppTeamInstallation.InstalledTeamID == teamID {
 					appTeamInstallation = currAppTeamInstallation
 					return nil
 				}
@@ -123,7 +124,7 @@ func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, tx *t
 			for _, row := range table.Rows {
 				currAppTeamInstallation := row.(entity.AppTeamInstallation)
 				if currAppTeamInstallation.AppID == appTeamInstallation.AppID &&
-					currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
+				   currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
 					return errs.NewError(errs.Unknown,
 						fmt.Sprintf("row already exist: appID=%v, teamID=%v", appTeamInstallation.AppID, appTeamInstallation.InstalledTeamID))
 				}
@@ -142,7 +143,7 @@ func (a AppTeamInstallation) CreateAppTeamInstallation(ct context.Context, tx *t
 			for _, row := range table.Rows {
 				currAppTeamInstallation := row.(entity.AppTeamInstallation)
 				if currAppTeamInstallation.AppID == appTeamInstallation.AppID &&
-					currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
+				   currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
 					continue
 				}
 
@@ -172,7 +173,7 @@ func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, tx *t
 			for i, row := range table.Rows {
 				currAppTeamInstallation := row.(entity.AppTeamInstallation)
 				if currAppTeamInstallation.AppID == appTeamInstallation.AppID &&
-					currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
+				   currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
 					table.Rows[i] = appTeamInstallation
 					return nil
 				}
@@ -190,7 +191,7 @@ func (a AppTeamInstallation) UpdateAppTeamInstallation(ct context.Context, tx *t
 			for index, row := range table.Rows {
 				currAppTeamInstallation := row.(entity.AppTeamInstallation)
 				if currAppTeamInstallation.AppID == appTeamInstallation.AppID &&
-					currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
+				   currAppTeamInstallation.InstalledTeamID == appTeamInstallation.InstalledTeamID {
 					table.Rows[index] = oldAppTeamInstallation
 				}
 			}
@@ -217,7 +218,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallation(ct context.Context, tx *t
 			for _, row := range table.Rows {
 				currAppTeamInstallation := row.(entity.AppTeamInstallation)
 				if currAppTeamInstallation.AppID != appID &&
-					currAppTeamInstallation.InstalledTeamID == teamID {
+				   currAppTeamInstallation.InstalledTeamID == teamID {
 					rows = append(rows, currAppTeamInstallation)
 				}
 			}
@@ -246,7 +247,7 @@ func (a AppTeamInstallation) DeleteAppTeamInstallationsByAppIDAndVersionNumber(c
 	for _, row := range table.Rows {
 		currAppTeamInstallation := row.(entity.AppTeamInstallation)
 		if currAppTeamInstallation.AppID == appID &&
-			currAppTeamInstallation.EnabledVersionNumber == versionNumber {
+		   currAppTeamInstallation.EnabledVersionNumber == versionNumber {
 			oldAppTeamInstallations = append(oldAppTeamInstallations, currAppTeamInstallation)
 		}
 	}
