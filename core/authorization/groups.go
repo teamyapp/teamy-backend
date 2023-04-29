@@ -1,6 +1,10 @@
 package authorization
 
-var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
+import (
+	"github.com/teamyapp/cloud/libs/authorization"
+)
+
+var TeamMemberResourceTypeOperations = []authorization.ResourceTypeOperation{
 	CreateSprintInTeam,
 	CreateTaskInTeam,
 	DeleteSprintInTeam,
@@ -11,9 +15,10 @@ var TeamMemberResourceTypeOperations = []ResourceTypeOperation{
 	ReadTaskInTeam,
 	UpdateTaskInTeam,
 	CloneTaskInTeam,
+	CreateTaskLinkInTeam,
 }
 
-var TeamAdminResourceTypeOperations = append([]ResourceTypeOperation{
+var TeamAdminResourceTypeOperations = append([]authorization.ResourceTypeOperation{
 	AddMemberToInTeam,
 	RemoveMemberFromInTeam,
 	UpdateMembersInTeam,
@@ -26,12 +31,12 @@ var TeamAdminResourceTypeOperations = append([]ResourceTypeOperation{
 	DeleteAppInstallationInTeam,
 }, TeamMemberResourceTypeOperations...)
 
-var TeamOwnerResourceTypeOperations = append([]ResourceTypeOperation{
+var TeamOwnerResourceTypeOperations = append([]authorization.ResourceTypeOperation{
 	PromoteMemberToAdminInTeam,
 	DemoteMemberFromAdminInTeam,
 }, TeamAdminResourceTypeOperations...)
 
-var AppMemberResourceTypeOperations = []ResourceTypeOperation{
+var AppMemberResourceTypeOperations = []authorization.ResourceTypeOperation{
 	ReadInApp,
 	CreateAppVersionInApp,
 	UpdateAppVersionInApp,
@@ -40,7 +45,7 @@ var AppMemberResourceTypeOperations = []ResourceTypeOperation{
 	DeleteAppVersionVisibleTeamInApp,
 }
 
-var AppAdminResourceTypeOperations = append([]ResourceTypeOperation{
+var AppAdminResourceTypeOperations = append([]authorization.ResourceTypeOperation{
 	UpdateInApp,
 	RefreshAppSecretInApp,
 	DeleteInApp,

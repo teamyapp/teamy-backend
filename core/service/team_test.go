@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -834,7 +835,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		},
 		RequestTimeout: 10 * time.Second,
 	}
-	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
+	cloudClientRegistry, err := client.NewRegistry(
 		logger,
 		virtualNetwork,
 		teamyPrometheus,
@@ -853,7 +854,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		return TeamTestRef{}, false
 	}
 
-	authorizer := NewAuthorizer(logger, cloudClientRegistry)
+	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
@@ -905,7 +906,7 @@ func assertTeamGroupAndUserPermissions(
 	teamID uint64,
 	groupLabel string,
 	requesterUserID uint64,
-	resourceTypeOperations []authorization.ResourceTypeOperation,
+	resourceTypeOperations []cloudAuthorization.ResourceTypeOperation,
 ) bool {
 	_, err := teamRef.teamGroupDaoV2.FindGroupByTeamIDAndLabel(ct, teamID, groupLabel)
 	if !assert.Nil(t, err) {
@@ -915,7 +916,7 @@ func assertTeamGroupAndUserPermissions(
 	for _, resourceTypeOperation := range resourceTypeOperations {
 		hasPermission, err := teamRef.cloudTestKit.AuthorizationService.HasPermission(
 			ct,
-			string(resourceTypeOperation.ResourceType),
+			resourceTypeOperation.ResourceType,
 			teamID,
 			resourceTypeOperation.Operation,
 			requesterUserID,

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -29,8 +29,8 @@ type CreateTaskLinkInput struct {
 
 type TaskLink struct {
 	logger              telemetry.Logger
-	cloudClientRegistry *cloudAPI.ClientRegistry
-	authorizer          Authorizer
+	cloudClientRegistry *client.Registry
+	authorizer          client.Authorizer
 	featureToggles      feature.Toggles
 	transactionFactory  transaction.Factory
 	stateSyncer         *realtime.StateSyncer
@@ -45,8 +45,8 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	}
 
 	if t.featureToggles.EnableAuthorization {
-		query := authorization.NewCreateTaskLinkInTeamQuery(userID, taskLinkEntity.TaskID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		query := authorization.NewCreateLinkInTaskQuery(userID, taskLinkEntity.TaskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.TaskLink{}, err
 		}
@@ -98,12 +98,12 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	}
 
 	if t.featureToggles.EnableAuthorization {
-		err := t.authorizer.registerResource(ct, authorization.TaskLinkResourceType, taskLink.ID)
+		err := t.authorizer.RegisterResource(ct, authorization.TaskLinkResourceType, taskLink.ID)
 		if err != nil {
 			return entity.TaskLink{}, err
 		}
 
-		err = t.authorizer.assignParentResource(ct, authorization.TaskLinkResourceType, taskLink.ID, authorization.TaskResourceType, taskLink.TaskID)
+		err = t.authorizer.AssignParentResource(ct, authorization.TaskLinkResourceType, taskLink.ID, authorization.TaskResourceType, taskLink.TaskID)
 		if err != nil {
 			return entity.TaskLink{}, err
 		}
@@ -168,9 +168,9 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 
 func NewTaskLink(
 	logger telemetry.Logger,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
+	cloudClientRegistry *client.Registry,
 	transactionFactory transaction.Factory,
-	authorizer Authorizer,
+	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	taskLinkDaoV2 daov2.TaskLink,

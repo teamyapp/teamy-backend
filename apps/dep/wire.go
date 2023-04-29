@@ -6,7 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/google/wire"
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/web"
@@ -14,15 +14,15 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	"github.com/teamyapp/teamy-backend/apps/github/client"
-	"github.com/teamyapp/teamy-backend/core/api"
+	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 )
 
 type GithubAppPrivateKeyPEM []byte
 
 func InitGithubAppAPI(
 	logger telemetry.Logger,
-	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
-	teamyAPIClientRegistry *api.ClientRegistry,
+	cloudClientRegistry *cloudClient.Registry,
+	teamyClientRegistry *teamyClient.Registry,
 	httpClient web.HTTPClient,
 	config github.AppConfig,
 	githubAppPrivateKeyPEM GithubAppPrivateKeyPEM,

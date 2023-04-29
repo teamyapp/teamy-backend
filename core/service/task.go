@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -58,8 +58,8 @@ type UpdateTaskInput struct {
 
 type Task struct {
 	logger                    telemetry.Logger
-	cloudClientRegistry       *cloudAPI.ClientRegistry
-	authorizer                Authorizer
+	cloudClientRegistry       *client.Registry
+	authorizer                client.Authorizer
 	featureToggles            feature.Toggles
 	stateSyncer               *realtime.StateSyncer
 	transactionFactory        transaction.Factory
@@ -236,12 +236,12 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	}
 
 	if t.featureToggles.EnableAuthorization {
-		internalErr = t.authorizer.registerResource(ct, authorization.TaskResourceType, task.ID)
+		internalErr = t.authorizer.RegisterResource(ct, authorization.TaskResourceType, task.ID)
 		if internalErr != nil {
 			return entity.Task{}, internalErr
 		}
 
-		internalErr = t.authorizer.assignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, teamID)
+		internalErr = t.authorizer.AssignParentResource(ct, authorization.TaskResourceType, task.ID, authorization.TeamResourceType, teamID)
 		if internalErr != nil {
 			return entity.Task{}, internalErr
 		}
@@ -258,7 +258,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateTaskInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Task{}, err
 		}
@@ -288,7 +288,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTaskQuery(userID, taskID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Task{}, err
 		}
@@ -985,8 +985,8 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 
 func NewTask(
 	logger telemetry.Logger,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	authorizer Authorizer,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,

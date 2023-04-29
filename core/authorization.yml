@@ -88,6 +88,11 @@ operationRelations:
     parents:
       - resourceType: Team
         operation: DeleteTask
+  - resourceType: Task
+    operation: CreateLink
+    parents:
+      - resourceType: Team
+        operation: CreateTaskLink
   - resourceType: TaskLink
     operation: Read
     parents:

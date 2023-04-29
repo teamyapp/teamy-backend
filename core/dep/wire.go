@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/env"
 	cloudGQL "github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -75,7 +75,6 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
-	service.NewAuthorizer,
 	service.NewApp,
 )
 
@@ -94,7 +93,7 @@ func InitGraphQLAPI(
 	environment env.Environment,
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
-	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) (cloudGQL.Service[gql.Resolver], error) {
@@ -105,6 +104,7 @@ func InitGraphQLAPI(
 		daoSet,
 		transaction.NewFactory,
 		serviceSet,
+		client.NewAuthorizer,
 		feature.NewStaticToggles,
 		cache.NewActivity,
 		gql.NewDependencies,
@@ -126,13 +126,14 @@ func InitRealTimeStateSyncAPI(
 
 func InitTaskRPCAPI(
 	logger telemetry.Logger,
-	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.TaskRPC {
 	wire.Build(
 		daoSet,
 		serviceSet,
+		client.NewAuthorizer,
 		feature.NewStaticToggles,
 		cache.NewActivity,
 		transaction.NewFactory,
@@ -143,13 +144,14 @@ func InitTaskRPCAPI(
 
 func InitSprintRPCAPI(
 	logger telemetry.Logger,
-	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.SprintRPC {
 	wire.Build(
 		daoSet,
 		serviceSet,
+		client.NewAuthorizer,
 		feature.NewStaticToggles,
 		transaction.NewFactory,
 		api.NewSprintRPC,
@@ -159,13 +161,14 @@ func InitSprintRPCAPI(
 
 func InitTaskLinkRPCAPI(
 	logger telemetry.Logger,
-	cloudAPIClientRegistry *cloudAPI.ClientRegistry,
+	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.TaskLinkRPC {
 	wire.Build(
 		daoSet,
 		serviceSet,
+		client.NewAuthorizer,
 		feature.NewStaticToggles,
 		transaction.NewFactory,
 		api.NewTaskLinkRPC,
@@ -176,7 +179,7 @@ func InitTaskLinkRPCAPI(
 func newUserService(
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
+	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	toggles feature.Toggles,
@@ -200,8 +203,8 @@ func newUserService(
 func newTeamService(
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	authorizer service.Authorizer,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	toggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,

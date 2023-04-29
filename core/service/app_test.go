@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -88,7 +88,7 @@ func prepareAppTestRef(t *testing.T, toggles feature.Toggles) (AppTestRef, bool)
 		},
 		RequestTimeout: 10 * time.Second,
 	}
-	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
+	cloudClientRegistry, err := cloudClient.NewRegistry(
 		logger,
 		virtualNetwork,
 		teamyPrometheus,
@@ -107,7 +107,7 @@ func prepareAppTestRef(t *testing.T, toggles feature.Toggles) (AppTestRef, bool)
 		return AppTestRef{}, false
 	}
 
-	authorizer := NewAuthorizer(logger, cloudClientRegistry)
+	authorizer := cloudClient.NewAuthorizer(logger, cloudClientRegistry)
 
 	transactionFactory := transaction.NewFactory(nil)
 

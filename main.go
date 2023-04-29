@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -27,7 +27,7 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDI "github.com/teamyapp/teamy-backend/apps/inject"
 	"github.com/teamyapp/teamy-backend/config"
-	"github.com/teamyapp/teamy-backend/core/api"
+	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 	"github.com/teamyapp/teamy-backend/core/dep"
 	"github.com/teamyapp/teamy-backend/core/inject"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -120,7 +120,7 @@ func startServiceRunner(
 	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
 	nw := network.NewSocket()
 	retryFactory := makeRetryFactory(logger, cfg)
-	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
+	cloudClientRegistry, err := cloudClient.NewRegistry(
 		logger,
 		nw,
 		prom,
@@ -137,7 +137,7 @@ func startServiceRunner(
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	teamyClientRegistry, internalErr := api.NewClientRegistry(
+	teamyClientRegistry, internalErr := teamyClient.NewRegistry(
 		logger,
 		nw,
 		prom,

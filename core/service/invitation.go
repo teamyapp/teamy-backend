@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -25,8 +25,8 @@ const invitationCodeLen = 20
 
 type Invitation struct {
 	logger                 telemetry.Logger
-	cloudClientRegistry    *cloudAPI.ClientRegistry
-	authorizer             Authorizer
+	cloudClientRegistry    *client.Registry
+	authorizer             client.Authorizer
 	featureToggles         feature.Toggles
 	stateSyncer            *realtime.StateSyncer
 	transactionFactory     transaction.Factory
@@ -83,7 +83,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 
 	if i.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateInvitationInTeamQuery(userID, teamID)
-		hasPermission, err := i.authorizer.hasPermission(ct, query)
+		hasPermission, err := i.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Invitation{}, err
 		}
@@ -143,12 +143,12 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 	}
 
 	if i.featureToggles.EnableAuthorization {
-		err = i.authorizer.registerResource(ct, authorization.InvitationResourceType, invitation.ID)
+		err = i.authorizer.RegisterResource(ct, authorization.InvitationResourceType, invitation.ID)
 		if err != nil {
 			return entity.Invitation{}, err
 		}
 
-		err = i.authorizer.assignParentResource(ct, authorization.InvitationResourceType, invitation.ID, authorization.TeamResourceType, invitation.TeamID)
+		err = i.authorizer.AssignParentResource(ct, authorization.InvitationResourceType, invitation.ID, authorization.TeamResourceType, invitation.TeamID)
 		if err != nil {
 			return entity.Invitation{}, err
 		}
@@ -246,7 +246,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 
 	if i.featureToggles.EnableAuthorization {
 		query := authorization.NewAddMemberToInTeamQuery(receiverUserID, invitation.TeamID)
-		hasPermission, internalErr := i.authorizer.hasPermission(ct, query)
+		hasPermission, internalErr := i.authorizer.HasPermission(ct, query)
 		if internalErr != nil {
 			return entity.Invitation{}, err
 		}
@@ -444,8 +444,8 @@ func (i Invitation) ensureInvitationPending(ct context.Context, invitation entit
 
 func NewInvitation(
 	logger telemetry.Logger,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	authorizer Authorizer,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,

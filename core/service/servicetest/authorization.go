@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/app/service"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 )
@@ -13,7 +14,7 @@ func AddTeamPermission(
 	authorizationService service.Authorization,
 	teamID uint64,
 	groupID uint64,
-	groupOperations []authorization.ResourceTypeOperation,
+	groupOperations []cloudAuthorization.ResourceTypeOperation,
 	requesterUserID uint64,
 ) *errs.Error {
 	err := authorizationService.AddUserGroupMember(ct, groupID, requesterUserID)
@@ -24,7 +25,7 @@ func AddTeamPermission(
 	for _, resourceTypeOperation := range groupOperations {
 		err = authorizationService.RegisterOperation(
 			ct,
-			string(resourceTypeOperation.ResourceType),
+			resourceTypeOperation.ResourceType,
 			resourceTypeOperation.Operation)
 		if err != nil {
 			return err
@@ -32,7 +33,7 @@ func AddTeamPermission(
 
 		err = authorizationService.AddPermission(
 			ct,
-			string(resourceTypeOperation.ResourceType),
+			resourceTypeOperation.ResourceType,
 			teamID,
 			resourceTypeOperation.Operation,
 			groupID)
@@ -43,7 +44,7 @@ func AddTeamPermission(
 
 	return authorizationService.RegisterResource(
 		ct,
-		string(authorization.TeamResourceType),
+		authorization.TeamResourceType,
 		teamID)
 }
 
@@ -68,7 +69,7 @@ func AddAppPermission(
 	authorizationService service.Authorization,
 	appID uint64,
 	groupID uint64,
-	groupOperations []authorization.ResourceTypeOperation,
+	groupOperations []cloudAuthorization.ResourceTypeOperation,
 	requesterUserID uint64,
 ) *errs.Error {
 	err := authorizationService.AddUserGroupMember(ct, groupID, requesterUserID)
@@ -79,7 +80,7 @@ func AddAppPermission(
 	for _, resourceTypeOperation := range groupOperations {
 		err = authorizationService.RegisterOperation(
 			ct,
-			string(resourceTypeOperation.ResourceType),
+			resourceTypeOperation.ResourceType,
 			resourceTypeOperation.Operation)
 		if err != nil {
 			return err
@@ -87,7 +88,7 @@ func AddAppPermission(
 
 		err = authorizationService.AddPermission(
 			ct,
-			string(resourceTypeOperation.ResourceType),
+			resourceTypeOperation.ResourceType,
 			appID,
 			resourceTypeOperation.Operation,
 			groupID)
@@ -98,6 +99,6 @@ func AddAppPermission(
 
 	return authorizationService.RegisterResource(
 		ct,
-		string(authorization.AppResourceType),
+		authorization.AppResourceType,
 		appID)
 }

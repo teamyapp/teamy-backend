@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -34,9 +34,9 @@ type CreateSprintInput struct {
 
 type Sprint struct {
 	logger                  telemetry.Logger
-	cloudClientRegistry     *cloudAPI.ClientRegistry
+	cloudClientRegistry     *client.Registry
 	stateSyncer             *realtime.StateSyncer
-	authorizer              Authorizer
+	authorizer              client.Authorizer
 	featureToggles          feature.Toggles
 	transactionFactory      transaction.Factory
 	taskDaoV2               daov2.Task
@@ -87,7 +87,7 @@ func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Spri
 		}
 
 		query := authorization.NewReadInTeamQuery(userID, teamID)
-		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +139,7 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 		}
 
 		query := authorization.NewUpdateInTeamQuery(userID, teamID)
-		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
 		}
@@ -254,7 +254,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 		}
 
 		query := authorization.NewCreateSprintInTeamQuery(userID, teamID)
-		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Sprint{}, err
 		}
@@ -340,12 +340,12 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 	// TODO(yuhang): if failed to register/assign resource, there will be inconsistent state. Cross-service transaction
 	// protection will be covered in stage 2
 	if s.featureToggles.EnableAuthorization {
-		err = s.authorizer.registerResource(ct, authorization.SprintResourceType, sprint.ID)
+		err = s.authorizer.RegisterResource(ct, authorization.SprintResourceType, sprint.ID)
 		if err != nil {
 			return entity.Sprint{}, err
 		}
 
-		err = s.authorizer.assignParentResource(ct, authorization.SprintResourceType, sprint.ID, authorization.TeamResourceType, sprint.OwningTeamID)
+		err = s.authorizer.AssignParentResource(ct, authorization.SprintResourceType, sprint.ID, authorization.TeamResourceType, sprint.OwningTeamID)
 		if err != nil {
 			return entity.Sprint{}, err
 		}
@@ -496,7 +496,7 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		}
 
 		query := authorization.NewCloneTaskInTeamQuery(userID, sprint.OwningTeamID)
-		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return nil, err
 		}
@@ -884,9 +884,9 @@ func (s Sprint) tryIncreaseBandwidth(
 
 func NewSprint(
 	logger telemetry.Logger,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
+	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
-	authorizer Authorizer,
+	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	transactionFactory transaction.Factory,
 	taskDaoV2 daov2.Task,
