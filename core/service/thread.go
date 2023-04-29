@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -27,7 +27,7 @@ type UpdateMessageInput struct {
 
 type Thread struct {
 	logger              telemetry.Logger
-	cloudClientRegistry *cloudAPI.ClientRegistry
+	cloudClientRegistry *client.Registry
 	stateSyncer         *realtime.StateSyncer
 	transactionFactory  transaction.Factory
 	toggles             feature.Toggles
@@ -185,7 +185,7 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 
 func NewThread(
 	logger telemetry.Logger,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
+	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	toggles feature.Toggles,

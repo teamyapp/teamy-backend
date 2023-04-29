@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -71,7 +71,7 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 		},
 		RequestTimeout: 10 * time.Second,
 	}
-	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
+	cloudClientRegistry, err := client.NewRegistry(
 		logger,
 		virtualNetwork,
 		teamyPrometheus,

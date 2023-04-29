@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -21,8 +22,8 @@ import (
 
 type App struct {
 	logger                     telemetry.Logger
-	cloudClientRegistry        *cloudAPI.ClientRegistry
-	authorizer                 Authorizer
+	cloudClientRegistry        *client.Registry
+	authorizer                 client.Authorizer
 	featureToggles             feature.Toggles
 	transactionFactory         transaction.Factory
 	stateSyncer                *realtime.StateSyncer
@@ -210,7 +211,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 	}
 
 	if a.featureToggles.EnableAuthorization {
-		err = a.authorizer.registerResource(ct, authorization.AppResourceType, app.ID)
+		err = a.authorizer.RegisterResource(ct, authorization.AppResourceType, app.ID)
 		if err != nil {
 			return entity.App{}, err
 		}
@@ -226,16 +227,16 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 		//		assign AppMember permissions to app creator
 		appAdminUserGroupName := fmt.Sprintf("App%d/Admin", app.ID)
 		appAdminDescription := fmt.Sprintf("Admins for %s", appAdminUserGroupName)
-		appAdminOperations := make([]authorization.ResourceOperation, 0)
+		appAdminOperations := make([]cloudAuthorization.ResourceOperation, 0)
 		for _, appAdminResourceTypeOperation := range authorization.AppAdminResourceTypeOperations {
-			appAdminOperations = append(appAdminOperations, authorization.ResourceOperation{
+			appAdminOperations = append(appAdminOperations, cloudAuthorization.ResourceOperation{
 				ResourceType: appAdminResourceTypeOperation.ResourceType,
 				Operation:    appAdminResourceTypeOperation.Operation,
 				ResourceID:   app.ID,
 			})
 		}
 
-		_, err = a.authorizer.createUserGroupAndAssignPermissions(ct,
+		_, err = a.authorizer.CreateUserGroupAndAssignPermissions(ct,
 			userID,
 			appAdminUserGroupName,
 			&appAdminDescription,
@@ -247,16 +248,16 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 
 		appMemberUserGroupName := fmt.Sprintf("App%d/Member", app.ID)
 		appMemberDescription := fmt.Sprintf("Members for %s", appMemberUserGroupName)
-		appMemberOperations := make([]authorization.ResourceOperation, 0)
+		appMemberOperations := make([]cloudAuthorization.ResourceOperation, 0)
 		for _, appMemberResourceTypeOperation := range authorization.AppMemberResourceTypeOperations {
-			appMemberOperations = append(appMemberOperations, authorization.ResourceOperation{
+			appMemberOperations = append(appMemberOperations, cloudAuthorization.ResourceOperation{
 				ResourceType: appMemberResourceTypeOperation.ResourceType,
 				Operation:    appMemberResourceTypeOperation.Operation,
 				ResourceID:   app.ID,
 			})
 		}
 
-		_, err = a.authorizer.createUserGroupAndAssignPermissions(ct,
+		_, err = a.authorizer.CreateUserGroupAndAssignPermissions(ct,
 			userID,
 			appMemberUserGroupName,
 			&appMemberDescription,
@@ -278,7 +279,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 		}
 
 		query := authorization.NewUpdateInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.App{}, err
 		}
@@ -361,7 +362,7 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 		}
 
 		query := authorization.NewRefreshAppSecretInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.App{}, err
 		}
@@ -415,7 +416,7 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 		}
 
 		query := authorization.NewDeleteInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.App{}, err
 		}
@@ -464,7 +465,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 
 	if a.featureToggles.EnableAuthorization {
 		query := authorization.NewCreateAppVersionInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
 		}
@@ -523,7 +524,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		}
 
 		query := authorization.NewUpdateAppVersionInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
 		}
@@ -554,9 +555,9 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 			return internalErr
 		}
 
-		if app.ActiveVersionNumber != nil && 
-		   *app.ActiveVersionNumber == versionNumber && 
-		   !input.IsPublic {
+		if app.ActiveVersionNumber != nil &&
+			*app.ActiveVersionNumber == versionNumber &&
+			!input.IsPublic {
 			return errs.NewError(errs.InvalidOperation, "cannot mark an activated version as non-public")
 		}
 
@@ -590,7 +591,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 		}
 
 		query := authorization.NewDeleteAppVersionInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
 		}
@@ -658,7 +659,7 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		}
 
 		query := authorization.NewCreateAppVersionVisibleTeamInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
 		}
@@ -711,7 +712,7 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		}
 
 		query := authorization.NewDeleteAppVersionVisibleTeamInAppQuery(userID, appID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppVersion{}, err
 		}
@@ -779,8 +780,8 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 	}
 
 	if a.featureToggles.EnableAuthorization {
-		query := authorization.NewCreateAppInstallationInTeamQuery(userID, teamID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		query := authorization.NewUpdateAppInstallationInTeamQuery(userID, teamID)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppTeamInstallation{}, err
 		}
@@ -840,7 +841,7 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 		}
 
 		query := authorization.NewUpdateAppInstallationInTeamQuery(userID, teamID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppTeamInstallation{}, err
 		}
@@ -889,8 +890,8 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 			return entity.AppTeamInstallation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewDeleteAppInstallationInTeamQuery(userID, teamID)
-		hasPermission, err := a.authorizer.hasPermission(ct, query)
+		query := authorization.NewUpdateAppInstallationInTeamQuery(userID, teamID)
+		hasPermission, err := a.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.AppTeamInstallation{}, err
 		}
@@ -952,10 +953,10 @@ func (a App) rollForwardAppInstallations(ct context.Context, tx *transaction.Tra
 }
 
 func (a App) isAppVisibleToTeam(
-    ct context.Context, 
-    tx *transaction.Transaction, 
-    app entity.App,
-    teamID uint64,
+	ct context.Context,
+	tx *transaction.Transaction,
+	app entity.App,
+	teamID uint64,
 ) (bool, *errs.Error) {
 	appVersions, err := a.appVersionDaoV2.FindAppVersionsByAppIDWithTx(ct, tx, app.ID)
 	if err != nil {
@@ -983,11 +984,11 @@ func (a App) isAppVisibleToTeam(
 }
 
 func (a App) isAppVersionVisibleToTeam(
-    ct context.Context, 
-    tx *transaction.Transaction, 
-    app entity.App,
-    appVersion entity.AppVersion, 
-    teamID uint64,
+	ct context.Context,
+	tx *transaction.Transaction,
+	app entity.App,
+	appVersion entity.AppVersion,
+	teamID uint64,
 ) (bool, *errs.Error) {
 	if app.ActiveVersionNumber != nil && appVersion.VersionNumber < *app.ActiveVersionNumber {
 		// if active version has been set, we should filter all old versions
@@ -1014,8 +1015,8 @@ func (a App) isAppVersionVisibleToTeam(
 
 func NewApp(
 	logger telemetry.Logger,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	authorizer Authorizer,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	transactionFactory transaction.Factory,
 	stateSyncer *realtime.StateSyncer,

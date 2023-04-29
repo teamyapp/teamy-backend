@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
@@ -34,7 +34,7 @@ type UpdateUserInput struct {
 type User struct {
 	logger                     telemetry.Logger
 	cloudWebAPIExternalBaseURL string
-	cloudClientRegistry        *cloudAPI.ClientRegistry
+	cloudClientRegistry        *client.Registry
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
 	toggles                    feature.Toggles
@@ -212,7 +212,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 func NewUser(
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL string,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
+	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	toggles feature.Toggles,

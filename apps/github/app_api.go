@@ -17,8 +17,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	teamyClient "github.com/teamyapp/teamy-backend/core/client"
+
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
+	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -30,7 +32,6 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/github/client"
 	githubEntity "github.com/teamyapp/teamy-backend/apps/github/entity"
 	appsProto "github.com/teamyapp/teamy-backend/apps/proto"
-	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -51,8 +52,8 @@ var taskIDPattern = regexp.MustCompile(`\(task:([\d]+)\)`)
 type AppAPI struct {
 	config                                   AppConfig
 	logger                                   telemetry.Logger
-	cloudClientRegistry                      *cloudAPI.ClientRegistry
-	teamyClientRegistry                      *api.ClientRegistry
+	cloudClientRegistry                      *cloudClient.Registry
+	teamyClientRegistry                      *teamyClient.Registry
 	githubAppInstallStateDao                 dao.GithubAppInstallState
 	githubAppInstallationDao                 dao.GithubAppInstallation
 	githubPullRequestDao                     dao.GithubPullRequest
@@ -1412,8 +1413,8 @@ func (a AppAPI) getInstallGithubAppURL(ct context.Context, stateID uint64) (stri
 func NewAppAPI(
 	cfg AppConfig,
 	logger telemetry.Logger,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	teamyClientRegistry *api.ClientRegistry,
+	cloudClientRegistry *cloudClient.Registry,
+	teamyClientRegistry *teamyClient.Registry,
 	githubAppInstallStateDao dao.GithubAppInstallState,
 	githubAppInstallationDao dao.GithubAppInstallation,
 	githubPullRequestDao dao.GithubPullRequest,

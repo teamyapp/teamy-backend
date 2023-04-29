@@ -1,4 +1,4 @@
-package api
+package client
 
 import (
 	"github.com/teamyapp/cloud/libs/errs"
@@ -11,50 +11,50 @@ import (
 	"google.golang.org/grpc"
 )
 
-type ClientRegistry struct {
+type Registry struct {
 	conn           *grpc.ClientConn
 	taskClient     proto.TaskClient
 	taskLinkClient proto.TaskLinkClient
 	sprintClient   proto.SprintClient
 }
 
-func (c *ClientRegistry) TaskClient() proto.TaskClient {
-	if c.taskClient == nil {
-		c.taskClient = proto.NewTaskClient(c.conn)
+func (r *Registry) TaskClient() proto.TaskClient {
+	if r.taskClient == nil {
+		r.taskClient = proto.NewTaskClient(r.conn)
 	}
 
-	return c.taskClient
+	return r.taskClient
 }
 
-func (c *ClientRegistry) TaskLinkClient() proto.TaskLinkClient {
-	if c.taskLinkClient == nil {
-		c.taskLinkClient = proto.NewTaskLinkClient(c.conn)
+func (r *Registry) TaskLinkClient() proto.TaskLinkClient {
+	if r.taskLinkClient == nil {
+		r.taskLinkClient = proto.NewTaskLinkClient(r.conn)
 	}
 
-	return c.taskLinkClient
+	return r.taskLinkClient
 }
 
-func (c *ClientRegistry) SprintClient() proto.SprintClient {
-	if c.sprintClient == nil {
-		c.sprintClient = proto.NewSprintClient(c.conn)
+func (r *Registry) SprintClient() proto.SprintClient {
+	if r.sprintClient == nil {
+		r.sprintClient = proto.NewSprintClient(r.conn)
 	}
 
-	return c.sprintClient
+	return r.sprintClient
 }
 
-func NewClientRegistry(
+func NewRegistry(
 	logger telemetry.Logger,
 	network network.Network,
 	clientGRPCMetrics middleware.ClientGRPCMetrics,
 	connCfg rpc.ConnectionConfig,
 	makeRetry func() retry.Retry,
-) (*ClientRegistry, *errs.Error) {
+) (*Registry, *errs.Error) {
 	conn, err := rpc.NewClientConnection(logger, network, clientGRPCMetrics, connCfg, makeRetry)
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return &ClientRegistry{
+	return &Registry{
 		conn: conn,
 	}, nil
 }

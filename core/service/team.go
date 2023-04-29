@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -39,8 +40,8 @@ type CreateTeamInput struct {
 type Team struct {
 	logger                     telemetry.Logger
 	cloudWebAPIExternalBaseURL string
-	cloudClientRegistry        *cloudAPI.ClientRegistry
-	authorizer                 Authorizer
+	cloudClientRegistry        *client.Registry
+	authorizer                 client.Authorizer
 	featureToggles             feature.Toggles
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
@@ -61,7 +62,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewReadInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
 		}
@@ -145,22 +146,22 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 	var memberGroupID uint64
 	var err *errs.Error
 	if t.featureToggles.EnableAuthorization {
-		err = t.authorizer.registerResource(ct, authorization.TeamResourceType, teamID)
+		err = t.authorizer.RegisterResource(ct, authorization.TeamResourceType, teamID)
 		if err != nil {
 			return entity.Team{}, err
 		}
 
 		teamOwnerUserGroupName := fmt.Sprintf("Team%d/Owner", teamID)
 		teamOwnerDescription := fmt.Sprintf("Owners for %s", teamOwnerUserGroupName)
-		teamOwnerOperations := make([]authorization.ResourceOperation, 0)
+		teamOwnerOperations := make([]cloudAuthorization.ResourceOperation, 0)
 		for _, teamOwnerResourceTypeOperation := range authorization.TeamOwnerResourceTypeOperations {
-			teamOwnerOperations = append(teamOwnerOperations, authorization.ResourceOperation{
+			teamOwnerOperations = append(teamOwnerOperations, cloudAuthorization.ResourceOperation{
 				ResourceType: teamOwnerResourceTypeOperation.ResourceType,
 				Operation:    teamOwnerResourceTypeOperation.Operation,
 				ResourceID:   teamID,
 			})
 		}
-		ownerGroupID, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
+		ownerGroupID, err = t.authorizer.CreateUserGroupAndAssignPermissions(ct,
 			userID,
 			teamOwnerUserGroupName,
 			&teamOwnerDescription,
@@ -172,16 +173,16 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 
 		teamAdminUserGroupName := fmt.Sprintf("Team%d/Admin", teamID)
 		teamAdminDescription := fmt.Sprintf("Admins for %s", teamAdminUserGroupName)
-		teamAdminOperations := make([]authorization.ResourceOperation, 0)
+		teamAdminOperations := make([]cloudAuthorization.ResourceOperation, 0)
 		for _, teamAdminResourceTypeOperation := range authorization.TeamAdminResourceTypeOperations {
-			teamAdminOperations = append(teamAdminOperations, authorization.ResourceOperation{
+			teamAdminOperations = append(teamAdminOperations, cloudAuthorization.ResourceOperation{
 				ResourceType: teamAdminResourceTypeOperation.ResourceType,
 				Operation:    teamAdminResourceTypeOperation.Operation,
 				ResourceID:   teamID,
 			})
 		}
 
-		adminGroupID, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
+		adminGroupID, err = t.authorizer.CreateUserGroupAndAssignPermissions(ct,
 			userID,
 			teamAdminUserGroupName,
 			&teamAdminDescription,
@@ -193,16 +194,16 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 
 		teamMemberUserGroupName := fmt.Sprintf("Team%d/Member", teamID)
 		teamMemberDescription := fmt.Sprintf("Members for %s", teamMemberUserGroupName)
-		teamMemberOperations := make([]authorization.ResourceOperation, 0)
+		teamMemberOperations := make([]cloudAuthorization.ResourceOperation, 0)
 		for _, teamMemberResourceTypeOperation := range authorization.TeamMemberResourceTypeOperations {
-			teamMemberOperations = append(teamMemberOperations, authorization.ResourceOperation{
+			teamMemberOperations = append(teamMemberOperations, cloudAuthorization.ResourceOperation{
 				ResourceType: teamMemberResourceTypeOperation.ResourceType,
 				Operation:    teamMemberResourceTypeOperation.Operation,
 				ResourceID:   teamID,
 			})
 		}
 
-		memberGroupID, err = t.authorizer.createUserGroupAndAssignPermissions(ct,
+		memberGroupID, err = t.authorizer.CreateUserGroupAndAssignPermissions(ct,
 			userID,
 			teamMemberUserGroupName,
 			&teamMemberDescription,
@@ -311,7 +312,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
 		}
@@ -370,7 +371,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 		}
 
 		query := authorization.NewDeleteInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
 		}
@@ -424,7 +425,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return 0, err
 		}
@@ -471,7 +472,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Team{}, err
 		}
@@ -550,7 +551,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewReadMembersInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return nil, err
 		}
@@ -571,7 +572,7 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewAddMemberToInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.TeamMember{}, err
 		}
@@ -660,7 +661,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewRemoveMemberFromInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.TeamMember{}, err
 		}
@@ -749,7 +750,7 @@ func (t Team) UpdateTeamMember(
 
 	if t.featureToggles.EnableAuthorization {
 		query := authorization.NewUpdateMembersInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.hasPermission(ct, query)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.TeamMember{}, err
 		}
@@ -844,8 +845,8 @@ func (t Team) UpdateTeamMember(
 func NewTeam(
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL string,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
-	authorizer Authorizer,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,

@@ -8,19 +8,19 @@ package dep
 
 import (
 	"database/sql"
-	"github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/gql"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/web"
 	"github.com/teamyapp/teamy-backend/apps/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/apps/github"
-	"github.com/teamyapp/teamy-backend/apps/github/client"
-	api2 "github.com/teamyapp/teamy-backend/core/api"
+	client3 "github.com/teamyapp/teamy-backend/apps/github/client"
+	client2 "github.com/teamyapp/teamy-backend/core/client"
 )
 
 // Injectors from wire.go:
 
-func InitGithubAppAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.ClientRegistry, teamyAPIClientRegistry *api2.ClientRegistry, httpClient web.HTTPClient, config github.AppConfig, githubAppPrivateKeyPEM GithubAppPrivateKeyPEM, sqlDB *sql.DB) (github.AppAPI, error) {
+func InitGithubAppAPI(logger telemetry.Logger, cloudClientRegistry *client.Registry, teamyClientRegistry *client2.Registry, httpClient web.HTTPClient, config github.AppConfig, githubAppPrivateKeyPEM GithubAppPrivateKeyPEM, sqlDB *sql.DB) (github.AppAPI, error) {
 	githubAppInstallState := sqldb.NewGithubAppInstallState(logger, sqlDB)
 	githubAppInstallation := sqldb.NewGithubAppInstallation(logger, sqlDB)
 	githubPullRequest := sqldb.NewGithubPullRequest(logger, sqlDB)
@@ -28,13 +28,13 @@ func InitGithubAppAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.Clien
 	githubRequiredUserAction := sqldb.NewGithubRequiredUserAction(logger, sqlDB)
 	githubPullRequestInternalTaskRelation := sqldb.NewGithubPullRequestInternalTaskRelation(logger, sqlDB)
 	gqlClient := gql.NewClient(logger, httpClient)
-	graphQLAPI := client.NewGraphQLAPI(logger, gqlClient)
-	restapi := client.NewRESTAPI(logger, httpClient)
+	graphQLAPI := client3.NewGraphQLAPI(logger, gqlClient)
+	restapi := client3.NewRESTAPI(logger, httpClient)
 	githubApp, err := newGithubApp(logger, config, githubAppPrivateKeyPEM)
 	if err != nil {
 		return github.AppAPI{}, err
 	}
-	appAPI := github.NewAppAPI(config, logger, cloudAPIClientRegistry, teamyAPIClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction, githubPullRequestInternalTaskRelation, graphQLAPI, restapi, githubApp)
+	appAPI := github.NewAppAPI(config, logger, cloudClientRegistry, teamyClientRegistry, githubAppInstallState, githubAppInstallation, githubPullRequest, githubCodeReview, githubRequiredUserAction, githubPullRequestInternalTaskRelation, graphQLAPI, restapi, githubApp)
 	return appAPI, nil
 }
 
@@ -42,6 +42,6 @@ func InitGithubAppAPI(logger telemetry.Logger, cloudAPIClientRegistry *api.Clien
 
 type GithubAppPrivateKeyPEM []byte
 
-func newGithubApp(logger telemetry.Logger, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client.GithubApp, error) {
-	return client.NewGithubApp(logger, config.AppID, []byte(privateKeyPEM))
+func newGithubApp(logger telemetry.Logger, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client3.GithubApp, error) {
+	return client3.NewGithubApp(logger, config.AppID, []byte(privateKeyPEM))
 }

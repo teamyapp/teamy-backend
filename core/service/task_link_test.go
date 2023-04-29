@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	cloudAPI "github.com/teamyapp/cloud/app/api"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
-	"github.com/teamyapp/cloud/libs/env"
-	"github.com/teamyapp/cloud/libs/metrics"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
@@ -21,15 +21,19 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/service/servicetest"
 )
 
 type TaskLinkTestRef struct {
+	teamService     Team
 	taskService     Task
 	taskLinkService TaskLink
+	cloudTestKit    testkit.TestKit
 }
 
 func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTestRef, bool) {
@@ -57,21 +61,25 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	}
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
+	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
+	if !assert.Nil(t, internalErr) {
+		return TaskLinkTestRef{}, false
+	}
 
-	teamyPrometheus := metrics.NewPrometheus("teamy", "backend", env.DevelopmentEnv)
+	noopMetrics := metricstest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
 		ShouldEncrypt: false,
 		GetAccessToken: func() string {
-			return "accessToken"
+			return apiToken
 		},
 		RequestTimeout: 10 * time.Second,
 	}
-	cloudClientRegistry, err := cloudAPI.NewClientRegistry(
+	cloudClientRegistry, err := client.NewRegistry(
 		logger,
 		virtualNetwork,
-		teamyPrometheus,
+		noopMetrics,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
@@ -87,11 +95,10 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		return TaskLinkTestRef{}, false
 	}
 
-	authorizer := NewAuthorizer(logger, cloudClientRegistry)
+	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-
 	teamyBackendDB.CreateTable(daotestv2.ThreadTableName)
 	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
 
@@ -105,6 +112,26 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)
 	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
+	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
+	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
+	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
+	teamGroupDaoV2 := daotestv2.NewTeamGroup(teamyBackendDB, transactionFactory)
+	teamService := NewTeam(
+		logger,
+		cloudTestKitConfig.WebAPIBaseURL,
+		cloudClientRegistry,
+		authorizer,
+		toggles,
+		stateSyncer,
+		transactionFactory,
+		taskDaoV2,
+		sprintDaoV2,
+		sprintParticipantDaoV2,
+		teamDaoV2,
+		teamMemberDaoV2,
+		teamFileUploadSessionDaoV2,
+		teamGroupDaoV2,
+	)
 	taskService := NewTask(
 		logger,
 		cloudClientRegistry,
@@ -123,10 +150,6 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 
 	teamyBackendDB.CreateTable(daotestv2.TaskLinkTableName)
 	taskLinkDaoV2 := daotestv2.NewTaskLink(teamyBackendDB)
-
-	toggles = feature.Toggles{
-		EnableAuthorization: false,
-	}
 	taskLinkService := NewTaskLink(
 		logger,
 		cloudClientRegistry,
@@ -138,59 +161,189 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		taskDaoV2,
 	)
 	return TaskLinkTestRef{
+		teamService:     teamService,
 		taskService:     taskService,
 		taskLinkService: taskLinkService,
+		cloudTestKit:    cloudTestKit,
 	}, true
 }
 
 func TestTaskLinkService_CreateTaskLink(t *testing.T) {
-	taskLinkTestRef, ok := prepareTaskLinkTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
-	})
-	if !ok {
-		return
-	}
-
-	var requesterUserID uint64 = 2
-	ct := context.Background()
-	ct = ctx.NewContextWithUserID(ct, requesterUserID)
-
 	var teamID uint64 = 1
-	var ownerUserID uint64 = 2
-	now := time.Now()
-	taskInput := CreateTaskInput{
-		Goal:        "Unit test",
-		OwnerUserID: &ownerUserID,
-		IsPlanned:   true,
-		DueAt:       &now,
-	}
-	newTask, internalErr := taskLinkTestRef.taskService.CreateTask(ct, teamID, taskInput)
+	var ownerUserID uint64 = 3
+	testCases := []struct {
+		name            string
+		toggles         feature.Toggles
+		prepareData     func(taskLinkTestRef TaskLinkTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID uint64
+		expectedErr     *errs.Error
+	}{
+		{
+			name: "succeed when user is team owner",
+			toggles: feature.Toggles{
+				EnableAuthorization: false,
+			},
+			prepareData: func(taskLinkTestRef TaskLinkTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := taskLinkTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
 
-	if !assert.Nil(t, internalErr) {
-		return
+				return servicetest.AddTeamPermission(
+					ct,
+					taskLinkTestRef.cloudTestKit.AuthorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 3,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team admin",
+			toggles: feature.Toggles{
+				EnableAuthorization: false,
+			},
+			prepareData: func(taskLinkTestRef TaskLinkTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := taskLinkTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					taskLinkTestRef.cloudTestKit.AuthorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 3,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team member",
+			toggles: feature.Toggles{
+				EnableAuthorization: false,
+			},
+			prepareData: func(taskLinkTestRef TaskLinkTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := taskLinkTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					taskLinkTestRef.cloudTestKit.AuthorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 3,
+			expectedErr:     nil,
+		},
+		//{
+		//	name: "permission denied when user is not in team",
+		//	toggles: feature.Toggles{
+		//		EnableAuthorization: true,
+		//	},
+		//	prepareData: func(taskLinkTestRef TaskLinkTestRef, requesterUserID uint64) *errs.Error {
+		//		ct := context.Background()
+		//		ct = ctx.NewContextWithUserID(ct, 1)
+		//		group, err := taskLinkTestRef.
+		//			cloudTestKit.
+		//			AuthorizationService.
+		//			CreateUserGroup(ct, "Member", nil)
+		//		if err != nil {
+		//			return err
+		//		}
+		//
+		//		return servicetest.AddTeamPermission(
+		//			ct,
+		//			taskLinkTestRef.cloudTestKit.AuthorizationService,
+		//			group.ID,
+		//			teamID,
+		//			authorization.TeamMemberResourceTypeOperations,
+		//			3)
+		//	},
+		//	requesterUserID: 4,
+		//	expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		//},
 	}
 
-	IconURL := "task link icon url"
-	IconHoverURL := "task link hover url"
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			taskLinkTestRef, ok := prepareTaskLinkTestRef(t, testCase.toggles)
+			if !ok {
+				return
+			}
 
-	taskLinkInput := CreateTaskLinkInput{
-		TaskID:       newTask.ID,
-		Title:        "task link title",
-		URL:          "task link url",
-		IconURL:      &IconURL,
-		IconHoverURL: &IconHoverURL,
-	}
-	newTaskLink, internalErr := taskLinkTestRef.taskLinkService.CreateTaskLink(ct, taskLinkInput)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(taskLinkTestRef, testCase.requesterUserID)
+				if !assert.Nil(t, err) {
+					return
+				}
+			}
 
-	assert.Equal(t, uint64(1), newTaskLink.ID)
-	assert.Equal(t, taskLinkInput.TaskID, newTaskLink.TaskID)
-	assert.Equal(t, taskLinkInput.Title, newTaskLink.Title)
-	assert.Equal(t, taskLinkInput.URL, newTaskLink.URL)
-	assert.Equal(t, taskLinkInput.IconURL, newTaskLink.IconURL)
-	assert.Equal(t, taskLinkInput.IconHoverURL, newTaskLink.IconHoverURL)
-	assert.NotNil(t, newTaskLink.CreatedAt)
-	assert.Nil(t, newTaskLink.UpdatedAt)
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
+
+			now := time.Now().UTC()
+			taskInput := CreateTaskInput{
+				Goal:        "Unit test",
+				OwnerUserID: &ownerUserID,
+				IsPlanned:   true,
+				DueAt:       &now,
+			}
+			newTask, internalErr := taskLinkTestRef.taskService.CreateTask(ct, teamID, taskInput)
+			if testCase.expectedErr != nil {
+				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				return
+			} else if !assert.Nil(t, internalErr) {
+				return
+			}
+
+			IconURL := "task link icon url"
+			IconHoverURL := "task link hover url"
+			taskLinkInput := CreateTaskLinkInput{
+				TaskID:       newTask.ID,
+				Title:        "task link title",
+				URL:          "task link url",
+				IconURL:      &IconURL,
+				IconHoverURL: &IconHoverURL,
+			}
+			newTaskLink, internalErr := taskLinkTestRef.taskLinkService.CreateTaskLink(ct, taskLinkInput)
+			if !assert.Nil(t, internalErr) {
+				return
+			}
+
+			assert.Equal(t, uint64(1), newTaskLink.ID)
+			assert.Equal(t, taskLinkInput.TaskID, newTaskLink.TaskID)
+			assert.Equal(t, taskLinkInput.Title, newTaskLink.Title)
+			assert.Equal(t, taskLinkInput.URL, newTaskLink.URL)
+			assert.Equal(t, taskLinkInput.IconURL, newTaskLink.IconURL)
+			assert.Equal(t, taskLinkInput.IconHoverURL, newTaskLink.IconHoverURL)
+			assert.NotNil(t, newTaskLink.CreatedAt)
+			assert.Nil(t, newTaskLink.UpdatedAt)
+		})
+	}
 }
