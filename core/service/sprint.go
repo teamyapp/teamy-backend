@@ -386,7 +386,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		}
 
 		for _, taskId := range taskIds {
-			_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId)
+			_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId, false)
 			if err != nil {
 				return err
 			}
@@ -617,7 +617,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID)
+		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID, true)
 		return err
 	})
 
@@ -781,7 +781,14 @@ func (s Sprint) moveTaskToSprint(
 	return task, nil
 }
 
-func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transaction, rtTx *realtime.Transaction, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
+func (s Sprint) removeTaskFromSprint(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rtTx *realtime.Transaction,
+	sprintID uint64,
+	taskID uint64,
+	adjustBandwidth bool,
+) (entity.Task, *errs.Error) {
 	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
 		return entity.Task{}, err
@@ -829,9 +836,11 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 		}
 	}
 
-	err = s.tryIncreaseBandwidth(ct, tx, rtTx, sprintID, task)
-	if err != nil {
-		return entity.Task{}, err
+	if adjustBandwidth {
+		err = s.tryIncreaseBandwidth(ct, tx, rtTx, sprintID, task)
+		if err != nil {
+			return entity.Task{}, err
+		}
 	}
 
 	return task, nil
@@ -903,9 +912,6 @@ func (s Sprint) tryIncreaseBandwidth(
 		if err != nil {
 			return err
 		}
-
-		// we need to prepare notifier in advance since sprint will be actually deleted later
-		updateSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
 	}
 
 	return nil
