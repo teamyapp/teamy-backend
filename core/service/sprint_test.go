@@ -31,12 +31,15 @@ import (
 )
 
 type SprintTestRef struct {
-	sprintService      Sprint
-	sprintDaoV2        daov2.Sprint
-	teamDaoV2          daov2.Team
-	userDaoV2          daov2.User
-	cloudTestKit       testkit.TestKit
-	transactionFactory transaction.Factory
+	sprintService           Sprint
+	sprintDaoV2             daov2.Sprint
+	teamDaoV2               daov2.Team
+	userDaoV2               daov2.User
+	taskDaoV2               daov2.Task
+	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
+	sprintParticipantDaoV2  daov2.SprintParticipant
+	cloudTestKit            testkit.TestKit
+	transactionFactory      transaction.Factory
 }
 
 func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef, bool) {
@@ -104,9 +107,12 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
 	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
 	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
+	teamyBackendDB.CreateTable(daotestv2.SprintTaskRelationTableName)
+	teamyBackendDB.CreateTable(daotestv2.SprintParticipantTableName)
+	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
 	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
+	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
@@ -131,12 +137,15 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	)
 
 	return SprintTestRef{
-		sprintService:      sprintService,
-		cloudTestKit:       cloudTestKit,
-		sprintDaoV2:        sprintDaoV2,
-		teamDaoV2:          teamDaoV2,
-		userDaoV2:          userDaoV2,
-		transactionFactory: transactionFactory,
+		sprintService:           sprintService,
+		cloudTestKit:            cloudTestKit,
+		sprintDaoV2:             sprintDaoV2,
+		teamDaoV2:               teamDaoV2,
+		userDaoV2:               userDaoV2,
+		taskDaoV2:               taskDaoV2,
+		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
+		sprintParticipantDaoV2:  sprintParticipantDaoV2,
+		transactionFactory:      transactionFactory,
 	}, true
 }
 
@@ -316,6 +325,236 @@ func TestSprintService_CreateSprint(t *testing.T) {
 		})
 	}
 
+}
+
+func TestSprintService_DeleteSprint(t *testing.T) {
+	var teamID uint64 = 1
+	testCases := []struct {
+		name            string
+		toggles         feature.Toggles
+		prepareData     func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID uint64
+		expectedErr     *errs.Error
+	}{
+		{
+			name: "succeed when user is team owner",
+			// TODO: turn it back on when ApplyAuthorizationConfig is implemented.
+			toggles: feature.Toggles{
+				EnableAuthorization: false,
+			},
+			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := sprintTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					sprintTestRef.cloudTestKit.AuthorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team admin",
+			// TODO: turn it back on when ApplyAuthorizationConfig is implemented.
+			toggles: feature.Toggles{
+				EnableAuthorization: false,
+			},
+			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := sprintTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					sprintTestRef.cloudTestKit.AuthorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team member",
+			// TODO: turn it back on when ApplyAuthorizationConfig is implemented.
+			toggles: feature.Toggles{
+				EnableAuthorization: false,
+			},
+			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, 1)
+				group, err := sprintTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					sprintTestRef.cloudTestKit.AuthorizationService,
+					group.ID,
+					teamID,
+					authorization.TeamMemberResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 3,
+			expectedErr:     nil,
+		},
+		// TODO: Pending on authorization config api to be ready
+		// {
+		// 	name: "permission denied when user is not in team",
+		// 	toggles: feature.Toggles{
+		// 		EnableAuthorization: false,
+		// 	},
+		// 	prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
+		// 		ct := context.Background()
+		// 		ct = ctx.NewContextWithUserID(ct, 1)
+		// 		group, err := sprintTestRef.
+		// 			cloudTestKit.
+		// 			AuthorizationService.
+		// 			CreateUserGroup(ct, "Member", nil)
+		// 		if err != nil {
+		// 			return err
+		// 		}
+
+		// 		return servicetest.AddTeamPermission(
+		// 			ct,
+		// 			sprintTestRef.cloudTestKit.AuthorizationService,
+		// 			group.ID,
+		// 			teamID,
+		// 			authorization.TeamMemberResourceTypeOperations,
+		// 			4)
+		// 	},
+		// 	requesterUserID: 3,
+		// 	expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		// },
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			sprintTestRef, ok := prepareSprintTestRef(t, testCase.toggles)
+			if !ok {
+				return
+			}
+
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(sprintTestRef, testCase.requesterUserID)
+				if !assert.Nil(t, err) {
+					return
+				}
+			}
+
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
+			now := time.Now().UTC()
+			tx, err := sprintTestRef.transactionFactory.BeginTx(ct, nil)
+			if !assert.Nil(t, err) {
+				return
+			}
+
+			defer tx.Rollback()
+			team := entity.Team{
+				ID:            teamID,
+				Name:          "test team",
+				CreatorUserID: 10,
+			}
+			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
+			if !assert.Nil(t, err) {
+				return
+			}
+
+			sprint := entity.Sprint{
+				ID:           1,
+				StartAt:      now,
+				EndAt:        now.Add(time.Hour * 24 * 7),
+				OwningTeamID: teamID,
+			}
+			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint)
+			if !assert.Nil(t, err) {
+				return
+			}
+
+			participant := entity.SprintParticipant{
+				SprintID:        sprint.ID,
+				UserID:          testCase.requesterUserID,
+				TotalBandwidth:  time.Hour * 24 * 7,
+				UnusedBandwidth: time.Hour * 12 * 7,
+				CreatedAt:       now,
+			}
+			err = sprintTestRef.sprintService.sprintParticipantDaoV2.CreateSprintParticipant(ct, tx, participant)
+			if !assert.Nil(t, err) {
+				return
+			}
+
+			effort := time.Hour * 12 * 7
+			task := entity.Task{
+				Goal:          "test task",
+				CreatorUserID: 1,
+				Status:        entity.TaskStatusTodo,
+				IsPlanned:     true,
+				OwnerUserID:   &testCase.requesterUserID,
+				Effort:        &effort,
+			}
+
+			err = sprintTestRef.taskDaoV2.CreateTask(ct, tx, task)
+			if !assert.Nil(t, err) {
+				return
+			}
+
+			sprintTaskRelation := entity.SprintTaskRelation{
+				SprintID: sprint.ID,
+				TaskID:   task.ID,
+			}
+			err = sprintTestRef.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, sprintTaskRelation)
+			if !assert.Nil(t, err) {
+				return
+			}
+
+			deletedSprint, internalErr := sprintTestRef.sprintService.DeleteSprint(ct, sprint.ID)
+			if testCase.expectedErr != nil {
+				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				return
+			} else if !assert.Nil(t, internalErr) {
+				return
+			}
+
+			updatedTask, err := sprintTestRef.taskDaoV2.FindTaskByIDWithTx(ct, tx, task.ID)
+			if !assert.Nil(t, err) {
+				return
+			}
+
+			_, err = sprintTestRef.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, participant.SprintID, participant.UserID)
+			assert.Equal(t, err.Code, errs.NotFound)
+
+			assert.Equal(t, deletedSprint.OwningTeamID, teamID)
+			assert.Equal(t, deletedSprint.StartAt, sprint.StartAt)
+			assert.Equal(t, deletedSprint.EndAt, sprint.EndAt)
+			assert.Equal(t, updatedTask.IsPlanned, false)
+			assert.Equal(t, updatedTask.Status, entity.TaskStatusTodo)
+		})
+	}
 }
 
 func TestSprintService_SetTeamActiveSprint(t *testing.T) {

@@ -276,7 +276,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
 	activityCache := cache.NewActivity(logger)
 
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB)
+	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
 	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
 	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
 	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)

@@ -355,6 +355,23 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 }
 
 func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewDeleteInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Sprint{}, err
+		}
+
+		if !hasPermission {
+			return entity.Sprint{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var sprint entity.Sprint
 	txCtx := TransactionsContext{
 		logger:             s.logger,
@@ -369,7 +386,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		}
 
 		for _, taskId := range taskIds {
-			_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId)
+			_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId, false)
 			if err != nil {
 				return err
 			}
@@ -403,7 +420,15 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 			deleteSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
 		}
 
-		return s.sprintDaoV2.DeleteSprint(ct, tx, sprintID)
+		deleteSprintMutation := mutation.NewDeleteSprint(
+			s.logger,
+			s.stateSyncer,
+			s.sprintDaoV2,
+			sprint,
+		)
+
+		rtTx.AppendMutation(deleteSprintMutation)
+		return deleteSprintMutation.ExecuteV2(ct, tx)
 	})
 
 	if err != nil {
@@ -592,7 +617,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID)
+		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID, true)
 		return err
 	})
 
@@ -756,7 +781,14 @@ func (s Sprint) moveTaskToSprint(
 	return task, nil
 }
 
-func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transaction, rtTx *realtime.Transaction, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
+func (s Sprint) removeTaskFromSprint(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rtTx *realtime.Transaction,
+	sprintID uint64,
+	taskID uint64,
+	adjustBandwidth bool,
+) (entity.Task, *errs.Error) {
 	sprintIDs, err := s.sprintTaskRelationDaoV2.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
 		return entity.Task{}, err
@@ -804,9 +836,11 @@ func (s Sprint) removeTaskFromSprint(ct context.Context, tx *transaction.Transac
 		}
 	}
 
-	err = s.tryIncreaseBandwidth(ct, tx, rtTx, sprintID, task)
-	if err != nil {
-		return entity.Task{}, err
+	if adjustBandwidth {
+		err = s.tryIncreaseBandwidth(ct, tx, rtTx, sprintID, task)
+		if err != nil {
+			return entity.Task{}, err
+		}
 	}
 
 	return task, nil
@@ -873,6 +907,7 @@ func (s Sprint) tryIncreaseBandwidth(
 			s.sprintDaoV2,
 			oldSprintParticipant)
 		rtTx.AppendMutation(updateSprintParticipantMutation)
+
 		err = updateSprintParticipantMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			return err

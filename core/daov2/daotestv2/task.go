@@ -2,6 +2,7 @@ package daotestv2
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/dbtest"
@@ -12,14 +13,23 @@ import (
 )
 
 type Task struct {
-	db *dbtest.InMemoryDB
+	db                 *dbtest.InMemoryDB
+	transactionFactory transaction.Factory
 }
 
 var _ daov2.Task = (*Task)(nil)
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
-	//TODO implement me
-	panic("implement me")
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	defer tx.Rollback()
+	return t.FindTaskByIDWithTx(ct, tx, taskID)
 }
 
 func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
@@ -143,8 +153,48 @@ func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task e
 }
 
 func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
-	//TODO implement me
-	panic("implement me")
+	oldTask, err := t.FindTaskByIDWithTx(ct, tx, task.ID)
+	if err != nil {
+		return err
+	}
+
+	return tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := t.db.GetTable(TaskTableName)
+			if err != nil {
+				return err
+			}
+
+			for i, row := range table.Rows {
+				currTask := row.(entity.Task)
+				if currTask.ID == task.ID {
+					table.Rows[i] = task
+					return nil
+				}
+			}
+
+			return &errs.Error{
+				Code:    errs.NotFound,
+				Message: fmt.Sprintf("row not found: taskID=%v", task.ID),
+			}
+		},
+		Undo: func() *errs.Error {
+			table, err := t.db.GetTable(TaskTableName)
+			if err != nil {
+				return err
+			}
+
+			for i, row := range table.Rows {
+				currTask := row.(entity.Task)
+				if currTask.ID == task.ID {
+					table.Rows[i] = oldTask
+					return nil
+				}
+			}
+
+			return nil
+		},
+	})
 }
 
 func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID uint64) *errs.Error {
@@ -152,6 +202,6 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 	panic("implement me")
 }
 
-func NewTask(db *dbtest.InMemoryDB) Task {
-	return Task{db: db}
+func NewTask(db *dbtest.InMemoryDB, transactionFactory transaction.Factory) Task {
+	return Task{db: db, transactionFactory: transactionFactory}
 }
