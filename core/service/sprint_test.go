@@ -475,13 +475,11 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 			}
 
 			defer tx.Rollback()
-
 			team := entity.Team{
 				ID:            teamID,
 				Name:          "test team",
 				CreatorUserID: 10,
 			}
-
 			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
 			if !assert.Nil(t, err) {
 				return
@@ -493,7 +491,6 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				EndAt:        now.Add(time.Hour * 24 * 7),
 				OwningTeamID: teamID,
 			}
-
 			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint)
 			if !assert.Nil(t, err) {
 				return
@@ -506,7 +503,6 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				UnusedBandwidth: time.Hour * 12 * 7,
 				CreatedAt:       now,
 			}
-
 			err = sprintTestRef.sprintService.sprintParticipantDaoV2.CreateSprintParticipant(ct, tx, participant)
 			if !assert.Nil(t, err) {
 				return
@@ -531,14 +527,12 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				SprintID: sprint.ID,
 				TaskID:   task.ID,
 			}
-
 			err = sprintTestRef.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, sprintTaskRelation)
 			if !assert.Nil(t, err) {
 				return
 			}
 
 			deletedSprint, internalErr := sprintTestRef.sprintService.DeleteSprint(ct, sprint.ID)
-
 			if testCase.expectedErr != nil {
 				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
