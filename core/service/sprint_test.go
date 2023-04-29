@@ -338,6 +338,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 	}{
 		{
 			name: "succeed when user is team owner",
+			// TODO: turn it back on when ApplyAuthorizationConfig is implemented.
 			toggles: feature.Toggles{
 				EnableAuthorization: false,
 			},
@@ -365,6 +366,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 		},
 		{
 			name: "succeed when user is team admin",
+			// TODO: turn it back on when ApplyAuthorizationConfig is implemented.
 			toggles: feature.Toggles{
 				EnableAuthorization: false,
 			},
@@ -392,6 +394,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 		},
 		{
 			name: "succeed when user is team member",
+			// TODO: turn it back on when ApplyAuthorizationConfig is implemented.
 			toggles: feature.Toggles{
 				EnableAuthorization: false,
 			},

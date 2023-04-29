@@ -899,12 +899,13 @@ func (s Sprint) tryIncreaseBandwidth(
 			oldSprintParticipant)
 		rtTx.AppendMutation(updateSprintParticipantMutation)
 
-		// we need to prepare notifier in advance since sprint will be actually deleted later
-		updateSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
 		err = updateSprintParticipantMutation.ExecuteV2(ct, tx)
 		if err != nil {
 			return err
 		}
+
+		// we need to prepare notifier in advance since sprint will be actually deleted later
+		updateSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
 	}
 
 	return nil
