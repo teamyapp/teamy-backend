@@ -362,7 +362,7 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		}
 
 		query := authorization.NewDeleteInSprintQuery(userID, sprintID)
-		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return entity.Sprint{}, err
 		}
