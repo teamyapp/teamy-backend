@@ -56,8 +56,8 @@ func (a AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Conte
 
 			for _, rawRow := range table.Rows {
 				currAppVersion := rawRow.(entity.AppVersion)
-				if currAppVersion.AppID == appID && 
-				   currAppVersion.VersionNumber == versionNumber {
+				if currAppVersion.AppID == appID &&
+					currAppVersion.VersionNumber == versionNumber {
 					appVersion = currAppVersion
 					return nil
 				}
@@ -131,8 +131,8 @@ func (a AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transac
 
 			for _, row := range table.Rows {
 				currAppVersion := row.(entity.AppVersion)
-				if currAppVersion.AppID == appVersion.AppID && 
-				   currAppVersion.VersionNumber == appVersion.VersionNumber {
+				if currAppVersion.AppID == appVersion.AppID &&
+					currAppVersion.VersionNumber == appVersion.VersionNumber {
 					return errs.NewError(errs.Unknown, fmt.Sprintf("row already exist: appID=%v, versionNumber=%v", appVersion.AppID, appVersion.VersionNumber))
 				}
 			}
@@ -177,8 +177,8 @@ func (a AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transac
 
 			for i, row := range table.Rows {
 				currAppVersion := row.(entity.AppVersion)
-				if currAppVersion.AppID == appVersion.AppID && 
-				   currAppVersion.VersionNumber == appVersion.VersionNumber {
+				if currAppVersion.AppID == appVersion.AppID &&
+					currAppVersion.VersionNumber == appVersion.VersionNumber {
 					table.Rows[i] = appVersion
 					return nil
 				}
@@ -220,8 +220,8 @@ func (a AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transac
 			rows := make([]interface{}, 0)
 			for _, row := range table.Rows {
 				currAppVersion := row.(entity.AppVersion)
-				if currAppVersion.AppID != appID || 
-				   currAppVersion.VersionNumber != versionNumber {
+				if currAppVersion.AppID != appID ||
+					currAppVersion.VersionNumber != versionNumber {
 					rows = append(rows, currAppVersion)
 				}
 			}
