@@ -99,7 +99,6 @@ func main() {
 		}
 
 		realTimeStateSyncer := dep.InitRealTimeStateSyncer(logger, sqlDB)
-
 		return startServiceRunner(logger, cfg, sqlDB, realTimeStateSyncer)
 	})
 	if err != nil {
@@ -156,7 +155,6 @@ func startServiceRunner(
 	}
 
 	logger.Info("Finish applying authorization config")
-
 	teamyClientRegistry, internalErr := teamyClient.NewRegistry(
 		logger,
 		nw,
