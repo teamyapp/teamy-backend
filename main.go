@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -10,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/env"
@@ -35,6 +38,9 @@ import (
 
 const appName = "teamy"
 const serviceName = "backend"
+
+//go:embed core/authorization.yml
+var coreAuthorizationConfig string
 
 var serviceLabels = []string{appName, serviceName}
 var fullServiceName = strings.Join(serviceLabels, "-")
@@ -137,6 +143,18 @@ func startServiceRunner(
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
+	authorizationClient := cloudClientRegistry.AuthorizationClient()
+	applyAuthorizationCfgReq := &cloudProto.ApplyAuthorizationConfigRequest{
+		ConfigContent: coreAuthorizationConfig,
+	}
+	ct := context.Background()
+	logger.Info("Start applying authorization config")
+	_, err = authorizationClient.ApplyAuthorizationConfig(ct, applyAuthorizationCfgReq)
+	if err != nil {
+		return errs.FromGRPCErr(err)
+	}
+
+	logger.Info("Finish applying authorization config")
 	teamyClientRegistry, internalErr := teamyClient.NewRegistry(
 		logger,
 		nw,
