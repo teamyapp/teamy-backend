@@ -149,10 +149,13 @@ func startServiceRunner(
 		ConfigContent: coreAuthorizationConfig,
 	}
 	ct := context.Background()
+	logger.Info("Start applying authorization config")
 	_, err = authorizationClient.ApplyAuthorizationConfig(ct, applyAuthorizationCfgReq)
 	if err != nil {
 		return errs.FromGRPCErr(err)
 	}
+
+	logger.Info("Finish applying authorization config")
 
 	teamyClientRegistry, internalErr := teamyClient.NewRegistry(
 		logger,
