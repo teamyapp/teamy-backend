@@ -5,172 +5,60 @@ import (
 	"github.com/teamyapp/cloud/libs/authorization"
 )
 
-// Operations for Task
+// Operations for App
 var (
-	ReadInTask = authorization.ResourceTypeOperation{
-		ResourceType: "Task",
-		Operation:    "Read",
+	CreateAppVersionInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "CreateAppVersion",
 	}
-	UpdateInTask = authorization.ResourceTypeOperation{
-		ResourceType: "Task",
-		Operation:    "Update",
+	CreateAppVersionVisibleTeamInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "CreateAppVersionVisibleTeam",
 	}
-	DeleteInTask = authorization.ResourceTypeOperation{
-		ResourceType: "Task",
+	CreateTeamInstallationInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "CreateTeamInstallation",
+	}
+	DeleteInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "Delete",
 	}
-	CreateLinkInTask = authorization.ResourceTypeOperation{
-		ResourceType: "Task",
-		Operation:    "CreateLink",
+	DeleteAppVersionInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "DeleteAppVersion",
 	}
-)
-
-// Operations for TaskLink
-var (
-	ReadInTaskLink = authorization.ResourceTypeOperation{
-		ResourceType: "TaskLink",
+	DeleteAppVersionVisibleTeamInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "DeleteAppVersionVisibleTeam",
+	}
+	DeleteTeamInstallationInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "DeleteTeamInstallation",
+	}
+	ReadInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "Read",
 	}
-	UpdateInTaskLink = authorization.ResourceTypeOperation{
-		ResourceType: "TaskLink",
+	RefreshAppSecretInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "RefreshAppSecret",
+	}
+	UpdateInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
 		Operation:    "Update",
 	}
-	DeleteInTaskLink = authorization.ResourceTypeOperation{
-		ResourceType: "TaskLink",
-		Operation:    "Delete",
+	UpdateAppVersionInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "UpdateAppVersion",
 	}
-)
-
-// Operations for Team
-var (
-	ReadInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "Read",
-	}
-	UpdateInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "Update",
-	}
-	DeleteInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "Delete",
-	}
-	ReadTaskInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "ReadTask",
-	}
-	CreateTaskInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "CreateTask",
-	}
-	UpdateTaskInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "UpdateTask",
-	}
-	DeleteTaskInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "DeleteTask",
-	}
-	CloneTaskInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "CloneTask",
-	}
-	CreateTaskLinkInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "CreateTaskLink",
-	}
-	PromoteMemberToAdminInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "PromoteMemberToAdmin",
-	}
-	DemoteMemberFromAdminInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "DemoteMemberFromAdmin",
-	}
-	ReadMembersInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "ReadMembers",
-	}
-	AddMemberToInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "AddMemberTo",
-	}
-	RemoveMemberFromInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "RemoveMemberFrom",
-	}
-	UpdateMembersInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "UpdateMembers",
-	}
-	ReadSprintInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "ReadSprint",
-	}
-	CreateSprintInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "CreateSprint",
-	}
-	UpdateSprintInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "UpdateSprint",
-	}
-	DeleteSprintInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "DeleteSprint",
-	}
-	ReadInvitationInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "ReadInvitation",
-	}
-	CreateInvitationInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "CreateInvitation",
-	}
-	UpdateInvitationInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "UpdateInvitation",
-	}
-	DeleteInvitationInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "DeleteInvitation",
-	}
-	CreateAppInstallationInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "CreateAppInstallation",
-	}
-	UpdateAppInstallationInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "UpdateAppInstallation",
-	}
-	DeleteAppInstallationInTeam = authorization.ResourceTypeOperation{
-		ResourceType: "Team",
-		Operation:    "DeleteAppInstallation",
-	}
-)
-
-// Operations for Sprint
-var (
-	ReadInSprint = authorization.ResourceTypeOperation{
-		ResourceType: "Sprint",
-		Operation:    "Read",
-	}
-	UpdateInSprint = authorization.ResourceTypeOperation{
-		ResourceType: "Sprint",
-		Operation:    "Update",
-	}
-	DeleteInSprint = authorization.ResourceTypeOperation{
-		ResourceType: "Sprint",
-		Operation:    "Delete",
+	UpdateTeamInstallationInApp = authorization.ResourceTypeOperation{
+		ResourceType: "App",
+		Operation:    "UpdateTeamInstallation",
 	}
 )
 
 // Operations for Invitation
 var (
-	ReadInInvitation = authorization.ResourceTypeOperation{
-		ResourceType: "Invitation",
-		Operation:    "Read",
-	}
 	CreateInInvitation = authorization.ResourceTypeOperation{
 		ResourceType: "Invitation",
 		Operation:    "Create",
@@ -179,56 +67,184 @@ var (
 		ResourceType: "Invitation",
 		Operation:    "Delete",
 	}
-)
-
-// Operations for App
-var (
-	ReadInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
+	ReadInInvitation = authorization.ResourceTypeOperation{
+		ResourceType: "Invitation",
 		Operation:    "Read",
 	}
-	UpdateInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "Update",
-	}
-	DeleteInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
+)
+
+// Operations for Sprint
+var (
+	DeleteInSprint = authorization.ResourceTypeOperation{
+		ResourceType: "Sprint",
 		Operation:    "Delete",
 	}
-	RefreshAppSecretInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "RefreshAppSecret",
+	ReadInSprint = authorization.ResourceTypeOperation{
+		ResourceType: "Sprint",
+		Operation:    "Read",
 	}
-	CreateAppVersionInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "CreateAppVersion",
+	UpdateInSprint = authorization.ResourceTypeOperation{
+		ResourceType: "Sprint",
+		Operation:    "Update",
 	}
-	UpdateAppVersionInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "UpdateAppVersion",
+)
+
+// Operations for Task
+var (
+	CreateLinkInTask = authorization.ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "CreateLink",
 	}
-	DeleteAppVersionInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "DeleteAppVersion",
+	DeleteInTask = authorization.ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "Delete",
 	}
-	CreateAppVersionVisibleTeamInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "CreateAppVersionVisibleTeam",
+	ReadInTask = authorization.ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "Read",
 	}
-	DeleteAppVersionVisibleTeamInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "DeleteAppVersionVisibleTeam",
+	UpdateInTask = authorization.ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "Update",
 	}
-	CreateTeamInstallationInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "CreateTeamInstallation",
+)
+
+// Operations for TaskLink
+var (
+	DeleteInTaskLink = authorization.ResourceTypeOperation{
+		ResourceType: "TaskLink",
+		Operation:    "Delete",
 	}
-	UpdateTeamInstallationInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "UpdateTeamInstallation",
+	ReadInTaskLink = authorization.ResourceTypeOperation{
+		ResourceType: "TaskLink",
+		Operation:    "Read",
 	}
-	DeleteTeamInstallationInApp = authorization.ResourceTypeOperation{
-		ResourceType: "App",
-		Operation:    "DeleteTeamInstallation",
+	UpdateInTaskLink = authorization.ResourceTypeOperation{
+		ResourceType: "TaskLink",
+		Operation:    "Update",
+	}
+)
+
+// Operations for Team
+var (
+	AddMemberToInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "AddMemberTo",
+	}
+	CloneTaskInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CloneTask",
+	}
+	CreateAppInstallationInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateAppInstallation",
+	}
+	CreateInvitationInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateInvitation",
+	}
+	CreateSprintInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateSprint",
+	}
+	CreateTaskInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateTask",
+	}
+	CreateTaskLinkInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "CreateTaskLink",
+	}
+	DeleteInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "Delete",
+	}
+	DeleteAppInstallationInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DeleteAppInstallation",
+	}
+	DeleteInvitationInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DeleteInvitation",
+	}
+	DeleteSprintInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DeleteSprint",
+	}
+	DeleteTaskInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DeleteTask",
+	}
+	DemoteMemberFromAdminInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "DemoteMemberFromAdmin",
+	}
+	PromoteMemberToAdminInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "PromoteMemberToAdmin",
+	}
+	ReadInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "Read",
+	}
+	ReadInvitationInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "ReadInvitation",
+	}
+	ReadMembersInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "ReadMembers",
+	}
+	ReadSprintInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "ReadSprint",
+	}
+	ReadTaskInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "ReadTask",
+	}
+	RemoveMemberFromInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "RemoveMemberFrom",
+	}
+	UpdateInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "Update",
+	}
+	UpdateAppInstallationInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateAppInstallation",
+	}
+	UpdateInvitationInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateInvitation",
+	}
+	UpdateMembersInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateMembers",
+	}
+	UpdateSprintInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateSprint",
+	}
+	UpdateTaskInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "UpdateTask",
+	}
+)
+
+// Operations for User
+var (
+	DeleteInUser = authorization.ResourceTypeOperation{
+		ResourceType: "User",
+		Operation:    "Delete",
+	}
+	ReadInUser = authorization.ResourceTypeOperation{
+		ResourceType: "User",
+		Operation:    "Read",
+	}
+	UpdateInUser = authorization.ResourceTypeOperation{
+		ResourceType: "User",
+		Operation:    "Update",
 	}
 )

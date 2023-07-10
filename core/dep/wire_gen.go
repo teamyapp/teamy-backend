@@ -56,7 +56,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
 	user := sqldb.NewUser(logger, factory)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(logger)
-	serviceUser := newUserService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, realTimeStateSyncer, factory, toggles, user, teamMember, userFileUploadSession)
+	serviceUser := newUserService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, toggles, user, teamMember, userFileUploadSession)
 	invitation := sqldb.NewInvitation(logger, factory)
 	serviceInvitation := service.NewInvitation(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, invitation, teamMember, sprintParticipant, sprint)
 	message := sqldb.NewMessage(logger, factory)
@@ -136,6 +136,7 @@ func newUserService(
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
 	toggles feature.Toggles,
@@ -147,6 +148,7 @@ func newUserService(
 		logger,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
+		authorizer,
 		stateSyncer,
 		transactionFactory,
 		toggles,

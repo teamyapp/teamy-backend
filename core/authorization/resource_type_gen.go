@@ -2,10 +2,11 @@
 package authorization
 
 const (
+	AppResourceType        string = "App"
+	InvitationResourceType string = "Invitation"
+	SprintResourceType     string = "Sprint"
 	TaskResourceType       string = "Task"
 	TaskLinkResourceType   string = "TaskLink"
 	TeamResourceType       string = "Team"
-	SprintResourceType     string = "Sprint"
-	InvitationResourceType string = "Invitation"
-	AppResourceType        string = "App"
+	UserResourceType       string = "User"
 )

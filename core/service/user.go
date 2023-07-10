@@ -12,6 +12,7 @@ import (
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/daov2"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -36,40 +37,73 @@ type User struct {
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *client.Registry
 	stateSyncer                *realtime.StateSyncer
+	authorizer                 client.Authorizer
 	transactionFactory         transaction.Factory
-	toggles                    feature.Toggles
+	featureToggles             feature.Toggles
 	userDaoV2                  daov2.User
 	teamMemberDaoV2            daov2.TeamMember
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession
 }
 
 func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
-	userID, ok := ctx.UserIDFromContext(ct)
+	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.featureToggles.EnableAuthorization {
+		query := authorization.NewReadInUserQuery(currUserID, currUserID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
+
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	return u.userDaoV2.FindUserByID(ct, currUserID)
+}
+
+func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
+	currUserID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.featureToggles.EnableAuthorization {
+		query := authorization.NewReadInUserQuery(currUserID, userID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
+
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	return u.userDaoV2.FindUserByID(ct, userID)
 }
 
-func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
-	return u.userDaoV2.FindUserByID(ct, userID)
-}
-
 func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, *errs.Error) {
-	userID, ok := ctx.UserIDFromContext(ct)
+	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	user := entity.User{
-		ID:         userID,
-		CreatedAt:  time.Now(),
+		ID:         currUserID,
+		CreatedAt:  time.Now().UTC(),
 		FirstName:  input.FirstName,
 		LastName:   input.LastName,
 		ProfileURL: input.ProfileURL,
 	}
-
 	txCtx := TransactionsContext{
 		logger:             u.logger,
 		transactionFactory: u.transactionFactory,
@@ -83,6 +117,25 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 }
 
 func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, *errs.Error) {
+	currUserID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.featureToggles.EnableAuthorization {
+		query := authorization.NewUpdateInUserQuery(currUserID, userID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
+
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var user entity.User
 	txCtx := TransactionsContext{
 		logger:             u.logger,
@@ -115,9 +168,23 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 }
 
 func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.Error) {
-	userID, ok := ctx.UserIDFromContext(ct)
+	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.featureToggles.EnableAuthorization {
+		query := authorization.NewUpdateInUserQuery(currUserID, currUserID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return 0, err
+		}
+
+		if !hasPermission {
+			return 0, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	res, rpcErr := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
@@ -127,7 +194,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 	}
 
 	fileUploadSession := entity.UserFileUploadSession{
-		UserID:              userID,
+		UserID:              currUserID,
 		Type:                entity.ProfileUserFileUploadSessionType,
 		FileUploadSessionID: res.UploadSessionId,
 		IsCompleted:         false,
@@ -151,6 +218,20 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.featureToggles.EnableAuthorization {
+		query := authorization.NewUpdateInUserQuery(userID, userID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
+
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	findUploadSessionReq := proto.FindUploadSessionRequest{
@@ -213,9 +294,10 @@ func NewUser(
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	toggles feature.Toggles,
+	featureToggles feature.Toggles,
 	userDaoV2 daov2.User,
 	teamMemberDaoV2 daov2.TeamMember,
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
@@ -224,9 +306,10 @@ func NewUser(
 		logger:                     logger,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
+		featureToggles:             featureToggles,
+		authorizer:                 authorizer,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
-		toggles:                    toggles,
 		userDaoV2:                  userDaoV2,
 		teamMemberDaoV2:            teamMemberDaoV2,
 		userFileUploadSessionDaoV2: userFileUploadSessionDaoV2,

@@ -88,6 +88,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 		return UserTestRef{}, false
 	}
 
+	authorizor := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
@@ -104,6 +105,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
+		authorizor,
 		stateSyncer,
 		transactionFactory,
 		toggles,

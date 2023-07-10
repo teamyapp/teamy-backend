@@ -68,6 +68,11 @@ resourceTypeOperations:
       - CreateTeamInstallation
       - UpdateTeamInstallation
       - DeleteTeamInstallation
+  - resourceType: User
+    operations:
+      - Read
+      - Update
+      - Delete
 operationRelations:
   - resourceType: Task
     operation: Read
