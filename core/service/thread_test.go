@@ -106,10 +106,10 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 
 	threadService := NewThread(
 		logger,
+		toggles,
 		cloudClientRegistry,
 		stateSyncer,
 		transactionFactory,
-		toggles,
 		taskDaoV2,
 		threadDaoV2,
 		messageDaoV2,

@@ -103,12 +103,12 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 	userFileUploadSessionDaoV2 := daotestv2.NewUserFileUploadSession(teamyBackendDB)
 	userService := NewUser(
 		logger,
+		toggles,
 		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
 		authorizor,
 		stateSyncer,
 		transactionFactory,
-		toggles,
 		userDaoV2,
 		teamMemberDaoV2,
 		userFileUploadSessionDaoV2,

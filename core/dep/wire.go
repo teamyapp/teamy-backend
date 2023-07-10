@@ -178,24 +178,24 @@ func InitTaskLinkRPCAPI(
 
 func newUserService(
 	logger telemetry.Logger,
+	toggles feature.Toggles,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	toggles feature.Toggles,
 	userDaoV2 daov2.User,
 	teamMemberV2 daov2.TeamMember,
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
 ) service.User {
 	return service.NewUser(
 		logger,
+		toggles,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		authorizer,
 		stateSyncer,
 		transactionFactory,
-		toggles,
 		userDaoV2,
 		teamMemberV2,
 		userFileUploadSessionDaoV2,
