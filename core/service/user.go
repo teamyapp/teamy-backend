@@ -34,12 +34,12 @@ type UpdateUserInput struct {
 
 type User struct {
 	logger                     telemetry.Logger
+	toggles                    feature.Toggles
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *client.Registry
-	stateSyncer                *realtime.StateSyncer
 	authorizer                 client.Authorizer
+	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
-	featureToggles             feature.Toggles
 	userDaoV2                  daov2.User
 	teamMemberDaoV2            daov2.TeamMember
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession
@@ -51,7 +51,7 @@ func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if u.featureToggles.EnableAuthorization {
+	if u.toggles.EnableAuthorization {
 		query := authorization.NewReadInUserQuery(currUserID, currUserID)
 		hasPermission, err := u.authorizer.HasPermission(ct, query)
 		if err != nil {
@@ -74,7 +74,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if u.featureToggles.EnableAuthorization {
+	if u.toggles.EnableAuthorization {
 		query := authorization.NewReadInUserQuery(currUserID, userID)
 		hasPermission, err := u.authorizer.HasPermission(ct, query)
 		if err != nil {
@@ -122,7 +122,7 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if u.featureToggles.EnableAuthorization {
+	if u.toggles.EnableAuthorization {
 		query := authorization.NewUpdateInUserQuery(currUserID, userID)
 		hasPermission, err := u.authorizer.HasPermission(ct, query)
 		if err != nil {
@@ -173,7 +173,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if u.featureToggles.EnableAuthorization {
+	if u.toggles.EnableAuthorization {
 		query := authorization.NewUpdateInUserQuery(currUserID, currUserID)
 		hasPermission, err := u.authorizer.HasPermission(ct, query)
 		if err != nil {
@@ -220,7 +220,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	if u.featureToggles.EnableAuthorization {
+	if u.toggles.EnableAuthorization {
 		query := authorization.NewUpdateInUserQuery(userID, userID)
 		hasPermission, err := u.authorizer.HasPermission(ct, query)
 		if err != nil {
@@ -292,12 +292,12 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 
 func NewUser(
 	logger telemetry.Logger,
+	toggles feature.Toggles,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	featureToggles feature.Toggles,
 	userDaoV2 daov2.User,
 	teamMemberDaoV2 daov2.TeamMember,
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
@@ -306,7 +306,7 @@ func NewUser(
 		logger:                     logger,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
-		featureToggles:             featureToggles,
+		toggles:                    toggles,
 		authorizer:                 authorizer,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,

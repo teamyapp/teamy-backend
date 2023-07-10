@@ -27,16 +27,17 @@ type UpdateMessageInput struct {
 
 type Thread struct {
 	logger              telemetry.Logger
+	toggles             feature.Toggles
 	cloudClientRegistry *client.Registry
 	stateSyncer         *realtime.StateSyncer
 	transactionFactory  transaction.Factory
-	toggles             feature.Toggles
 	taskDaoV2           daov2.Task
 	threadDaoV2         daov2.Thread
 	messageDaoV2        daov2.Message
 }
 
 func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
+	// TODO: add authorization logic
 	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
 	genThreadIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if rpcErr != nil {
@@ -58,6 +59,7 @@ func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
 }
 
 func (t Thread) FindMessages(ct context.Context, threadID uint64) ([]entity.Message, *errs.Error) {
+	// TODO: add authorization logic
 	return t.messageDaoV2.FindMessagesByThreadID(ct, threadID)
 }
 
@@ -67,6 +69,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 		return entity.Message{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
+	// TODO: add authorization logic
 	genMessageIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "messageID"}
 	genMessageIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genMessageIDReq)
 	if rpcErr != nil {
@@ -111,6 +114,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 }
 
 func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input UpdateMessageInput) (entity.Message, *errs.Error) {
+	// TODO: add authorization logic
 	message, err := t.messageDaoV2.FindMessageByID(ct, messageID)
 	if err != nil {
 		return entity.Message{}, err
@@ -149,6 +153,7 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 }
 
 func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Message, *errs.Error) {
+	// TODO: add authorization logic
 	message, err := t.messageDaoV2.FindMessageByID(ct, messageID)
 	if err != nil {
 		return entity.Message{}, err
@@ -185,20 +190,20 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 
 func NewThread(
 	logger telemetry.Logger,
+	toggles feature.Toggles,
 	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	toggles feature.Toggles,
 	taskDaoV2 daov2.Task,
 	threadDaoV2 daov2.Thread,
 	messageDaoV2 daov2.Message,
 ) Thread {
 	return Thread{
 		logger:              logger,
+		toggles:             toggles,
 		cloudClientRegistry: cloudClientRegistry,
 		stateSyncer:         stateSyncer,
 		transactionFactory:  transactionFactory,
-		toggles:             toggles,
 		taskDaoV2:           taskDaoV2,
 		threadDaoV2:         threadDaoV2,
 		messageDaoV2:        messageDaoV2,

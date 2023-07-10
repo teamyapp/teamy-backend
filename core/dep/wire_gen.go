@@ -56,11 +56,11 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	serviceSprint := service.NewSprint(logger, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
 	user := sqldb.NewUser(logger, factory)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(logger)
-	serviceUser := newUserService(logger, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, toggles, user, teamMember, userFileUploadSession)
+	serviceUser := newUserService(logger, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, user, teamMember, userFileUploadSession)
 	invitation := sqldb.NewInvitation(logger, factory)
 	serviceInvitation := service.NewInvitation(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, invitation, teamMember, sprintParticipant, sprint)
 	message := sqldb.NewMessage(logger, factory)
-	serviceThread := service.NewThread(logger, cloudAPIClientRegistry, realTimeStateSyncer, factory, toggles, task, thread, message)
+	serviceThread := service.NewThread(logger, toggles, cloudAPIClientRegistry, realTimeStateSyncer, factory, task, thread, message)
 	app := sqldb.NewApp(logger, factory)
 	appVersion := sqldb.NewAppVersion(logger, sqlDB)
 	appTeamInstallation := sqldb.NewAppTeamInstallation(logger, sqlDB)
@@ -134,24 +134,24 @@ var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewTask
 
 func newUserService(
 	logger telemetry.Logger,
+	toggles feature.Toggles,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	toggles feature.Toggles,
 	userDaoV2 daov2.User,
 	teamMemberV2 daov2.TeamMember,
 	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
 ) service.User {
 	return service.NewUser(
 		logger,
+		toggles,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		authorizer,
 		stateSyncer,
 		transactionFactory,
-		toggles,
 		userDaoV2,
 		teamMemberV2,
 		userFileUploadSessionDaoV2,
