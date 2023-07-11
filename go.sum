@@ -442,6 +442,8 @@ github.com/teamyapp/cloud v0.0.0-20230429172340-769e93481f47 h1:LAJzWqRMvciCsUmV
 github.com/teamyapp/cloud v0.0.0-20230429172340-769e93481f47/go.mod h1:tpMlh7azI5g3EwCd5jSrDCt2uSyzjIC9CxH6TKzZNDU=
 github.com/teamyapp/cloud v0.0.0-20230707070610-5a774c293ede h1:T2aWtRUHF+jgEgvI1X7Qbjy3f9h6TO5QN5X8sZfggP0=
 github.com/teamyapp/cloud v0.0.0-20230707070610-5a774c293ede/go.mod h1:tpMlh7azI5g3EwCd5jSrDCt2uSyzjIC9CxH6TKzZNDU=
+github.com/teamyapp/cloud v0.0.0-20230711061011-028f633bfc22 h1:qXhkEur6XfWieMRycRQiC3P2r3z4hoUazsctfkgu/f0=
+github.com/teamyapp/cloud v0.0.0-20230711061011-028f633bfc22/go.mod h1:tpMlh7azI5g3EwCd5jSrDCt2uSyzjIC9CxH6TKzZNDU=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=

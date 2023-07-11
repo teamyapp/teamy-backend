@@ -81,6 +81,26 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 		return nil, err
 	}
 
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, nil
+		}
+
+		authorizedTeams, err := client.FilterAuthorizedItems(
+			ct,
+			t.authorizer,
+			teams,
+			func(team entity.Team) cloudAuthorization.Query {
+				return authorization.NewReadInTeamQuery(userID, team.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		teams = authorizedTeams
+	}
+
 	if filter != nil {
 		teams = filterTeams(teams, *filter)
 	}
@@ -116,6 +136,26 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 			return internalErr
 		}
 
+		if t.featureToggles.EnableAuthorization {
+			userID, ok := ctx.UserIDFromContext(ct)
+			if !ok {
+				return nil
+			}
+
+			authorizedTeams, err := client.FilterAuthorizedItems(
+				ct,
+				t.authorizer,
+				teams,
+				func(team entity.Team) cloudAuthorization.Query {
+					return authorization.NewReadInTeamQuery(userID, team.ID)
+				})
+			if err != nil {
+				return err
+			}
+
+			teams = authorizedTeams
+		}
+
 		if filter != nil {
 			teams = filterTeams(teams, *filter)
 		}
@@ -123,7 +163,6 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 		return nil
 	})
 
-	// TODO: authorization - need to check permission for each team, and return list of errors
 	return teams, err
 }
 
