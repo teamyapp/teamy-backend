@@ -46,7 +46,6 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 		stateSyncer:        t.stateSyncer,
 		ct:                 ct,
 	}
-
 	var taskLinks []entity.TaskLink
 	internalErr := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
