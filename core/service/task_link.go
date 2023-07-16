@@ -7,6 +7,7 @@ import (
 
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -36,6 +37,47 @@ type TaskLink struct {
 	stateSyncer         *realtime.StateSyncer
 	taskLinkDaoV2       daov2.TaskLink
 	taskDaoV2           daov2.Task
+}
+
+func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, *errs.Error) {
+	txCtx := TransactionsContext{
+		logger:             t.logger,
+		transactionFactory: t.transactionFactory,
+		stateSyncer:        t.stateSyncer,
+		ct:                 ct,
+	}
+	var taskLinks []entity.TaskLink
+	internalErr := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		taskLinks, err = t.taskLinkDaoV2.FindLinksByTaskID(ct, tx, taskID)
+		return err
+	})
+
+	if internalErr != nil {
+		return nil, internalErr
+	}
+
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, nil
+		}
+
+		authorizedLinks, err := client.FilterAuthorizedItems(
+			ct,
+			t.authorizer,
+			taskLinks,
+			func(taskLink entity.TaskLink) cloudAuthorization.Query {
+				return authorization.NewReadInTaskLinkQuery(userID, taskLink.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		taskLinks = authorizedLinks
+	}
+
+	return taskLinks, nil
 }
 
 func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLinkInput) (entity.TaskLink, *errs.Error) {
@@ -72,7 +114,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		URL:          taskLinkEntity.URL,
 		IconURL:      taskLinkEntity.IconURL,
 		IconHoverURL: taskLinkEntity.IconHoverURL,
-		CreatedAt:    time.Now(),
+		CreatedAt:    time.Now().UTC(),
 	}
 
 	txCtx := TransactionsContext{
@@ -113,6 +155,25 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 }
 
 func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.TaskLink, *errs.Error) {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.TaskLink{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewDeleteInTaskLinkQuery(userID, taskLinkID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.TaskLink{}, err
+		}
+
+		if !hasPermission {
+			return entity.TaskLink{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	txCtx := TransactionsContext{
 		logger:             t.logger,
 		transactionFactory: t.transactionFactory,
@@ -142,28 +203,6 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 	}
 
 	return taskLink, nil
-}
-
-func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, *errs.Error) {
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-
-	var taskLinks []entity.TaskLink
-	internalErr := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		taskLinks, err = t.taskLinkDaoV2.FindLinksByTaskID(ct, tx, taskID)
-		return err
-	})
-
-	if internalErr != nil {
-		return nil, internalErr
-	}
-
-	return taskLinks, nil
 }
 
 func NewTaskLink(
