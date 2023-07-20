@@ -4,6 +4,9 @@ resourceTypeOperations:
       - Read
       - Update
       - Delete
+      - AddAwaitForTask
+      - RemoveAwaitForTask
+      - MoveBetweenContainers
       # Link
       - CreateLink
   - resourceType: TaskLink
@@ -22,6 +25,9 @@ resourceTypeOperations:
       - UpdateTask
       - DeleteTask
       - CloneTask
+      - AddAwaitForTask
+      - RemoveAwaitForTask
+      - MoveTaskBetweenContainers
       - CreateTaskLink
       # Member
       - PromoteMemberToAdmin

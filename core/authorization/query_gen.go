@@ -152,6 +152,14 @@ func NewUpdateInSprintQuery(currUserID uint64, sprintID uint64) authorization.Qu
 	}
 }
 
+func NewAddAwaitForTaskInTaskQuery(currUserID uint64, taskID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: TaskResourceType,
+		ResourceID:   taskID,
+		Operation:    "AddAwaitForTask",
+		UserID:       currUserID,
+	}
+}
 func NewCreateLinkInTaskQuery(currUserID uint64, taskID uint64) authorization.Query {
 	return authorization.Query{
 		ResourceType: TaskResourceType,
@@ -168,11 +176,27 @@ func NewDeleteInTaskQuery(currUserID uint64, taskID uint64) authorization.Query 
 		UserID:       currUserID,
 	}
 }
+func NewMoveBetweenContainersInTaskQuery(currUserID uint64, taskID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: TaskResourceType,
+		ResourceID:   taskID,
+		Operation:    "MoveBetweenContainers",
+		UserID:       currUserID,
+	}
+}
 func NewReadInTaskQuery(currUserID uint64, taskID uint64) authorization.Query {
 	return authorization.Query{
 		ResourceType: TaskResourceType,
 		ResourceID:   taskID,
 		Operation:    "Read",
+		UserID:       currUserID,
+	}
+}
+func NewRemoveAwaitForTaskInTaskQuery(currUserID uint64, taskID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: TaskResourceType,
+		ResourceID:   taskID,
+		Operation:    "RemoveAwaitForTask",
 		UserID:       currUserID,
 	}
 }
@@ -210,6 +234,14 @@ func NewUpdateInTaskLinkQuery(currUserID uint64, taskLinkID uint64) authorizatio
 	}
 }
 
+func NewAddAwaitForTaskInTeamQuery(currUserID uint64, teamID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "AddAwaitForTask",
+		UserID:       currUserID,
+	}
+}
 func NewAddMemberToInTeamQuery(currUserID uint64, teamID uint64) authorization.Query {
 	return authorization.Query{
 		ResourceType: TeamResourceType,
@@ -314,6 +346,14 @@ func NewDemoteMemberFromAdminInTeamQuery(currUserID uint64, teamID uint64) autho
 		UserID:       currUserID,
 	}
 }
+func NewMoveTaskBetweenContainersInTeamQuery(currUserID uint64, teamID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "MoveTaskBetweenContainers",
+		UserID:       currUserID,
+	}
+}
 func NewPromoteMemberToAdminInTeamQuery(currUserID uint64, teamID uint64) authorization.Query {
 	return authorization.Query{
 		ResourceType: TeamResourceType,
@@ -359,6 +399,14 @@ func NewReadTaskInTeamQuery(currUserID uint64, teamID uint64) authorization.Quer
 		ResourceType: TeamResourceType,
 		ResourceID:   teamID,
 		Operation:    "ReadTask",
+		UserID:       currUserID,
+	}
+}
+func NewRemoveAwaitForTaskInTeamQuery(currUserID uint64, teamID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: TeamResourceType,
+		ResourceID:   teamID,
+		Operation:    "RemoveAwaitForTask",
 		UserID:       currUserID,
 	}
 }

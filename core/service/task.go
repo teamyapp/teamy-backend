@@ -7,6 +7,7 @@ import (
 
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -73,6 +74,25 @@ type Task struct {
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if t.featureToggles.EnableAuthorization {
+		query := authorization.NewReadInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	return t.taskDaoV2.FindTaskByID(ct, taskID)
 }
 
@@ -80,6 +100,26 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 	tasks, err := t.taskDaoV2.FindAllTasks(ct)
 	if err != nil {
 		return nil, err
+	}
+
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		authorizedTasks, err := client.FilterAuthorizedItems(
+			ct,
+			t.authorizer,
+			tasks,
+			func(task entity.Task) cloudAuthorization.Query {
+				return authorization.NewReadInTaskQuery(userID, task.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		tasks = authorizedTasks
 	}
 
 	if filter != nil {
@@ -93,6 +133,26 @@ func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFil
 	tasks, err := t.taskDaoV2.FindTasksByTeamID(ct, teamID)
 	if err != nil {
 		return nil, err
+	}
+
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		authorizedTasks, err := client.FilterAuthorizedItems(
+			ct,
+			t.authorizer,
+			tasks,
+			func(task entity.Task) cloudAuthorization.Query {
+				return authorization.NewReadInTaskQuery(userID, task.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		tasks = authorizedTasks
 	}
 
 	if filter != nil {
@@ -128,6 +188,26 @@ func (t Task) FindTasksInSprint(
 		return nil, err
 	}
 
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		authorizedTasks, err := client.FilterAuthorizedItems(
+			ct,
+			t.authorizer,
+			tasks,
+			func(task entity.Task) cloudAuthorization.Query {
+				return authorization.NewReadInTaskQuery(userID, task.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		tasks = authorizedTasks
+	}
+
 	if filter != nil {
 		tasks = filterTasks(tasks, *filter)
 	}
@@ -157,6 +237,27 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 		return nil, err
 	}
 
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		// TODO: let users know the task cannot be delivered because of
+		authorizedTasks, err := client.FilterAuthorizedItems(
+			ct,
+			t.authorizer,
+			tasks,
+			func(task entity.Task) cloudAuthorization.Query {
+				return authorization.NewReadInTaskQuery(userID, task.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		tasks = authorizedTasks
+	}
+
 	return tasks, err
 }
 
@@ -165,6 +266,26 @@ func (t Task) FindTaskActivities(ct context.Context, teamID uint64) []entity.Tas
 	taskActivityMap := t.activityCache.FindAllTaskActivitiesByTeamID(teamID)
 	for _, taskActivity := range taskActivityMap {
 		taskActivities = append(taskActivities, *taskActivity)
+	}
+
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil
+		}
+
+		authorizedTaskActivities, err := client.FilterAuthorizedItems(
+			ct,
+			t.authorizer,
+			taskActivities,
+			func(taskActivity entity.TaskActivity) cloudAuthorization.Query {
+				return authorization.NewReadInTaskQuery(userID, taskActivity.TaskID)
+			})
+		if err != nil {
+			return nil
+		}
+
+		taskActivities = authorizedTaskActivities
 	}
 
 	return taskActivities
@@ -281,12 +402,12 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 }
 
 func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInput) (entity.Task, *errs.Error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
-	}
-
 	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
 		query := authorization.NewUpdateInTaskQuery(userID, taskID)
 		hasPermission, err := t.authorizer.HasPermission(ct, query)
 		if err != nil {
@@ -444,6 +565,23 @@ func (t Task) findTaskOwnerInSprints(ct context.Context, tx *transaction.Transac
 }
 
 func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewDeleteInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var task entity.Task
 	txCtx := TransactionsContext{
 		logger:             t.logger,
@@ -549,6 +687,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 		return nil
 	})
 
+	// TODO: clean up resource relations in authorization service
 	return task, err
 }
 
@@ -567,7 +706,7 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction
 		task.Status = entity.TaskStatusTodo
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	task.UpdatedAt = &now
 	updateTaskMutation := mutation.NewUpdateTask(
 		t.logger,
@@ -585,6 +724,23 @@ func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewMoveBetweenContainersInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var task entity.Task
 	txCtx := TransactionsContext{
 		logger:             t.logger,
@@ -608,7 +764,7 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 			task.Status = entity.TaskStatusTodo
 		}
 
-		now := time.Now()
+		now := time.Now().UTC()
 		task.UpdatedAt = &now
 		updateTaskMutation := mutation.NewUpdateTask(
 			t.logger,
@@ -632,6 +788,18 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if t.featureToggles.EnableAuthorization {
+		query := authorization.NewMoveBetweenContainersInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	var task entity.Task
@@ -669,7 +837,7 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			return eachTask.Status == entity.TaskStatusInProgress
 		})
 
-		now := time.Now()
+		now := time.Now().UTC()
 		if len(inProgressTasks) > 0 {
 			inProgressTask := inProgressTasks[0]
 			inProgressTask.Status = entity.TaskStatusPaused
@@ -708,6 +876,23 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 }
 
 func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewMoveBetweenContainersInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var task entity.Task
 	txCtx := TransactionsContext{
 		logger:             t.logger,
@@ -723,7 +908,7 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 		}
 
 		task.Status = entity.TaskStatusDelivered
-		now := time.Now()
+		now := time.Now().UTC()
 		task.UpdatedAt = &now
 		task.DeliveredAt = &now
 		updateTaskMutation := mutation.NewUpdateTask(
@@ -774,10 +959,44 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 }
 
 func (t Task) MoveTaskToBlocked(ct context.Context, taskID uint64, reason string) (entity.Task, *errs.Error) {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewMoveBetweenContainersInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	panic("implement me")
 }
 
 func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitForTaskId uint64) (entity.Task, *errs.Error) {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewAddAwaitForTaskInTaskQuery(userID, awaitingTaskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var task entity.Task
 	txCtx := TransactionsContext{
 		logger:             t.logger,
@@ -802,7 +1021,7 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("task must be awaitable: taskID=%v", awaitingTaskID))
 		}
 
-		now := time.Now()
+		now := time.Now().UTC()
 		taskAwaitForRelation := entity.TaskAwaitForRelation{
 			AwaitingTaskID: awaitingTaskID,
 			AwaitForTaskID: awaitForTask.ID,
@@ -841,7 +1060,24 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	return task, err
 }
 
-func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTaskId uint64) (entity.Task, *errs.Error) {
+func (t Task) RemoveAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitForTaskId uint64) (entity.Task, *errs.Error) {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewRemoveAwaitForTaskInTaskQuery(userID, awaitingTaskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var task entity.Task
 	txCtx := TransactionsContext{
 		logger:             t.logger,
@@ -851,7 +1087,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, taskID)
+		task, err = t.taskDaoV2.FindTaskByIDWithTx(ct, tx, awaitingTaskID)
 		if err != nil {
 			return err
 		}
@@ -863,7 +1099,7 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 		}
 
 		if task.Status != entity.TaskStatusAwaiting {
-			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("task must be awaitable: taskID=%v", taskID))
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("task must be awaitable: taskID=%v", awaitingTaskID))
 		}
 
 		deleteTaskAwaitForRelationMutation := mutation.NewDeleteTaskAwaitForRelation(
@@ -879,13 +1115,13 @@ func (t Task) RemoveAwaitForTask(ct context.Context, taskID uint64, awaitForTask
 			return err
 		}
 
-		awaitForTaskIds, err := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, taskID)
+		awaitForTaskIds, err := t.taskAwaitForRelationDaoV2.FindAwaitForTaskIDsWithTx(ct, tx, awaitingTaskID)
 		if err != nil {
 			return err
 		}
 
 		if len(awaitForTaskIds) == 0 {
-			task, err = t.moveTaskToUpcoming(ct, tx, rtTx, taskID, false)
+			task, err = t.moveTaskToUpcoming(ct, tx, rtTx, awaitingTaskID, false)
 			if err != nil {
 				return err
 			}
@@ -901,6 +1137,18 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if t.featureToggles.EnableAuthorization {
+		query := authorization.NewMoveBetweenContainersInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return err
+		}
+
+		if !hasPermission {
+			return errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	txCtx := TransactionsContext{
@@ -945,6 +1193,23 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 }
 
 func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint64) *errs.Error {
+	if t.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewMoveBetweenContainersInTaskQuery(userID, taskID)
+		hasPermission, err := t.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return err
+		}
+
+		if !hasPermission {
+			return errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	txCtx := TransactionsContext{
 		logger:             t.logger,
 		transactionFactory: t.transactionFactory,

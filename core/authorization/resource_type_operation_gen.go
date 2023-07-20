@@ -91,6 +91,10 @@ var (
 
 // Operations for Task
 var (
+	AddAwaitForTaskInTask = authorization.ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "AddAwaitForTask",
+	}
 	CreateLinkInTask = authorization.ResourceTypeOperation{
 		ResourceType: "Task",
 		Operation:    "CreateLink",
@@ -99,9 +103,17 @@ var (
 		ResourceType: "Task",
 		Operation:    "Delete",
 	}
+	MoveBetweenContainersInTask = authorization.ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "MoveBetweenContainers",
+	}
 	ReadInTask = authorization.ResourceTypeOperation{
 		ResourceType: "Task",
 		Operation:    "Read",
+	}
+	RemoveAwaitForTaskInTask = authorization.ResourceTypeOperation{
+		ResourceType: "Task",
+		Operation:    "RemoveAwaitForTask",
 	}
 	UpdateInTask = authorization.ResourceTypeOperation{
 		ResourceType: "Task",
@@ -127,6 +139,10 @@ var (
 
 // Operations for Team
 var (
+	AddAwaitForTaskInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "AddAwaitForTask",
+	}
 	AddMemberToInTeam = authorization.ResourceTypeOperation{
 		ResourceType: "Team",
 		Operation:    "AddMemberTo",
@@ -179,6 +195,10 @@ var (
 		ResourceType: "Team",
 		Operation:    "DemoteMemberFromAdmin",
 	}
+	MoveTaskBetweenContainersInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "MoveTaskBetweenContainers",
+	}
 	PromoteMemberToAdminInTeam = authorization.ResourceTypeOperation{
 		ResourceType: "Team",
 		Operation:    "PromoteMemberToAdmin",
@@ -202,6 +222,10 @@ var (
 	ReadTaskInTeam = authorization.ResourceTypeOperation{
 		ResourceType: "Team",
 		Operation:    "ReadTask",
+	}
+	RemoveAwaitForTaskInTeam = authorization.ResourceTypeOperation{
+		ResourceType: "Team",
+		Operation:    "RemoveAwaitForTask",
 	}
 	RemoveMemberFromInTeam = authorization.ResourceTypeOperation{
 		ResourceType: "Team",
