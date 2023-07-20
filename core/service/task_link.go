@@ -202,6 +202,7 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 		return entity.TaskLink{}, internalErr
 	}
 
+	// TODO: clean up resource relations in authorization service
 	return taskLink, nil
 }
 

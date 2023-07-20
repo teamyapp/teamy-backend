@@ -453,6 +453,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 		return entity.Team{}, err
 	}
 
+	// TODO: clean up resource relations in authorization service
 	return team, nil
 }
 

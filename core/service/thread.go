@@ -185,6 +185,7 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		return entity.Message{}, err
 	}
 
+	// TODO: clean up resource relations in authorization service
 	return message, nil
 }
 
