@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -55,9 +55,7 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -73,24 +71,17 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 		UpdatedAt:     &now,
 	}
 
-	// insert team into table
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
-		return
-	}
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
 
 	teamFound, internalErr := teamRef.teamService.FindTeamByID(ct, team.ID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	// verify return result
-	assert.Equal(t, team.ID, teamFound.ID)
-	assert.Equal(t, team.Name, teamFound.Name)
-	assert.Equal(t, team.IconURL, teamFound.IconURL)
-	assert.Equal(t, team.CreatorUserID, teamFound.CreatorUserID)
-	assert.Equal(t, team.OwnerUserID, teamFound.OwnerUserID)
-	assert.NotNil(t, team.CreatedAt, teamFound.CreatedAt)
-	assert.NotNil(t, team.UpdatedAt, teamFound.UpdatedAt)
+	require.Nil(t, internalErr)
+	require.Equal(t, team.ID, teamFound.ID)
+	require.Equal(t, team.Name, teamFound.Name)
+	require.Equal(t, team.IconURL, teamFound.IconURL)
+	require.Equal(t, team.CreatorUserID, teamFound.CreatorUserID)
+	require.Equal(t, team.OwnerUserID, teamFound.OwnerUserID)
+	require.NotNil(t, team.CreatedAt, teamFound.CreatedAt)
+	require.NotNil(t, team.UpdatedAt, teamFound.UpdatedAt)
 }
 
 func TestTeamService_FindTeams(t *testing.T) {
@@ -109,9 +100,7 @@ func TestTeamService_FindTeams(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID1)
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -138,31 +127,24 @@ func TestTeamService_FindTeams(t *testing.T) {
 	}
 
 	// insert teams into table
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1)) {
-		return
-	}
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2)) {
-		return
-	}
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1))
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2))
 
 	teamFilter := TeamFilter{
 		TeamID: &teamID2,
 	}
 
 	teamsFound, internalErr := teamRef.teamService.FindTeams(ct, &teamFilter)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
+	require.Nil(t, internalErr)
 	// only team2 should be returned
-	assert.Equal(t, len(teamsFound), 1)
-	assert.Equal(t, team2.ID, teamsFound[0].ID)
-	assert.Equal(t, team2.Name, teamsFound[0].Name)
-	assert.Equal(t, team2.IconURL, teamsFound[0].IconURL)
-	assert.Equal(t, team2.CreatorUserID, teamsFound[0].CreatorUserID)
-	assert.Equal(t, team2.OwnerUserID, teamsFound[0].OwnerUserID)
-	assert.NotNil(t, team2.CreatedAt, teamsFound[0].CreatedAt)
-	assert.NotNil(t, team2.UpdatedAt, teamsFound[0].UpdatedAt)
+	require.Equal(t, len(teamsFound), 1)
+	require.Equal(t, team2.ID, teamsFound[0].ID)
+	require.Equal(t, team2.Name, teamsFound[0].Name)
+	require.Equal(t, team2.IconURL, teamsFound[0].IconURL)
+	require.Equal(t, team2.CreatorUserID, teamsFound[0].CreatorUserID)
+	require.Equal(t, team2.OwnerUserID, teamsFound[0].OwnerUserID)
+	require.NotNil(t, team2.CreatedAt, teamsFound[0].CreatedAt)
+	require.NotNil(t, team2.UpdatedAt, teamsFound[0].UpdatedAt)
 }
 
 func TestTeamService_FindTeamsForUser(t *testing.T) {
@@ -182,9 +164,7 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID1)
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -225,47 +205,28 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	teamMember3 := entity.TeamMember{TeamID: teamID3, UserID: requesterUserID1, CreatedAt: now}
 
 	// insert teams and teamMembers into table
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1)) {
-		return
-	}
-
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2)) {
-		return
-	}
-
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team3)) {
-		return
-	}
-	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
-		return
-	}
-
-	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
-		return
-	}
-
-	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember3)) {
-		return
-	}
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1))
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2))
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team3))
+	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1))
+	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2))
+	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember3))
 
 	teamFilter := TeamFilter{
 		TeamID: &teamID3,
 	}
 
 	teamsFound, internalErr := teamRef.teamService.FindTeamsForUser(ct, requesterUserID1, &teamFilter)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
+	require.Nil(t, internalErr)
 	// only team3 should be returned
-	assert.Equal(t, 1, len(teamsFound))
-	assert.Equal(t, team3.ID, teamsFound[0].ID)
-	assert.Equal(t, team3.Name, teamsFound[0].Name)
-	assert.Equal(t, team3.IconURL, teamsFound[0].IconURL)
-	assert.Equal(t, team3.CreatorUserID, teamsFound[0].CreatorUserID)
-	assert.Equal(t, team3.OwnerUserID, teamsFound[0].OwnerUserID)
-	assert.NotNil(t, team3.CreatedAt, teamsFound[0].CreatedAt)
-	assert.NotNil(t, team3.UpdatedAt, teamsFound[0].UpdatedAt)
+	require.Equal(t, 1, len(teamsFound))
+	require.Equal(t, team3.ID, teamsFound[0].ID)
+	require.Equal(t, team3.Name, teamsFound[0].Name)
+	require.Equal(t, team3.IconURL, teamsFound[0].IconURL)
+	require.Equal(t, team3.CreatorUserID, teamsFound[0].CreatorUserID)
+	require.Equal(t, team3.OwnerUserID, teamsFound[0].OwnerUserID)
+	require.NotNil(t, team3.CreatedAt, teamsFound[0].CreatedAt)
+	require.NotNil(t, team3.UpdatedAt, teamsFound[0].UpdatedAt)
 }
 
 func TestTeamService_CreateTeam(t *testing.T) {
@@ -284,44 +245,34 @@ func TestTeamService_CreateTeam(t *testing.T) {
 	}
 
 	newTeam, internalErr := teamRef.teamService.CreateTeam(ct, teamInput)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
 
-	// verify return result
-	assert.Equal(t, requesterUserID, newTeam.CreatorUserID)
-	assert.Equal(t, teamInput.Name, newTeam.Name)
-	assert.Equal(t, requesterUserID, newTeam.OwnerUserID)
-	assert.Nil(t, newTeam.IconURL)
-	assert.NotNil(t, newTeam.CreatedAt)
-	assert.Nil(t, newTeam.UpdatedAt)
+	require.Equal(t, requesterUserID, newTeam.CreatorUserID)
+	require.Equal(t, teamInput.Name, newTeam.Name)
+	require.Equal(t, requesterUserID, newTeam.OwnerUserID)
+	require.Nil(t, newTeam.IconURL)
+	require.NotNil(t, newTeam.CreatedAt)
+	require.Nil(t, newTeam.UpdatedAt)
 
-	// verify in-memory DB
 	teamInMemory, err := teamRef.teamDaoV2.FindTeamByID(ct, newTeam.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	assert.Equal(t, requesterUserID, teamInMemory.CreatorUserID)
-	assert.Equal(t, teamInput.Name, teamInMemory.Name)
-	assert.Equal(t, requesterUserID, teamInMemory.OwnerUserID)
-	assert.Nil(t, teamInMemory.IconURL)
-	assert.NotNil(t, teamInMemory.CreatedAt)
-	assert.Nil(t, teamInMemory.UpdatedAt)
+	require.Equal(t, requesterUserID, teamInMemory.CreatorUserID)
+	require.Equal(t, teamInput.Name, teamInMemory.Name)
+	require.Equal(t, requesterUserID, teamInMemory.OwnerUserID)
+	require.Nil(t, teamInMemory.IconURL)
+	require.NotNil(t, teamInMemory.CreatedAt)
+	require.Nil(t, teamInMemory.UpdatedAt)
 
-	if !assertTeamGroupAndUserPermissions(
+	assertTeamGroupAndUserPermissions(
 		t,
 		teamRef,
 		ct,
 		newTeam.ID,
 		entity.OwnerTeamGroupLabel,
 		requesterUserID,
-		authorization.TeamOwnerResourceTypeOperations,
-	) {
-		return
-	}
-
-	if !assertTeamGroupAndUserPermissions(
+		authorization.TeamOwnerResourceTypeOperations)
+	assertTeamGroupAndUserPermissions(
 		t,
 		teamRef,
 		ct,
@@ -329,11 +280,8 @@ func TestTeamService_CreateTeam(t *testing.T) {
 		entity.AdminTeamGroupLabel,
 		requesterUserID,
 		authorization.TeamAdminResourceTypeOperations,
-	) {
-		return
-	}
-
-	if !assertTeamGroupAndUserPermissions(
+	)
+	assertTeamGroupAndUserPermissions(
 		t,
 		teamRef,
 		ct,
@@ -341,9 +289,7 @@ func TestTeamService_CreateTeam(t *testing.T) {
 		entity.MemberTeamGroupLabel,
 		requesterUserID,
 		authorization.TeamMemberResourceTypeOperations,
-	) {
-		return
-	}
+	)
 }
 
 func TestTeamService_UpdateTeam(t *testing.T) {
@@ -372,43 +318,30 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 	}
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
-	// insert team into table
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
-		return
-	}
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
 
 	updateTeamInput := UpdateTeamInput{Name: "UpdatedTeamName", OwnerUserID: 25}
 	updatedTeam, internalErr := teamRef.teamService.UpdateTeam(ct, team.ID, updateTeamInput)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
+	require.Equal(t, team.CreatorUserID, updatedTeam.CreatorUserID)
+	require.Equal(t, updateTeamInput.Name, updatedTeam.Name)
+	require.Equal(t, updateTeamInput.OwnerUserID, updatedTeam.OwnerUserID)
+	require.Equal(t, team.IconURL, updatedTeam.IconURL)
+	require.Equal(t, team.CreatedAt, updatedTeam.CreatedAt)
+	require.NotNil(t, updatedTeam.UpdatedAt)
 
-	// verify return result
-	assert.Equal(t, team.CreatorUserID, updatedTeam.CreatorUserID)
-	assert.Equal(t, updateTeamInput.Name, updatedTeam.Name)
-	assert.Equal(t, updateTeamInput.OwnerUserID, updatedTeam.OwnerUserID)
-	assert.Equal(t, team.IconURL, updatedTeam.IconURL)
-	assert.Equal(t, team.CreatedAt, updatedTeam.CreatedAt)
-	assert.NotNil(t, updatedTeam.UpdatedAt)
-
-	// verify in-memory DB
 	teamInMemory, err := teamRef.teamDaoV2.FindTeamByID(ct, updatedTeam.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.Equal(t, team.CreatorUserID, teamInMemory.CreatorUserID)
-	assert.Equal(t, updateTeamInput.Name, teamInMemory.Name)
-	assert.Equal(t, updateTeamInput.OwnerUserID, teamInMemory.OwnerUserID)
-	assert.Equal(t, team.IconURL, teamInMemory.IconURL)
-	assert.Equal(t, team.CreatedAt, teamInMemory.CreatedAt)
-	assert.NotNil(t, teamInMemory.UpdatedAt)
+	require.Nil(t, err)
+	require.Equal(t, team.CreatorUserID, teamInMemory.CreatorUserID)
+	require.Equal(t, updateTeamInput.Name, teamInMemory.Name)
+	require.Equal(t, updateTeamInput.OwnerUserID, teamInMemory.OwnerUserID)
+	require.Equal(t, team.IconURL, teamInMemory.IconURL)
+	require.Equal(t, team.CreatedAt, teamInMemory.CreatedAt)
+	require.NotNil(t, teamInMemory.UpdatedAt)
 }
 
 func TestTeamService_DeleteTeam(t *testing.T) {
@@ -437,33 +370,24 @@ func TestTeamService_DeleteTeam(t *testing.T) {
 	}
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+
 	defer tx.Rollback()
 
-	// insert team into table
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
-		return
-	}
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
 
 	deletedTeam, internalErr := teamRef.teamService.DeleteTeam(ct, team.ID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
+	require.Equal(t, team.CreatorUserID, deletedTeam.CreatorUserID)
+	require.Equal(t, team.Name, deletedTeam.Name)
+	require.Equal(t, team.OwnerUserID, deletedTeam.OwnerUserID)
+	require.Equal(t, team.IconURL, deletedTeam.IconURL)
+	require.Equal(t, team.CreatedAt, deletedTeam.CreatedAt)
+	require.Equal(t, team.UpdatedAt, deletedTeam.UpdatedAt)
 
-	// verify return result
-	assert.Equal(t, team.CreatorUserID, deletedTeam.CreatorUserID)
-	assert.Equal(t, team.Name, deletedTeam.Name)
-	assert.Equal(t, team.OwnerUserID, deletedTeam.OwnerUserID)
-	assert.Equal(t, team.IconURL, deletedTeam.IconURL)
-	assert.Equal(t, team.CreatedAt, deletedTeam.CreatedAt)
-	assert.Equal(t, team.UpdatedAt, deletedTeam.UpdatedAt)
-
-	// verify in-memory DB
 	_, err = teamRef.teamDaoV2.FindTeamByID(ct, deletedTeam.ID)
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Code, errs.NotFound)
+	require.NotNil(t, err)
+	require.Equal(t, err.Code, errs.NotFound)
 }
 
 func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
@@ -479,34 +403,25 @@ func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
 	uploadSessionID, internalErr := teamRef.teamService.CreateTeamIconUploadSession(ct, teamID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
+	require.Equal(t, uploadSessionID, uint64(1))
 
-	assert.Equal(t, uploadSessionID, uint64(1))
-
-	// verify in-memory DB
 	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
 		tx,
 		teamID,
 		entity.IconTeamFileUploadSessionType,
 		uploadSessionID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
-	assert.Equal(t, uploadSessionInMemory.TeamID, teamID)
-	assert.Nil(t, uploadSessionInMemory.UpdatedAt)
-	assert.Equal(t, uploadSessionInMemory.Type, entity.IconTeamFileUploadSessionType)
-	assert.Equal(t, uploadSessionInMemory.IsCompleted, false)
+	require.Nil(t, err)
+	require.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
+	require.Equal(t, uploadSessionInMemory.TeamID, teamID)
+	require.Nil(t, uploadSessionInMemory.UpdatedAt)
+	require.Equal(t, uploadSessionInMemory.Type, entity.IconTeamFileUploadSessionType)
+	require.Equal(t, uploadSessionInMemory.IsCompleted, false)
 }
 
 func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
@@ -535,53 +450,36 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 	}
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
-	// insert team into table
-	if !assert.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team)) {
-		return
-	}
+	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
 
-	// create team upload session
 	uploadSessionID, internalErr := teamRef.teamService.CreateTeamIconUploadSession(ct, teamID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
 
-	// finish upload session
 	updatedTeam, err := teamRef.teamService.FinishTeamIconUploadSession(ct, team.ID, uploadSessionID)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+	require.Equal(t, team.ID, updatedTeam.ID)
+	require.NotEqual(t, team.IconURL, updatedTeam.IconURL)
+	require.NotEqual(t, team.UpdatedAt, updatedTeam.UpdatedAt)
+	require.Equal(t, team.Name, updatedTeam.Name)
+	require.Equal(t, team.CreatedAt, updatedTeam.CreatedAt)
+	require.Equal(t, team.OwnerUserID, updatedTeam.OwnerUserID)
+	require.Equal(t, team.CreatorUserID, updatedTeam.CreatorUserID)
 
-	// verify returned team
-	assert.Equal(t, team.ID, updatedTeam.ID)
-	assert.NotEqual(t, team.IconURL, updatedTeam.IconURL)
-	assert.NotEqual(t, team.UpdatedAt, updatedTeam.UpdatedAt)
-	assert.Equal(t, team.Name, updatedTeam.Name)
-	assert.Equal(t, team.CreatedAt, updatedTeam.CreatedAt)
-	assert.Equal(t, team.OwnerUserID, updatedTeam.OwnerUserID)
-	assert.Equal(t, team.CreatorUserID, updatedTeam.CreatorUserID)
-
-	// verify in-memory DB
 	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
 		tx,
 		teamID,
 		entity.IconTeamFileUploadSessionType,
 		uploadSessionID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
-	assert.Equal(t, uploadSessionInMemory.TeamID, teamID)
-	assert.NotNil(t, uploadSessionInMemory.UpdatedAt)
-	assert.Equal(t, uploadSessionInMemory.Type, entity.IconTeamFileUploadSessionType)
-	assert.Equal(t, uploadSessionInMemory.IsCompleted, true)
+	require.Nil(t, err)
+	require.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
+	require.Equal(t, uploadSessionInMemory.TeamID, teamID)
+	require.NotNil(t, uploadSessionInMemory.UpdatedAt)
+	require.Equal(t, uploadSessionInMemory.Type, entity.IconTeamFileUploadSessionType)
+	require.Equal(t, uploadSessionInMemory.IsCompleted, true)
 }
 
 func TestTeamService_FindTeamMembers(t *testing.T) {
@@ -599,9 +497,7 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -622,26 +518,17 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 	}
 
 	// insert teams into table
-	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1)) {
-		return
-	}
-
-	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2)) {
-		return
-	}
+	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1))
+	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2))
 
 	teamsFound, internalErr := teamRef.teamService.FindTeamMembers(ct, teamMember1.TeamID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	// verify return result
-	assert.Equal(t, 1, len(teamsFound))
-	assert.Equal(t, teamMember1.TeamID, teamsFound[0].TeamID)
-	assert.Equal(t, teamMember1.UserID, teamsFound[0].UserID)
-	assert.Equal(t, teamMember1.WeeklyBandwidth, teamsFound[0].WeeklyBandwidth)
-	assert.Equal(t, teamMember1.CreatedAt, teamsFound[0].CreatedAt)
-	assert.Equal(t, teamMember1.UpdatedAt, teamsFound[0].UpdatedAt)
+	require.Nil(t, internalErr)
+	require.Equal(t, 1, len(teamsFound))
+	require.Equal(t, teamMember1.TeamID, teamsFound[0].TeamID)
+	require.Equal(t, teamMember1.UserID, teamsFound[0].UserID)
+	require.Equal(t, teamMember1.WeeklyBandwidth, teamsFound[0].WeeklyBandwidth)
+	require.Equal(t, teamMember1.CreatedAt, teamsFound[0].CreatedAt)
+	require.Equal(t, teamMember1.UpdatedAt, teamsFound[0].UpdatedAt)
 }
 
 func TestTeamService_AddMemberToTeam(t *testing.T) {
@@ -658,28 +545,20 @@ func TestTeamService_AddMemberToTeam(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+
 	defer tx.Rollback()
 
 	teamMember, internalErr := teamRef.teamService.AddMemberToTeam(ct, teamID, requesterUserID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
 
-	// verify return result
-	assert.Equal(t, teamMember.TeamID, teamID)
-	assert.Equal(t, teamMember.UserID, requesterUserID)
+	require.Equal(t, teamMember.TeamID, teamID)
+	require.Equal(t, teamMember.UserID, requesterUserID)
 
-	// verify in-memory DB
 	teamMemberInMemory, internalErr := teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, requesterUserID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	assert.Equal(t, teamMemberInMemory.TeamID, teamID)
-	assert.Equal(t, teamMemberInMemory.UserID, requesterUserID)
+	require.Nil(t, internalErr)
+	require.Equal(t, teamMemberInMemory.TeamID, teamID)
+	require.Equal(t, teamMemberInMemory.UserID, requesterUserID)
 }
 
 func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
@@ -696,9 +575,8 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+
 	defer tx.Rollback()
 
 	now := time.Now().UTC()
@@ -710,27 +588,19 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 		UpdatedAt:       &now,
 	}
 
-	// insert teams into table
-	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember)) {
-		return
-	}
+	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember))
 
 	teamDeleted, internalErr := teamRef.teamService.RemoveMemberFromTeam(ct, teamMember.TeamID, teamMember.UserID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
+	require.Equal(t, teamDeleted.TeamID, teamMember.TeamID)
+	require.Equal(t, teamDeleted.UserID, teamMember.UserID)
+	require.Equal(t, teamDeleted.WeeklyBandwidth, teamMember.WeeklyBandwidth)
+	require.Equal(t, teamDeleted.CreatedAt, teamMember.CreatedAt)
+	require.Equal(t, teamDeleted.UpdatedAt, teamMember.UpdatedAt)
 
-	// verify return result
-	assert.Equal(t, teamDeleted.TeamID, teamMember.TeamID)
-	assert.Equal(t, teamDeleted.UserID, teamMember.UserID)
-	assert.Equal(t, teamDeleted.WeeklyBandwidth, teamMember.WeeklyBandwidth)
-	assert.Equal(t, teamDeleted.CreatedAt, teamMember.CreatedAt)
-	assert.Equal(t, teamDeleted.UpdatedAt, teamMember.UpdatedAt)
-
-	// verify in-memory DB
 	_, internalErr = teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
-	assert.NotNil(t, internalErr)
-	assert.Equal(t, internalErr.Code, errs.NotFound)
+	require.NotNil(t, internalErr)
+	require.Equal(t, internalErr.Code, errs.NotFound)
 }
 
 func TestTeamService_UpdateTeamMember(t *testing.T) {
@@ -747,9 +617,7 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := teamRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -763,37 +631,27 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	}
 
 	// insert teams into table
-	if !assert.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember)) {
-		return
-	}
+	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember))
 
 	updateInput := UpdateTeamMemberInput{
 		UserID:          requesterUserID,
 		WeeklyBandwidth: timePerWeek / 7,
 	}
 	teamUpdated, internalErr := teamRef.teamService.UpdateTeamMember(ct, teamMember.TeamID, updateInput)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
+	require.Equal(t, teamUpdated.TeamID, teamMember.TeamID)
+	require.Equal(t, teamUpdated.UserID, teamMember.UserID)
+	require.Equal(t, teamUpdated.WeeklyBandwidth, updateInput.WeeklyBandwidth)
+	require.Equal(t, teamUpdated.CreatedAt, teamMember.CreatedAt)
+	require.NotEqual(t, teamUpdated.UpdatedAt, teamMember.UpdatedAt)
 
-	// verify return result
-	assert.Equal(t, teamUpdated.TeamID, teamMember.TeamID)
-	assert.Equal(t, teamUpdated.UserID, teamMember.UserID)
-	assert.Equal(t, teamUpdated.WeeklyBandwidth, updateInput.WeeklyBandwidth)
-	assert.Equal(t, teamUpdated.CreatedAt, teamMember.CreatedAt)
-	assert.NotEqual(t, teamUpdated.UpdatedAt, teamMember.UpdatedAt)
-
-	// verify in-memory DB
 	teamMemberInMemory, internalErr := teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	assert.Equal(t, teamMemberInMemory.TeamID, teamMember.TeamID)
-	assert.Equal(t, teamMemberInMemory.UserID, teamMember.UserID)
-	assert.Equal(t, teamMemberInMemory.WeeklyBandwidth, updateInput.WeeklyBandwidth)
-	assert.Equal(t, teamMemberInMemory.CreatedAt, teamMember.CreatedAt)
-	assert.NotEqual(t, teamMemberInMemory.UpdatedAt, teamMember.UpdatedAt)
+	require.Nil(t, internalErr)
+	require.Equal(t, teamMemberInMemory.TeamID, teamMember.TeamID)
+	require.Equal(t, teamMemberInMemory.UserID, teamMember.UserID)
+	require.Equal(t, teamMemberInMemory.WeeklyBandwidth, updateInput.WeeklyBandwidth)
+	require.Equal(t, teamMemberInMemory.CreatedAt, teamMember.CreatedAt)
+	require.NotEqual(t, teamMemberInMemory.UpdatedAt, teamMember.UpdatedAt)
 }
 
 func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, bool) {
@@ -815,17 +673,13 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return TeamTestRef{}, false
-	}
-
+	require.Nil(t, internalErr)
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
 	teamyPrometheus := metricstest.NewNoopMetrics()
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
-	if !assert.Nil(t, internalErr) {
-		return TeamTestRef{}, false
-	}
+	require.Nil(t, internalErr)
+
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -850,9 +704,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 				3,
 				nil)
 		})
-	if !assert.Nil(t, err) {
-		return TeamTestRef{}, false
-	}
+	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
@@ -909,9 +761,7 @@ func assertTeamGroupAndUserPermissions(
 	resourceTypeOperations []cloudAuthorization.ResourceTypeOperation,
 ) bool {
 	_, err := teamRef.teamGroupDaoV2.FindGroupByTeamIDAndLabel(ct, teamID, groupLabel)
-	if !assert.Nil(t, err) {
-		return false
-	}
+	require.Nil(t, err)
 
 	for _, resourceTypeOperation := range resourceTypeOperations {
 		hasPermission, err := teamRef.cloudTestKit.AuthorizationService.HasPermission(
@@ -921,11 +771,8 @@ func assertTeamGroupAndUserPermissions(
 			resourceTypeOperation.Operation,
 			requesterUserID,
 		)
-		if !assert.Nil(t, err) {
-			return false
-		}
-
-		assert.True(t, hasPermission)
+		require.Nil(t, err)
+		require.True(t, hasPermission)
 	}
 
 	return true

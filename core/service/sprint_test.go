@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
@@ -61,15 +61,11 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return SprintTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
-	if !assert.Nil(t, internalErr) {
-		return SprintTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	teamyPrometheus := metricstest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
@@ -96,12 +92,9 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 				3,
 				nil)
 		})
-	if !assert.Nil(t, err) {
-		return SprintTestRef{}, false
-	}
+	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
-
 	transactionFactory := transaction.NewFactory(nil)
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
@@ -279,18 +272,14 @@ func TestSprintService_CreateSprint(t *testing.T) {
 
 			if testCase.prepareData != nil {
 				err := testCase.prepareData(sprintTestRef, testCase.requesterUserID)
-				if !assert.Nil(t, err) {
-					return
-				}
+				require.Nil(t, err)
 			}
 
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 			now := time.Now().UTC()
 			tx, err := sprintTestRef.transactionFactory.BeginTx(ct, nil)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			defer tx.Rollback()
 
@@ -301,9 +290,7 @@ func TestSprintService_CreateSprint(t *testing.T) {
 			}
 
 			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			sprint := CreateSprintInput{
 				StartAt: now,
@@ -313,15 +300,15 @@ func TestSprintService_CreateSprint(t *testing.T) {
 			createdSprint, internalErr := sprintTestRef.sprintService.CreateSprint(ct, teamID, sprint)
 
 			if testCase.expectedErr != nil {
-				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
-			} else if !assert.Nil(t, internalErr) {
-				return
+			} else {
+				require.Nil(t, internalErr)
 			}
 
-			assert.Equal(t, createdSprint.OwningTeamID, teamID)
-			assert.Equal(t, createdSprint.StartAt, sprint.StartAt)
-			assert.Equal(t, createdSprint.EndAt, sprint.EndAt)
+			require.Equal(t, createdSprint.OwningTeamID, teamID)
+			require.Equal(t, createdSprint.StartAt, sprint.StartAt)
+			require.Equal(t, createdSprint.EndAt, sprint.EndAt)
 		})
 	}
 
@@ -461,18 +448,14 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 
 			if testCase.prepareData != nil {
 				err := testCase.prepareData(sprintTestRef, testCase.requesterUserID)
-				if !assert.Nil(t, err) {
-					return
-				}
+				require.Nil(t, err)
 			}
 
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 			now := time.Now().UTC()
 			tx, err := sprintTestRef.transactionFactory.BeginTx(ct, nil)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			defer tx.Rollback()
 			team := entity.Team{
@@ -481,9 +464,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				CreatorUserID: 10,
 			}
 			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			sprint := entity.Sprint{
 				ID:           1,
@@ -492,9 +473,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				OwningTeamID: teamID,
 			}
 			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			participant := entity.SprintParticipant{
 				SprintID:        sprint.ID,
@@ -504,9 +483,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				CreatedAt:       now,
 			}
 			err = sprintTestRef.sprintService.sprintParticipantDaoV2.CreateSprintParticipant(ct, tx, participant)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			effort := time.Hour * 12 * 7
 			task := entity.Task{
@@ -519,40 +496,34 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 			}
 
 			err = sprintTestRef.taskDaoV2.CreateTask(ct, tx, task)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			sprintTaskRelation := entity.SprintTaskRelation{
 				SprintID: sprint.ID,
 				TaskID:   task.ID,
 			}
 			err = sprintTestRef.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, sprintTaskRelation)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			deletedSprint, internalErr := sprintTestRef.sprintService.DeleteSprint(ct, sprint.ID)
 			if testCase.expectedErr != nil {
-				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
-			} else if !assert.Nil(t, internalErr) {
-				return
+			} else {
+				require.Nil(t, internalErr)
 			}
 
 			updatedTask, err := sprintTestRef.taskDaoV2.FindTaskByIDWithTx(ct, tx, task.ID)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			_, err = sprintTestRef.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, participant.SprintID, participant.UserID)
-			assert.Equal(t, err.Code, errs.NotFound)
+			require.Equal(t, err.Code, errs.NotFound)
 
-			assert.Equal(t, deletedSprint.OwningTeamID, teamID)
-			assert.Equal(t, deletedSprint.StartAt, sprint.StartAt)
-			assert.Equal(t, deletedSprint.EndAt, sprint.EndAt)
-			assert.Equal(t, updatedTask.IsPlanned, false)
-			assert.Equal(t, updatedTask.Status, entity.TaskStatusTodo)
+			require.Equal(t, deletedSprint.OwningTeamID, teamID)
+			require.Equal(t, deletedSprint.StartAt, sprint.StartAt)
+			require.Equal(t, deletedSprint.EndAt, sprint.EndAt)
+			require.Equal(t, updatedTask.IsPlanned, false)
+			require.Equal(t, updatedTask.Status, entity.TaskStatusTodo)
 		})
 	}
 }
@@ -689,18 +660,14 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 
 			if testCase.prepareData != nil {
 				err := testCase.prepareData(sprintTestRef, testCase.requesterUserID)
-				if !assert.Nil(t, err) {
-					return
-				}
+				require.Nil(t, err)
 			}
 
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 			now := time.Now().UTC()
 			tx, err := sprintTestRef.transactionFactory.BeginTx(ct, nil)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			defer tx.Rollback()
 
@@ -721,14 +688,10 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 			}
 
 			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint1)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint2)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			team := entity.Team{
 				ID:            teamID,
@@ -738,29 +701,26 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 			}
 
 			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			updatedTeam, internalErr := sprintTestRef.sprintService.SetTeamActiveSprint(ct, teamID, sprintID1)
 			if testCase.expectedErr != nil {
-				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
-			} else if !assert.Nil(t, internalErr) {
-				return
+			} else {
+				require.Nil(t, internalErr)
 			}
 
-			assert.Equal(t, sprintID1, *updatedTeam.ActiveSprintID)
+			require.Equal(t, sprintID1, *updatedTeam.ActiveSprintID)
 
 			updatedTeam, internalErr = sprintTestRef.sprintService.SetTeamActiveSprint(ct, teamID, sprintID2)
 			if testCase.expectedErr != nil {
-				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
-				return
-			} else if !assert.Nil(t, internalErr) {
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
 			}
 
-			assert.Equal(t, sprintID2, *updatedTeam.ActiveSprintID)
+			require.Nil(t, internalErr)
+			require.Equal(t, sprintID2, *updatedTeam.ActiveSprintID)
 		})
 	}
 
@@ -897,18 +857,14 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 
 			if testCase.prepareData != nil {
 				err := testCase.prepareData(sprintTestRef, testCase.requesterUserID)
-				if !assert.Nil(t, err) {
-					return
-				}
+				require.Nil(t, err)
 			}
 
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 			now := time.Now().UTC()
 			tx, err := sprintTestRef.transactionFactory.BeginTx(ct, nil)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			defer tx.Rollback()
 
@@ -921,9 +877,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 			}
 
 			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint1)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			team := entity.Team{
 				ID:             teamID,
@@ -934,19 +888,17 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 			}
 
 			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
-			if !assert.Nil(t, err) {
-				return
-			}
+			require.Nil(t, err)
 
 			activeSprint, internalErr := sprintTestRef.sprintService.GetActiveSprint(ct, teamID)
 			if testCase.expectedErr != nil {
-				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
-			} else if !assert.Nil(t, internalErr) {
-				return
+			} else {
+				require.Nil(t, internalErr)
 			}
 
-			assert.Equal(t, sprintID1, activeSprint.ID)
+			require.Equal(t, sprintID1, activeSprint.ID)
 		})
 	}
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
@@ -55,9 +55,7 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return ThreadTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
@@ -86,9 +84,7 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 				3,
 				nil)
 		})
-	if !assert.Nil(t, err) {
-		return ThreadTestRef{}, false
-	}
+	require.Nil(t, err)
 
 	transactionFactory := transaction.NewFactory(nil)
 
@@ -135,17 +131,13 @@ func TestTeamService_CreateThread(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := threadRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
 	// create thread
 	_, err = threadRef.threadService.CreateThread(ct)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 }
 
 func TestTeamService_FindMessages(t *testing.T) {
@@ -165,9 +157,7 @@ func TestTeamService_FindMessages(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := threadRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -190,23 +180,14 @@ func TestTeamService_FindMessages(t *testing.T) {
 		UpdatedAt:    nil,
 	}
 
-	// insert message into table
-	if !assert.Nil(t, threadRef.messageDaoV2.CreateMessage(ct, tx, message1)) {
-		return
-	}
-
-	if !assert.Nil(t, threadRef.messageDaoV2.CreateMessage(ct, tx, message2)) {
-		return
-	}
+	require.Nil(t, threadRef.messageDaoV2.CreateMessage(ct, tx, message1))
+	require.Nil(t, threadRef.messageDaoV2.CreateMessage(ct, tx, message2))
 
 	messageFound, internalErr := threadRef.threadService.FindMessages(ct, threadID1)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
 
-	// verify return result
-	assert.Equal(t, 1, len(messageFound))
-	assert.True(t, areMessagesEqual(message1, messageFound[0]))
+	require.Equal(t, 1, len(messageFound))
+	require.True(t, areMessagesEqual(message1, messageFound[0]))
 }
 
 func TestTeamService_CreateMessage(t *testing.T) {
@@ -223,9 +204,7 @@ func TestTeamService_CreateMessage(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := threadRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -234,7 +213,6 @@ func TestTeamService_CreateMessage(t *testing.T) {
 		Body: body,
 	}
 
-	// create task
 	now := time.Now().UTC()
 	task := entity.Task{
 		ID:               12,
@@ -253,27 +231,16 @@ func TestTeamService_CreateMessage(t *testing.T) {
 		DeliveredAt:      nil,
 	}
 	err = threadRef.taskDaoV2.CreateTask(ct, tx, task)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	// create message
 	message, err := threadRef.threadService.CreateMessage(ct, threadID, input)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+	require.Equal(t, body, message.Body)
+	require.Equal(t, threadID, message.ThreadID)
 
-	assert.Equal(t, body, message.Body)
-	assert.Equal(t, threadID, message.ThreadID)
-
-	// compare with message in memory
 	messageFound, internalErr := threadRef.messageDaoV2.FindMessageByIDWithTx(ct, tx, message.ID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	// verify return result
-	assert.True(t, areMessagesEqual(message, messageFound))
+	require.Nil(t, internalErr)
+	require.True(t, areMessagesEqual(message, messageFound))
 }
 
 func TestTeamService_UpdateMessage(t *testing.T) {
@@ -291,9 +258,7 @@ func TestTeamService_UpdateMessage(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := threadRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -306,8 +271,6 @@ func TestTeamService_UpdateMessage(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    nil,
 	}
-
-	// create task
 	task := entity.Task{
 		ID:               12,
 		Goal:             "Test goal",
@@ -325,37 +288,22 @@ func TestTeamService_UpdateMessage(t *testing.T) {
 		DeliveredAt:      nil,
 	}
 	err = threadRef.taskDaoV2.CreateTask(ct, tx, task)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	// insert message into table
 	err = threadRef.messageDaoV2.CreateMessage(ct, tx, message)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	input := UpdateMessageInput{
 		Body: "Updated",
 	}
-
-	// create message
 	message.Body = input.Body
 	updated, err := threadRef.threadService.UpdateMessage(ct, messageID, input)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+	require.True(t, areMessagesEqual(updated, message))
 
-	assert.True(t, areMessagesEqual(updated, message))
-
-	// compare with message in memory
 	messageFound, internalErr := threadRef.messageDaoV2.FindMessageByIDWithTx(ct, tx, messageID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	// verify return result
-	assert.True(t, areMessagesEqual(messageFound, message))
+	require.Nil(t, internalErr)
+	require.True(t, areMessagesEqual(messageFound, message))
 }
 
 func TestTeamService_DeleteMessage(t *testing.T) {
@@ -373,9 +321,7 @@ func TestTeamService_DeleteMessage(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := threadRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -406,31 +352,16 @@ func TestTeamService_DeleteMessage(t *testing.T) {
 		DeliveredAt:      nil,
 	}
 	err = threadRef.taskDaoV2.CreateTask(ct, tx, task)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	// insert message into table
-	err = threadRef.messageDaoV2.CreateMessage(ct, tx, message)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	// create message
 	deleted, err := threadRef.threadService.DeleteMessage(ct, messageID)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	assert.True(t, areMessagesEqual(deleted, message))
+	require.True(t, areMessagesEqual(deleted, message))
 
-	// no message in memory
 	_, internalErr := threadRef.messageDaoV2.FindMessageByIDWithTx(ct, tx, messageID)
-	if !assert.NotNil(t, internalErr) {
-		return
-	}
-
-	assert.Equal(t, errs.NotFound, internalErr.Code)
+	require.NotNil(t, internalErr)
+	require.Equal(t, errs.NotFound, internalErr.Code)
 }
 
 func areMessagesEqual(one entity.Message, other entity.Message) bool {
