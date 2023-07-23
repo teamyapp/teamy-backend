@@ -127,6 +127,22 @@ func NewReadInInvitationQuery(currUserID uint64, invitationID uint64) authorizat
 	}
 }
 
+func NewAddTaskToInSprintQuery(currUserID uint64, sprintID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: SprintResourceType,
+		ResourceID:   sprintID,
+		Operation:    "AddTaskTo",
+		UserID:       currUserID,
+	}
+}
+func NewCopyTasksToInSprintQuery(currUserID uint64, sprintID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: SprintResourceType,
+		ResourceID:   sprintID,
+		Operation:    "CopyTasksTo",
+		UserID:       currUserID,
+	}
+}
 func NewDeleteInSprintQuery(currUserID uint64, sprintID uint64) authorization.Query {
 	return authorization.Query{
 		ResourceType: SprintResourceType,
@@ -140,6 +156,14 @@ func NewReadInSprintQuery(currUserID uint64, sprintID uint64) authorization.Quer
 		ResourceType: SprintResourceType,
 		ResourceID:   sprintID,
 		Operation:    "Read",
+		UserID:       currUserID,
+	}
+}
+func NewRemoveTaskFromInSprintQuery(currUserID uint64, sprintID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: SprintResourceType,
+		ResourceID:   sprintID,
+		Operation:    "RemoveTaskFrom",
 		UserID:       currUserID,
 	}
 }
