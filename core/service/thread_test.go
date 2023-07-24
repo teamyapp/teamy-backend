@@ -354,9 +354,11 @@ func TestTeamService_DeleteMessage(t *testing.T) {
 	err = threadRef.taskDaoV2.CreateTask(ct, tx, task)
 	require.Nil(t, err)
 
-	deleted, err := threadRef.threadService.DeleteMessage(ct, messageID)
+	err = threadRef.messageDaoV2.CreateMessage(ct, tx, message)
 	require.Nil(t, err)
 
+	deleted, err := threadRef.threadService.DeleteMessage(ct, messageID)
+	require.Nil(t, err)
 	require.True(t, areMessagesEqual(deleted, message))
 
 	_, internalErr := threadRef.messageDaoV2.FindMessageByIDWithTx(ct, tx, messageID)

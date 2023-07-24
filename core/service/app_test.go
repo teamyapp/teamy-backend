@@ -1284,7 +1284,6 @@ func TestAppService_CreateAppTeamInstallation(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 

@@ -30,6 +30,10 @@ import (
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
 )
 
+const automationUserID = 0
+
+var automationCtx = ctx.NewContextWithUserID(context.Background(), automationUserID)
+
 type SprintTestRef struct {
 	sprintService           Sprint
 	sprintDaoV2             daov2.Sprint
@@ -61,6 +65,9 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
+	require.Nil(t, internalErr)
+
+	internalErr = servicetest.ApplyAuthorizationConfig(cloudTestKit.AuthorizationService)
 	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
@@ -728,7 +735,6 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 
 func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 	var teamID uint64 = 1
-	var sprintID1 uint64 = 2
 	testCases := []struct {
 		name            string
 		toggles         feature.Toggles
@@ -743,7 +749,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 			},
 			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
-				ct = ctx.NewContextWithUserID(ct, 1)
+				ct = ctx.NewContextWithUserID(ct, automationUserID)
 				group, err := sprintTestRef.
 					cloudTestKit.
 					AuthorizationService.
@@ -770,7 +776,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 			},
 			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
-				ct = ctx.NewContextWithUserID(ct, 1)
+				ct = ctx.NewContextWithUserID(ct, automationUserID)
 				group, err := sprintTestRef.
 					cloudTestKit.
 					AuthorizationService.
@@ -797,7 +803,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 			},
 			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
-				ct = ctx.NewContextWithUserID(ct, 1)
+				ct = ctx.NewContextWithUserID(ct, automationUserID)
 				group, err := sprintTestRef.
 					cloudTestKit.
 					AuthorizationService.
@@ -824,7 +830,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 			},
 			prepareData: func(sprintTestRef SprintTestRef, requesterUserID uint64) *errs.Error {
 				ct := context.Background()
-				ct = ctx.NewContextWithUserID(ct, 1)
+				ct = ctx.NewContextWithUserID(ct, automationUserID)
 				group, err := sprintTestRef.
 					cloudTestKit.
 					AuthorizationService.
@@ -855,6 +861,12 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 				return
 			}
 
+			err := servicetest.AddAllTeamPermissions(
+				sprintTestRef.cloudTestKit.AuthorizationService,
+				teamID,
+				automationUserID)
+			require.Nil(t, err)
+
 			if testCase.prepareData != nil {
 				err := testCase.prepareData(sprintTestRef, testCase.requesterUserID)
 				require.Nil(t, err)
@@ -868,20 +880,15 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 
 			defer tx.Rollback()
 
-			sprint1 := entity.Sprint{
-				ID:           sprintID1,
-				StartAt:      now,
-				EndAt:        now.Add(time.Hour * 24 * 7),
-				CreatedAt:    now,
-				OwningTeamID: teamID,
-			}
-
-			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint1)
+			sprint1, err := sprintTestRef.sprintService.CreateSprint(automationCtx, teamID, CreateSprintInput{
+				StartAt: now,
+				EndAt:   now.Add(time.Hour * 24 * 7),
+			})
 			require.Nil(t, err)
 
 			team := entity.Team{
 				ID:             teamID,
-				ActiveSprintID: &sprintID1,
+				ActiveSprintID: &sprint1.ID,
 				Name:           "test team",
 				CreatorUserID:  10,
 				CreatedAt:      now,
@@ -898,7 +905,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 				require.Nil(t, internalErr)
 			}
 
-			require.Equal(t, sprintID1, activeSprint.ID)
+			require.Equal(t, sprint1.ID, activeSprint.ID)
 		})
 	}
 
