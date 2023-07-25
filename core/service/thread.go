@@ -10,7 +10,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -31,9 +31,9 @@ type Thread struct {
 	cloudClientRegistry *client.Registry
 	stateSyncer         *realtime.StateSyncer
 	transactionFactory  transaction.Factory
-	taskDaoV2           daov2.Task
-	threadDaoV2         daov2.Thread
-	messageDaoV2        daov2.Message
+	taskDao             dao.Task
+	threadDao           dao.Thread
+	messageDao          dao.Message
 }
 
 func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
@@ -53,14 +53,14 @@ func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return t.threadDaoV2.CreateThread(ct, tx, threadID)
+		return t.threadDao.CreateThread(ct, tx, threadID)
 	})
 	return threadID, err
 }
 
 func (t Thread) FindMessages(ct context.Context, threadID uint64) ([]entity.Message, *errs.Error) {
 	// TODO: add authorization logic
-	return t.messageDaoV2.FindMessagesByThreadID(ct, threadID)
+	return t.messageDao.FindMessagesByThreadID(ct, threadID)
 }
 
 func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateMessageInput) (entity.Message, *errs.Error) {
@@ -93,11 +93,11 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		createMessageMutation := mutation.NewCreateMessage(
 			t.stateSyncer,
-			t.messageDaoV2,
-			t.taskDaoV2,
+			t.messageDao,
+			t.taskDao,
 			t.logger,
 			message)
-		err := createMessageMutation.ExecuteV2(ct, tx)
+		err := createMessageMutation.Execute(ct, tx)
 		if err != nil {
 			return err
 		}
@@ -115,7 +115,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 
 func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input UpdateMessageInput) (entity.Message, *errs.Error) {
 	// TODO: add authorization logic
-	message, err := t.messageDaoV2.FindMessageByID(ct, messageID)
+	message, err := t.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
 		return entity.Message{}, err
 	}
@@ -133,10 +133,10 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 		updateMessageMutation := mutation.NewUpdateMessage(
 			t.logger,
 			t.stateSyncer,
-			t.messageDaoV2,
-			t.taskDaoV2,
+			t.messageDao,
+			t.taskDao,
 			message)
-		err = updateMessageMutation.ExecuteV2(ct, tx)
+		err = updateMessageMutation.Execute(ct, tx)
 		if err != nil {
 			return err
 		}
@@ -154,7 +154,7 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 
 func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Message, *errs.Error) {
 	// TODO: add authorization logic
-	message, err := t.messageDaoV2.FindMessageByID(ct, messageID)
+	message, err := t.messageDao.FindMessageByID(ct, messageID)
 	if err != nil {
 		return entity.Message{}, err
 	}
@@ -169,10 +169,10 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		deleteMessageMutation := mutation.NewDeleteMessage(
 			t.logger,
 			t.stateSyncer,
-			t.messageDaoV2,
-			t.taskDaoV2,
+			t.messageDao,
+			t.taskDao,
 			message)
-		err = deleteMessageMutation.ExecuteV2(ct, tx)
+		err = deleteMessageMutation.Execute(ct, tx)
 		if err != nil {
 			return err
 		}
@@ -195,9 +195,9 @@ func NewThread(
 	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	taskDaoV2 daov2.Task,
-	threadDaoV2 daov2.Thread,
-	messageDaoV2 daov2.Message,
+	taskDao dao.Task,
+	threadDao dao.Thread,
+	messageDao dao.Message,
 ) Thread {
 	return Thread{
 		logger:              logger,
@@ -205,8 +205,8 @@ func NewThread(
 		cloudClientRegistry: cloudClientRegistry,
 		stateSyncer:         stateSyncer,
 		transactionFactory:  transactionFactory,
-		taskDaoV2:           taskDaoV2,
-		threadDaoV2:         threadDaoV2,
-		messageDaoV2:        messageDaoV2,
+		taskDao:             taskDao,
+		threadDao:           threadDao,
+		messageDao:          messageDao,
 	}
 }

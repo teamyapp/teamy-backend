@@ -13,7 +13,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -40,9 +40,9 @@ type User struct {
 	authorizer                 client.Authorizer
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
-	userDaoV2                  daov2.User
-	teamMemberDaoV2            daov2.TeamMember
-	userFileUploadSessionDaoV2 daov2.UserFileUploadSession
+	userDao                    dao.User
+	teamMemberDao              dao.TeamMember
+	userFileUploadSessionDao   dao.UserFileUploadSession
 }
 
 func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
@@ -65,7 +65,7 @@ func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 		}
 	}
 
-	return u.userDaoV2.FindUserByID(ct, currUserID)
+	return u.userDao.FindUserByID(ct, currUserID)
 }
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
@@ -88,7 +88,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 		}
 	}
 
-	return u.userDaoV2.FindUserByID(ct, userID)
+	return u.userDao.FindUserByID(ct, userID)
 }
 
 func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, *errs.Error) {
@@ -111,7 +111,7 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return u.userDaoV2.CreateUser(ct, tx, user)
+		return u.userDao.CreateUser(ct, tx, user)
 	})
 	return user, err
 }
@@ -145,7 +145,7 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		user, err = u.userDaoV2.FindUserByIDWithTx(ct, tx, userID)
+		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
 		if err != nil {
 			return err
 		}
@@ -157,11 +157,11 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 		userMutation := mutation.NewUpdateUser(
 			u.logger,
 			u.stateSyncer,
-			u.userDaoV2,
-			u.teamMemberDaoV2,
+			u.userDao,
+			u.teamMemberDao,
 			user)
 		rtTx.AppendMutation(userMutation)
-		return userMutation.ExecuteV2(ct, tx)
+		return userMutation.Execute(ct, tx)
 	})
 
 	return user, err
@@ -208,7 +208,7 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return u.userFileUploadSessionDaoV2.CreateUserFileUploadSession(ct, tx, fileUploadSession)
+		return u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, tx, fileUploadSession)
 	})
 
 	return res.UploadSessionId, err
@@ -251,7 +251,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		profileUploadSession, err := u.userFileUploadSessionDaoV2.FindUserFileUploadSessionByUserIDWithTx(
+		profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(
 			ct,
 			tx,
 			userID,
@@ -270,12 +270,12 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		now := time.Now().UTC()
 		profileUploadSession.IsCompleted = true
 		profileUploadSession.UpdatedAt = &now
-		err = u.userFileUploadSessionDaoV2.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
+		err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
 		if err != nil {
 			return err
 		}
 
-		user, err = u.userDaoV2.FindUserByIDWithTx(ct, tx, userID)
+		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
 		if err != nil {
 			return err
 		}
@@ -283,7 +283,7 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 		profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 		user.ProfileURL = &profileURL
 		user.UpdatedAt = &now
-		err = u.userDaoV2.UpdateUser(ct, tx, user)
+		err = u.userDao.UpdateUser(ct, tx, user)
 		return err
 	})
 
@@ -298,9 +298,9 @@ func NewUser(
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	userDaoV2 daov2.User,
-	teamMemberDaoV2 daov2.TeamMember,
-	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
+	userDao dao.User,
+	teamMemberDao dao.TeamMember,
+	userFileUploadSessionDao dao.UserFileUploadSession,
 ) User {
 	return User{
 		logger:                     logger,
@@ -310,8 +310,8 @@ func NewUser(
 		authorizer:                 authorizer,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
-		userDaoV2:                  userDaoV2,
-		teamMemberDaoV2:            teamMemberDaoV2,
-		userFileUploadSessionDaoV2: userFileUploadSessionDaoV2,
+		userDao:                    userDao,
+		teamMemberDao:              teamMemberDao,
+		userFileUploadSessionDao:   userFileUploadSessionDao,
 	}
 }

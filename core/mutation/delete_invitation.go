@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type DeleteInvitation struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
-	invitationDaoV2   daov2.Invitation
+	invitationDao     dao.Invitation
 	id                uint64
 	invitation        entity.Invitation
 	clientNotifiers   []*realtime.ClientNotifier
@@ -27,8 +27,8 @@ func (d *DeleteInvitation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteInvitation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return d.invitationDaoV2.DeleteInvitation(ct, tx, d.invitation.ID)
+func (d *DeleteInvitation) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return d.invitationDao.DeleteInvitation(ct, tx, d.invitation.ID)
 }
 
 func (d *DeleteInvitation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -50,7 +50,7 @@ func (d *DeleteInvitation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteInvitation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteInvitation) GetClientNotifiers() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
@@ -70,14 +70,14 @@ func (d *DeleteInvitation) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteInvitation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	invitationDaoV2 daov2.Invitation,
+	invitationDao dao.Invitation,
 	invitation entity.Invitation,
 ) *DeleteInvitation {
 	return &DeleteInvitation{
-		logger:          logger,
-		stateSyncer:     stateSyncer,
-		invitationDaoV2: invitationDaoV2,
-		id:              stateSyncer.NextMutationID(),
-		invitation:      invitation,
+		logger:        logger,
+		stateSyncer:   stateSyncer,
+		invitationDao: invitationDao,
+		id:            stateSyncer.NextMutationID(),
+		invitation:    invitation,
 	}
 }

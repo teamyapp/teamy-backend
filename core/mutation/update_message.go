@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,8 +14,8 @@ import (
 type UpdateMessage struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	messageDaoV2     daov2.Message
-	taskDaoV2        daov2.Task
+	messageDao       dao.Message
+	taskDao          dao.Task
 	id               uint64
 	message          entity.Message
 	clientNotifiers  []*realtime.ClientNotifier
@@ -28,8 +28,8 @@ func (u *UpdateMessage) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateMessage) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return u.messageDaoV2.UpdateMessage(ct, tx, u.message)
+func (u *UpdateMessage) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return u.messageDao.UpdateMessage(ct, tx, u.message)
 }
 
 func (u *UpdateMessage) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -37,7 +37,7 @@ func (u *UpdateMessage) PrepareClientNotifiers(ct context.Context, tx *transacti
 		return nil
 	}
 
-	task, err := u.taskDaoV2.FindTaskByCommentsThreadIDWithTx(ct, tx, u.message.ThreadID)
+	task, err := u.taskDao.FindTaskByCommentsThreadIDWithTx(ct, tx, u.message.ThreadID)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (u *UpdateMessage) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateMessage) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateMessage) GetClientNotifiers() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 
@@ -76,15 +76,15 @@ func (u *UpdateMessage) CleanUp(ct context.Context) *errs.Error {
 func NewUpdateMessage(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	messageDaoV2 daov2.Message,
-	taskDaoV2 daov2.Task,
+	messageDao dao.Message,
+	taskDao dao.Task,
 	message entity.Message,
 ) *UpdateMessage {
 	return &UpdateMessage{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		messageDaoV2:     messageDaoV2,
-		taskDaoV2:        taskDaoV2,
+		messageDao:       messageDao,
+		taskDao:          taskDao,
 		id:               stateSyncer.NextMutationID(),
 		message:          message,
 		notifierPrepared: false,

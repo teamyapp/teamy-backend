@@ -21,8 +21,8 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
-	"github.com/teamyapp/teamy-backend/core/daov2"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -30,7 +30,7 @@ import (
 
 type InvitationTestRef struct {
 	invitationService  Invitation
-	invitationDaoV2    daov2.Invitation
+	invitationDao      dao.Invitation
 	transactionFactory transaction.Factory
 }
 
@@ -89,16 +89,16 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.InvitationTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
-	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
+	teamyBackendDB.CreateTable(daotest.InvitationTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberTableName)
+	teamyBackendDB.CreateTable(daotest.SprintTableName)
 
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
-	invitationDaoV2 := daotestv2.NewInvitation(teamyBackendDB, transactionFactory)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
+	invitationDao := daotest.NewInvitation(teamyBackendDB, transactionFactory)
+	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
+	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
 	invitationService := NewInvitation(
 		logger,
 		cloudClientRegistry,
@@ -106,14 +106,14 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 		toggles,
 		stateSyncer,
 		transactionFactory,
-		invitationDaoV2,
-		teamMemberDaoV2,
-		sprintParticipantDaoV2,
-		sprintDaoV2,
+		invitationDao,
+		teamMemberDao,
+		sprintParticipantDao,
+		sprintDao,
 	)
 	return InvitationTestRef{
 		invitationService:  invitationService,
-		invitationDaoV2:    invitationDaoV2,
+		invitationDao:      invitationDao,
 		transactionFactory: transactionFactory,
 	}, true
 }
@@ -188,9 +188,9 @@ func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
 		UpdatedAt:         &now,
 	}
 
-	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation1))
-	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation2))
-	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation3))
+	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation1))
+	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation2))
+	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation3))
 
 	filter1 := InvitationFilter{InvitationID: &invitationID2, Code: &code1}
 	invitationsFound, internalErr := invitationRef.invitationService.FindInvitationsInTeam(ct, teamID2, &filter1)
@@ -275,9 +275,9 @@ func TestInvitationService_FindInvitations(t *testing.T) {
 		UpdatedAt:         &now,
 	}
 
-	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation1))
-	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation2))
-	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation3))
+	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation1))
+	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation2))
+	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation3))
 
 	filter1 := InvitationFilter{InvitationID: &invitationID2, Code: &code1}
 	invitationsFound, internalErr := invitationRef.invitationService.FindInvitations(ct, &filter1)
@@ -331,7 +331,7 @@ func TestInvitationService_CreateInvitation(t *testing.T) {
 	require.NotNil(t, invitation.CreatedAt)
 	require.Nil(t, invitation.UpdatedAt)
 
-	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
+	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
 	require.Nil(t, err)
 	require.Equal(t, receiverEmail, *(invitationInMemory.ReceiverEmail))
 	require.Equal(t, receiverLastName, *(invitationInMemory.ReceiverLastName))
@@ -381,7 +381,7 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
+	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
 	require.Nil(t, err)
 
 	expiredAt := now.Add(3 * time.Hour)
@@ -400,7 +400,7 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 	invitation.ReceiverLastName = &updatedLastName
 	require.True(t, areInvitationsEqual(invitation, updated))
 
-	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
+	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
 	require.Nil(t, err)
 	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
@@ -443,14 +443,14 @@ func TestInvitationService_DeleteInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
+	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
 	require.Nil(t, err)
 
 	deleted, err := invitationRef.invitationService.DeleteInvitation(ct, invitation.ID)
 	require.Nil(t, err)
 	require.True(t, areInvitationsEqual(invitation, deleted))
 
-	_, err = invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
+	_, err = invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
 	require.NotNil(t, err)
 	require.Equal(t, errs.NotFound, err.Code)
 }
@@ -493,7 +493,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
+	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
 	require.Nil(t, err)
 
 	accepted, err := invitationRef.invitationService.AcceptInvitation(ct, invitation.ID, invitation.Code)
@@ -503,7 +503,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 	invitation.ReceiverUserID = &requesterUserID
 	require.True(t, areInvitationsEqual(invitation, accepted))
 
-	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
+	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
 	require.Nil(t, err)
 	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
@@ -546,7 +546,7 @@ func TestInvitationService_DeclineInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
+	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
 	require.Nil(t, err)
 
 	accepted, err := invitationRef.invitationService.DeclineInvitation(ct, invitation.ID, invitation.Code)
@@ -555,7 +555,7 @@ func TestInvitationService_DeclineInvitation(t *testing.T) {
 	invitation.ReceiverUserID = &requesterUserID
 	require.True(t, areInvitationsEqual(invitation, accepted))
 
-	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
+	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
 	require.Nil(t, err)
 	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }

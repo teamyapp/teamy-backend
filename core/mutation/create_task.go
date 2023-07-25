@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type CreateTask struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	taskDaoV2        daov2.Task
+	taskDao          dao.Task
 	id               uint64
 	task             entity.Task
 	clientNotifiers  []*realtime.ClientNotifier
@@ -27,8 +27,8 @@ func (c *CreateTask) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTask) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	internalErr := c.taskDaoV2.CreateTask(ct, tx, c.task)
+func (c *CreateTask) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	internalErr := c.taskDao.CreateTask(ct, tx, c.task)
 	if internalErr != nil {
 		return internalErr
 	}
@@ -55,7 +55,7 @@ func (c *CreateTask) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTask) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateTask) GetClientNotifiers() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
@@ -75,13 +75,13 @@ func (c *CreateTask) CleanUp(ct context.Context) *errs.Error {
 func NewCreateTask(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	taskDaoV2 daov2.Task,
+	taskDao dao.Task,
 	task entity.Task,
 ) *CreateTask {
 	return &CreateTask{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		taskDaoV2:        taskDaoV2,
+		taskDao:          taskDao,
 		id:               stateSyncer.NextMutationID(),
 		task:             task,
 		notifierPrepared: false,

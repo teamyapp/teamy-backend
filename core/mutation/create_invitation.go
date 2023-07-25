@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type CreateInvitation struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
-	invitationDaoV2   daov2.Invitation
+	invitationDao     dao.Invitation
 	id                uint64
 	invitation        entity.Invitation
 	clientNotifiers   []*realtime.ClientNotifier
@@ -27,8 +27,8 @@ func (c *CreateInvitation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateInvitation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return c.invitationDaoV2.CreateInvitation(ct, tx, c.invitation)
+func (c *CreateInvitation) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return c.invitationDao.CreateInvitation(ct, tx, c.invitation)
 }
 
 func (c *CreateInvitation) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -50,7 +50,7 @@ func (c *CreateInvitation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateInvitation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateInvitation) GetClientNotifiers() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
@@ -70,13 +70,13 @@ func (c *CreateInvitation) CleanUp(ct context.Context) *errs.Error {
 func NewCreateInvitation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	invitationDaoV2 daov2.Invitation,
+	invitationDao dao.Invitation,
 	invitation entity.Invitation,
 ) *CreateInvitation {
 	return &CreateInvitation{
 		logger:            logger,
 		stateSyncer:       stateSyncer,
-		invitationDaoV2:   invitationDaoV2,
+		invitationDao:     invitationDao,
 		id:                stateSyncer.NextMutationID(),
 		invitation:        invitation,
 		notifiersPrepared: false,

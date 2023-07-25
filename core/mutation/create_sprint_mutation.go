@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type CreateSprintMutation struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	sprintDaoV2      daov2.Sprint
+	sprintDao        dao.Sprint
 	id               uint64
 	sprint           entity.Sprint
 	clientNotifiers  []*realtime.ClientNotifier
@@ -27,8 +27,8 @@ func (c *CreateSprintMutation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateSprintMutation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	internalErr := c.sprintDaoV2.CreateSprint(ct, tx, c.sprint)
+func (c *CreateSprintMutation) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	internalErr := c.sprintDao.CreateSprint(ct, tx, c.sprint)
 	return internalErr
 }
 
@@ -51,7 +51,7 @@ func (c *CreateSprintMutation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateSprintMutation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateSprintMutation) GetClientNotifiers() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
@@ -71,13 +71,13 @@ func (c *CreateSprintMutation) CleanUp(ct context.Context) *errs.Error {
 func NewCreateSprintMutation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	sprintDaoV2 daov2.Sprint,
+	sprintDao dao.Sprint,
 	sprint entity.Sprint,
 ) *CreateSprintMutation {
 	return &CreateSprintMutation{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		sprintDaoV2:      sprintDaoV2,
+		sprintDao:        sprintDao,
 		id:               stateSyncer.NextMutationID(),
 		sprint:           sprint,
 		notifierPrepared: false,

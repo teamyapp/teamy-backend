@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -15,9 +15,9 @@ type DeleteMessage struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
 	message          entity.Message
-	messageDaoV2     daov2.Message
+	messageDao       dao.Message
 	id               uint64
-	taskDaoV2        daov2.Task
+	taskDao          dao.Task
 	clientNotifiers  []*realtime.ClientNotifier
 	notifierPrepared bool
 }
@@ -28,8 +28,8 @@ func (d *DeleteMessage) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteMessage) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return d.messageDaoV2.DeleteMessage(ct, tx, d.message.ID)
+func (d *DeleteMessage) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return d.messageDao.DeleteMessage(ct, tx, d.message.ID)
 }
 
 func (d *DeleteMessage) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -37,7 +37,7 @@ func (d *DeleteMessage) PrepareClientNotifiers(ct context.Context, tx *transacti
 		return nil
 	}
 
-	task, err := d.taskDaoV2.FindTaskByCommentsThreadIDWithTx(ct, tx, d.message.ThreadID)
+	task, err := d.taskDao.FindTaskByCommentsThreadIDWithTx(ct, tx, d.message.ThreadID)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (d *DeleteMessage) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteMessage) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteMessage) GetClientNotifiers() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
@@ -76,16 +76,16 @@ func (d *DeleteMessage) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteMessage(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	messageDaoV2 daov2.Message,
-	taskDaoV2 daov2.Task,
+	messageDao dao.Message,
+	taskDao dao.Task,
 	message entity.Message,
 ) *DeleteMessage {
 	return &DeleteMessage{
-		logger:       logger,
-		stateSyncer:  stateSyncer,
-		messageDaoV2: messageDaoV2,
-		taskDaoV2:    taskDaoV2,
-		id:           stateSyncer.NextMutationID(),
-		message:      message,
+		logger:      logger,
+		stateSyncer: stateSyncer,
+		messageDao:  messageDao,
+		taskDao:     taskDao,
+		id:          stateSyncer.NextMutationID(),
+		message:     message,
 	}
 }

@@ -27,7 +27,7 @@ func (u *UpdateTaskActivity) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTaskActivity) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (u *UpdateTaskActivity) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	_, err := u.activityCache.UpdateTaskActivity(ct, u.taskActivity.TeamID, u.taskActivity.TaskID, &u.taskActivity)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (u *UpdateTaskActivity) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateTaskActivity) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateTaskActivity) GetClientNotifiers() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 

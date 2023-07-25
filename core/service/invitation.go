@@ -14,7 +14,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -24,16 +24,16 @@ import (
 const invitationCodeLen = 20
 
 type Invitation struct {
-	logger                 telemetry.Logger
-	cloudClientRegistry    *client.Registry
-	authorizer             client.Authorizer
-	featureToggles         feature.Toggles
-	stateSyncer            *realtime.StateSyncer
-	transactionFactory     transaction.Factory
-	invitationDaoV2        daov2.Invitation
-	teamMemberDaoV2        daov2.TeamMember
-	sprintParticipantDaoV2 daov2.SprintParticipant
-	sprintDaoV2            daov2.Sprint
+	logger               telemetry.Logger
+	cloudClientRegistry  *client.Registry
+	authorizer           client.Authorizer
+	featureToggles       feature.Toggles
+	stateSyncer          *realtime.StateSyncer
+	transactionFactory   transaction.Factory
+	invitationDao        dao.Invitation
+	teamMemberDao        dao.TeamMember
+	sprintParticipantDao dao.SprintParticipant
+	sprintDao            dao.Sprint
 }
 
 type CreateInvitationInput struct {
@@ -50,7 +50,7 @@ type UpdateInvitationInput struct {
 }
 
 func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, filter *InvitationFilter) ([]entity.Invitation, *errs.Error) {
-	invitations, err := i.invitationDaoV2.FindInvitationsByTeamID(ct, teamID)
+	invitations, err := i.invitationDao.FindInvitationsByTeamID(ct, teamID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, fil
 }
 
 func (i Invitation) FindInvitations(ct context.Context, filter *InvitationFilter) ([]entity.Invitation, *errs.Error) {
-	invitations, err := i.invitationDaoV2.FindAllInvitations(ct)
+	invitations, err := i.invitationDao.FindAllInvitations(ct)
 	if err != nil {
 		return nil, err
 	}
@@ -125,11 +125,11 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		createInvitationMutation := mutation.NewCreateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDaoV2,
+			i.invitationDao,
 			invitation,
 		)
 
-		internalErr := createInvitationMutation.ExecuteV2(ct, tx)
+		internalErr := createInvitationMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -158,7 +158,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 }
 
 func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, input UpdateInvitationInput) (entity.Invitation, *errs.Error) {
-	invitation, err := i.invitationDaoV2.FindInvitationByID(ct, invitationID)
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
 		return entity.Invitation{}, err
 	}
@@ -179,10 +179,10 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDaoV2,
+			i.invitationDao,
 			invitation,
 		)
-		internalErr := updateInvitationMutation.ExecuteV2(ct, tx)
+		internalErr := updateInvitationMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -199,7 +199,7 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 }
 
 func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (entity.Invitation, *errs.Error) {
-	invitation, err := i.invitationDaoV2.FindInvitationByID(ct, invitationID)
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
 		return entity.Invitation{}, err
 	}
@@ -214,10 +214,10 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 		deleteInvitationMutation := mutation.NewDeleteInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDaoV2,
+			i.invitationDao,
 			invitation,
 		)
-		internalErr := deleteInvitationMutation.ExecuteV2(ct, tx)
+		internalErr := deleteInvitationMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -239,7 +239,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		return entity.Invitation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	invitation, err := i.invitationDaoV2.FindInvitationByID(ct, invitationID)
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
 		return entity.Invitation{}, err
 	}
@@ -286,16 +286,16 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDaoV2,
+			i.invitationDao,
 			invitation,
 		)
-		internalErr := updateInvitationMutation.ExecuteV2(ct, tx)
+		internalErr := updateInvitationMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
 
 		rtTx.AppendMutation(updateInvitationMutation)
-		_, err = i.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, invitation.TeamID, receiverUserID)
+		_, err = i.teamMemberDao.FindTeamMemberWithTx(ct, tx, invitation.TeamID, receiverUserID)
 		if err != nil {
 			if err.Code != errs.NotFound {
 				return err
@@ -309,10 +309,10 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 			createTeamMemberMutation := mutation.NewCreateTeamMember(
 				i.logger,
 				i.stateSyncer,
-				i.teamMemberDaoV2,
+				i.teamMemberDao,
 				teamMember,
 			)
-			internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+			internalErr = createTeamMemberMutation.Execute(ct, tx)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -320,7 +320,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 			rtTx.AppendMutation(createTeamMemberMutation)
 
 			var sprints []entity.Sprint
-			sprints, internalErr = i.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, invitation.TeamID)
+			sprints, internalErr = i.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, invitation.TeamID)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -343,11 +343,11 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 					i.logger,
 					i.stateSyncer,
-					i.sprintParticipantDaoV2,
-					i.sprintDaoV2,
+					i.sprintParticipantDao,
+					i.sprintDao,
 					participant,
 				)
-				internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+				internalErr = createTeamMemberMutation.Execute(ct, tx)
 				if internalErr != nil {
 					return internalErr
 				}
@@ -372,7 +372,7 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 		return entity.Invitation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	invitation, err := i.invitationDaoV2.FindInvitationByID(ct, invitationID)
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
 	if err != nil {
 		return entity.Invitation{}, err
 	}
@@ -403,11 +403,11 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
-			i.invitationDaoV2,
+			i.invitationDao,
 			invitation,
 		)
 
-		err = updateInvitationMutation.ExecuteV2(ct, tx)
+		err = updateInvitationMutation.Execute(ct, tx)
 		if err != nil {
 			return err
 		}
@@ -449,21 +449,21 @@ func NewInvitation(
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	invitationDaoV2 daov2.Invitation,
-	teamMemberDaoV2 daov2.TeamMember,
-	sprintParticipantDaoV2 daov2.SprintParticipant,
-	sprintDaoV2 daov2.Sprint,
+	invitationDao dao.Invitation,
+	teamMemberDao dao.TeamMember,
+	sprintParticipantDao dao.SprintParticipant,
+	sprintDao dao.Sprint,
 ) Invitation {
 	return Invitation{
-		logger:                 logger,
-		cloudClientRegistry:    cloudClientRegistry,
-		authorizer:             authorizer,
-		featureToggles:         featureToggles,
-		stateSyncer:            stateSyncer,
-		transactionFactory:     transactionFactory,
-		invitationDaoV2:        invitationDaoV2,
-		teamMemberDaoV2:        teamMemberDaoV2,
-		sprintParticipantDaoV2: sprintParticipantDaoV2,
-		sprintDaoV2:            sprintDaoV2,
+		logger:               logger,
+		cloudClientRegistry:  cloudClientRegistry,
+		authorizer:           authorizer,
+		featureToggles:       featureToggles,
+		stateSyncer:          stateSyncer,
+		transactionFactory:   transactionFactory,
+		invitationDao:        invitationDao,
+		teamMemberDao:        teamMemberDao,
+		sprintParticipantDao: sprintParticipantDao,
+		sprintDao:            sprintDao,
 	}
 }

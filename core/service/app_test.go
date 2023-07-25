@@ -22,8 +22,8 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -31,14 +31,14 @@ import (
 )
 
 type AppTestRef struct {
-	appService                 App
-	appDaoV2                   daov2.App
-	appVersionDaoV2            daov2.AppVersion
-	appVersionVisibleTeamDaoV2 daov2.AppVersionVisibleTeam
-	teamDaoV2                  daov2.Team
-	appTeamInstallationDaoV2   daov2.AppTeamInstallation
-	transactionFactory         transaction.Factory
-	cloudTestKit               testkit.TestKit
+	appService               App
+	appDao                   dao.App
+	appVersionDao            dao.AppVersion
+	appVersionVisibleTeamDao dao.AppVersionVisibleTeam
+	teamDao                  dao.Team
+	appTeamInstallationDao   dao.AppTeamInstallation
+	transactionFactory       transaction.Factory
+	cloudTestKit             testkit.TestKit
 }
 
 func prepareAppTestRef(t *testing.T, toggles feature.Toggles) (AppTestRef, bool) {
@@ -104,20 +104,20 @@ func prepareAppTestRef(t *testing.T, toggles feature.Toggles) (AppTestRef, bool)
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.AppTableName)
-	teamyBackendDB.CreateTable(daotestv2.AppVersionTableName)
-	teamyBackendDB.CreateTable(daotestv2.AppVersionVisibleTeamTableName)
-	teamyBackendDB.CreateTable(daotestv2.AppTeamInstallationTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
+	teamyBackendDB.CreateTable(daotest.AppTableName)
+	teamyBackendDB.CreateTable(daotest.AppVersionTableName)
+	teamyBackendDB.CreateTable(daotest.AppVersionVisibleTeamTableName)
+	teamyBackendDB.CreateTable(daotest.AppTeamInstallationTableName)
+	teamyBackendDB.CreateTable(daotest.TeamTableName)
 
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
-	appDaoV2 := daotestv2.NewApp(teamyBackendDB, transactionFactory)
-	appVersionDaoV2 := daotestv2.NewAppVersion(teamyBackendDB, transactionFactory)
-	appVersionVisibleTeamDaoV2 := daotestv2.NewAppVersionVisibleTeam(teamyBackendDB, transactionFactory)
-	appTeamInstallationDaoV2 := daotestv2.NewAppTeamInstallation(teamyBackendDB, transactionFactory)
-	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
+	appDao := daotest.NewApp(teamyBackendDB, transactionFactory)
+	appVersionDao := daotest.NewAppVersion(teamyBackendDB, transactionFactory)
+	appVersionVisibleTeamDao := daotest.NewAppVersionVisibleTeam(teamyBackendDB, transactionFactory)
+	appTeamInstallationDao := daotest.NewAppTeamInstallation(teamyBackendDB, transactionFactory)
+	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
 
 	appService := NewApp(
 		logger,
@@ -126,22 +126,22 @@ func prepareAppTestRef(t *testing.T, toggles feature.Toggles) (AppTestRef, bool)
 		toggles,
 		transactionFactory,
 		stateSyncer,
-		appDaoV2,
-		appVersionDaoV2,
-		appTeamInstallationDaoV2,
-		appVersionVisibleTeamDaoV2,
-		teamDaoV2,
+		appDao,
+		appVersionDao,
+		appTeamInstallationDao,
+		appVersionVisibleTeamDao,
+		teamDao,
 	)
 
 	return AppTestRef{
-		appService:                 appService,
-		transactionFactory:         transactionFactory,
-		appDaoV2:                   appDaoV2,
-		appVersionDaoV2:            appVersionDaoV2,
-		appVersionVisibleTeamDaoV2: appVersionVisibleTeamDaoV2,
-		teamDaoV2:                  teamDaoV2,
-		appTeamInstallationDaoV2:   appTeamInstallationDaoV2,
-		cloudTestKit:               cloudTestKit,
+		appService:               appService,
+		transactionFactory:       transactionFactory,
+		appDao:                   appDao,
+		appVersionDao:            appVersionDao,
+		appVersionVisibleTeamDao: appVersionVisibleTeamDao,
+		teamDao:                  teamDao,
+		appTeamInstallationDao:   appTeamInstallationDao,
+		cloudTestKit:             cloudTestKit,
 	}, true
 }
 
@@ -204,7 +204,7 @@ func TestAppService_CreateApp(t *testing.T) {
 			require.NotNil(t, newApp.CreatedAt)
 			require.Nil(t, newApp.UpdatedAt)
 
-			appInDb, internalErr := appTestRef.appDaoV2.FindAppByID(ct, newApp.ID)
+			appInDb, internalErr := appTestRef.appDao.FindAppByID(ct, newApp.ID)
 			require.Nil(t, internalErr)
 
 			require.True(t, areAppsEqual(newApp, appInDb))
@@ -278,7 +278,7 @@ func TestAppService_UpdateApp(t *testing.T) {
 
 			defer tx.Rollback()
 			app := createAppData(appID, nil, ownerUserID)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
 
 			updatedName := "Updated Name"
 			updatedDescription := "Updated Description"
@@ -302,7 +302,7 @@ func TestAppService_UpdateApp(t *testing.T) {
 			app.Description = *input.Description
 			require.True(t, areAppsEqual(app, updatedApp))
 
-			appInDb, internalErr := appTestRef.appDaoV2.FindAppByID(ct, app.ID)
+			appInDb, internalErr := appTestRef.appDao.FindAppByID(ct, app.ID)
 			require.Nil(t, internalErr)
 			require.True(t, areAppsEqual(app, appInDb))
 		})
@@ -373,7 +373,7 @@ func TestAppService_DeleteApp(t *testing.T) {
 			defer tx.Rollback()
 			activeVersionNumber := int32(1)
 			app := createAppData(appID, &activeVersionNumber, ownerUserID)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
 
 			deleted, internalErr := appTestRef.appService.DeleteApp(ct, appID)
 			if testCase.expectedErr != nil {
@@ -387,7 +387,7 @@ func TestAppService_DeleteApp(t *testing.T) {
 
 			require.True(t, areAppsEqual(deleted, app))
 
-			_, internalErr = appTestRef.appDaoV2.FindAppByID(ct, app.ID)
+			_, internalErr = appTestRef.appDao.FindAppByID(ct, app.ID)
 			require.NotNil(t, internalErr)
 			require.Equal(t, internalErr.Code, errs.NotFound)
 			// (TODO): verify if user group deleted after we support finding group by resource id in cloud
@@ -459,7 +459,7 @@ func TestAppService_RefreshAppSecret(t *testing.T) {
 			defer tx.Rollback()
 			activeVersionNumber := int32(1)
 			app := createAppData(appID, &activeVersionNumber, ownerUserID)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
 
 			updated, internalErr := appTestRef.appService.RefreshAppSecret(ct, appID)
 			if testCase.expectedErr != nil {
@@ -475,7 +475,7 @@ func TestAppService_RefreshAppSecret(t *testing.T) {
 			app.APISecret = updated.APISecret
 			require.True(t, areAppsEqual(app, updated))
 
-			appInDb, internalErr := appTestRef.appDaoV2.FindAppByID(ct, app.ID)
+			appInDb, internalErr := appTestRef.appDao.FindAppByID(ct, app.ID)
 			require.Nil(t, internalErr)
 			require.True(t, areAppsEqual(app, appInDb))
 		})
@@ -537,13 +537,13 @@ func TestAppService_FindApp(t *testing.T) {
 			appVersion2 := createAppVersionData(appID2, 1, false)
 			appVersion3 := createAppVersionData(appID3, 1, true)
 			appVersionVisibleTeam1 := createAppVersionVisibleTeamData(appID2, 1, teamID)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app1))
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app2))
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app3))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion1))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion2))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion3))
-			require.Nil(t, appTestRef.appVersionVisibleTeamDaoV2.CreateAppVersionVisibleTeam(ct, tx, appVersionVisibleTeam1))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app1))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app2))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app3))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion1))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion2))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion3))
+			require.Nil(t, appTestRef.appVersionVisibleTeamDao.CreateAppVersionVisibleTeam(ct, tx, appVersionVisibleTeam1))
 
 			filter1 := AppFilter{
 				AppID: &appID1,
@@ -666,7 +666,7 @@ func TestAppService_CreateAppVersion(t *testing.T) {
 			require.Nil(t, newAppVersion.UIExtensionEntrypointPath)
 			require.Nil(t, newAppVersion.UpdateAt)
 
-			appVersionInDb, internalErr := appTestRef.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumber(ct,
+			appVersionInDb, internalErr := appTestRef.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct,
 				newAppVersion.AppID, newAppVersion.VersionNumber)
 			require.Nil(t, internalErr)
 			require.True(t, areAppVersionsEqual(newAppVersion, appVersionInDb))
@@ -739,8 +739,8 @@ func TestAppService_UpdateAppVersion(t *testing.T) {
 			defer tx.Rollback()
 			app := createAppData(appID, nil, ownerUserID)
 			appVersion := createAppVersionData(appID, versionNumber, false)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion))
 
 			iconUrl := "Updated URL"
 			uiExtensionEntryPointPath := "Updated path"
@@ -769,7 +769,7 @@ func TestAppService_UpdateAppVersion(t *testing.T) {
 			appVersion.IsPublic = input.IsPublic
 			require.True(t, areAppVersionsEqual(appVersion, updatedAppVersion))
 
-			appVersionInDb, internalErr := appTestRef.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumber(ct,
+			appVersionInDb, internalErr := appTestRef.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct,
 				appVersion.AppID, appVersion.VersionNumber)
 			require.Nil(t, internalErr)
 			require.True(t, areAppVersionsEqual(appVersion, appVersionInDb))
@@ -842,8 +842,8 @@ func TestAppService_DeleteAppVersion(t *testing.T) {
 			defer tx.Rollback()
 			app := createAppData(appID, nil, ownerUserID)
 			appVersion := createAppVersionData(appID, versionNumber, false)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion))
 
 			deletedAppVersion, internalErr := appTestRef.appService.DeleteAppVersion(ct,
 				appVersion.AppID, appVersion.VersionNumber)
@@ -857,7 +857,7 @@ func TestAppService_DeleteAppVersion(t *testing.T) {
 
 			require.True(t, areAppVersionsEqual(appVersion, deletedAppVersion))
 
-			_, internalErr = appTestRef.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumber(ct, appVersion.AppID,
+			_, internalErr = appTestRef.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appVersion.AppID,
 				appVersion.VersionNumber)
 			require.NotNil(t, internalErr)
 			require.Equal(t, internalErr.Code, errs.NotFound)
@@ -915,10 +915,10 @@ func TestAppService_FindAppVersion(t *testing.T) {
 			app2 := createAppData(appID2, &activeVersionNumber, ownerUserID)
 			appVersion1 := createAppVersionData(appID1, 1, false)
 			appVersion2 := createAppVersionData(appID2, 1, false)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app1))
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app2))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion1))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion2))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app1))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app2))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion1))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion2))
 
 			found, internalErr := appTestRef.appService.FindAppVersionByAppID(ct, appID1)
 			require.Nil(t, internalErr)
@@ -1000,8 +1000,8 @@ func TestAppService_CreateAppVersionVisibleTeam(t *testing.T) {
 			app := createAppData(appID, nil, ownerUserID)
 			appVersion := createAppVersionData(appID, versionNumber, false)
 
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion))
 
 			returned, internalErr := appTestRef.appService.CreateAppVersionVisibleTeam(ct, appID,
 				versionNumber, teamID)
@@ -1021,7 +1021,7 @@ func TestAppService_CreateAppVersionVisibleTeam(t *testing.T) {
 			require.Nil(t, returned.Changes)
 			require.Nil(t, returned.UIExtensionEntrypointPath)
 
-			appVersionVisibleTeamInDb, internalErr := appTestRef.appVersionVisibleTeamDaoV2.
+			appVersionVisibleTeamInDb, internalErr := appTestRef.appVersionVisibleTeamDao.
 				FindAppVersionVisibleTeamWithTx(ct, tx, appID, versionNumber, teamID)
 			require.Nil(t, internalErr)
 			require.Equal(t, versionNumber, appVersionVisibleTeamInDb.VersionNumber)
@@ -1098,9 +1098,9 @@ func TestAppService_DeleteAppVersionVisibleTeam(t *testing.T) {
 			app := createAppData(appID, nil, ownerUserID)
 			appVersion := createAppVersionData(appID, versionNumber, false)
 			appVersionVisibleTeam := createAppVersionVisibleTeamData(appID, versionNumber, teamID)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion))
-			require.Nil(t, appTestRef.appVersionVisibleTeamDaoV2.CreateAppVersionVisibleTeam(ct, tx,
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion))
+			require.Nil(t, appTestRef.appVersionVisibleTeamDao.CreateAppVersionVisibleTeam(ct, tx,
 				appVersionVisibleTeam))
 
 			returned, internalErr := appTestRef.appService.DeleteAppVersionVisibleTeam(ct, appID, versionNumber,
@@ -1115,7 +1115,7 @@ func TestAppService_DeleteAppVersionVisibleTeam(t *testing.T) {
 
 			require.True(t, areAppVersionsEqual(appVersion, returned))
 
-			_, internalErr = appTestRef.appVersionVisibleTeamDaoV2.FindAppVersionVisibleTeamWithTx(ct, tx, appID,
+			_, internalErr = appTestRef.appVersionVisibleTeamDao.FindAppVersionVisibleTeamWithTx(ct, tx, appID,
 				versionNumber,
 				teamID)
 			require.NotNil(t, internalErr)
@@ -1181,13 +1181,13 @@ func TestAppService_FindAppVersionVisibleTeams(t *testing.T) {
 			appVersion3 := createAppVersionData(appID2, versionNumber3, false)
 			appVersionVisibleTeam := createAppVersionVisibleTeamData(appID2, versionNumber3, teamID)
 			team := createTeamData(teamID, ownerUserID)
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app1))
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app2))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion1))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion2))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion3))
-			require.Nil(t, appTestRef.appVersionVisibleTeamDaoV2.CreateAppVersionVisibleTeam(ct, tx, appVersionVisibleTeam))
-			require.Nil(t, appTestRef.teamDaoV2.CreateTeam(ct, tx, team))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app1))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app2))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion1))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion2))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion3))
+			require.Nil(t, appTestRef.appVersionVisibleTeamDao.CreateAppVersionVisibleTeam(ct, tx, appVersionVisibleTeam))
+			require.Nil(t, appTestRef.teamDao.CreateTeam(ct, tx, team))
 
 			found, internalErr := appTestRef.appService.FindAppVersionVisibleTeams(ct, appID2, versionNumber3)
 			require.Nil(t, internalErr)
@@ -1274,9 +1274,9 @@ func TestAppService_CreateAppTeamInstallation(t *testing.T) {
 			appVersion := createAppVersionData(appID, versionNumber, true)
 			team := createTeamData(teamID, ownerUserID)
 
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion))
-			require.Nil(t, appTestRef.teamDaoV2.CreateTeam(ct, tx, team))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion))
+			require.Nil(t, appTestRef.teamDao.CreateTeam(ct, tx, team))
 
 			newAppInstallation, internalErr := appTestRef.appService.CreateAppInstallation(ct, teamID, appID,
 				versionNumber)
@@ -1294,7 +1294,7 @@ func TestAppService_CreateAppTeamInstallation(t *testing.T) {
 			require.Equal(t, ownerUserID, *newAppInstallation.InstalledByUserID)
 			require.NotNil(t, newAppInstallation.InstalledAt)
 
-			appInstallationInDb, internalErr := appTestRef.appTeamInstallationDaoV2.
+			appInstallationInDb, internalErr := appTestRef.appTeamInstallationDao.
 				FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 			require.Nil(t, internalErr)
 			require.True(t, areAppInstallationsEqual(appInstallationInDb, newAppInstallation))
@@ -1382,11 +1382,11 @@ func TestAppService_UpdateAppTeamInstallation(t *testing.T) {
 			team := createTeamData(teamID, ownerUserID)
 			appTeamInstallation := createAppTeamInstallation(appID, versionNumber1, teamID, ownerUserID)
 
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion1))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion2))
-			require.Nil(t, appTestRef.teamDaoV2.CreateTeam(ct, tx, team))
-			require.Nil(t, appTestRef.appTeamInstallationDaoV2.CreateAppTeamInstallation(ct, tx, appTeamInstallation))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion1))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion2))
+			require.Nil(t, appTestRef.teamDao.CreateTeam(ct, tx, team))
+			require.Nil(t, appTestRef.appTeamInstallationDao.CreateAppTeamInstallation(ct, tx, appTeamInstallation))
 
 			input := UpdateAppTeamInstallationInput{
 				EnabledVersionNumber: versionNumber2,
@@ -1404,7 +1404,7 @@ func TestAppService_UpdateAppTeamInstallation(t *testing.T) {
 			appTeamInstallation.EnabledVersionNumber = versionNumber2
 			require.True(t, areAppInstallationsEqual(appTeamInstallation, updated))
 
-			appInstallationInDb, internalErr := appTestRef.appTeamInstallationDaoV2.
+			appInstallationInDb, internalErr := appTestRef.appTeamInstallationDao.
 				FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 			require.Nil(t, internalErr)
 			require.True(t, areAppInstallationsEqual(appInstallationInDb, appTeamInstallation))
@@ -1490,10 +1490,10 @@ func TestAppService_DeleteAppTeamInstallation(t *testing.T) {
 			team := createTeamData(teamID, ownerUserID)
 			appTeamInstallation := createAppTeamInstallation(appID, versionNumber, teamID, ownerUserID)
 
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion))
-			require.Nil(t, appTestRef.teamDaoV2.CreateTeam(ct, tx, team))
-			require.Nil(t, appTestRef.appTeamInstallationDaoV2.CreateAppTeamInstallation(ct, tx, appTeamInstallation))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion))
+			require.Nil(t, appTestRef.teamDao.CreateTeam(ct, tx, team))
+			require.Nil(t, appTestRef.appTeamInstallationDao.CreateAppTeamInstallation(ct, tx, appTeamInstallation))
 
 			deleted, internalErr := appTestRef.appService.DeleteAppInstallation(ct, appID, teamID)
 			if testCase.expectedErr != nil {
@@ -1506,7 +1506,7 @@ func TestAppService_DeleteAppTeamInstallation(t *testing.T) {
 
 			require.True(t, areAppInstallationsEqual(appTeamInstallation, deleted))
 
-			_, internalErr = appTestRef.appTeamInstallationDaoV2.
+			_, internalErr = appTestRef.appTeamInstallationDao.
 				FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 			require.NotNil(t, internalErr)
 			require.Equal(t, errs.NotFound, internalErr.Code)
@@ -1572,15 +1572,15 @@ func TestAppService_FindAppTeamInstallations(t *testing.T) {
 			appTeamInstallation2 := createAppTeamInstallation(appID2, versionNumber, teamID2, ownerUserID)
 			appTeamInstallation3 := createAppTeamInstallation(appID1, versionNumber, teamID2, ownerUserID)
 
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app1))
-			require.Nil(t, appTestRef.appDaoV2.CreateApp(ct, tx, app2))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion1))
-			require.Nil(t, appTestRef.appVersionDaoV2.CreateAppVersion(ct, tx, appVersion2))
-			require.Nil(t, appTestRef.teamDaoV2.CreateTeam(ct, tx, team1))
-			require.Nil(t, appTestRef.teamDaoV2.CreateTeam(ct, tx, team2))
-			require.Nil(t, appTestRef.appTeamInstallationDaoV2.CreateAppTeamInstallation(ct, tx, appTeamInstallation1))
-			require.Nil(t, appTestRef.appTeamInstallationDaoV2.CreateAppTeamInstallation(ct, tx, appTeamInstallation2))
-			require.Nil(t, appTestRef.appTeamInstallationDaoV2.CreateAppTeamInstallation(ct, tx, appTeamInstallation3))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app1))
+			require.Nil(t, appTestRef.appDao.CreateApp(ct, tx, app2))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion1))
+			require.Nil(t, appTestRef.appVersionDao.CreateAppVersion(ct, tx, appVersion2))
+			require.Nil(t, appTestRef.teamDao.CreateTeam(ct, tx, team1))
+			require.Nil(t, appTestRef.teamDao.CreateTeam(ct, tx, team2))
+			require.Nil(t, appTestRef.appTeamInstallationDao.CreateAppTeamInstallation(ct, tx, appTeamInstallation1))
+			require.Nil(t, appTestRef.appTeamInstallationDao.CreateAppTeamInstallation(ct, tx, appTeamInstallation2))
+			require.Nil(t, appTestRef.appTeamInstallationDao.CreateAppTeamInstallation(ct, tx, appTeamInstallation3))
 
 			found, internalErr := appTestRef.appService.FindAppTeamInstallationsByAppID(ct, appID1)
 			require.Nil(t, internalErr)

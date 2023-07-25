@@ -79,7 +79,7 @@ func (t *Transaction) Notify(ct context.Context) *errs.Error {
 
 	clientTransactions := make(map[uint64]*ClientTransaction)
 	for _, mutation := range t.mutations {
-		clientNotifiers := mutation.GetClientNotifiersV2()
+		clientNotifiers := mutation.GetClientNotifiers()
 		for _, clientNotifier := range clientNotifiers {
 			clientID := clientNotifier.getClientID()
 			_, ok := clientTransactions[clientID]

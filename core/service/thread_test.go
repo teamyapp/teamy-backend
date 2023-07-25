@@ -21,8 +21,8 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
-	"github.com/teamyapp/teamy-backend/core/daov2"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -30,9 +30,9 @@ import (
 
 type ThreadTestRef struct {
 	threadService      Thread
-	taskDaoV2          daov2.Task
-	threadDaoV2        daov2.Thread
-	messageDaoV2       daov2.Message
+	taskDao            dao.Task
+	threadDao          dao.Thread
+	messageDao         dao.Message
 	transactionFactory transaction.Factory
 }
 
@@ -89,16 +89,16 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.ThreadTableName)
-	teamyBackendDB.CreateTable(daotestv2.MessageTableName)
-	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
+	teamyBackendDB.CreateTable(daotest.ThreadTableName)
+	teamyBackendDB.CreateTable(daotest.MessageTableName)
+	teamyBackendDB.CreateTable(daotest.TaskTableName)
 
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
-	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
-	messageDaoV2 := daotestv2.NewMessage(teamyBackendDB, transactionFactory)
+	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
+	threadDao := daotest.NewThread(teamyBackendDB)
+	messageDao := daotest.NewMessage(teamyBackendDB, transactionFactory)
 
 	threadService := NewThread(
 		logger,
@@ -106,15 +106,15 @@ func prepareThreadTestRef(t *testing.T, toggles feature.Toggles) (ThreadTestRef,
 		cloudClientRegistry,
 		stateSyncer,
 		transactionFactory,
-		taskDaoV2,
-		threadDaoV2,
-		messageDaoV2,
+		taskDao,
+		threadDao,
+		messageDao,
 	)
 	return ThreadTestRef{
 		threadService: threadService,
-		threadDaoV2:   threadDaoV2,
-		messageDaoV2:  messageDaoV2,
-		taskDaoV2:     taskDaoV2,
+		threadDao:     threadDao,
+		messageDao:    messageDao,
+		taskDao:       taskDao,
 	}, true
 }
 
@@ -180,8 +180,8 @@ func TestTeamService_FindMessages(t *testing.T) {
 		UpdatedAt:    nil,
 	}
 
-	require.Nil(t, threadRef.messageDaoV2.CreateMessage(ct, tx, message1))
-	require.Nil(t, threadRef.messageDaoV2.CreateMessage(ct, tx, message2))
+	require.Nil(t, threadRef.messageDao.CreateMessage(ct, tx, message1))
+	require.Nil(t, threadRef.messageDao.CreateMessage(ct, tx, message2))
 
 	messageFound, internalErr := threadRef.threadService.FindMessages(ct, threadID1)
 	require.Nil(t, internalErr)
@@ -230,7 +230,7 @@ func TestTeamService_CreateMessage(t *testing.T) {
 		UpdatedAt:        nil,
 		DeliveredAt:      nil,
 	}
-	err = threadRef.taskDaoV2.CreateTask(ct, tx, task)
+	err = threadRef.taskDao.CreateTask(ct, tx, task)
 	require.Nil(t, err)
 
 	message, err := threadRef.threadService.CreateMessage(ct, threadID, input)
@@ -238,7 +238,7 @@ func TestTeamService_CreateMessage(t *testing.T) {
 	require.Equal(t, body, message.Body)
 	require.Equal(t, threadID, message.ThreadID)
 
-	messageFound, internalErr := threadRef.messageDaoV2.FindMessageByIDWithTx(ct, tx, message.ID)
+	messageFound, internalErr := threadRef.messageDao.FindMessageByIDWithTx(ct, tx, message.ID)
 	require.Nil(t, internalErr)
 	require.True(t, areMessagesEqual(message, messageFound))
 }
@@ -287,10 +287,10 @@ func TestTeamService_UpdateMessage(t *testing.T) {
 		UpdatedAt:        nil,
 		DeliveredAt:      nil,
 	}
-	err = threadRef.taskDaoV2.CreateTask(ct, tx, task)
+	err = threadRef.taskDao.CreateTask(ct, tx, task)
 	require.Nil(t, err)
 
-	err = threadRef.messageDaoV2.CreateMessage(ct, tx, message)
+	err = threadRef.messageDao.CreateMessage(ct, tx, message)
 	require.Nil(t, err)
 
 	input := UpdateMessageInput{
@@ -301,7 +301,7 @@ func TestTeamService_UpdateMessage(t *testing.T) {
 	require.Nil(t, err)
 	require.True(t, areMessagesEqual(updated, message))
 
-	messageFound, internalErr := threadRef.messageDaoV2.FindMessageByIDWithTx(ct, tx, messageID)
+	messageFound, internalErr := threadRef.messageDao.FindMessageByIDWithTx(ct, tx, messageID)
 	require.Nil(t, internalErr)
 	require.True(t, areMessagesEqual(messageFound, message))
 }
@@ -351,17 +351,17 @@ func TestTeamService_DeleteMessage(t *testing.T) {
 		UpdatedAt:        nil,
 		DeliveredAt:      nil,
 	}
-	err = threadRef.taskDaoV2.CreateTask(ct, tx, task)
+	err = threadRef.taskDao.CreateTask(ct, tx, task)
 	require.Nil(t, err)
 
-	err = threadRef.messageDaoV2.CreateMessage(ct, tx, message)
+	err = threadRef.messageDao.CreateMessage(ct, tx, message)
 	require.Nil(t, err)
 
 	deleted, err := threadRef.threadService.DeleteMessage(ct, messageID)
 	require.Nil(t, err)
 	require.True(t, areMessagesEqual(deleted, message))
 
-	_, internalErr := threadRef.messageDaoV2.FindMessageByIDWithTx(ct, tx, messageID)
+	_, internalErr := threadRef.messageDao.FindMessageByIDWithTx(ct, tx, messageID)
 	require.NotNil(t, internalErr)
 	require.Equal(t, errs.NotFound, internalErr.Code)
 }

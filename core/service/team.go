@@ -15,7 +15,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -45,13 +45,13 @@ type Team struct {
 	featureToggles             feature.Toggles
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         transaction.Factory
-	taskDaoV2                  daov2.Task
-	sprintDaoV2                daov2.Sprint
-	sprintParticipantDaoV2     daov2.SprintParticipant
-	teamDaoV2                  daov2.Team
-	teamMemberDaoV2            daov2.TeamMember
-	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession
-	teamGroupDaoV2             daov2.TeamGroup
+	taskDao                    dao.Task
+	sprintDao                  dao.Sprint
+	sprintParticipantDao       dao.SprintParticipant
+	teamDao                    dao.Team
+	teamMemberDao              dao.TeamMember
+	teamFileUploadSessionDao   dao.TeamFileUploadSession
+	teamGroupDao               dao.TeamGroup
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
@@ -72,11 +72,11 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 		}
 	}
 
-	return t.teamDaoV2.FindTeamByID(ct, teamID)
+	return t.teamDao.FindTeamByID(ct, teamID)
 }
 
 func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, *errs.Error) {
-	teams, err := t.teamDaoV2.FindAllTeams(ct)
+	teams, err := t.teamDao.FindAllTeams(ct)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		ids, internalErr := t.teamMemberDaoV2.FindTeamIDsByUserIDWithTx(ct, tx, userID)
+		ids, internalErr := t.teamMemberDao.FindTeamIDsByUserIDWithTx(ct, tx, userID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -131,7 +131,7 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 			return nil
 		}
 
-		teams, internalErr = t.teamDaoV2.FindTeamsByIDsWithTx(ct, tx, ids)
+		teams, internalErr = t.teamDao.FindTeamsByIDsWithTx(ct, tx, ids)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -271,10 +271,10 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		createTeamMutation := mutation.NewCreateTeam(
 			t.logger,
 			t.stateSyncer,
-			t.teamDaoV2,
+			t.teamDao,
 			team,
 		)
-		internalErr := createTeamMutation.ExecuteV2(ct, tx)
+		internalErr := createTeamMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -288,10 +288,10 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		createTeamMemberMutation := mutation.NewCreateTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDaoV2,
+			t.teamMemberDao,
 			teamMember,
 		)
-		internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+		internalErr = createTeamMemberMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -323,10 +323,10 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 				teamGroupMutation := mutation.NewCreateTeamGroup(
 					t.logger,
 					t.stateSyncer,
-					t.teamGroupDaoV2,
+					t.teamGroupDao,
 					teamGroup,
 				)
-				internalErr = teamGroupMutation.ExecuteV2(ct, tx)
+				internalErr = teamGroupMutation.Execute(ct, tx)
 				if internalErr != nil {
 					return internalErr
 				}
@@ -370,7 +370,7 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
+		team, internalErr = t.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -382,11 +382,11 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 		updateTeamMutation := mutation.NewUpdateTeam(
 			t.logger,
 			t.stateSyncer,
-			t.teamDaoV2,
+			t.teamDao,
 			team,
 		)
 
-		internalErr = updateTeamMutation.ExecuteV2(ct, tx)
+		internalErr = updateTeamMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -429,7 +429,7 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
+		team, internalErr = t.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -437,10 +437,10 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 		deleteTeamMutation := mutation.NewDeleteTeam(
 			t.logger,
 			t.stateSyncer,
-			t.teamDaoV2,
+			t.teamDao,
 			teamID,
 		)
-		internalErr = deleteTeamMutation.ExecuteV2(ct, tx)
+		internalErr = deleteTeamMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -494,7 +494,7 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return t.teamFileUploadSessionDaoV2.CreateTeamFileUploadSession(ct, tx, fileUploadSession)
+		return t.teamFileUploadSessionDao.CreateTeamFileUploadSession(ct, tx, fileUploadSession)
 	})
 
 	if err != nil {
@@ -541,7 +541,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		iconUploadSession, internalErr = t.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(
+		iconUploadSession, internalErr = t.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamIDWithTx(
 			ct,
 			tx,
 			teamID,
@@ -560,12 +560,12 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		now := time.Now().UTC()
 		iconUploadSession.IsCompleted = true
 		iconUploadSession.UpdatedAt = &now
-		internalErr = t.teamFileUploadSessionDaoV2.UpdateTeamFileUploadSession(ct, tx, iconUploadSession)
+		internalErr = t.teamFileUploadSessionDao.UpdateTeamFileUploadSession(ct, tx, iconUploadSession)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		team, internalErr = t.teamDaoV2.FindTeamByIDWithTx(ct, tx, teamID)
+		team, internalErr = t.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -573,7 +573,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		iconUrl := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 		team.IconURL = &iconUrl
 		team.UpdatedAt = &now
-		return t.teamDaoV2.UpdateTeam(ct, tx, team)
+		return t.teamDao.UpdateTeam(ct, tx, team)
 	})
 
 	if err != nil {
@@ -601,7 +601,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 		}
 	}
 
-	return t.teamMemberDaoV2.FindTeamMembersByTeamID(ct, teamID)
+	return t.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 }
 
 func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
@@ -638,17 +638,17 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		createTeamMemberMutation := mutation.NewCreateTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDaoV2,
+			t.teamMemberDao,
 			teamMember,
 		)
-		internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+		internalErr = createTeamMemberMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
 
 		rtTx.AppendMutation(createTeamMemberMutation)
 
-		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		sprints, internalErr := t.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -671,11 +671,11 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
 				t.logger,
 				t.stateSyncer,
-				t.sprintParticipantDaoV2,
-				t.sprintDaoV2,
+				t.sprintParticipantDao,
+				t.sprintDao,
 				participant,
 			)
-			internalErr = createTeamMemberMutation.ExecuteV2(ct, tx)
+			internalErr = createTeamMemberMutation.Execute(ct, tx)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -720,7 +720,7 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		teamMember, internalErr = t.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, memberUserID)
+		teamMember, internalErr = t.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, memberUserID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -728,16 +728,16 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 		deleteTeamMemberMutation := mutation.NewDeleteTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDaoV2,
+			t.teamMemberDao,
 			teamID,
 			teamMember.UserID,
 		)
-		internalErr = deleteTeamMemberMutation.ExecuteV2(ct, tx)
+		internalErr = deleteTeamMemberMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		sprints, internalErr := t.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -755,12 +755,12 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
 				t.logger,
 				t.stateSyncer,
-				t.sprintParticipantDaoV2,
-				t.sprintDaoV2,
+				t.sprintParticipantDao,
+				t.sprintDao,
 				teamMember.UserID,
 				sprint.ID,
 			)
-			internalErr = deleteSprintParticipantMutation.ExecuteV2(ct, tx)
+			internalErr = deleteSprintParticipantMutation.Execute(ct, tx)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -809,7 +809,7 @@ func (t Team) UpdateTeamMember(
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		teamMember, internalErr = t.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, input.UserID)
+		teamMember, internalErr = t.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, input.UserID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -821,15 +821,15 @@ func (t Team) UpdateTeamMember(
 		updateTeamMemberMutation := mutation.NewUpdateTeamMember(
 			t.logger,
 			t.stateSyncer,
-			t.teamMemberDaoV2,
+			t.teamMemberDao,
 			teamMember,
 		)
-		internalErr = updateTeamMemberMutation.ExecuteV2(ct, tx)
+		internalErr = updateTeamMemberMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		sprints, internalErr := t.sprintDaoV2.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		sprints, internalErr := t.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -844,7 +844,7 @@ func (t Team) UpdateTeamMember(
 		})
 
 		for _, sprint := range currAndFutureSprints {
-			participants, err := t.sprintParticipantDaoV2.FindParticipantsBySprintIDWithTx(ct, tx, sprint.ID)
+			participants, err := t.sprintParticipantDao.FindParticipantsBySprintIDWithTx(ct, tx, sprint.ID)
 			if err != nil {
 				return err
 			}
@@ -859,11 +859,11 @@ func (t Team) UpdateTeamMember(
 				updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
 					t.logger,
 					t.stateSyncer,
-					t.sprintParticipantDaoV2,
-					t.sprintDaoV2,
+					t.sprintParticipantDao,
+					t.sprintDao,
 					participant,
 				)
-				internalErr = updateSprintParticipantMutation.ExecuteV2(ct, tx)
+				internalErr = updateSprintParticipantMutation.Execute(ct, tx)
 				if internalErr != nil {
 					return internalErr
 				}
@@ -890,13 +890,13 @@ func NewTeam(
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	taskDaoV2 daov2.Task,
-	sprintDaoV2 daov2.Sprint,
-	sprintParticipantDaoV2 daov2.SprintParticipant,
-	teamDaoV2 daov2.Team,
-	teamMemberDaoV2 daov2.TeamMember,
-	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
-	teamGroupDaoV2 daov2.TeamGroup,
+	taskDao dao.Task,
+	sprintDao dao.Sprint,
+	sprintParticipantDao dao.SprintParticipant,
+	teamDao dao.Team,
+	teamMemberDao dao.TeamMember,
+	teamFileUploadSessionDao dao.TeamFileUploadSession,
+	teamGroupDao dao.TeamGroup,
 ) Team {
 	return Team{
 		logger:                     logger,
@@ -906,12 +906,12 @@ func NewTeam(
 		featureToggles:             featureToggles,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
-		taskDaoV2:                  taskDaoV2,
-		sprintDaoV2:                sprintDaoV2,
-		sprintParticipantDaoV2:     sprintParticipantDaoV2,
-		teamMemberDaoV2:            teamMemberDaoV2,
-		teamDaoV2:                  teamDaoV2,
-		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
-		teamGroupDaoV2:             teamGroupDaoV2,
+		taskDao:                    taskDao,
+		sprintDao:                  sprintDao,
+		sprintParticipantDao:       sprintParticipantDao,
+		teamMemberDao:              teamMemberDao,
+		teamDao:                    teamDao,
+		teamFileUploadSessionDao:   teamFileUploadSessionDao,
+		teamGroupDao:               teamGroupDao,
 	}
 }

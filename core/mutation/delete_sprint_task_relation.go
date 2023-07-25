@@ -6,20 +6,20 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteSprintTaskRelation struct {
-	logger                  telemetry.Logger
-	stateSyncer             *realtime.StateSyncer
-	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
-	id                      uint64
-	sprintID                uint64
-	task                    entity.Task
-	clientNotifiers         []*realtime.ClientNotifier
-	notifierPrepared        bool
+	logger                telemetry.Logger
+	stateSyncer           *realtime.StateSyncer
+	sprintTaskRelationDao dao.SprintTaskRelation
+	id                    uint64
+	sprintID              uint64
+	task                  entity.Task
+	clientNotifiers       []*realtime.ClientNotifier
+	notifierPrepared      bool
 }
 
 var _ realtime.Mutation = (*DeleteSprintTaskRelation)(nil)
@@ -28,8 +28,8 @@ func (d *DeleteSprintTaskRelation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteSprintTaskRelation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	internalErr := d.sprintTaskRelationDaoV2.DeleteSprintTaskRelation(ct, tx, d.sprintID, d.task.ID)
+func (d *DeleteSprintTaskRelation) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	internalErr := d.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, tx, d.sprintID, d.task.ID)
 	if internalErr != nil {
 		return internalErr
 	}
@@ -56,7 +56,7 @@ func (d *DeleteSprintTaskRelation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteSprintTaskRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteSprintTaskRelation) GetClientNotifiers() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
@@ -82,17 +82,17 @@ func (d *DeleteSprintTaskRelation) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteSprintTaskRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	sprintTaskRelationDaoV2 daov2.SprintTaskRelation,
+	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintID uint64,
 	task entity.Task,
 ) *DeleteSprintTaskRelation {
 	return &DeleteSprintTaskRelation{
-		logger:                  logger,
-		stateSyncer:             stateSyncer,
-		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
-		id:                      stateSyncer.NextMutationID(),
-		sprintID:                sprintID,
-		task:                    task,
-		notifierPrepared:        false,
+		logger:                logger,
+		stateSyncer:           stateSyncer,
+		sprintTaskRelationDao: sprintTaskRelationDao,
+		id:                    stateSyncer.NextMutationID(),
+		sprintID:              sprintID,
+		task:                  task,
+		notifierPrepared:      false,
 	}
 }

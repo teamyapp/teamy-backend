@@ -14,24 +14,24 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type App struct {
-	logger                     telemetry.Logger
-	cloudClientRegistry        *client.Registry
-	authorizer                 client.Authorizer
-	featureToggles             feature.Toggles
-	transactionFactory         transaction.Factory
-	stateSyncer                *realtime.StateSyncer
-	appDaoV2                   daov2.App
-	appVersionDaoV2            daov2.AppVersion
-	appTeamInstallationDaoV2   daov2.AppTeamInstallation
-	appVersionVisibleTeamDaoV2 daov2.AppVersionVisibleTeam
-	teamDaoV2                  daov2.Team
+	logger                   telemetry.Logger
+	cloudClientRegistry      *client.Registry
+	authorizer               client.Authorizer
+	featureToggles           feature.Toggles
+	transactionFactory       transaction.Factory
+	stateSyncer              *realtime.StateSyncer
+	appDao                   dao.App
+	appVersionDao            dao.AppVersion
+	appTeamInstallationDao   dao.AppTeamInstallation
+	appVersionVisibleTeamDao dao.AppVersionVisibleTeam
+	teamDao                  dao.Team
 }
 
 type AppFilter struct {
@@ -58,7 +58,7 @@ type UpdateAppTeamInstallationInput struct {
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
-	return a.appDaoV2.FindAppByID(ct, appID)
+	return a.appDao.FindAppByID(ct, appID)
 }
 
 func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *errs.Error) {
@@ -72,7 +72,7 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		if filter != nil {
 			if filter.AppID != nil {
-				app, err := a.appDaoV2.FindAppByIDWithTx(ct, tx, *filter.AppID)
+				app, err := a.appDao.FindAppByIDWithTx(ct, tx, *filter.AppID)
 				if err != nil {
 					return err
 				}
@@ -80,7 +80,7 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 				apps = append(apps, app)
 			} else {
 				var err *errs.Error
-				apps, err = a.appDaoV2.FindAllAppsWithTx(ct, tx)
+				apps, err = a.appDao.FindAllAppsWithTx(ct, tx)
 				if err != nil {
 					return err
 				}
@@ -104,7 +104,7 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 			}
 		} else {
 			var err *errs.Error
-			apps, err = a.appDaoV2.FindAllAppsWithTx(ct, tx)
+			apps, err = a.appDao.FindAllAppsWithTx(ct, tx)
 			if err != nil {
 				return err
 			}
@@ -121,19 +121,19 @@ func (a App) FindApps(ct context.Context, filter *AppFilter) ([]entity.App, *err
 }
 
 func (a App) FindAppTeamInstallationsByAppID(ct context.Context, appID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
-	return a.appTeamInstallationDaoV2.FindAppTeamInstallationsByAppID(ct, appID)
+	return a.appTeamInstallationDao.FindAppTeamInstallationsByAppID(ct, appID)
 }
 
 func (a App) FindAppInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.AppTeamInstallation, *errs.Error) {
-	return a.appTeamInstallationDaoV2.FindAppTeamInstallationsByTeamID(ct, teamID)
+	return a.appTeamInstallationDao.FindAppTeamInstallationsByTeamID(ct, teamID)
 }
 
 func (a App) FindAppVersionByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
-	return a.appVersionDaoV2.FindAppVersionsByAppID(ct, appID)
+	return a.appVersionDao.FindAppVersionsByAppID(ct, appID)
 }
 
 func (a App) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int32) (entity.AppVersion, *errs.Error) {
-	return a.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
+	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
 func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versionNumber int32) ([]entity.Team, *errs.Error) {
@@ -146,7 +146,7 @@ func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versio
 	}
 	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		appVersionVisibleTeams, err :=
-			a.appVersionVisibleTeamDaoV2.FindAppVersionVisibleTeamsByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+			a.appVersionVisibleTeamDao.FindAppVersionVisibleTeamsByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if err != nil {
 			return err
 		}
@@ -154,7 +154,7 @@ func (a App) FindAppVersionVisibleTeams(ct context.Context, appID uint64, versio
 		teamIDs := collect.Map(appVersionVisibleTeams, func(appVersionVisibleTeam entity.AppVersionVisibleTeam, _ int) uint64 {
 			return appVersionVisibleTeam.TeamID
 		})
-		teams, err = a.teamDaoV2.FindTeamsByIDsWithTx(ct, tx, teamIDs)
+		teams, err = a.teamDao.FindTeamsByIDsWithTx(ct, tx, teamIDs)
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func (a App) CreateApp(ct context.Context, name string) (entity.App, *errs.Error
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return a.appDaoV2.CreateApp(ct, tx, app)
+		return a.appDao.CreateApp(ct, tx, app)
 	})
 
 	if err != nil {
@@ -298,7 +298,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		app, internalErr = a.appDaoV2.FindAppByIDWithTx(ct, tx, appID)
+		app, internalErr = a.appDao.FindAppByIDWithTx(ct, tx, appID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -318,7 +318,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 
 				if *app.ActiveVersionNumber < *input.ActiveVersionNumber {
 					var appVersion entity.AppVersion
-					appVersion, internalErr = a.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx,
+					appVersion, internalErr = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx,
 						appID, *input.ActiveVersionNumber)
 					if internalErr != nil {
 						return internalErr
@@ -339,7 +339,7 @@ func (a App) UpdateApp(ct context.Context, appID uint64, input UpdateAppInput) (
 
 		now := time.Now().UTC()
 		app.UpdatedAt = &now
-		internalErr = a.appDaoV2.UpdateApp(ct, tx, app)
+		internalErr = a.appDao.UpdateApp(ct, tx, app)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -387,13 +387,13 @@ func (a App) RefreshAppSecret(ct context.Context, appID uint64) (entity.App, *er
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		app, internalErr = a.appDaoV2.FindAppByIDWithTx(ct, tx, appID)
+		app, internalErr = a.appDao.FindAppByIDWithTx(ct, tx, appID)
 		if internalErr != nil {
 			return internalErr
 		}
 
 		app.APISecret = genAppSecretRes.UniqueString
-		internalErr = a.appDaoV2.UpdateApp(ct, tx, app)
+		internalErr = a.appDao.UpdateApp(ct, tx, app)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -435,12 +435,12 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		app, internalErr = a.appDaoV2.FindAppByIDWithTx(ct, tx, appID)
+		app, internalErr = a.appDao.FindAppByIDWithTx(ct, tx, appID)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		internalErr = a.appDaoV2.DeleteApp(ct, tx, appID)
+		internalErr = a.appDao.DeleteApp(ct, tx, appID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -490,7 +490,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		maxVersion, err := a.appVersionDaoV2.FindMaxVersionNumberWithTx(ct, tx, appID)
+		maxVersion, err := a.appVersionDao.FindMaxVersionNumberWithTx(ct, tx, appID)
 		if err != nil {
 			if err.Code == errs.NotFound {
 				// no version exists, start from 0
@@ -501,7 +501,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		}
 
 		av.VersionNumber = maxVersion + 1
-		err = a.appVersionDaoV2.CreateAppVersion(ct, tx, av)
+		err = a.appVersionDao.CreateAppVersion(ct, tx, av)
 		if err != nil {
 			return err
 		}
@@ -545,12 +545,12 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		av, internalErr = a.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+		av, internalErr = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		app, internalErr := a.appDaoV2.FindAppByIDWithTx(ct, tx, appID)
+		app, internalErr := a.appDao.FindAppByIDWithTx(ct, tx, appID)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -568,7 +568,7 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		av.UIExtensionEntrypointPath = input.UIExtensionEntryPointPath
 		now := time.Now().UTC()
 		av.UpdateAt = &now
-		internalErr = a.appVersionDaoV2.UpdateAppVersion(ct, tx, av)
+		internalErr = a.appVersionDao.UpdateAppVersion(ct, tx, av)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -610,12 +610,12 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		av, internalErr = a.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+		av, internalErr = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		app, err := a.appDaoV2.FindAppByIDWithTx(ct, tx, appID)
+		app, err := a.appDao.FindAppByIDWithTx(ct, tx, appID)
 		if err != nil {
 			return internalErr
 		}
@@ -624,18 +624,18 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("Cannot delete active version: appID=%v", appID))
 		}
 
-		internalErr = a.appVersionDaoV2.DeleteAppVersion(ct, tx, appID, versionNumber)
+		internalErr = a.appVersionDao.DeleteAppVersion(ct, tx, appID, versionNumber)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		internalErr = a.appTeamInstallationDaoV2.DeleteAppTeamInstallationsByAppIDAndVersionNumber(ct, tx, appID,
+		internalErr = a.appTeamInstallationDao.DeleteAppTeamInstallationsByAppIDAndVersionNumber(ct, tx, appID,
 			versionNumber)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		internalErr = a.appVersionVisibleTeamDaoV2.DeleteAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, tx, appID,
+		internalErr = a.appVersionVisibleTeamDao.DeleteAppVersionVisibleTeamsByAppIDAndVersionNumber(ct, tx, appID,
 			versionNumber)
 		if internalErr != nil {
 			return internalErr
@@ -684,12 +684,12 @@ func (a App) CreateAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := a.appVersionVisibleTeamDaoV2.CreateAppVersionVisibleTeam(ct, tx, av)
+		err := a.appVersionVisibleTeamDao.CreateAppVersionVisibleTeam(ct, tx, av)
 		if err != nil {
 			return err
 		}
 
-		appVersion, err = a.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+		appVersion, err = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if err != nil {
 			return err
 		}
@@ -732,18 +732,18 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		av, err := a.appVersionVisibleTeamDaoV2.FindAppVersionVisibleTeamWithTx(ct, tx, appID, versionNumber, teamID)
+		av, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeamWithTx(ct, tx, appID, versionNumber, teamID)
 		if err != nil {
 			return err
 		}
 
-		err = a.appVersionVisibleTeamDaoV2.DeleteAppVersionVisibleTeam(ct, tx, appID, versionNumber, teamID)
+		err = a.appVersionVisibleTeamDao.DeleteAppVersionVisibleTeam(ct, tx, appID, versionNumber, teamID)
 		if err != nil {
 			return err
 		}
 
 		// if team has installed the version, delete installation as well
-		appTeamInstallation, err := a.appTeamInstallationDaoV2.FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx,
+		appTeamInstallation, err := a.appTeamInstallationDao.FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx,
 			appID, teamID)
 		if err != nil {
 			if err.Code != errs.NotFound {
@@ -751,14 +751,14 @@ func (a App) DeleteAppVersionVisibleTeam(ct context.Context, appID uint64, versi
 			}
 		} else {
 			if appTeamInstallation.EnabledVersionNumber == versionNumber {
-				err = a.appTeamInstallationDaoV2.DeleteAppTeamInstallation(ct, tx, appID, teamID)
+				err = a.appTeamInstallationDao.DeleteAppTeamInstallation(ct, tx, appID, teamID)
 				if err != nil {
 					return err
 				}
 			}
 		}
 
-		appVersion, err = a.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, av.AppID, av.VersionNumber)
+		appVersion, err = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, av.AppID, av.VersionNumber)
 		if err != nil {
 			return err
 		}
@@ -807,18 +807,18 @@ func (a App) CreateAppInstallation(ct context.Context, teamID uint64, appID uint
 		ct:                 ct,
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		app, err := a.appDaoV2.FindAppByIDWithTx(ct, tx, appID)
+		app, err := a.appDao.FindAppByIDWithTx(ct, tx, appID)
 		if err != nil {
 			return err
 		}
 
-		err = a.appTeamInstallationDaoV2.CreateAppTeamInstallation(ct, tx, ai)
+		err = a.appTeamInstallationDao.CreateAppTeamInstallation(ct, tx, ai)
 		if err != nil {
 			return err
 		}
 
 		app.InstallationCount = app.InstallationCount + 1
-		err = a.appDaoV2.UpdateApp(ct, tx, app)
+		err = a.appDao.UpdateApp(ct, tx, app)
 		if err != nil {
 			return err
 		}
@@ -862,13 +862,13 @@ func (a App) UpdateAppInstallation(ct context.Context, appID uint64, teamID uint
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		ai, err = a.appTeamInstallationDaoV2.FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
+		ai, err = a.appTeamInstallationDao.FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 		if err != nil {
 			return err
 		}
 
 		ai.EnabledVersionNumber = input.EnabledVersionNumber
-		err = a.appTeamInstallationDaoV2.UpdateAppTeamInstallation(ct, tx, ai)
+		err = a.appTeamInstallationDao.UpdateAppTeamInstallation(ct, tx, ai)
 		if err != nil {
 			return err
 		}
@@ -912,12 +912,12 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		ai, err = a.appTeamInstallationDaoV2.FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
+		ai, err = a.appTeamInstallationDao.FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 		if err != nil {
 			return err
 		}
 
-		err = a.appTeamInstallationDaoV2.DeleteAppTeamInstallation(ct, tx, appID, teamID)
+		err = a.appTeamInstallationDao.DeleteAppTeamInstallation(ct, tx, appID, teamID)
 		if err != nil {
 			return err
 		}
@@ -934,7 +934,7 @@ func (a App) DeleteAppInstallation(ct context.Context, appID uint64, teamID uint
 
 // rollForwardAppInstallations moves all app installations to a newly enabled version
 func (a App) rollForwardAppInstallations(ct context.Context, tx *transaction.Transaction, appID uint64, activeVersionNumber int32) *errs.Error {
-	appInstallations, err := a.appTeamInstallationDaoV2.FindAppTeamInstallationsByAppIDWithTx(ct, tx, appID)
+	appInstallations, err := a.appTeamInstallationDao.FindAppTeamInstallationsByAppIDWithTx(ct, tx, appID)
 	if err != nil {
 		return err
 	}
@@ -942,7 +942,7 @@ func (a App) rollForwardAppInstallations(ct context.Context, tx *transaction.Tra
 	for _, appInstallation := range appInstallations {
 		if appInstallation.EnabledVersionNumber < activeVersionNumber {
 			appInstallation.EnabledVersionNumber = activeVersionNumber
-			err = a.appTeamInstallationDaoV2.UpdateAppTeamInstallation(ct, tx, appInstallation)
+			err = a.appTeamInstallationDao.UpdateAppTeamInstallation(ct, tx, appInstallation)
 			if err != nil {
 				a.logger.ErrorWithContext(ct, err)
 			}
@@ -958,7 +958,7 @@ func (a App) isAppVisibleToTeam(
 	app entity.App,
 	teamID uint64,
 ) (bool, *errs.Error) {
-	appVersions, err := a.appVersionDaoV2.FindAppVersionsByAppIDWithTx(ct, tx, app.ID)
+	appVersions, err := a.appVersionDao.FindAppVersionsByAppIDWithTx(ct, tx, app.ID)
 	if err != nil {
 		return false, err
 	}
@@ -997,7 +997,7 @@ func (a App) isAppVersionVisibleToTeam(
 
 	if !appVersion.IsPublic {
 		// if app version not public, we need to check if team is in visible list
-		_, err := a.appVersionVisibleTeamDaoV2.FindAppVersionVisibleTeamWithTx(ct, tx, app.ID, appVersion.VersionNumber,
+		_, err := a.appVersionVisibleTeamDao.FindAppVersionVisibleTeamWithTx(ct, tx, app.ID, appVersion.VersionNumber,
 			teamID)
 		if err != nil {
 			if err.Code != errs.NotFound {
@@ -1020,11 +1020,11 @@ func NewApp(
 	featureToggles feature.Toggles,
 	transactionFactory transaction.Factory,
 	stateSyncer *realtime.StateSyncer,
-	appDaoV2 daov2.App,
-	appVersionDaoV2 daov2.AppVersion,
-	appTeamInstallationDaoV2 daov2.AppTeamInstallation,
-	appVersionVisibleTeamDaoV2 daov2.AppVersionVisibleTeam,
-	teamDaoV2 daov2.Team,
+	appDao dao.App,
+	appVersionDao dao.AppVersion,
+	appTeamInstallationDao dao.AppTeamInstallation,
+	appVersionVisibleTeamDao dao.AppVersionVisibleTeam,
+	teamDao dao.Team,
 ) App {
 	return App{
 		logger,
@@ -1033,10 +1033,10 @@ func NewApp(
 		featureToggles,
 		transactionFactory,
 		stateSyncer,
-		appDaoV2,
-		appVersionDaoV2,
-		appTeamInstallationDaoV2,
-		appVersionVisibleTeamDaoV2,
-		teamDaoV2,
+		appDao,
+		appVersionDao,
+		appTeamInstallationDao,
+		appVersionVisibleTeamDao,
+		teamDao,
 	}
 }

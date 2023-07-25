@@ -15,8 +15,8 @@ import (
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/daov2"
-	sqldbV2 "github.com/teamyapp/teamy-backend/core/daov2/sqldb"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service"
@@ -27,44 +27,44 @@ type ServiceName string
 type CloudWebAPIExternalBaseURL string
 
 var daoSet = wire.NewSet(
-	wire.Bind(new(daov2.Task), new(sqldbV2.Task)),
-	wire.Bind(new(daov2.TaskLink), new(sqldbV2.TaskLink)),
-	wire.Bind(new(daov2.TaskAwaitForRelation), new(sqldbV2.TaskAwaitForRelation)),
-	wire.Bind(new(daov2.SprintParticipant), new(sqldbV2.SprintParticipant)),
-	wire.Bind(new(daov2.Sprint), new(sqldbV2.Sprint)),
-	wire.Bind(new(daov2.SprintTaskRelation), new(sqldbV2.SprintTaskRelation)),
-	wire.Bind(new(daov2.Thread), new(sqldbV2.Thread)),
-	wire.Bind(new(daov2.TeamMember), new(sqldbV2.TeamMember)),
-	wire.Bind(new(daov2.TeamGroup), new(sqldbV2.TeamGroup)),
-	wire.Bind(new(daov2.User), new(sqldbV2.User)),
-	wire.Bind(new(daov2.UserFileUploadSession), new(sqldbV2.UserFileUploadSession)),
-	wire.Bind(new(daov2.Team), new(sqldbV2.Team)),
-	wire.Bind(new(daov2.TeamFileUploadSession), new(sqldbV2.TeamFileUploadSession)),
-	wire.Bind(new(daov2.Invitation), new(sqldbV2.Invitation)),
-	wire.Bind(new(daov2.Message), new(sqldbV2.Message)),
-	wire.Bind(new(daov2.App), new(sqldbV2.App)),
-	wire.Bind(new(daov2.AppVersion), new(sqldbV2.AppVersion)),
-	wire.Bind(new(daov2.AppVersionVisibleTeam), new(sqldbV2.AppVersionVisibleTeam)),
-	wire.Bind(new(daov2.AppTeamInstallation), new(sqldbV2.AppTeamInstallation)),
-	sqldbV2.NewTask,
-	sqldbV2.NewTaskLink,
-	sqldbV2.NewTaskAwaitForRelation,
-	sqldbV2.NewSprintParticipant,
-	sqldbV2.NewSprint,
-	sqldbV2.NewSprintTaskRelation,
-	sqldbV2.NewThread,
-	sqldbV2.NewTeamMember,
-	sqldbV2.NewTeamGroup,
-	sqldbV2.NewUser,
-	sqldbV2.NewUserFileUploadSession,
-	sqldbV2.NewTeam,
-	sqldbV2.NewTeamFileUploadSession,
-	sqldbV2.NewInvitation,
-	sqldbV2.NewMessage,
-	sqldbV2.NewApp,
-	sqldbV2.NewAppVersion,
-	sqldbV2.NewAppVersionVisibleTeam,
-	sqldbV2.NewAppTeamInstallation,
+	wire.Bind(new(dao.Task), new(sqldb.Task)),
+	wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)),
+	wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)),
+	wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)),
+	wire.Bind(new(dao.Sprint), new(sqldb.Sprint)),
+	wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)),
+	wire.Bind(new(dao.Thread), new(sqldb.Thread)),
+	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
+	wire.Bind(new(dao.TeamGroup), new(sqldb.TeamGroup)),
+	wire.Bind(new(dao.User), new(sqldb.User)),
+	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
+	wire.Bind(new(dao.Team), new(sqldb.Team)),
+	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
+	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
+	wire.Bind(new(dao.Message), new(sqldb.Message)),
+	wire.Bind(new(dao.App), new(sqldb.App)),
+	wire.Bind(new(dao.AppVersion), new(sqldb.AppVersion)),
+	wire.Bind(new(dao.AppVersionVisibleTeam), new(sqldb.AppVersionVisibleTeam)),
+	wire.Bind(new(dao.AppTeamInstallation), new(sqldb.AppTeamInstallation)),
+	sqldb.NewTask,
+	sqldb.NewTaskLink,
+	sqldb.NewTaskAwaitForRelation,
+	sqldb.NewSprintParticipant,
+	sqldb.NewSprint,
+	sqldb.NewSprintTaskRelation,
+	sqldb.NewThread,
+	sqldb.NewTeamMember,
+	sqldb.NewTeamGroup,
+	sqldb.NewUser,
+	sqldb.NewUserFileUploadSession,
+	sqldb.NewTeam,
+	sqldb.NewTeamFileUploadSession,
+	sqldb.NewInvitation,
+	sqldb.NewMessage,
+	sqldb.NewApp,
+	sqldb.NewAppVersion,
+	sqldb.NewAppVersionVisibleTeam,
+	sqldb.NewAppTeamInstallation,
 )
 
 var serviceSet = wire.NewSet(
@@ -184,9 +184,9 @@ func newUserService(
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	userDaoV2 daov2.User,
-	teamMemberV2 daov2.TeamMember,
-	userFileUploadSessionDaoV2 daov2.UserFileUploadSession,
+	userDao dao.User,
+	teamMember dao.TeamMember,
+	userFileUploadSessionDao dao.UserFileUploadSession,
 ) service.User {
 	return service.NewUser(
 		logger,
@@ -196,9 +196,9 @@ func newUserService(
 		authorizer,
 		stateSyncer,
 		transactionFactory,
-		userDaoV2,
-		teamMemberV2,
-		userFileUploadSessionDaoV2,
+		userDao,
+		teamMember,
+		userFileUploadSessionDao,
 	)
 }
 
@@ -210,13 +210,13 @@ func newTeamService(
 	toggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory transaction.Factory,
-	taskDaoV2 daov2.Task,
-	sprintDaoV2 daov2.Sprint,
-	sprintParticipantDaoV2 daov2.SprintParticipant,
-	teamDaoV2 daov2.Team,
-	teamMemberDaoV2 daov2.TeamMember,
-	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession,
-	teamGroupDaoV2 daov2.TeamGroup,
+	taskDao dao.Task,
+	sprintDao dao.Sprint,
+	sprintParticipantDao dao.SprintParticipant,
+	teamDao dao.Team,
+	teamMemberDao dao.TeamMember,
+	teamFileUploadSessionDao dao.TeamFileUploadSession,
+	teamGroupDao dao.TeamGroup,
 ) service.Team {
 	return service.NewTeam(
 		logger,
@@ -226,13 +226,13 @@ func newTeamService(
 		toggles,
 		stateSyncer,
 		transactionFactory,
-		taskDaoV2,
-		sprintDaoV2,
-		sprintParticipantDaoV2,
-		teamDaoV2,
-		teamMemberDaoV2,
-		teamFileUploadSessionDaoV2,
-		teamGroupDaoV2)
+		taskDao,
+		sprintDao,
+		sprintParticipantDao,
+		teamDao,
+		teamMemberDao,
+		teamFileUploadSessionDao,
+		teamGroupDao)
 }
 
 func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) cloudGQL.PrometheusTracer {
