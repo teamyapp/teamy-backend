@@ -184,7 +184,9 @@ func startServiceRunner(
 		http.DefaultClient, //TODO: add a log middleware to log outgoing request
 		githubCfg,
 		privateKeyPEM,
-		sqlDB)
+		sqlDB,
+		appsDep.TeamyWebUIBaseURL(cfg.TeamyWebUIBaseURL),
+	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}
