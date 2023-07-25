@@ -204,7 +204,6 @@ func TestAppService_CreateApp(t *testing.T) {
 			require.NotNil(t, newApp.CreatedAt)
 			require.Nil(t, newApp.UpdatedAt)
 
-			// verify data in db
 			appInDb, internalErr := appTestRef.appDaoV2.FindAppByID(ct, newApp.ID)
 			require.Nil(t, internalErr)
 
@@ -303,7 +302,6 @@ func TestAppService_UpdateApp(t *testing.T) {
 			app.Description = *input.Description
 			require.True(t, areAppsEqual(app, updatedApp))
 
-			// verify data in db
 			appInDb, internalErr := appTestRef.appDaoV2.FindAppByID(ct, app.ID)
 			require.Nil(t, internalErr)
 			require.True(t, areAppsEqual(app, appInDb))
@@ -369,7 +367,6 @@ func TestAppService_DeleteApp(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -390,7 +387,6 @@ func TestAppService_DeleteApp(t *testing.T) {
 
 			require.True(t, areAppsEqual(deleted, app))
 
-			// verify data in db
 			_, internalErr = appTestRef.appDaoV2.FindAppByID(ct, app.ID)
 			require.NotNil(t, internalErr)
 			require.Equal(t, internalErr.Code, errs.NotFound)
@@ -457,7 +453,6 @@ func TestAppService_RefreshAppSecret(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -480,7 +475,6 @@ func TestAppService_RefreshAppSecret(t *testing.T) {
 			app.APISecret = updated.APISecret
 			require.True(t, areAppsEqual(app, updated))
 
-			// verify data in db
 			appInDb, internalErr := appTestRef.appDaoV2.FindAppByID(ct, app.ID)
 			require.Nil(t, internalErr)
 			require.True(t, areAppsEqual(app, appInDb))
@@ -531,7 +525,6 @@ func TestAppService_FindApp(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -673,7 +666,6 @@ func TestAppService_CreateAppVersion(t *testing.T) {
 			require.Nil(t, newAppVersion.UIExtensionEntrypointPath)
 			require.Nil(t, newAppVersion.UpdateAt)
 
-			// verify data in db
 			appVersionInDb, internalErr := appTestRef.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumber(ct,
 				newAppVersion.AppID, newAppVersion.VersionNumber)
 			require.Nil(t, internalErr)
@@ -741,7 +733,6 @@ func TestAppService_UpdateAppVersion(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app and app version
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -778,7 +769,6 @@ func TestAppService_UpdateAppVersion(t *testing.T) {
 			appVersion.IsPublic = input.IsPublic
 			require.True(t, areAppVersionsEqual(appVersion, updatedAppVersion))
 
-			// verify data in db
 			appVersionInDb, internalErr := appTestRef.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumber(ct,
 				appVersion.AppID, appVersion.VersionNumber)
 			require.Nil(t, internalErr)
@@ -846,7 +836,6 @@ func TestAppService_DeleteAppVersion(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app and app version
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -868,7 +857,6 @@ func TestAppService_DeleteAppVersion(t *testing.T) {
 
 			require.True(t, areAppVersionsEqual(appVersion, deletedAppVersion))
 
-			// verify data in db
 			_, internalErr = appTestRef.appVersionDaoV2.FindAppVersionByAppIDAndVersionNumber(ct, appVersion.AppID,
 				appVersion.VersionNumber)
 			require.NotNil(t, internalErr)
@@ -918,7 +906,6 @@ func TestAppService_FindAppVersion(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -1006,7 +993,6 @@ func TestAppService_CreateAppVersionVisibleTeam(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -1035,7 +1021,6 @@ func TestAppService_CreateAppVersionVisibleTeam(t *testing.T) {
 			require.Nil(t, returned.Changes)
 			require.Nil(t, returned.UIExtensionEntrypointPath)
 
-			// verify data in db
 			appVersionVisibleTeamInDb, internalErr := appTestRef.appVersionVisibleTeamDaoV2.
 				FindAppVersionVisibleTeamWithTx(ct, tx, appID, versionNumber, teamID)
 			require.Nil(t, internalErr)
@@ -1106,7 +1091,6 @@ func TestAppService_DeleteAppVersionVisibleTeam(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app and app version
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -1131,7 +1115,6 @@ func TestAppService_DeleteAppVersionVisibleTeam(t *testing.T) {
 
 			require.True(t, areAppVersionsEqual(appVersion, returned))
 
-			// verify data in db
 			_, internalErr = appTestRef.appVersionVisibleTeamDaoV2.FindAppVersionVisibleTeamWithTx(ct, tx, appID,
 				versionNumber,
 				teamID)
@@ -1186,7 +1169,6 @@ func TestAppService_FindAppVersionVisibleTeams(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -1312,7 +1294,6 @@ func TestAppService_CreateAppTeamInstallation(t *testing.T) {
 			require.Equal(t, ownerUserID, *newAppInstallation.InstalledByUserID)
 			require.NotNil(t, newAppInstallation.InstalledAt)
 
-			// verify data in db
 			appInstallationInDb, internalErr := appTestRef.appTeamInstallationDaoV2.
 				FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 			require.Nil(t, internalErr)
@@ -1391,7 +1372,6 @@ func TestAppService_UpdateAppTeamInstallation(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -1424,7 +1404,6 @@ func TestAppService_UpdateAppTeamInstallation(t *testing.T) {
 			appTeamInstallation.EnabledVersionNumber = versionNumber2
 			require.True(t, areAppInstallationsEqual(appTeamInstallation, updated))
 
-			// verify data in db
 			appInstallationInDb, internalErr := appTestRef.appTeamInstallationDaoV2.
 				FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 			require.Nil(t, internalErr)
@@ -1502,7 +1481,6 @@ func TestAppService_DeleteAppTeamInstallation(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 
@@ -1528,7 +1506,6 @@ func TestAppService_DeleteAppTeamInstallation(t *testing.T) {
 
 			require.True(t, areAppInstallationsEqual(appTeamInstallation, deleted))
 
-			// verify data in db
 			_, internalErr = appTestRef.appTeamInstallationDaoV2.
 				FindAppTeamInstallationByAppIDAndTeamIDWithTx(ct, tx, appID, teamID)
 			require.NotNil(t, internalErr)
@@ -1581,7 +1558,6 @@ func TestAppService_FindAppTeamInstallations(t *testing.T) {
 			ct := context.Background()
 			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-			// create app
 			tx, err := appTestRef.transactionFactory.BeginTx(ct, nil)
 			require.Nil(t, err)
 

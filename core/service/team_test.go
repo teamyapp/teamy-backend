@@ -126,7 +126,6 @@ func TestTeamService_FindTeams(t *testing.T) {
 		UpdatedAt:     &now,
 	}
 
-	// insert teams into table
 	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1))
 	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2))
 
@@ -204,7 +203,6 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	teamMember2 := entity.TeamMember{TeamID: teamID2, UserID: requesterUserID2, CreatedAt: now}
 	teamMember3 := entity.TeamMember{TeamID: teamID3, UserID: requesterUserID1, CreatedAt: now}
 
-	// insert teams and teamMembers into table
 	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1))
 	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2))
 	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team3))
@@ -517,7 +515,6 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 		UpdatedAt:       &now,
 	}
 
-	// insert teams into table
 	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1))
 	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2))
 
@@ -630,7 +627,6 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 		UpdatedAt:       &now,
 	}
 
-	// insert teams into table
 	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember))
 
 	updateInput := UpdateTeamMemberInput{
