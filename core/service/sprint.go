@@ -8,6 +8,7 @@ import (
 
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -50,9 +51,43 @@ type Sprint struct {
 }
 
 func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if s.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	sprints, err := s.sprintDaoV2.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
 		return nil, err
+	}
+
+	if s.featureToggles.EnableAuthorization {
+		authorizedSprints, err := client.FilterAuthorizedItems(
+			ct,
+			s.authorizer,
+			sprints,
+			func(sprint entity.Sprint) cloudAuthorization.Query {
+				return authorization.NewReadInSprintQuery(userID, sprint.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		sprints = authorizedSprints
 	}
 
 	if filter != nil {
@@ -63,6 +98,25 @@ func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *Spr
 }
 
 func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	return s.sprintParticipantDaoV2.FindParticipantsBySprintID(ct, sprintID)
 }
 
@@ -70,6 +124,26 @@ func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.
 	sprints, err := s.sprintDaoV2.FindAllSprints(ct)
 	if err != nil {
 		return nil, err
+	}
+
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		authorizedSprints, err := client.FilterAuthorizedItems(
+			ct,
+			s.authorizer,
+			sprints,
+			func(sprint entity.Sprint) cloudAuthorization.Query {
+				return authorization.NewReadInSprintQuery(userID, sprint.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		sprints = authorizedSprints
 	}
 
 	if filter != nil {
@@ -80,8 +154,8 @@ func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.
 }
 
 func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Sprint, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
 	if s.featureToggles.EnableAuthorization {
-		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
@@ -123,9 +197,28 @@ func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Spri
 		sprint = &sprintRes
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
+	}
+
+	if sprint == nil {
+		return nil, nil
+	}
+
+	if s.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInSprintQuery(userID, sprint.ID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	return sprint, nil
@@ -193,6 +286,23 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 }
 
 func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if s.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var sprints []entity.Sprint
 	txCtx := TransactionsContext{
 		logger:             s.logger,
@@ -222,10 +332,42 @@ func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) (
 		return nil, err
 	}
 
+	if s.featureToggles.EnableAuthorization {
+		authorizedSprints, err := client.FilterAuthorizedItems(
+			ct,
+			s.authorizer,
+			sprints,
+			func(sprint entity.Sprint) cloudAuthorization.Query {
+				return authorization.NewReadInSprintQuery(userID, sprint.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		sprints = authorizedSprints
+	}
+
 	return sprints, nil
 }
 
 func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Sprint{}, err
+		}
+
+		if !hasPermission {
+			return entity.Sprint{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var sprint entity.Sprint
 	txCtx := TransactionsContext{
 		logger:             s.logger,
@@ -337,7 +479,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 		return entity.Sprint{}, err
 	}
 
-	// TODO(yuhang): if failed to register/assign resource, there will be inconsistent state. Cross-service transaction
+	// TODO(magicoder10): if failed to register/assign resource, there will be inconsistent state. Cross-service transaction
 	// protection will be covered in stage 2
 	if s.featureToggles.EnableAuthorization {
 		err = s.authorizer.RegisterResource(ct, authorization.SprintResourceType, sprint.ID)
@@ -435,10 +577,28 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 		return entity.Sprint{}, err
 	}
 
+	// TODO: clean up resource relations in authorization service
 	return sprint, nil
 }
 
 func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewAddTaskToInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var task entity.Task
 	txCtx := TransactionsContext{
 		logger:             s.logger,
@@ -505,14 +665,31 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 		return entity.Task{}, err
 	}
 
+	// TODO: update resource relations in authorization service
 	return task, nil
 }
 
-func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+func (s Sprint) CopyTasksToSprint(
+	ct context.Context,
+	toSprintID uint64,
+	taskIDs []uint64,
+) ([]entity.Task, *errs.Error) {
 	if s.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
 			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		for _, taskID := range taskIDs {
+			query := authorization.NewReadInTaskQuery(userID, taskID)
+			hasPermission, err := s.authorizer.HasPermission(ct, query)
+			if err != nil {
+				return nil, err
+			}
+
+			if !hasPermission {
+				return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+			}
 		}
 
 		sprint, err := s.sprintDaoV2.FindSprintByID(ct, toSprintID)
@@ -520,21 +697,31 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 			return nil, err
 		}
 
-		query := authorization.NewCloneTaskInTeamQuery(userID, sprint.OwningTeamID)
+		query := authorization.NewCreateTaskInTeamQuery(userID, sprint.OwningTeamID)
 		hasPermission, err := s.authorizer.HasPermission(ct, query)
 		if err != nil {
 			return nil, err
 		}
 
 		if !hasPermission {
-			return []entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+
+		query = authorization.NewAddTaskToInSprintQuery(userID, toSprintID)
+		hasPermission, err = s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	var tasks []entity.Task
 	var newTaskIDs []uint64
 	var newThreadIDs []uint64
-	// TODO(yuhang): these genID requests should be batched in a single RPC
+	// TODO(magicoder10): these genID requests should be batched in a single RPC
 	for range taskIDs {
 		genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 		genTaskIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
@@ -575,10 +762,43 @@ func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs
 		return nil
 	})
 
+	// TODO: update resource relations in authorization service
 	return tasks, nil
 }
 
-func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+func (s Sprint) MoveTasksToSprint(
+	ct context.Context,
+	fromSprintID uint64,
+	toSprintID uint64,
+	taskIDs []uint64,
+) ([]entity.Task, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewRemoveTaskFromInSprintQuery(userID, fromSprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+
+		query = authorization.NewAddTaskToInSprintQuery(userID, toSprintID)
+		hasPermission, err = s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var tasks []entity.Task
 	txCtx := TransactionsContext{
 		logger:             s.logger,
@@ -604,10 +824,28 @@ func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSpr
 		return nil, err
 	}
 
+	// TODO: update resource relations in authorization service
 	return tasks, nil
 }
 
 func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewRemoveTaskFromInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	var task entity.Task
 	txCtx := TransactionsContext{
 		logger:             s.logger,
@@ -625,6 +863,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return entity.Task{}, err
 	}
 
+	// TODO: update resource relations in authorization service
 	return task, nil
 }
 

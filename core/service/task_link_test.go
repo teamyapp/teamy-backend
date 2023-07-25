@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
@@ -56,15 +56,11 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return TaskLinkTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
-	if !assert.Nil(t, internalErr) {
-		return TaskLinkTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	noopMetrics := metricstest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
@@ -91,9 +87,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 				3,
 				nil)
 		})
-	if !assert.Nil(t, err) {
-		return TaskLinkTestRef{}, false
-	}
+	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
@@ -299,9 +293,7 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 
 			if testCase.prepareData != nil {
 				err := testCase.prepareData(taskLinkTestRef, testCase.requesterUserID)
-				if !assert.Nil(t, err) {
-					return
-				}
+				require.Nil(t, err)
 			}
 
 			ct := context.Background()
@@ -316,10 +308,10 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 			}
 			newTask, internalErr := taskLinkTestRef.taskService.CreateTask(ct, teamID, taskInput)
 			if testCase.expectedErr != nil {
-				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
-			} else if !assert.Nil(t, internalErr) {
-				return
+			} else {
+				require.Nil(t, internalErr)
 			}
 
 			IconURL := "task link icon url"
@@ -332,18 +324,16 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 				IconHoverURL: &IconHoverURL,
 			}
 			newTaskLink, internalErr := taskLinkTestRef.taskLinkService.CreateTaskLink(ct, taskLinkInput)
-			if !assert.Nil(t, internalErr) {
-				return
-			}
+			require.Nil(t, internalErr)
 
-			assert.Equal(t, uint64(1), newTaskLink.ID)
-			assert.Equal(t, taskLinkInput.TaskID, newTaskLink.TaskID)
-			assert.Equal(t, taskLinkInput.Title, newTaskLink.Title)
-			assert.Equal(t, taskLinkInput.URL, newTaskLink.URL)
-			assert.Equal(t, taskLinkInput.IconURL, newTaskLink.IconURL)
-			assert.Equal(t, taskLinkInput.IconHoverURL, newTaskLink.IconHoverURL)
-			assert.NotNil(t, newTaskLink.CreatedAt)
-			assert.Nil(t, newTaskLink.UpdatedAt)
+			require.Equal(t, uint64(1), newTaskLink.ID)
+			require.Equal(t, taskLinkInput.TaskID, newTaskLink.TaskID)
+			require.Equal(t, taskLinkInput.Title, newTaskLink.Title)
+			require.Equal(t, taskLinkInput.URL, newTaskLink.URL)
+			require.Equal(t, taskLinkInput.IconURL, newTaskLink.IconURL)
+			require.Equal(t, taskLinkInput.IconHoverURL, newTaskLink.IconHoverURL)
+			require.NotNil(t, newTaskLink.CreatedAt)
+			require.Nil(t, newTaskLink.UpdatedAt)
 		})
 	}
 }

@@ -5,7 +5,9 @@ import (
 
 	"github.com/teamyapp/cloud/app/service"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
+	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/teamy-backend/core"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 )
 
@@ -23,14 +25,6 @@ func AddTeamPermission(
 	}
 
 	for _, resourceTypeOperation := range groupOperations {
-		err = authorizationService.RegisterOperation(
-			ct,
-			resourceTypeOperation.ResourceType,
-			resourceTypeOperation.Operation)
-		if err != nil {
-			return err
-		}
-
 		err = authorizationService.AddPermission(
 			ct,
 			resourceTypeOperation.ResourceType,
@@ -78,14 +72,6 @@ func AddAppPermission(
 	}
 
 	for _, resourceTypeOperation := range groupOperations {
-		err = authorizationService.RegisterOperation(
-			ct,
-			resourceTypeOperation.ResourceType,
-			resourceTypeOperation.Operation)
-		if err != nil {
-			return err
-		}
-
 		err = authorizationService.AddPermission(
 			ct,
 			resourceTypeOperation.ResourceType,
@@ -101,4 +87,32 @@ func AddAppPermission(
 		ct,
 		authorization.AppResourceType,
 		appID)
+}
+
+func AddAllTeamPermissions(
+	authorizationService service.Authorization,
+	teamID uint64,
+	userID uint64,
+) *errs.Error {
+	ct := context.Background()
+	ct = ctx.NewContextWithUserID(ct, 1)
+	group, err := authorizationService.
+		CreateUserGroup(ct, "FullControl", nil)
+	if err != nil {
+		return err
+	}
+
+	return AddTeamPermission(
+		ct,
+		authorizationService,
+		group.ID,
+		teamID,
+		authorization.AllTeamResourceTypeOperations,
+		userID)
+}
+
+func ApplyAuthorizationConfig(authorizationService service.Authorization) *errs.Error {
+	ct := context.Background()
+	ct = ctx.NewContextWithUserID(ct, 1)
+	return authorizationService.ApplyAuthorizationConfig(ct, core.AuthorizationConfig)
 }

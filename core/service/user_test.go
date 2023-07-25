@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
@@ -53,9 +53,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return UserTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
@@ -84,9 +82,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 				3,
 				nil)
 		})
-	if !assert.Nil(t, err) {
-		return UserTestRef{}, false
-	}
+	require.Nil(t, err)
 
 	authorizor := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
@@ -141,30 +137,23 @@ func TestUserService_CreateUser(t *testing.T) {
 		ProfileURL: &profileURL,
 	}
 	newUser, internalErr := userTestRef.userService.CreateUser(ct, userInput)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
 
-	// verify return result
-	assert.Equal(t, requesterUserID, newUser.ID)
-	assert.Equal(t, userInput.LastName, newUser.LastName)
-	assert.Equal(t, userInput.FirstName, newUser.FirstName)
-	assert.Equal(t, userInput.ProfileURL, newUser.ProfileURL)
-	assert.NotNil(t, newUser.CreatedAt)
-	assert.Nil(t, newUser.UpdatedAt)
+	require.Equal(t, requesterUserID, newUser.ID)
+	require.Equal(t, userInput.LastName, newUser.LastName)
+	require.Equal(t, userInput.FirstName, newUser.FirstName)
+	require.Equal(t, userInput.ProfileURL, newUser.ProfileURL)
+	require.NotNil(t, newUser.CreatedAt)
+	require.Nil(t, newUser.UpdatedAt)
 
-	// verify in-memory DB
 	userInMemory, err := userTestRef.userDaoV2.FindUserByID(ct, newUser.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.Equal(t, requesterUserID, userInMemory.ID)
-	assert.Equal(t, userInput.LastName, userInMemory.LastName)
-	assert.Equal(t, userInput.FirstName, userInMemory.FirstName)
-	assert.Equal(t, userInput.ProfileURL, userInMemory.ProfileURL)
-	assert.NotNil(t, userInMemory.CreatedAt)
-	assert.Nil(t, userInMemory.UpdatedAt)
+	require.Nil(t, err)
+	require.Equal(t, requesterUserID, userInMemory.ID)
+	require.Equal(t, userInput.LastName, userInMemory.LastName)
+	require.Equal(t, userInput.FirstName, userInMemory.FirstName)
+	require.Equal(t, userInput.ProfileURL, userInMemory.ProfileURL)
+	require.NotNil(t, userInMemory.CreatedAt)
+	require.Nil(t, userInMemory.UpdatedAt)
 }
 
 func TestUserService_UpdateUser(t *testing.T) {
@@ -182,9 +171,7 @@ func TestUserService_UpdateUser(t *testing.T) {
 	var profileURL = "https://test"
 
 	tx, err := userTestRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -197,40 +184,29 @@ func TestUserService_UpdateUser(t *testing.T) {
 		UpdatedAt:  nil,
 	}
 
-	// insert user into table
-	if !assert.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user)) {
-		return
-	}
+	require.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user))
 
 	updateInput := UpdateUserInput{
 		LastName:  "UpdatedLastName",
 		FirstName: "UpdatedFirstName",
 	}
 	updatedUser, internalErr := userTestRef.userService.UpdateUser(ct, user.ID, updateInput)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
+	require.Nil(t, internalErr)
+	require.Equal(t, requesterUserID, updatedUser.ID)
+	require.Equal(t, updateInput.LastName, updatedUser.LastName)
+	require.Equal(t, updateInput.FirstName, updatedUser.FirstName)
+	require.Equal(t, user.ProfileURL, updatedUser.ProfileURL)
+	require.Equal(t, user.CreatedAt, updatedUser.CreatedAt)
+	require.NotNil(t, updatedUser.UpdatedAt)
 
-	// verify return result
-	assert.Equal(t, requesterUserID, updatedUser.ID)
-	assert.Equal(t, updateInput.LastName, updatedUser.LastName)
-	assert.Equal(t, updateInput.FirstName, updatedUser.FirstName)
-	assert.Equal(t, user.ProfileURL, updatedUser.ProfileURL)
-	assert.Equal(t, user.CreatedAt, updatedUser.CreatedAt)
-	assert.NotNil(t, updatedUser.UpdatedAt)
-
-	// verify in-memory DB
 	userInMemory, err := userTestRef.userDaoV2.FindUserByID(ct, user.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.Equal(t, requesterUserID, userInMemory.ID)
-	assert.Equal(t, updateInput.LastName, userInMemory.LastName)
-	assert.Equal(t, updateInput.FirstName, userInMemory.FirstName)
-	assert.Equal(t, user.ProfileURL, userInMemory.ProfileURL)
-	assert.Equal(t, user.CreatedAt, userInMemory.CreatedAt)
-	assert.NotNil(t, userInMemory.UpdatedAt)
+	require.Nil(t, err)
+	require.Equal(t, requesterUserID, userInMemory.ID)
+	require.Equal(t, updateInput.LastName, userInMemory.LastName)
+	require.Equal(t, updateInput.FirstName, userInMemory.FirstName)
+	require.Equal(t, user.ProfileURL, userInMemory.ProfileURL)
+	require.Equal(t, user.CreatedAt, userInMemory.CreatedAt)
+	require.NotNil(t, userInMemory.UpdatedAt)
 }
 
 func TestUserService_FindUserByID(t *testing.T) {
@@ -247,9 +223,7 @@ func TestUserService_FindUserByID(t *testing.T) {
 
 	var profileURL = "https://test"
 	tx, err := userTestRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -263,23 +237,16 @@ func TestUserService_FindUserByID(t *testing.T) {
 		UpdatedAt:  &now,
 	}
 
-	// insert user into table
-	if !assert.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user)) {
-		return
-	}
+	require.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user))
 
 	userFound, internalErr := userTestRef.userService.FindUserByID(ct, user.ID)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	// verify return result
-	assert.Equal(t, user.ID, userFound.ID)
-	assert.Equal(t, user.LastName, userFound.LastName)
-	assert.Equal(t, user.FirstName, userFound.FirstName)
-	assert.Equal(t, user.ProfileURL, userFound.ProfileURL)
-	assert.Equal(t, user.CreatedAt, userFound.CreatedAt)
-	assert.NotNil(t, user.UpdatedAt, userFound.UpdatedAt)
+	require.Nil(t, internalErr)
+	require.Equal(t, user.ID, userFound.ID)
+	require.Equal(t, user.LastName, userFound.LastName)
+	require.Equal(t, user.FirstName, userFound.FirstName)
+	require.Equal(t, user.ProfileURL, userFound.ProfileURL)
+	require.Equal(t, user.CreatedAt, userFound.CreatedAt)
+	require.NotNil(t, user.UpdatedAt, userFound.UpdatedAt)
 }
 
 func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
@@ -295,34 +262,25 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := userTestRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
 	uploadSessionID, err := userTestRef.userService.CreateUserProfileUploadSession(ct)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+	require.Equal(t, uploadSessionID, uint64(1))
 
-	assert.Equal(t, uploadSessionID, uint64(1))
-
-	// verify in-memory DB
 	uploadSessionInMemory, err := userTestRef.userFileUploadSessionDaoV2.FindUserFileUploadSessionByUserIDWithTx(ct,
 		tx,
 		requesterUserID,
 		entity.ProfileUserFileUploadSessionType,
 		uploadSessionID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
-	assert.Equal(t, uploadSessionInMemory.UserID, requesterUserID)
-	assert.Nil(t, uploadSessionInMemory.UpdatedAt)
-	assert.Equal(t, uploadSessionInMemory.Type, entity.ProfileUserFileUploadSessionType)
-	assert.Equal(t, uploadSessionInMemory.IsCompleted, false)
+	require.Nil(t, err)
+	require.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
+	require.Equal(t, uploadSessionInMemory.UserID, requesterUserID)
+	require.Nil(t, uploadSessionInMemory.UpdatedAt)
+	require.Equal(t, uploadSessionInMemory.Type, entity.ProfileUserFileUploadSessionType)
+	require.Equal(t, uploadSessionInMemory.IsCompleted, false)
 }
 
 func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
@@ -338,9 +296,7 @@ func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := userTestRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -355,41 +311,29 @@ func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
 		UpdatedAt:  &now,
 	}
 
-	// insert user table
-	if !assert.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user)) {
-		return
-	}
+	require.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user))
 
-	// create user upload session
 	uploadSessionID, err := userTestRef.userService.CreateUserProfileUploadSession(ct)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	// finish upload session
 	updatedUser, err := userTestRef.userService.FinishUserProfileUploadSession(ct, uploadSessionID)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+	require.Equal(t, user.ID, updatedUser.ID)
+	require.NotEqual(t, user.ProfileURL, updatedUser.ProfileURL)
+	require.NotEqual(t, user.UpdatedAt, updatedUser.UpdatedAt)
+	require.Equal(t, user.FirstName, updatedUser.FirstName)
+	require.Equal(t, user.LastName, updatedUser.LastName)
+	require.Equal(t, user.CreatedAt, updatedUser.CreatedAt)
 
-	// verify returned user
-	assert.Equal(t, user.ID, updatedUser.ID)
-	assert.NotEqual(t, user.ProfileURL, updatedUser.ProfileURL)
-	assert.NotEqual(t, user.UpdatedAt, updatedUser.UpdatedAt)
-	assert.Equal(t, user.FirstName, updatedUser.FirstName)
-	assert.Equal(t, user.LastName, updatedUser.LastName)
-	assert.Equal(t, user.CreatedAt, updatedUser.CreatedAt)
-
-	// verify in-memory DB
 	uploadSessionInMemory, err := userTestRef.userFileUploadSessionDaoV2.FindUserFileUploadSessionByUserIDWithTx(ct,
 		tx,
 		requesterUserID,
 		entity.ProfileUserFileUploadSessionType,
 		uploadSessionID)
 
-	assert.Equal(t, uploadSessionInMemory.IsCompleted, true)
-	assert.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
-	assert.Equal(t, uploadSessionInMemory.UserID, user.ID)
-	assert.Equal(t, uploadSessionInMemory.Type, entity.ProfileUserFileUploadSessionType)
-	assert.NotNil(t, uploadSessionInMemory.UpdatedAt)
+	require.Equal(t, uploadSessionInMemory.IsCompleted, true)
+	require.Equal(t, uploadSessionInMemory.FileUploadSessionID, uploadSessionID)
+	require.Equal(t, uploadSessionInMemory.UserID, user.ID)
+	require.Equal(t, uploadSessionInMemory.Type, entity.ProfileUserFileUploadSessionType)
+	require.NotNil(t, uploadSessionInMemory.UpdatedAt)
 }

@@ -55,6 +55,8 @@ resourceTypeOperations:
       - Read
       - Update
       - Delete
+      - AddTaskTo
+      - RemoveTaskFrom
   - resourceType: Invitation
     operations:
       - Read

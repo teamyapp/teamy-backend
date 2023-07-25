@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
@@ -53,9 +53,7 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return InvitationTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
@@ -84,9 +82,7 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 				3,
 				nil)
 		})
-	if !assert.Nil(t, err) {
-		return InvitationTestRef{}, false
-	}
+	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 
@@ -145,9 +141,7 @@ func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -194,38 +188,21 @@ func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
 		UpdatedAt:         &now,
 	}
 
-	// insert team into table
-	if !assert.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation1)) {
-		return
-	}
-
-	if !assert.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation2)) {
-		return
-	}
-
-	if !assert.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation3)) {
-		return
-	}
+	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation1))
+	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation2))
+	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation3))
 
 	filter1 := InvitationFilter{InvitationID: &invitationID2, Code: &code1}
 	invitationsFound, internalErr := invitationRef.invitationService.FindInvitationsInTeam(ct, teamID2, &filter1)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	// verify return result
-	assert.Equal(t, 1, len(invitationsFound))
-
-	assert.Equal(t, invitation2.ID, invitationsFound[0].ID)
-	assert.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
+	require.Nil(t, internalErr)
+	require.Equal(t, 1, len(invitationsFound))
+	require.Equal(t, invitation2.ID, invitationsFound[0].ID)
+	require.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
 
 	filter2 := InvitationFilter{InvitationID: &invitationID2, Code: &code2}
 	invitationsFound, internalErr = invitationRef.invitationService.FindInvitationsInTeam(ct, teamID1, &filter2)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	assert.Equal(t, 0, len(invitationsFound))
+	require.Nil(t, internalErr)
+	require.Equal(t, 0, len(invitationsFound))
 }
 
 func TestInvitationService_FindInvitations(t *testing.T) {
@@ -251,9 +228,7 @@ func TestInvitationService_FindInvitations(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -300,36 +275,20 @@ func TestInvitationService_FindInvitations(t *testing.T) {
 		UpdatedAt:         &now,
 	}
 
-	// insert team into table
-	if !assert.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation1)) {
-		return
-	}
-
-	if !assert.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation2)) {
-		return
-	}
-
-	if !assert.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation3)) {
-		return
-	}
+	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation1))
+	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation2))
+	require.Nil(t, invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation3))
 
 	filter1 := InvitationFilter{InvitationID: &invitationID2, Code: &code1}
 	invitationsFound, internalErr := invitationRef.invitationService.FindInvitations(ct, &filter1)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	// verify return result
-	assert.Equal(t, 1, len(invitationsFound))
-	assert.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
+	require.Nil(t, internalErr)
+	require.Equal(t, 1, len(invitationsFound))
+	require.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
 
 	filter2 := InvitationFilter{InvitationID: &invitationID2, Code: &code2}
 	invitationsFound, internalErr = invitationRef.invitationService.FindInvitations(ct, &filter2)
-	if !assert.Nil(t, internalErr) {
-		return
-	}
-
-	assert.Equal(t, 0, len(invitationsFound))
+	require.Nil(t, internalErr)
+	require.Equal(t, 0, len(invitationsFound))
 }
 
 func TestInvitationService_CreateInvitation(t *testing.T) {
@@ -349,9 +308,7 @@ func TestInvitationService_CreateInvitation(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -364,34 +321,26 @@ func TestInvitationService_CreateInvitation(t *testing.T) {
 	}
 
 	invitation, err := invitationRef.invitationService.CreateInvitation(ct, teamID, input)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+	require.Equal(t, receiverEmail, *(invitation.ReceiverEmail))
+	require.Equal(t, receiverLastName, *(invitation.ReceiverLastName))
+	require.Equal(t, receiverFirstName, *(invitation.ReceiverFirstName))
+	require.Equal(t, teamID, invitation.TeamID)
+	require.Equal(t, entity.InvitationStatusPending, invitation.Status)
+	require.Equal(t, expiredAt, invitation.ExpireAt)
+	require.NotNil(t, invitation.CreatedAt)
+	require.Nil(t, invitation.UpdatedAt)
 
-	// verify return result
-	assert.Equal(t, receiverEmail, *(invitation.ReceiverEmail))
-	assert.Equal(t, receiverLastName, *(invitation.ReceiverLastName))
-	assert.Equal(t, receiverFirstName, *(invitation.ReceiverFirstName))
-	assert.Equal(t, teamID, invitation.TeamID)
-	assert.Equal(t, entity.InvitationStatusPending, invitation.Status)
-	assert.Equal(t, expiredAt, invitation.ExpireAt)
-	assert.NotNil(t, invitation.CreatedAt)
-	assert.Nil(t, invitation.UpdatedAt)
-
-	// verify in-memory DB
 	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.Equal(t, receiverEmail, *(invitationInMemory.ReceiverEmail))
-	assert.Equal(t, receiverLastName, *(invitationInMemory.ReceiverLastName))
-	assert.Equal(t, receiverFirstName, *(invitationInMemory.ReceiverFirstName))
-	assert.Equal(t, teamID, invitationInMemory.TeamID)
-	assert.Equal(t, entity.InvitationStatusPending, invitationInMemory.Status)
-	assert.Equal(t, expiredAt, invitationInMemory.ExpireAt)
-	assert.NotNil(t, invitationInMemory.CreatedAt)
-	assert.Nil(t, invitationInMemory.UpdatedAt)
+	require.Nil(t, err)
+	require.Equal(t, receiverEmail, *(invitationInMemory.ReceiverEmail))
+	require.Equal(t, receiverLastName, *(invitationInMemory.ReceiverLastName))
+	require.Equal(t, receiverFirstName, *(invitationInMemory.ReceiverFirstName))
+	require.Equal(t, teamID, invitationInMemory.TeamID)
+	require.Equal(t, entity.InvitationStatusPending, invitationInMemory.Status)
+	require.Equal(t, expiredAt, invitationInMemory.ExpireAt)
+	require.NotNil(t, invitationInMemory.CreatedAt)
+	require.Nil(t, invitationInMemory.UpdatedAt)
 }
 
 func TestInvitationService_UpdateInvitation(t *testing.T) {
@@ -413,9 +362,7 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -434,11 +381,8 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	// insert team into table
 	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	expiredAt := now.Add(3 * time.Hour)
 	updatedFirstName := "Updated_FirstName"
@@ -449,23 +393,16 @@ func TestInvitationService_UpdateInvitation(t *testing.T) {
 		ReceiverLastName:  &updatedLastName,
 	}
 	updated, err := invitationRef.invitationService.UpdateInvitation(ct, invitation.ID, input)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	// verify return result
 	invitation.ExpireAt = expiredAt
 	invitation.ReceiverFirstName = &updatedFirstName
 	invitation.ReceiverLastName = &updatedLastName
-	assert.True(t, areInvitationsEqual(invitation, updated))
+	require.True(t, areInvitationsEqual(invitation, updated))
 
-	// verify in-memory DB
 	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.True(t, areInvitationsEqual(invitation, invitationInMemory))
+	require.Nil(t, err)
+	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
 
 func TestInvitationService_DeleteInvitation(t *testing.T) {
@@ -487,9 +424,7 @@ func TestInvitationService_DeleteInvitation(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -508,27 +443,16 @@ func TestInvitationService_DeleteInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	// insert team into table
 	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	deleted, err := invitationRef.invitationService.DeleteInvitation(ct, invitation.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
+	require.True(t, areInvitationsEqual(invitation, deleted))
 
-	// verify return result
-	assert.True(t, areInvitationsEqual(invitation, deleted))
-
-	// verify in-memory DB
 	_, err = invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	if !assert.NotNil(t, err) {
-		return
-	}
-
-	assert.Equal(t, errs.NotFound, err.Code)
+	require.NotNil(t, err)
+	require.Equal(t, errs.NotFound, err.Code)
 }
 
 func TestInvitationService_AcceptInvitation(t *testing.T) {
@@ -550,9 +474,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -571,29 +493,19 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	// insert team into table
 	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	accepted, err := invitationRef.invitationService.AcceptInvitation(ct, invitation.ID, invitation.Code)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
-	// verify return result
 	invitation.Status = entity.InvitationStatusAccepted
 	invitation.ReceiverUserID = &requesterUserID
-	assert.True(t, areInvitationsEqual(invitation, accepted))
+	require.True(t, areInvitationsEqual(invitation, accepted))
 
-	// verify in-memory DB
 	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.True(t, areInvitationsEqual(invitation, invitationInMemory))
+	require.Nil(t, err)
+	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
 
 func TestInvitationService_DeclineInvitation(t *testing.T) {
@@ -615,9 +527,7 @@ func TestInvitationService_DeclineInvitation(t *testing.T) {
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
 
 	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	defer tx.Rollback()
 
@@ -636,26 +546,18 @@ func TestInvitationService_DeclineInvitation(t *testing.T) {
 		UpdatedAt:         nil,
 	}
 
-	// insert team into table
 	err = invitationRef.invitationDaoV2.CreateInvitation(ct, tx, invitation)
-	if !assert.Nil(t, err) {
-		return
-	}
+	require.Nil(t, err)
 
 	accepted, err := invitationRef.invitationService.DeclineInvitation(ct, invitation.ID, invitation.Code)
 
-	// verify return result
 	invitation.Status = entity.InvitationStatusDeclined
 	invitation.ReceiverUserID = &requesterUserID
-	assert.True(t, areInvitationsEqual(invitation, accepted))
+	require.True(t, areInvitationsEqual(invitation, accepted))
 
-	// verify in-memory DB
 	invitationInMemory, err := invitationRef.invitationDaoV2.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	if !assert.Nil(t, err) {
-		return
-	}
-
-	assert.True(t, areInvitationsEqual(invitation, invitationInMemory))
+	require.Nil(t, err)
+	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
 
 func areInvitationsEqual(one entity.Invitation, other entity.Invitation) bool {

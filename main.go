@@ -30,6 +30,7 @@ import (
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDI "github.com/teamyapp/teamy-backend/apps/inject"
 	"github.com/teamyapp/teamy-backend/config"
+	"github.com/teamyapp/teamy-backend/core"
 	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 	"github.com/teamyapp/teamy-backend/core/dep"
 	"github.com/teamyapp/teamy-backend/core/inject"
@@ -38,9 +39,6 @@ import (
 
 const appName = "teamy"
 const serviceName = "backend"
-
-//go:embed core/authorization.yml
-var coreAuthorizationConfig string
 
 var serviceLabels = []string{appName, serviceName}
 var fullServiceName = strings.Join(serviceLabels, "-")
@@ -145,7 +143,7 @@ func startServiceRunner(
 
 	authorizationClient := cloudClientRegistry.AuthorizationClient()
 	applyAuthorizationCfgReq := &cloudProto.ApplyAuthorizationConfigRequest{
-		ConfigContent: coreAuthorizationConfig,
+		ConfigContent: core.AuthorizationConfig,
 	}
 	ct := context.Background()
 	logger.Info("Start applying authorization config")

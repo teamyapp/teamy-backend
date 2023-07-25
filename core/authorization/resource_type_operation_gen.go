@@ -75,6 +75,14 @@ var (
 
 // Operations for Sprint
 var (
+	AddTaskToInSprint = authorization.ResourceTypeOperation{
+		ResourceType: "Sprint",
+		Operation:    "AddTaskTo",
+	}
+	CopyTasksToInSprint = authorization.ResourceTypeOperation{
+		ResourceType: "Sprint",
+		Operation:    "CopyTasksTo",
+	}
 	DeleteInSprint = authorization.ResourceTypeOperation{
 		ResourceType: "Sprint",
 		Operation:    "Delete",
@@ -82,6 +90,10 @@ var (
 	ReadInSprint = authorization.ResourceTypeOperation{
 		ResourceType: "Sprint",
 		Operation:    "Read",
+	}
+	RemoveTaskFromInSprint = authorization.ResourceTypeOperation{
+		ResourceType: "Sprint",
+		Operation:    "RemoveTaskFrom",
 	}
 	UpdateInSprint = authorization.ResourceTypeOperation{
 		ResourceType: "Sprint",

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
@@ -166,9 +166,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 
 			if testCase.prepareData != nil {
 				err := testCase.prepareData(taskTestRef, testCase.requesterUserID)
-				if !assert.Nil(t, err) {
-					return
-				}
+				require.Nil(t, err)
 			}
 
 			ct := context.Background()
@@ -183,25 +181,24 @@ func TestTaskService_CreateTask(t *testing.T) {
 			}
 			newTask, internalErr := taskTestRef.taskService.CreateTask(ct, teamID, taskInput)
 			if testCase.expectedErr != nil {
-				assert.Equal(t, testCase.expectedErr.Code, internalErr.Code)
-				return
-			} else if !assert.Nil(t, internalErr) {
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
 				return
 			}
 
-			assert.Equal(t, uint64(1), newTask.ID)
-			assert.Equal(t, taskInput.Goal, newTask.Goal)
-			assert.Equal(t, taskInput.Context, newTask.Context)
-			assert.Equal(t, teamID, newTask.OwningTeamID)
-			assert.Equal(t, taskInput.OwnerUserID, newTask.OwnerUserID)
-			assert.Equal(t, taskInput.DueAt, newTask.DueAt)
-			assert.Nil(t, newTask.Effort)
-			assert.Equal(t, taskInput.IsPlanned, newTask.IsPlanned)
-			assert.Equal(t, entity.TaskStatusTodo, newTask.Status)
-			assert.Equal(t, uint64(1), newTask.CommentsThreadID)
-			assert.NotNil(t, newTask.CreatedAt)
-			assert.Nil(t, newTask.UpdatedAt)
-			assert.Nil(t, newTask.DeliveredAt)
+			require.Nil(t, internalErr)
+			require.Equal(t, uint64(1), newTask.ID)
+			require.Equal(t, taskInput.Goal, newTask.Goal)
+			require.Equal(t, taskInput.Context, newTask.Context)
+			require.Equal(t, teamID, newTask.OwningTeamID)
+			require.Equal(t, taskInput.OwnerUserID, newTask.OwnerUserID)
+			require.Equal(t, taskInput.DueAt, newTask.DueAt)
+			require.Nil(t, newTask.Effort)
+			require.Equal(t, taskInput.IsPlanned, newTask.IsPlanned)
+			require.Equal(t, entity.TaskStatusTodo, newTask.Status)
+			require.Equal(t, uint64(1), newTask.CommentsThreadID)
+			require.NotNil(t, newTask.CreatedAt)
+			require.Nil(t, newTask.UpdatedAt)
+			require.Nil(t, newTask.DeliveredAt)
 		})
 	}
 }
@@ -226,14 +223,10 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		GRPCServerPort:           81,
 	}
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
-	if !assert.Nil(t, internalErr) {
-		return TaskTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
-	if !assert.Nil(t, internalErr) {
-		return TaskTestRef{}, false
-	}
+	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 	noopMetrics := metricstest.NewNoopMetrics()
@@ -261,9 +254,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 				3,
 				nil)
 		})
-	if !assert.Nil(t, err) {
-		return TaskTestRef{}, false
-	}
+	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
