@@ -17,10 +17,10 @@ const (
 
 type Mutation interface {
 	GetID() uint64
-	ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error
+	Execute(ct context.Context, tx *transaction.Transaction) *errs.Error
 	Undo() *errs.Error
 	CleanUp(ct context.Context) *errs.Error
-	GetClientNotifiersV2() []*ClientNotifier
+	GetClientNotifiers() []*ClientNotifier
 	PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error
 	ToMessage() MutationMessage
 }

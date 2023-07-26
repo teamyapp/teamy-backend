@@ -23,7 +23,7 @@ import (
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
@@ -93,23 +93,22 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.ThreadTableName)
-	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
+	teamyBackendDB.CreateTable(daotest.ThreadTableName)
+	teamyBackendDB.CreateTable(daotest.TaskTableName)
 
-	teamMemberDaov2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaov2)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 	activityCache := cache.NewActivity(logger)
 
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
-	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
-	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
-	teamGroupDaoV2 := daotestv2.NewTeamGroup(teamyBackendDB, transactionFactory)
+	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
+	threadDao := daotest.NewThread(teamyBackendDB)
+	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
+	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
+	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
+	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
+	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
+	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
+	teamGroupDao := daotest.NewTeamGroup(teamyBackendDB, transactionFactory)
 	teamService := NewTeam(
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
@@ -118,13 +117,13 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		toggles,
 		stateSyncer,
 		transactionFactory,
-		taskDaoV2,
-		sprintDaoV2,
-		sprintParticipantDaoV2,
-		teamDaoV2,
-		teamMemberDaoV2,
-		teamFileUploadSessionDaoV2,
-		teamGroupDaoV2,
+		taskDao,
+		sprintDao,
+		sprintParticipantDao,
+		teamDao,
+		teamMemberDao,
+		teamFileUploadSessionDao,
+		teamGroupDao,
 	)
 	taskService := NewTask(
 		logger,
@@ -134,16 +133,16 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		stateSyncer,
 		transactionFactory,
 		activityCache,
-		taskDaoV2,
-		threadDaoV2,
-		sprintDaoV2,
-		taskAwaitForRelationDaoV2,
-		sprintParticipantDaoV2,
-		sprintTaskRelationDaoV2,
+		taskDao,
+		threadDao,
+		sprintDao,
+		taskAwaitForRelationDao,
+		sprintParticipantDao,
+		sprintTaskRelationDao,
 	)
 
-	teamyBackendDB.CreateTable(daotestv2.TaskLinkTableName)
-	taskLinkDaoV2 := daotestv2.NewTaskLink(teamyBackendDB)
+	teamyBackendDB.CreateTable(daotest.TaskLinkTableName)
+	taskLinkDao := daotest.NewTaskLink(teamyBackendDB)
 	taskLinkService := NewTaskLink(
 		logger,
 		cloudClientRegistry,
@@ -151,8 +150,8 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		authorizer,
 		toggles,
 		stateSyncer,
-		taskLinkDaoV2,
-		taskDaoV2,
+		taskLinkDao,
+		taskDao,
 	)
 	return TaskLinkTestRef{
 		teamService:     teamService,

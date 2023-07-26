@@ -23,7 +23,7 @@ import (
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -260,19 +260,19 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.ThreadTableName)
-	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
+	teamyBackendDB.CreateTable(daotest.ThreadTableName)
+	teamyBackendDB.CreateTable(daotest.TaskTableName)
 
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 	activityCache := cache.NewActivity(logger)
 
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
-	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	taskAwaitForRelationDaoV2 := daotestv2.NewTaskAwaitForRelation(teamyBackendDB)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
+	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
+	threadDao := daotest.NewThread(teamyBackendDB)
+	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
+	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
+	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
+	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	taskService := NewTask(
 		logger,
 		cloudClientRegistry,
@@ -281,12 +281,12 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		stateSyncer,
 		transactionFactory,
 		activityCache,
-		taskDaoV2,
-		threadDaoV2,
-		sprintDaoV2,
-		taskAwaitForRelationDaoV2,
-		sprintParticipantDaoV2,
-		sprintTaskRelationDaoV2,
+		taskDao,
+		threadDao,
+		sprintDao,
+		taskAwaitForRelationDao,
+		sprintParticipantDao,
+		sprintTaskRelationDao,
 	)
 	return TaskTestRef{
 		taskService:  taskService,

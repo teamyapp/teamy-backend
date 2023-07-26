@@ -6,20 +6,20 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type DeleteTaskAwaitForRelation struct {
-	logger                    telemetry.Logger
-	stateSyncer               *realtime.StateSyncer
-	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
-	id                        uint64
-	awaitingTask              entity.Task
-	awaitForTaskID            uint64
-	clientNotifiers           []*realtime.ClientNotifier
-	notifierPrepared          bool
+	logger                  telemetry.Logger
+	stateSyncer             *realtime.StateSyncer
+	taskAwaitForRelationDao dao.TaskAwaitForRelation
+	id                      uint64
+	awaitingTask            entity.Task
+	awaitForTaskID          uint64
+	clientNotifiers         []*realtime.ClientNotifier
+	notifierPrepared        bool
 }
 
 var _ realtime.Mutation = (*DeleteTaskAwaitForRelation)(nil)
@@ -28,8 +28,8 @@ func (d *DeleteTaskAwaitForRelation) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTaskAwaitForRelation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	err := d.taskAwaitForRelationDaoV2.DeleteRelation(ct, tx, d.awaitingTask.ID, d.awaitForTaskID)
+func (d *DeleteTaskAwaitForRelation) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	err := d.taskAwaitForRelationDao.DeleteRelation(ct, tx, d.awaitingTask.ID, d.awaitForTaskID)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (d *DeleteTaskAwaitForRelation) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteTaskAwaitForRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteTaskAwaitForRelation) GetClientNotifiers() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
@@ -82,17 +82,17 @@ func (d *DeleteTaskAwaitForRelation) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteTaskAwaitForRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
+	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	awaitingTask entity.Task,
 	awaitForTaskID uint64,
 ) *DeleteTaskAwaitForRelation {
 	return &DeleteTaskAwaitForRelation{
-		logger:                    logger,
-		stateSyncer:               stateSyncer,
-		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,
-		id:                        stateSyncer.NextMutationID(),
-		awaitingTask:              awaitingTask,
-		awaitForTaskID:            awaitForTaskID,
-		notifierPrepared:          false,
+		logger:                  logger,
+		stateSyncer:             stateSyncer,
+		taskAwaitForRelationDao: taskAwaitForRelationDao,
+		id:                      stateSyncer.NextMutationID(),
+		awaitingTask:            awaitingTask,
+		awaitForTaskID:          awaitForTaskID,
+		notifierPrepared:        false,
 	}
 }

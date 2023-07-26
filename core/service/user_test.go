@@ -20,18 +20,18 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
-	"github.com/teamyapp/teamy-backend/core/daov2"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type UserTestRef struct {
-	userService                User
-	userDaoV2                  daov2.User
-	userFileUploadSessionDaoV2 daov2.UserFileUploadSession
-	transactionFactory         transaction.Factory
+	userService              User
+	userDao                  dao.User
+	userFileUploadSessionDao dao.UserFileUploadSession
+	transactionFactory       transaction.Factory
 }
 
 func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, bool) {
@@ -88,15 +88,15 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.UserTableName)
-	teamyBackendDB.CreateTable(daotestv2.UserFileUploadSessionTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
+	teamyBackendDB.CreateTable(daotest.UserTableName)
+	teamyBackendDB.CreateTable(daotest.UserFileUploadSessionTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberTableName)
 
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
-	userDaoV2 := daotestv2.NewUser(teamyBackendDB, transactionFactory)
-	userFileUploadSessionDaoV2 := daotestv2.NewUserFileUploadSession(teamyBackendDB)
+	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
+	userFileUploadSessionDao := daotest.NewUserFileUploadSession(teamyBackendDB)
 	userService := NewUser(
 		logger,
 		toggles,
@@ -105,16 +105,16 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 		authorizor,
 		stateSyncer,
 		transactionFactory,
-		userDaoV2,
-		teamMemberDaoV2,
-		userFileUploadSessionDaoV2,
+		userDao,
+		teamMemberDao,
+		userFileUploadSessionDao,
 	)
 
 	return UserTestRef{
-		userService:                userService,
-		userDaoV2:                  userDaoV2,
-		userFileUploadSessionDaoV2: userFileUploadSessionDaoV2,
-		transactionFactory:         transactionFactory,
+		userService:              userService,
+		userDao:                  userDao,
+		userFileUploadSessionDao: userFileUploadSessionDao,
+		transactionFactory:       transactionFactory,
 	}, true
 }
 
@@ -146,7 +146,7 @@ func TestUserService_CreateUser(t *testing.T) {
 	require.NotNil(t, newUser.CreatedAt)
 	require.Nil(t, newUser.UpdatedAt)
 
-	userInMemory, err := userTestRef.userDaoV2.FindUserByID(ct, newUser.ID)
+	userInMemory, err := userTestRef.userDao.FindUserByID(ct, newUser.ID)
 	require.Nil(t, err)
 	require.Equal(t, requesterUserID, userInMemory.ID)
 	require.Equal(t, userInput.LastName, userInMemory.LastName)
@@ -184,7 +184,7 @@ func TestUserService_UpdateUser(t *testing.T) {
 		UpdatedAt:  nil,
 	}
 
-	require.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user))
+	require.Nil(t, userTestRef.userDao.CreateUser(ct, tx, user))
 
 	updateInput := UpdateUserInput{
 		LastName:  "UpdatedLastName",
@@ -199,7 +199,7 @@ func TestUserService_UpdateUser(t *testing.T) {
 	require.Equal(t, user.CreatedAt, updatedUser.CreatedAt)
 	require.NotNil(t, updatedUser.UpdatedAt)
 
-	userInMemory, err := userTestRef.userDaoV2.FindUserByID(ct, user.ID)
+	userInMemory, err := userTestRef.userDao.FindUserByID(ct, user.ID)
 	require.Nil(t, err)
 	require.Equal(t, requesterUserID, userInMemory.ID)
 	require.Equal(t, updateInput.LastName, userInMemory.LastName)
@@ -237,7 +237,7 @@ func TestUserService_FindUserByID(t *testing.T) {
 		UpdatedAt:  &now,
 	}
 
-	require.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user))
+	require.Nil(t, userTestRef.userDao.CreateUser(ct, tx, user))
 
 	userFound, internalErr := userTestRef.userService.FindUserByID(ct, user.ID)
 	require.Nil(t, internalErr)
@@ -270,7 +270,7 @@ func TestUserService_CreateUserProfileUploadSession(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, uploadSessionID, uint64(1))
 
-	uploadSessionInMemory, err := userTestRef.userFileUploadSessionDaoV2.FindUserFileUploadSessionByUserIDWithTx(ct,
+	uploadSessionInMemory, err := userTestRef.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(ct,
 		tx,
 		requesterUserID,
 		entity.ProfileUserFileUploadSessionType,
@@ -311,7 +311,7 @@ func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
 		UpdatedAt:  &now,
 	}
 
-	require.Nil(t, userTestRef.userDaoV2.CreateUser(ct, tx, user))
+	require.Nil(t, userTestRef.userDao.CreateUser(ct, tx, user))
 
 	uploadSessionID, err := userTestRef.userService.CreateUserProfileUploadSession(ct)
 	require.Nil(t, err)
@@ -325,7 +325,7 @@ func TestUserService_FinishUserProfileUploadSession(t *testing.T) {
 	require.Equal(t, user.LastName, updatedUser.LastName)
 	require.Equal(t, user.CreatedAt, updatedUser.CreatedAt)
 
-	uploadSessionInMemory, err := userTestRef.userFileUploadSessionDaoV2.FindUserFileUploadSessionByUserIDWithTx(ct,
+	uploadSessionInMemory, err := userTestRef.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(ct,
 		tx,
 		requesterUserID,
 		entity.ProfileUserFileUploadSessionType,

@@ -13,7 +13,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -35,8 +35,8 @@ type TaskLink struct {
 	featureToggles      feature.Toggles
 	transactionFactory  transaction.Factory
 	stateSyncer         *realtime.StateSyncer
-	taskLinkDaoV2       daov2.TaskLink
-	taskDaoV2           daov2.Task
+	taskLinkDao         dao.TaskLink
+	taskDao             dao.Task
 }
 
 func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, *errs.Error) {
@@ -49,7 +49,7 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 	var taskLinks []entity.TaskLink
 	internalErr := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		taskLinks, err = t.taskLinkDaoV2.FindLinksByTaskID(ct, tx, taskID)
+		taskLinks, err = t.taskLinkDao.FindLinksByTaskID(ct, tx, taskID)
 		return err
 	})
 
@@ -125,8 +125,8 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 	}
 
 	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		createTaskLinkMutation := mutation.NewCreateTaskLink(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
-		internalErr := createTaskLinkMutation.ExecuteV2(ct, tx)
+		createTaskLinkMutation := mutation.NewCreateTaskLink(t.logger, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
+		internalErr := createTaskLinkMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -183,13 +183,13 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 	var taskLink entity.TaskLink
 	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		taskLink, err = t.taskLinkDaoV2.FindTaskLinkByID(ct, tx, taskLinkID)
+		taskLink, err = t.taskLinkDao.FindTaskLinkByID(ct, tx, taskLinkID)
 		if err != nil {
 			return err
 		}
 
-		deleteTaskLinkMutation := mutation.NewDeleteTaskLink(t.logger, t.stateSyncer, t.taskLinkDaoV2, t.taskDaoV2, taskLink)
-		internalErr := deleteTaskLinkMutation.ExecuteV2(ct, tx)
+		deleteTaskLinkMutation := mutation.NewDeleteTaskLink(t.logger, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
+		internalErr := deleteTaskLinkMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -213,8 +213,8 @@ func NewTaskLink(
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
-	taskLinkDaoV2 daov2.TaskLink,
-	taskDaoV2 daov2.Task,
+	taskLinkDao dao.TaskLink,
+	taskDao dao.Task,
 ) TaskLink {
 	return TaskLink{
 		logger:              logger,
@@ -223,7 +223,7 @@ func NewTaskLink(
 		authorizer:          authorizer,
 		featureToggles:      featureToggles,
 		stateSyncer:         stateSyncer,
-		taskLinkDaoV2:       taskLinkDaoV2,
-		taskDaoV2:           taskDaoV2,
+		taskLinkDao:         taskLinkDao,
+		taskDao:             taskDao,
 	}
 }

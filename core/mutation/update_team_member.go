@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type UpdateTeamMember struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	teamMemberDaoV2  daov2.TeamMember
+	teamMemberDao    dao.TeamMember
 	id               uint64
 	teamMember       entity.TeamMember
 	clientNotifiers  []*realtime.ClientNotifier
@@ -27,8 +27,8 @@ func (u *UpdateTeamMember) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTeamMember) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return u.teamMemberDaoV2.UpdateTeamMember(ct, tx, u.teamMember)
+func (u *UpdateTeamMember) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return u.teamMemberDao.UpdateTeamMember(ct, tx, u.teamMember)
 }
 
 func (u *UpdateTeamMember) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -50,7 +50,7 @@ func (u *UpdateTeamMember) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateTeamMember) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateTeamMember) GetClientNotifiers() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 
@@ -70,13 +70,13 @@ func (u *UpdateTeamMember) CleanUp(ct context.Context) *errs.Error {
 func NewUpdateTeamMember(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	teamMemberDaoV2 daov2.TeamMember,
+	teamMemberDao dao.TeamMember,
 	teamMember entity.TeamMember,
 ) *UpdateTeamMember {
 	return &UpdateTeamMember{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		teamMemberDaoV2:  teamMemberDaoV2,
+		teamMemberDao:    teamMemberDao,
 		id:               stateSyncer.NextMutationID(),
 		teamMember:       teamMember,
 		notifierPrepared: false,

@@ -23,8 +23,8 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -32,13 +32,13 @@ import (
 )
 
 type TeamTestRef struct {
-	transactionFactory         transaction.Factory
-	teamService                Team
-	teamDaoV2                  daov2.Team
-	teamMemberDaoV2            daov2.TeamMember
-	teamFileUploadSessionDaoV2 daov2.TeamFileUploadSession
-	teamGroupDaoV2             daov2.TeamGroup
-	cloudTestKit               testkit.TestKit
+	transactionFactory       transaction.Factory
+	teamService              Team
+	teamDao                  dao.Team
+	teamMemberDao            dao.TeamMember
+	teamFileUploadSessionDao dao.TeamFileUploadSession
+	teamGroupDao             dao.TeamGroup
+	cloudTestKit             testkit.TestKit
 }
 
 func TestTeamService_FindTeamByID(t *testing.T) {
@@ -71,7 +71,7 @@ func TestTeamService_FindTeamByID(t *testing.T) {
 		UpdatedAt:     &now,
 	}
 
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team))
 
 	teamFound, internalErr := teamRef.teamService.FindTeamByID(ct, team.ID)
 	require.Nil(t, internalErr)
@@ -126,8 +126,8 @@ func TestTeamService_FindTeams(t *testing.T) {
 		UpdatedAt:     &now,
 	}
 
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1))
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team1))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team2))
 
 	teamFilter := TeamFilter{
 		TeamID: &teamID2,
@@ -203,12 +203,12 @@ func TestTeamService_FindTeamsForUser(t *testing.T) {
 	teamMember2 := entity.TeamMember{TeamID: teamID2, UserID: requesterUserID2, CreatedAt: now}
 	teamMember3 := entity.TeamMember{TeamID: teamID3, UserID: requesterUserID1, CreatedAt: now}
 
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team1))
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team2))
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team3))
-	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1))
-	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2))
-	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember3))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team1))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team2))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team3))
+	require.Nil(t, teamRef.teamMemberDao.CreateTeamMember(ct, tx, teamMember1))
+	require.Nil(t, teamRef.teamMemberDao.CreateTeamMember(ct, tx, teamMember2))
+	require.Nil(t, teamRef.teamMemberDao.CreateTeamMember(ct, tx, teamMember3))
 
 	teamFilter := TeamFilter{
 		TeamID: &teamID3,
@@ -252,7 +252,7 @@ func TestTeamService_CreateTeam(t *testing.T) {
 	require.NotNil(t, newTeam.CreatedAt)
 	require.Nil(t, newTeam.UpdatedAt)
 
-	teamInMemory, err := teamRef.teamDaoV2.FindTeamByID(ct, newTeam.ID)
+	teamInMemory, err := teamRef.teamDao.FindTeamByID(ct, newTeam.ID)
 	require.Nil(t, err)
 
 	require.Equal(t, requesterUserID, teamInMemory.CreatorUserID)
@@ -320,7 +320,7 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 
 	defer tx.Rollback()
 
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team))
 
 	updateTeamInput := UpdateTeamInput{Name: "UpdatedTeamName", OwnerUserID: 25}
 	updatedTeam, internalErr := teamRef.teamService.UpdateTeam(ct, team.ID, updateTeamInput)
@@ -332,7 +332,7 @@ func TestTeamService_UpdateTeam(t *testing.T) {
 	require.Equal(t, team.CreatedAt, updatedTeam.CreatedAt)
 	require.NotNil(t, updatedTeam.UpdatedAt)
 
-	teamInMemory, err := teamRef.teamDaoV2.FindTeamByID(ct, updatedTeam.ID)
+	teamInMemory, err := teamRef.teamDao.FindTeamByID(ct, updatedTeam.ID)
 	require.Nil(t, err)
 	require.Equal(t, team.CreatorUserID, teamInMemory.CreatorUserID)
 	require.Equal(t, updateTeamInput.Name, teamInMemory.Name)
@@ -372,7 +372,7 @@ func TestTeamService_DeleteTeam(t *testing.T) {
 
 	defer tx.Rollback()
 
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team))
 
 	deletedTeam, internalErr := teamRef.teamService.DeleteTeam(ct, team.ID)
 	require.Nil(t, internalErr)
@@ -383,7 +383,7 @@ func TestTeamService_DeleteTeam(t *testing.T) {
 	require.Equal(t, team.CreatedAt, deletedTeam.CreatedAt)
 	require.Equal(t, team.UpdatedAt, deletedTeam.UpdatedAt)
 
-	_, err = teamRef.teamDaoV2.FindTeamByID(ct, deletedTeam.ID)
+	_, err = teamRef.teamDao.FindTeamByID(ct, deletedTeam.ID)
 	require.NotNil(t, err)
 	require.Equal(t, err.Code, errs.NotFound)
 }
@@ -409,7 +409,7 @@ func TestTeamService_CreateTeamIconUploadSession(t *testing.T) {
 	require.Nil(t, internalErr)
 	require.Equal(t, uploadSessionID, uint64(1))
 
-	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
+	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamIDWithTx(ct,
 		tx,
 		teamID,
 		entity.IconTeamFileUploadSessionType,
@@ -452,7 +452,7 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 
 	defer tx.Rollback()
 
-	require.Nil(t, teamRef.teamDaoV2.CreateTeam(ct, tx, team))
+	require.Nil(t, teamRef.teamDao.CreateTeam(ct, tx, team))
 
 	uploadSessionID, internalErr := teamRef.teamService.CreateTeamIconUploadSession(ct, teamID)
 	require.Nil(t, internalErr)
@@ -467,7 +467,7 @@ func TestTeamService_FinishTeamIconUploadSession(t *testing.T) {
 	require.Equal(t, team.OwnerUserID, updatedTeam.OwnerUserID)
 	require.Equal(t, team.CreatorUserID, updatedTeam.CreatorUserID)
 
-	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDaoV2.FindTeamFileUploadSessionByTeamIDWithTx(ct,
+	uploadSessionInMemory, err := teamRef.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamIDWithTx(ct,
 		tx,
 		teamID,
 		entity.IconTeamFileUploadSessionType,
@@ -515,8 +515,8 @@ func TestTeamService_FindTeamMembers(t *testing.T) {
 		UpdatedAt:       &now,
 	}
 
-	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember1))
-	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember2))
+	require.Nil(t, teamRef.teamMemberDao.CreateTeamMember(ct, tx, teamMember1))
+	require.Nil(t, teamRef.teamMemberDao.CreateTeamMember(ct, tx, teamMember2))
 
 	teamsFound, internalErr := teamRef.teamService.FindTeamMembers(ct, teamMember1.TeamID)
 	require.Nil(t, internalErr)
@@ -552,7 +552,7 @@ func TestTeamService_AddMemberToTeam(t *testing.T) {
 	require.Equal(t, teamMember.TeamID, teamID)
 	require.Equal(t, teamMember.UserID, requesterUserID)
 
-	teamMemberInMemory, internalErr := teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamID, requesterUserID)
+	teamMemberInMemory, internalErr := teamRef.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, requesterUserID)
 	require.Nil(t, internalErr)
 	require.Equal(t, teamMemberInMemory.TeamID, teamID)
 	require.Equal(t, teamMemberInMemory.UserID, requesterUserID)
@@ -585,7 +585,7 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 		UpdatedAt:       &now,
 	}
 
-	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember))
+	require.Nil(t, teamRef.teamMemberDao.CreateTeamMember(ct, tx, teamMember))
 
 	teamDeleted, internalErr := teamRef.teamService.RemoveMemberFromTeam(ct, teamMember.TeamID, teamMember.UserID)
 	require.Nil(t, internalErr)
@@ -595,7 +595,7 @@ func TestTeamService_RemoveMemberFromTeam(t *testing.T) {
 	require.Equal(t, teamDeleted.CreatedAt, teamMember.CreatedAt)
 	require.Equal(t, teamDeleted.UpdatedAt, teamMember.UpdatedAt)
 
-	_, internalErr = teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
+	_, internalErr = teamRef.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
 	require.NotNil(t, internalErr)
 	require.Equal(t, internalErr.Code, errs.NotFound)
 }
@@ -627,7 +627,7 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 		UpdatedAt:       &now,
 	}
 
-	require.Nil(t, teamRef.teamMemberDaoV2.CreateTeamMember(ct, tx, teamMember))
+	require.Nil(t, teamRef.teamMemberDao.CreateTeamMember(ct, tx, teamMember))
 
 	updateInput := UpdateTeamMemberInput{
 		UserID:          requesterUserID,
@@ -641,7 +641,7 @@ func TestTeamService_UpdateTeamMember(t *testing.T) {
 	require.Equal(t, teamUpdated.CreatedAt, teamMember.CreatedAt)
 	require.NotEqual(t, teamUpdated.UpdatedAt, teamMember.UpdatedAt)
 
-	teamMemberInMemory, internalErr := teamRef.teamMemberDaoV2.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
+	teamMemberInMemory, internalErr := teamRef.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamMember.TeamID, teamMember.UserID)
 	require.Nil(t, internalErr)
 	require.Equal(t, teamMemberInMemory.TeamID, teamMember.TeamID)
 	require.Equal(t, teamMemberInMemory.UserID, teamMember.UserID)
@@ -706,21 +706,21 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	transactionFactory := transaction.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamFileUploadSessionTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamGroupTableName)
-	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
+	teamyBackendDB.CreateTable(daotest.TeamTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberTableName)
+	teamyBackendDB.CreateTable(daotest.TeamFileUploadSessionTableName)
+	teamyBackendDB.CreateTable(daotest.TeamGroupTableName)
+	teamyBackendDB.CreateTable(daotest.SprintTableName)
 
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
-	teamFileUploadSessionDaoV2 := daotestv2.NewTeamFileUploadSession(teamyBackendDB)
-	teamGroupDaoV2 := daotestv2.NewTeamGroup(teamyBackendDB, transactionFactory)
+	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
+	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
+	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
+	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
+	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
+	teamGroupDao := daotest.NewTeamGroup(teamyBackendDB, transactionFactory)
 	teamService := NewTeam(
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
@@ -729,21 +729,21 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		toggles,
 		stateSyncer,
 		transactionFactory,
-		taskDaoV2,
-		sprintDaoV2,
-		sprintParticipantDaoV2,
-		teamDaoV2,
-		teamMemberDaoV2,
-		teamFileUploadSessionDaoV2,
-		teamGroupDaoV2,
+		taskDao,
+		sprintDao,
+		sprintParticipantDao,
+		teamDao,
+		teamMemberDao,
+		teamFileUploadSessionDao,
+		teamGroupDao,
 	)
 	return TeamTestRef{
-		teamService:                teamService,
-		teamDaoV2:                  teamDaoV2,
-		teamMemberDaoV2:            teamMemberDaoV2,
-		teamFileUploadSessionDaoV2: teamFileUploadSessionDaoV2,
-		teamGroupDaoV2:             teamGroupDaoV2,
-		cloudTestKit:               cloudTestKit,
+		teamService:              teamService,
+		teamDao:                  teamDao,
+		teamMemberDao:            teamMemberDao,
+		teamFileUploadSessionDao: teamFileUploadSessionDao,
+		teamGroupDao:             teamGroupDao,
+		cloudTestKit:             cloudTestKit,
 	}, true
 }
 
@@ -756,7 +756,7 @@ func assertTeamGroupAndUserPermissions(
 	requesterUserID uint64,
 	resourceTypeOperations []cloudAuthorization.ResourceTypeOperation,
 ) bool {
-	_, err := teamRef.teamGroupDaoV2.FindGroupByTeamIDAndLabel(ct, teamID, groupLabel)
+	_, err := teamRef.teamGroupDao.FindGroupByTeamIDAndLabel(ct, teamID, groupLabel)
 	require.Nil(t, err)
 
 	for _, resourceTypeOperation := range resourceTypeOperations {

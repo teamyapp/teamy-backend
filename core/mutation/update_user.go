@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,8 +14,8 @@ import (
 type UpdateUser struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
-	userDaoV2         daov2.User
-	teamMemberDaoV2   daov2.TeamMember
+	userDao           dao.User
+	teamMemberDao     dao.TeamMember
 	id                uint64
 	user              entity.User
 	clientNotifiers   []*realtime.ClientNotifier
@@ -28,8 +28,8 @@ func (u *UpdateUser) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateUser) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return u.userDaoV2.UpdateUser(ct, tx, u.user)
+func (u *UpdateUser) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return u.userDao.UpdateUser(ct, tx, u.user)
 }
 
 func (u *UpdateUser) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -37,7 +37,7 @@ func (u *UpdateUser) PrepareClientNotifiers(ct context.Context, tx *transaction.
 		return nil
 	}
 
-	teamIDs, err := u.teamMemberDaoV2.FindTeamIDsByUserIDWithTx(ct, tx, u.user.ID)
+	teamIDs, err := u.teamMemberDao.FindTeamIDsByUserIDWithTx(ct, tx, u.user.ID)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (u *UpdateUser) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateUser) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateUser) GetClientNotifiers() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 
@@ -75,15 +75,15 @@ func (u *UpdateUser) CleanUp(ct context.Context) *errs.Error {
 func NewUpdateUser(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	userDaoV2 daov2.User,
-	teamMemberDaoV2 daov2.TeamMember,
+	userDao dao.User,
+	teamMemberDao dao.TeamMember,
 	user entity.User,
 ) *UpdateUser {
 	return &UpdateUser{
 		logger:            logger,
 		stateSyncer:       stateSyncer,
-		userDaoV2:         userDaoV2,
-		teamMemberDaoV2:   teamMemberDaoV2,
+		userDao:           userDao,
+		teamMemberDao:     teamMemberDao,
 		id:                stateSyncer.NextMutationID(),
 		user:              user,
 		notifiersPrepared: false,

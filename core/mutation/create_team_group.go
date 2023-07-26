@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type CreateTeamGroup struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
-	teamGroupDaoV2    daov2.TeamGroup
+	teamGroupDao      dao.TeamGroup
 	id                uint64
 	teamGroup         entity.TeamGroup
 	clientNotifiers   []*realtime.ClientNotifier
@@ -27,8 +27,8 @@ func (c *CreateTeamGroup) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTeamGroup) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return c.teamGroupDaoV2.CreateGroup(ct, tx, c.teamGroup)
+func (c *CreateTeamGroup) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return c.teamGroupDao.CreateGroup(ct, tx, c.teamGroup)
 }
 
 func (c *CreateTeamGroup) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -50,7 +50,7 @@ func (c *CreateTeamGroup) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTeamGroup) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateTeamGroup) GetClientNotifiers() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
@@ -70,13 +70,13 @@ func (c *CreateTeamGroup) CleanUp(ct context.Context) *errs.Error {
 func NewCreateTeamGroup(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	teamGroupDaoV2 daov2.TeamGroup,
+	teamGroupDao dao.TeamGroup,
 	teamGroup entity.TeamGroup,
 ) *CreateTeamGroup {
 	return &CreateTeamGroup{
 		logger:            logger,
 		stateSyncer:       stateSyncer,
-		teamGroupDaoV2:    teamGroupDaoV2,
+		teamGroupDao:      teamGroupDao,
 		id:                stateSyncer.NextMutationID(),
 		teamGroup:         teamGroup,
 		notifiersPrepared: false,

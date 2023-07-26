@@ -22,8 +22,8 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/daov2"
-	"github.com/teamyapp/teamy-backend/core/daov2/daotestv2"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -35,15 +35,15 @@ const automationUserID = 0
 var automationCtx = ctx.NewContextWithUserID(context.Background(), automationUserID)
 
 type SprintTestRef struct {
-	sprintService           Sprint
-	sprintDaoV2             daov2.Sprint
-	teamDaoV2               daov2.Team
-	userDaoV2               daov2.User
-	taskDaoV2               daov2.Task
-	sprintTaskRelationDaoV2 daov2.SprintTaskRelation
-	sprintParticipantDaoV2  daov2.SprintParticipant
-	cloudTestKit            testkit.TestKit
-	transactionFactory      transaction.Factory
+	sprintService         Sprint
+	sprintDao             dao.Sprint
+	teamDao               dao.Team
+	userDao               dao.User
+	taskDao               dao.Task
+	sprintTaskRelationDao dao.SprintTaskRelation
+	sprintParticipantDao  dao.SprintParticipant
+	cloudTestKit          testkit.TestKit
+	transactionFactory    transaction.Factory
 }
 
 func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef, bool) {
@@ -104,21 +104,21 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 	transactionFactory := transaction.NewFactory(nil)
 	teamyBackendDB := dbtest.NewInMemoryDB()
-	teamyBackendDB.CreateTable(daotestv2.TeamTableName)
-	teamyBackendDB.CreateTable(daotestv2.SprintTableName)
-	teamyBackendDB.CreateTable(daotestv2.TeamMemberTableName)
-	teamyBackendDB.CreateTable(daotestv2.SprintTaskRelationTableName)
-	teamyBackendDB.CreateTable(daotestv2.SprintParticipantTableName)
-	teamyBackendDB.CreateTable(daotestv2.TaskTableName)
-	teamMemberDaoV2 := daotestv2.NewTeamMember(teamyBackendDB, transactionFactory)
-	sprintDaoV2 := daotestv2.NewSprint(teamyBackendDB, transactionFactory)
-	taskDaoV2 := daotestv2.NewTask(teamyBackendDB, transactionFactory)
-	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDaoV2)
-	teamDaoV2 := daotestv2.NewTeam(teamyBackendDB, transactionFactory)
-	sprintTaskRelationDaoV2 := daotestv2.NewSprintTaskRelation(teamyBackendDB)
-	sprintParticipantDaoV2 := daotestv2.NewSprintParticipant(teamyBackendDB, transactionFactory)
-	threadDaoV2 := daotestv2.NewThread(teamyBackendDB)
-	userDaoV2 := daotestv2.NewUser(teamyBackendDB, transactionFactory)
+	teamyBackendDB.CreateTable(daotest.TeamTableName)
+	teamyBackendDB.CreateTable(daotest.SprintTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberTableName)
+	teamyBackendDB.CreateTable(daotest.SprintTaskRelationTableName)
+	teamyBackendDB.CreateTable(daotest.SprintParticipantTableName)
+	teamyBackendDB.CreateTable(daotest.TaskTableName)
+	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
+	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
+	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
+	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
+	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
+	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
+	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
+	threadDao := daotest.NewThread(teamyBackendDB)
+	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 
 	sprintService := NewSprint(
 		logger,
@@ -127,25 +127,25 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 		authorizer,
 		toggles,
 		transactionFactory,
-		taskDaoV2,
-		sprintDaoV2,
-		teamDaoV2,
-		sprintTaskRelationDaoV2,
-		sprintParticipantDaoV2,
-		teamMemberDaoV2,
-		threadDaoV2,
+		taskDao,
+		sprintDao,
+		teamDao,
+		sprintTaskRelationDao,
+		sprintParticipantDao,
+		teamMemberDao,
+		threadDao,
 	)
 
 	return SprintTestRef{
-		sprintService:           sprintService,
-		cloudTestKit:            cloudTestKit,
-		sprintDaoV2:             sprintDaoV2,
-		teamDaoV2:               teamDaoV2,
-		userDaoV2:               userDaoV2,
-		taskDaoV2:               taskDaoV2,
-		sprintTaskRelationDaoV2: sprintTaskRelationDaoV2,
-		sprintParticipantDaoV2:  sprintParticipantDaoV2,
-		transactionFactory:      transactionFactory,
+		sprintService:         sprintService,
+		cloudTestKit:          cloudTestKit,
+		sprintDao:             sprintDao,
+		teamDao:               teamDao,
+		userDao:               userDao,
+		taskDao:               taskDao,
+		sprintTaskRelationDao: sprintTaskRelationDao,
+		sprintParticipantDao:  sprintParticipantDao,
+		transactionFactory:    transactionFactory,
 	}, true
 }
 
@@ -296,7 +296,7 @@ func TestSprintService_CreateSprint(t *testing.T) {
 				CreatorUserID: 10,
 			}
 
-			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
+			err = sprintTestRef.teamDao.CreateTeam(ct, tx, team)
 			require.Nil(t, err)
 
 			sprint := CreateSprintInput{
@@ -470,7 +470,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				Name:          "test team",
 				CreatorUserID: 10,
 			}
-			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
+			err = sprintTestRef.teamDao.CreateTeam(ct, tx, team)
 			require.Nil(t, err)
 
 			sprint := entity.Sprint{
@@ -479,7 +479,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				EndAt:        now.Add(time.Hour * 24 * 7),
 				OwningTeamID: teamID,
 			}
-			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint)
+			err = sprintTestRef.sprintDao.CreateSprint(ct, tx, sprint)
 			require.Nil(t, err)
 
 			participant := entity.SprintParticipant{
@@ -489,7 +489,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				UnusedBandwidth: time.Hour * 12 * 7,
 				CreatedAt:       now,
 			}
-			err = sprintTestRef.sprintService.sprintParticipantDaoV2.CreateSprintParticipant(ct, tx, participant)
+			err = sprintTestRef.sprintService.sprintParticipantDao.CreateSprintParticipant(ct, tx, participant)
 			require.Nil(t, err)
 
 			effort := time.Hour * 12 * 7
@@ -502,14 +502,14 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				Effort:        &effort,
 			}
 
-			err = sprintTestRef.taskDaoV2.CreateTask(ct, tx, task)
+			err = sprintTestRef.taskDao.CreateTask(ct, tx, task)
 			require.Nil(t, err)
 
 			sprintTaskRelation := entity.SprintTaskRelation{
 				SprintID: sprint.ID,
 				TaskID:   task.ID,
 			}
-			err = sprintTestRef.sprintTaskRelationDaoV2.CreateSprintTaskRelation(ct, tx, sprintTaskRelation)
+			err = sprintTestRef.sprintTaskRelationDao.CreateSprintTaskRelation(ct, tx, sprintTaskRelation)
 			require.Nil(t, err)
 
 			deletedSprint, internalErr := sprintTestRef.sprintService.DeleteSprint(ct, sprint.ID)
@@ -520,10 +520,10 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				require.Nil(t, internalErr)
 			}
 
-			updatedTask, err := sprintTestRef.taskDaoV2.FindTaskByIDWithTx(ct, tx, task.ID)
+			updatedTask, err := sprintTestRef.taskDao.FindTaskByIDWithTx(ct, tx, task.ID)
 			require.Nil(t, err)
 
-			_, err = sprintTestRef.sprintParticipantDaoV2.FindParticipantWithTx(ct, tx, participant.SprintID, participant.UserID)
+			_, err = sprintTestRef.sprintParticipantDao.FindParticipantWithTx(ct, tx, participant.SprintID, participant.UserID)
 			require.Equal(t, err.Code, errs.NotFound)
 
 			require.Equal(t, deletedSprint.OwningTeamID, teamID)
@@ -694,10 +694,10 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 				OwningTeamID: teamID,
 			}
 
-			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint1)
+			err = sprintTestRef.sprintDao.CreateSprint(ct, tx, sprint1)
 			require.Nil(t, err)
 
-			err = sprintTestRef.sprintDaoV2.CreateSprint(ct, tx, sprint2)
+			err = sprintTestRef.sprintDao.CreateSprint(ct, tx, sprint2)
 			require.Nil(t, err)
 
 			team := entity.Team{
@@ -707,7 +707,7 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 				CreatedAt:     now,
 			}
 
-			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
+			err = sprintTestRef.teamDao.CreateTeam(ct, tx, team)
 			require.Nil(t, err)
 
 			updatedTeam, internalErr := sprintTestRef.sprintService.SetTeamActiveSprint(ct, teamID, sprintID1)
@@ -733,7 +733,7 @@ func TestSprintService_SetTeamActiveSprint(t *testing.T) {
 
 }
 
-func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
+func TestSprintService_GetTeamActiveSprint(t *testing.T) {
 	var teamID uint64 = 1
 	testCases := []struct {
 		name            string
@@ -894,7 +894,7 @@ func TestSprintServiceV2_GetTeamActiveSprint(t *testing.T) {
 				CreatedAt:      now,
 			}
 
-			err = sprintTestRef.teamDaoV2.CreateTeam(ct, tx, team)
+			err = sprintTestRef.teamDao.CreateTeam(ct, tx, team)
 			require.Nil(t, err)
 
 			activeSprint, internalErr := sprintTestRef.sprintService.GetActiveSprint(ct, teamID)

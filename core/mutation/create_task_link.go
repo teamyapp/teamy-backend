@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,8 +14,8 @@ import (
 type CreateTaskLink struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	taskLinkDaoV2    daov2.TaskLink
-	taskDaoV2        daov2.Task
+	taskLinkDao      dao.TaskLink
+	taskDao          dao.Task
 	id               uint64
 	taskLink         entity.TaskLink
 	clientNotifiers  []*realtime.ClientNotifier
@@ -28,8 +28,8 @@ func (c *CreateTaskLink) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTaskLink) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	err := c.taskLinkDaoV2.CreateTaskLink(ct, tx, c.taskLink)
+func (c *CreateTaskLink) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	err := c.taskLinkDao.CreateTaskLink(ct, tx, c.taskLink)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (c *CreateTaskLink) PrepareClientNotifiers(ct context.Context, tx *transact
 		return nil
 	}
 
-	task, err := c.taskDaoV2.FindTaskByIDWithTx(ct, tx, c.taskLink.TaskID)
+	task, err := c.taskDao.FindTaskByIDWithTx(ct, tx, c.taskLink.TaskID)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (c *CreateTaskLink) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTaskLink) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateTaskLink) GetClientNotifiers() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
@@ -81,15 +81,15 @@ func (c *CreateTaskLink) CleanUp(ct context.Context) *errs.Error {
 func NewCreateTaskLink(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	taskLinkDaoV2 daov2.TaskLink,
-	taskDaoV2 daov2.Task,
+	taskLinkDao dao.TaskLink,
+	taskDao dao.Task,
 	taskLink entity.TaskLink,
 ) *CreateTaskLink {
 	return &CreateTaskLink{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		taskLinkDaoV2:    taskLinkDaoV2,
-		taskDaoV2:        taskDaoV2,
+		taskLinkDao:      taskLinkDao,
+		taskDao:          taskDao,
 		id:               stateSyncer.NextMutationID(),
 		taskLink:         taskLink,
 		notifierPrepared: false,

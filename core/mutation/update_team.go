@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type UpdateTeam struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	teamDaoV2        daov2.Team
+	teamDao          dao.Team
 	id               uint64
 	team             entity.Team
 	clientNotifiers  []*realtime.ClientNotifier
@@ -27,8 +27,8 @@ func (u *UpdateTeam) GetID() uint64 {
 	return u.id
 }
 
-func (u *UpdateTeam) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return u.teamDaoV2.UpdateTeam(ct, tx, u.team)
+func (u *UpdateTeam) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return u.teamDao.UpdateTeam(ct, tx, u.team)
 }
 
 func (u *UpdateTeam) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -50,7 +50,7 @@ func (u *UpdateTeam) Undo() *errs.Error {
 	return nil
 }
 
-func (u *UpdateTeam) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (u *UpdateTeam) GetClientNotifiers() []*realtime.ClientNotifier {
 	return u.clientNotifiers
 }
 
@@ -70,13 +70,13 @@ func (u *UpdateTeam) CleanUp(ct context.Context) *errs.Error {
 func NewUpdateTeam(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	teamDaoV2 daov2.Team,
+	teamDao dao.Team,
 	team entity.Team,
 ) *UpdateTeam {
 	return &UpdateTeam{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		teamDaoV2:        teamDaoV2,
+		teamDao:          teamDao,
 		id:               stateSyncer.NextMutationID(),
 		team:             team,
 		notifierPrepared: false,

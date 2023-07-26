@@ -6,20 +6,20 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
 type CreateTaskAwaitForRelation struct {
-	logger                    telemetry.Logger
-	stateSyncer               *realtime.StateSyncer
-	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation
-	taskDaoV2                 daov2.Task
-	id                        uint64
-	taskAwaitForRelation      entity.TaskAwaitForRelation
-	clientNotifiers           []*realtime.ClientNotifier
-	notifiersPrepared         bool
+	logger                  telemetry.Logger
+	stateSyncer             *realtime.StateSyncer
+	taskAwaitForRelationDao dao.TaskAwaitForRelation
+	taskDao                 dao.Task
+	id                      uint64
+	taskAwaitForRelation    entity.TaskAwaitForRelation
+	clientNotifiers         []*realtime.ClientNotifier
+	notifiersPrepared       bool
 }
 
 var _ realtime.Mutation = (*CreateTaskAwaitForRelation)(nil)
@@ -28,8 +28,8 @@ func (c *CreateTaskAwaitForRelation) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateTaskAwaitForRelation) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	err := c.taskAwaitForRelationDaoV2.CreateRelation(ct, tx, c.taskAwaitForRelation)
+func (c *CreateTaskAwaitForRelation) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	err := c.taskAwaitForRelationDao.CreateRelation(ct, tx, c.taskAwaitForRelation)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (c *CreateTaskAwaitForRelation) PrepareClientNotifiers(ct context.Context, 
 		return nil
 	}
 
-	task, err := c.taskDaoV2.FindTaskByIDWithTx(ct, tx, c.taskAwaitForRelation.AwaitForTaskID)
+	task, err := c.taskDao.FindTaskByIDWithTx(ct, tx, c.taskAwaitForRelation.AwaitForTaskID)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (c *CreateTaskAwaitForRelation) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateTaskAwaitForRelation) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (c *CreateTaskAwaitForRelation) GetClientNotifiers() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
@@ -80,17 +80,17 @@ func (c *CreateTaskAwaitForRelation) CleanUp(ct context.Context) *errs.Error {
 func NewCreateTaskAwaitForRelation(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	taskAwaitForRelationDaoV2 daov2.TaskAwaitForRelation,
-	taskDaoV2 daov2.Task,
+	taskAwaitForRelationDao dao.TaskAwaitForRelation,
+	taskDao dao.Task,
 	taskAwaitForRelation entity.TaskAwaitForRelation,
 ) *CreateTaskAwaitForRelation {
 	return &CreateTaskAwaitForRelation{
-		logger:                    logger,
-		stateSyncer:               stateSyncer,
-		taskAwaitForRelationDaoV2: taskAwaitForRelationDaoV2,
-		taskDaoV2:                 taskDaoV2,
-		id:                        stateSyncer.NextMutationID(),
-		taskAwaitForRelation:      taskAwaitForRelation,
-		notifiersPrepared:         false,
+		logger:                  logger,
+		stateSyncer:             stateSyncer,
+		taskAwaitForRelationDao: taskAwaitForRelationDao,
+		taskDao:                 taskDao,
+		id:                      stateSyncer.NextMutationID(),
+		taskAwaitForRelation:    taskAwaitForRelation,
+		notifiersPrepared:       false,
 	}
 }

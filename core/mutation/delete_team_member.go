@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type DeleteTeamMember struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	teamMemberDaoV2  daov2.TeamMember
+	teamMemberDao    dao.TeamMember
 	id               uint64
 	teamID           uint64
 	userID           uint64
@@ -28,8 +28,8 @@ func (d *DeleteTeamMember) GetID() uint64 {
 	return d.id
 }
 
-func (d *DeleteTeamMember) ExecuteV2(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	return d.teamMemberDaoV2.DeleteTeamMember(ct, tx, d.teamID, d.userID)
+func (d *DeleteTeamMember) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	return d.teamMemberDao.DeleteTeamMember(ct, tx, d.teamID, d.userID)
 }
 
 func (d *DeleteTeamMember) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
@@ -51,7 +51,7 @@ func (d *DeleteTeamMember) Undo() *errs.Error {
 	return nil
 }
 
-func (d *DeleteTeamMember) GetClientNotifiersV2() []*realtime.ClientNotifier {
+func (d *DeleteTeamMember) GetClientNotifiers() []*realtime.ClientNotifier {
 	return d.clientNotifiers
 }
 
@@ -81,14 +81,14 @@ func (d *DeleteTeamMember) CleanUp(ct context.Context) *errs.Error {
 func NewDeleteTeamMember(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	teamMemberDaoV2 daov2.TeamMember,
+	teamMemberDao dao.TeamMember,
 	teamID uint64,
 	userID uint64,
 ) *DeleteTeamMember {
 	return &DeleteTeamMember{
 		logger:           logger,
 		stateSyncer:      stateSyncer,
-		teamMemberDaoV2:  teamMemberDaoV2,
+		teamMemberDao:    teamMemberDao,
 		id:               stateSyncer.NextMutationID(),
 		teamID:           teamID,
 		userID:           userID,

@@ -9,7 +9,7 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/teamy-backend/core/daov2"
+	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 // Client connect
@@ -22,7 +22,7 @@ import (
 
 type StateSyncer struct {
 	logger                  telemetry.Logger
-	teamMemberDaoV2         daov2.TeamMember
+	teamMemberDao           dao.TeamMember
 	teamNotifiers           map[uint64]*TeamNotifier
 	userNotifiers           map[uint64]*UserNotifier
 	nextClientID            uint64
@@ -47,12 +47,12 @@ func (s *StateSyncer) EndTransaction() {
 func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) *errs.Error {
 	ct := ctx.WithClientID(context.Background(), s.nextClientID)
 	s.logger.InfoWithContext(ct, fmt.Sprintf("client connected: userID=%v", userID))
-	teamIDs, err := s.teamMemberDaoV2.FindTeamIDsByUserID(ct, userID)
+	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
 		return err
 	}
 
-	userNotifier, err := s.GetUserNotifierV2(ct, userID, teamIDs)
+	userNotifier, err := s.GetUserNotifier(ct, userID, teamIDs)
 	if err != nil {
 		return err
 	}
@@ -108,14 +108,14 @@ func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) *errs.
 	return nil
 }
 
-func (s *StateSyncer) newUserNotifierV2(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
+func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
 	userNotifier := newUserNotifier(s.logger, userID)
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
 	}()
 	s.userNotifiers[userID] = userNotifier
-	err := s.SubscribeToTeamsV2(ct, userID, userNotifier, teamIDs)
+	err := s.SubscribeToTeams(ct, userID, userNotifier, teamIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (s *StateSyncer) newUserNotifierV2(ct context.Context, userID uint64, teamI
 	return userNotifier, nil
 }
 
-func (s *StateSyncer) SubscribeToTeamsV2(ct context.Context, userID uint64, userNotifier *UserNotifier, teamIDs []uint64) *errs.Error {
+func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier, teamIDs []uint64) *errs.Error {
 	for _, teamID := range teamIDs {
 		teamNotifier, ok := s.teamNotifiers[teamID]
 		if !ok {
@@ -153,11 +153,11 @@ func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	return teamNotifier
 }
 
-func (s *StateSyncer) GetUserNotifierV2(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
+func (s *StateSyncer) GetUserNotifier(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
 	userNotifier, ok := s.userNotifiers[userID]
 	var err *errs.Error
 	if !ok {
-		userNotifier, err = s.newUserNotifierV2(ct, userID, teamIDs)
+		userNotifier, err = s.newUserNotifier(ct, userID, teamIDs)
 		if err != nil {
 			return nil, err
 		}
@@ -219,11 +219,11 @@ func (s *StateSyncer) GetClientNotifiersByTeamIDs(ct context.Context, teamIDs []
 
 func NewStateSyncer(
 	logger telemetry.Logger,
-	teamMemberDaoV2 daov2.TeamMember,
+	teamMemberDao dao.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
 		logger:                  logger,
-		teamMemberDaoV2:         teamMemberDaoV2,
+		teamMemberDao:           teamMemberDao,
 		teamNotifiers:           map[uint64]*TeamNotifier{},
 		userNotifiers:           map[uint64]*UserNotifier{},
 		nextClientID:            1,
