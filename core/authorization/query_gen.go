@@ -102,14 +102,6 @@ func NewUpdateTeamInstallationInAppQuery(currUserID uint64, appID uint64) author
 	}
 }
 
-func NewCreateInInvitationQuery(currUserID uint64, invitationID uint64) authorization.Query {
-	return authorization.Query{
-		ResourceType: InvitationResourceType,
-		ResourceID:   invitationID,
-		Operation:    "Create",
-		UserID:       currUserID,
-	}
-}
 func NewDeleteInInvitationQuery(currUserID uint64, invitationID uint64) authorization.Query {
 	return authorization.Query{
 		ResourceType: InvitationResourceType,
@@ -126,20 +118,20 @@ func NewReadInInvitationQuery(currUserID uint64, invitationID uint64) authorizat
 		UserID:       currUserID,
 	}
 }
+func NewUpdateInInvitationQuery(currUserID uint64, invitationID uint64) authorization.Query {
+	return authorization.Query{
+		ResourceType: InvitationResourceType,
+		ResourceID:   invitationID,
+		Operation:    "Update",
+		UserID:       currUserID,
+	}
+}
 
 func NewAddTaskToInSprintQuery(currUserID uint64, sprintID uint64) authorization.Query {
 	return authorization.Query{
 		ResourceType: SprintResourceType,
 		ResourceID:   sprintID,
 		Operation:    "AddTaskTo",
-		UserID:       currUserID,
-	}
-}
-func NewCopyTasksToInSprintQuery(currUserID uint64, sprintID uint64) authorization.Query {
-	return authorization.Query{
-		ResourceType: SprintResourceType,
-		ResourceID:   sprintID,
-		Operation:    "CopyTasksTo",
 		UserID:       currUserID,
 	}
 }

@@ -190,8 +190,8 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 				return servicetest.AddTeamPermission(
 					ct,
 					taskLinkTestRef.cloudTestKit.AuthorizationService,
-					group.ID,
 					teamID,
+					group.ID,
 					authorization.TeamOwnerResourceTypeOperations,
 					requesterUserID)
 			},
@@ -217,8 +217,8 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 				return servicetest.AddTeamPermission(
 					ct,
 					taskLinkTestRef.cloudTestKit.AuthorizationService,
-					group.ID,
 					teamID,
+					group.ID,
 					authorization.TeamAdminResourceTypeOperations,
 					requesterUserID)
 			},
@@ -244,8 +244,8 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 				return servicetest.AddTeamPermission(
 					ct,
 					taskLinkTestRef.cloudTestKit.AuthorizationService,
-					group.ID,
 					teamID,
+					group.ID,
 					authorization.TeamAdminResourceTypeOperations,
 					requesterUserID)
 			},

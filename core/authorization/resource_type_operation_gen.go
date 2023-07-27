@@ -59,10 +59,6 @@ var (
 
 // Operations for Invitation
 var (
-	CreateInInvitation = authorization.ResourceTypeOperation{
-		ResourceType: "Invitation",
-		Operation:    "Create",
-	}
 	DeleteInInvitation = authorization.ResourceTypeOperation{
 		ResourceType: "Invitation",
 		Operation:    "Delete",
@@ -71,6 +67,10 @@ var (
 		ResourceType: "Invitation",
 		Operation:    "Read",
 	}
+	UpdateInInvitation = authorization.ResourceTypeOperation{
+		ResourceType: "Invitation",
+		Operation:    "Update",
+	}
 )
 
 // Operations for Sprint
@@ -78,10 +78,6 @@ var (
 	AddTaskToInSprint = authorization.ResourceTypeOperation{
 		ResourceType: "Sprint",
 		Operation:    "AddTaskTo",
-	}
-	CopyTasksToInSprint = authorization.ResourceTypeOperation{
-		ResourceType: "Sprint",
-		Operation:    "CopyTasksTo",
 	}
 	DeleteInSprint = authorization.ResourceTypeOperation{
 		ResourceType: "Sprint",

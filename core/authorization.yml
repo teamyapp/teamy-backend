@@ -60,7 +60,7 @@ resourceTypeOperations:
   - resourceType: Invitation
     operations:
       - Read
-      - Create
+      - Update
       - Delete
   - resourceType: App
     operations:
