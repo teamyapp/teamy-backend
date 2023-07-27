@@ -48,7 +48,9 @@ const pullRequestIconURL = "/assets/apps/pull_request_dark_green.svg"
 const pullRequestIconHoverURL = "/assets/apps/pull_request_light_green.svg"
 
 var taskIDWithTaskLinkPattern = regexp.MustCompile(`\[\(task:([\d]+)\)\]\(.+\)`)
-var taskIDPatternWithTaskLink = "[(task:%d)](%s)"
+var taskIDWithTaskLinkFormat = "[(task:%d)](%s)"
+var taskIDWithBodyFormat = "%v\n[(task:%d)](%s)"
+var taskLinkFormat = "%v/teams/%v/tasks/%v"
 
 type AppAPI struct {
 	config                                   AppConfig
@@ -551,8 +553,8 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 				return err
 			}
 
-			webURL := a.composeWebURL(a.teamyWebUIBaseURL, teamID, prTaskRelation.InternalTaskID)
-			body = strings.ReplaceAll(body, fmt.Sprintf(taskIDPatternWithTaskLink, prTaskRelation.InternalTaskID, webURL), "")
+			taskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
+			body = strings.ReplaceAll(body, taskIDWithTaskURL, "")
 		}
 
 		githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
@@ -758,18 +760,18 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 				return err
 			}
 
-			webPreviousTaskURL := a.composeWebURL(a.teamyWebUIBaseURL, teamID, prTaskRelation.InternalTaskID)
-			webNewTaskURL := a.composeWebURL(a.teamyWebUIBaseURL, teamID, *taskID)
+			prevTaskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
+			newTaskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, *taskID)
 			body = strings.ReplaceAll(
 				pullRequestNode.Body,
-				fmt.Sprintf(taskIDPatternWithTaskLink, prTaskRelation.InternalTaskID, webPreviousTaskURL),
-				fmt.Sprintf(taskIDPatternWithTaskLink, *taskID, webNewTaskURL),
+				prevTaskIDWithTaskURL,
+				newTaskIDWithTaskURL,
 			)
 		} else {
-			webURL := a.composeWebURL(a.teamyWebUIBaseURL, teamID, prTaskRelation.InternalTaskID)
+			taskIDWithTaskLink := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
 			body = strings.ReplaceAll(
 				pullRequestNode.Body,
-				fmt.Sprintf(taskIDPatternWithTaskLink, prTaskRelation.InternalTaskID, webURL),
+				taskIDWithTaskLink,
 				"",
 			)
 		}
@@ -825,8 +827,7 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			return err
 		}
 
-		webURL := a.composeWebURL(a.teamyWebUIBaseURL, teamID, *taskID)
-		body := fmt.Sprintf("%v\n"+taskIDPatternWithTaskLink, prEvt.PullRequest.Body, *taskID, webURL)
+		body := a.formatTaskIDWithBody(prEvt.PullRequest.Body, teamID, *taskID)
 		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
 			PullRequestID: prEvt.PullRequest.NodeID,
 			Body:          &body,
@@ -960,8 +961,7 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			return err
 		}
 
-		webURL := a.composeWebURL(a.teamyWebUIBaseURL, teamID, *taskID)
-		body := fmt.Sprintf("%v\n"+taskIDPatternWithTaskLink, prEvt.PullRequest.Body, *taskID, webURL)
+		body := a.formatTaskIDWithBody(prEvt.PullRequest.Body, teamID, *taskID)
 		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
 			PullRequestID: prEvt.PullRequest.NodeID,
 			Body:          &body,
@@ -1419,8 +1419,18 @@ func (a AppAPI) getInstallGithubAppURL(ct context.Context, stateID uint64) (stri
 	return installURL.String(), nil
 }
 
-func (a AppAPI) composeWebURL(baseURL string, teamID uint64, taskID uint64) string {
-	return fmt.Sprintf("%v/teams/%v/tasks/%v", baseURL, teamID, taskID)
+func (a AppAPI) formatTaskIDWithTaskURL(teamID uint64, taskID uint64) string {
+	taskURL := a.formatTeamyWebTaskURL(teamID, taskID)
+	return fmt.Sprintf(taskIDWithTaskLinkFormat, taskID, taskURL)
+}
+
+func (a AppAPI) formatTaskIDWithBody(body string, teamID uint64, taskID uint64) string {
+	taskURL := a.formatTeamyWebTaskURL(teamID, taskID)
+	return fmt.Sprintf(taskIDWithBodyFormat, body, taskID, taskURL)
+}
+
+func (a AppAPI) formatTeamyWebTaskURL(teamID uint64, taskID uint64) string {
+	return fmt.Sprintf(taskLinkFormat, a.teamyWebUIBaseURL, teamID, taskID)
 }
 
 func NewAppAPI(
