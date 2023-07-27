@@ -48,9 +48,6 @@ const pullRequestIconURL = "/assets/apps/pull_request_dark_green.svg"
 const pullRequestIconHoverURL = "/assets/apps/pull_request_light_green.svg"
 
 var taskIDWithTaskLinkPattern = regexp.MustCompile(`\[\(task:([\d]+)\)\]\(.+\)`)
-var taskIDWithTaskLinkFormat = "[(task:%d)](%s)"
-var taskIDWithBodyFormat = "%v\n[(task:%d)](%s)"
-var taskLinkFormat = "%v/teams/%v/tasks/%v"
 
 type AppAPI struct {
 	config                                   AppConfig
@@ -1421,16 +1418,16 @@ func (a AppAPI) getInstallGithubAppURL(ct context.Context, stateID uint64) (stri
 
 func (a AppAPI) formatTaskIDWithTaskURL(teamID uint64, taskID uint64) string {
 	taskURL := a.formatTeamyWebTaskURL(teamID, taskID)
-	return fmt.Sprintf(taskIDWithTaskLinkFormat, taskID, taskURL)
+	return fmt.Sprintf("[(task:%d)](%s)", taskID, taskURL)
 }
 
 func (a AppAPI) formatTaskIDWithBody(body string, teamID uint64, taskID uint64) string {
 	taskURL := a.formatTeamyWebTaskURL(teamID, taskID)
-	return fmt.Sprintf(taskIDWithBodyFormat, body, taskID, taskURL)
+	return fmt.Sprintf("%v\n[(task:%d)](%s)", body, taskID, taskURL)
 }
 
 func (a AppAPI) formatTeamyWebTaskURL(teamID uint64, taskID uint64) string {
-	return fmt.Sprintf(taskLinkFormat, a.teamyWebUIBaseURL, teamID, taskID)
+	return fmt.Sprintf("%v/teams/%v/tasks/%v", a.teamyWebUIBaseURL, teamID, taskID)
 }
 
 func NewAppAPI(
