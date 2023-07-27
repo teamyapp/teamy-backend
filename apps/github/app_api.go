@@ -47,7 +47,7 @@ const authProvider = "github"
 const pullRequestIconURL = "/assets/apps/pull_request_dark_green.svg"
 const pullRequestIconHoverURL = "/assets/apps/pull_request_light_green.svg"
 
-var taskIDPattern = regexp.MustCompile(`\(task:([\d]+)\)`)
+var taskIDWithTaskLinkPattern = regexp.MustCompile(`\[\(task:([\d]+)\)\]\(.+\)`)
 
 type AppAPI struct {
 	config                                   AppConfig
@@ -64,6 +64,7 @@ type AppAPI struct {
 	githubGraphQLAPI                         client.GraphQLAPI
 	githubRESTAPI                            client.RESTAPI
 	appsProto.UnimplementedGithubServer
+	teamyWebUIBaseURL string
 }
 
 var _ runner.Service = (*AppAPI)(nil)
@@ -549,7 +550,8 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 				return err
 			}
 
-			body = strings.ReplaceAll(body, fmt.Sprintf("(task:%d)", prTaskRelation.InternalTaskID), "")
+			taskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
+			body = strings.ReplaceAll(body, taskIDWithTaskURL, "")
 		}
 
 		githubAppInstallation, err := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
@@ -599,9 +601,9 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 
 func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[uint64]*proto.TaskMsg, *errs.Error) {
 	tasks := map[uint64]*proto.TaskMsg{}
-	allMatches := taskIDPattern.FindAllStringSubmatch(body, -1)
+	allMatches := taskIDWithTaskLinkPattern.FindAllStringSubmatch(body, -1)
 	for _, matches := range allMatches {
-		taskID, err := strconv.ParseUint(string(matches[1]), 10, 64)
+		taskID, err := strconv.ParseUint(matches[1], 10, 64)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
@@ -645,7 +647,8 @@ func (a AppAPI) createPullRequestTaskRelation(
 	taskID uint64,
 	automaticTracking bool,
 	pullRequestURL string,
-	pullRequestNodeID string) *errs.Error {
+	pullRequestNodeID string,
+) *errs.Error {
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
@@ -754,15 +757,18 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 				return err
 			}
 
+			prevTaskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
+			newTaskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, *taskID)
 			body = strings.ReplaceAll(
 				pullRequestNode.Body,
-				fmt.Sprintf("(task:%d)", prTaskRelation.InternalTaskID),
-				fmt.Sprintf("(task:%d)", *taskID),
+				prevTaskIDWithTaskURL,
+				newTaskIDWithTaskURL,
 			)
 		} else {
+			taskIDWithTaskLink := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
 			body = strings.ReplaceAll(
 				pullRequestNode.Body,
-				fmt.Sprintf("(task:%d)", prTaskRelation.InternalTaskID),
+				taskIDWithTaskLink,
 				"",
 			)
 		}
@@ -818,7 +824,7 @@ func (a AppAPI) createTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			return err
 		}
 
-		body := fmt.Sprintf("%v\n(task:%d)", prEvt.PullRequest.Body, *taskID)
+		body := a.formatTaskIDWithBody(prEvt.PullRequest.Body, teamID, *taskID)
 		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
 			PullRequestID: prEvt.PullRequest.NodeID,
 			Body:          &body,
@@ -952,7 +958,7 @@ func (a AppAPI) updateTaskForPullRequest(ct context.Context, teamID uint64, evt 
 			return err
 		}
 
-		body := fmt.Sprintf("%v\n(task:%d)", prEvt.PullRequest.Body, *taskID)
+		body := a.formatTaskIDWithBody(prEvt.PullRequest.Body, teamID, *taskID)
 		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
 			PullRequestID: prEvt.PullRequest.NodeID,
 			Body:          &body,
@@ -1410,6 +1416,20 @@ func (a AppAPI) getInstallGithubAppURL(ct context.Context, stateID uint64) (stri
 	return installURL.String(), nil
 }
 
+func (a AppAPI) formatTaskIDWithTaskURL(teamID uint64, taskID uint64) string {
+	taskURL := a.formatTeamyWebTaskURL(teamID, taskID)
+	return fmt.Sprintf("[(task:%d)](%s)", taskID, taskURL)
+}
+
+func (a AppAPI) formatTaskIDWithBody(body string, teamID uint64, taskID uint64) string {
+	taskURL := a.formatTeamyWebTaskURL(teamID, taskID)
+	return fmt.Sprintf("%v\n[(task:%d)](%s)", body, taskID, taskURL)
+}
+
+func (a AppAPI) formatTeamyWebTaskURL(teamID uint64, taskID uint64) string {
+	return fmt.Sprintf("%v/teams/%v/tasks/%v", a.teamyWebUIBaseURL, teamID, taskID)
+}
+
 func NewAppAPI(
 	cfg AppConfig,
 	logger telemetry.Logger,
@@ -1424,6 +1444,7 @@ func NewAppAPI(
 	githubGraphQLAPI client.GraphQLAPI,
 	githubRESTAPI client.RESTAPI,
 	githubApp *client.GithubApp,
+	teamyWebUIBaseURL string,
 ) AppAPI {
 
 	return AppAPI{
@@ -1440,6 +1461,7 @@ func NewAppAPI(
 		githubGraphQLAPI:                         githubGraphQLAPI,
 		githubRESTAPI:                            githubRESTAPI,
 		githubApp:                                githubApp,
+		teamyWebUIBaseURL:                        teamyWebUIBaseURL,
 	}
 }
 

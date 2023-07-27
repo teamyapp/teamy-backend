@@ -24,6 +24,7 @@ type App struct {
 	TeamyAPIShouldEncrypt       bool          `envconfig:"TEAMY_API_SHOULD_ENCRYPT" default:"false"`
 	RequestTimeout              time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10s"`
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
+	TeamyWebUIBaseURL           string        `envconfig:"TEAMY_WEB_UI_BASE_URL" default:"http://localhost:3000"`
 }
 
 func AppFromEnv() (App, *errs.Error) {

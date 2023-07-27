@@ -114,6 +114,8 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: internal-service-account-api-token
+            - name: TEAMY_WEB_UI_BASE_URL
+              value: "https://staging.teamyapp.com"
           volumeMounts:
             - mountPath: /var/lib/vault
               name: vault

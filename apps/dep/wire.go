@@ -18,6 +18,7 @@ import (
 )
 
 type GithubAppPrivateKeyPEM []byte
+type TeamyWebUIBaseURL string
 
 func InitGithubAppAPI(
 	logger telemetry.Logger,
@@ -27,6 +28,7 @@ func InitGithubAppAPI(
 	config github.AppConfig,
 	githubAppPrivateKeyPEM GithubAppPrivateKeyPEM,
 	sqlDB *sql.DB,
+	teamyWebUIBaseURL TeamyWebUIBaseURL,
 ) (github.AppAPI, error) {
 	wire.Build(
 		wire.Bind(new(dao.GithubAppInstallState), new(sqldb.GithubAppInstallState)),
@@ -45,9 +47,43 @@ func InitGithubAppAPI(
 		gql.NewClient,
 		client.NewGraphQLAPI,
 		client.NewRESTAPI,
-		github.NewAppAPI,
+		newAppAPI,
 	)
 	return github.AppAPI{}, nil
+}
+
+func newAppAPI(
+	cfg github.AppConfig,
+	logger telemetry.Logger,
+	cloudClientRegistry *cloudClient.Registry,
+	teamyClientRegistry *teamyClient.Registry,
+	githubAppInstallStateDao dao.GithubAppInstallState,
+	githubAppInstallationDao dao.GithubAppInstallation,
+	githubPullRequestDao dao.GithubPullRequest,
+	githubCodeReviewDao dao.GithubCodeReview,
+	githubRequiredUserActionDao dao.GithubRequiredUserAction,
+	githubPullRequestInternalTaskRelationDao dao.GithubPullRequestInternalTaskRelation,
+	githubGraphQLAPI client.GraphQLAPI,
+	githubRESTAPI client.RESTAPI,
+	githubApp *client.GithubApp,
+	teamyWebUIBaseURL TeamyWebUIBaseURL,
+) github.AppAPI {
+	return github.NewAppAPI(
+		cfg,
+		logger,
+		cloudClientRegistry,
+		teamyClientRegistry,
+		githubAppInstallStateDao,
+		githubAppInstallationDao,
+		githubPullRequestDao,
+		githubCodeReviewDao,
+		githubRequiredUserActionDao,
+		githubPullRequestInternalTaskRelationDao,
+		githubGraphQLAPI,
+		githubRESTAPI,
+		githubApp,
+		string(teamyWebUIBaseURL),
+	)
 }
 
 func newGithubApp(logger telemetry.Logger, config github.AppConfig, privateKeyPEM GithubAppPrivateKeyPEM) (*client.GithubApp, error) {
