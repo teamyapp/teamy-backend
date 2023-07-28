@@ -7,6 +7,7 @@ import (
 
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -50,9 +51,43 @@ type UpdateInvitationInput struct {
 }
 
 func (i Invitation) FindInvitationsInTeam(ct context.Context, teamID uint64, filter *InvitationFilter) ([]entity.Invitation, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if i.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInTeamQuery(userID, teamID)
+		hasPermission, err := i.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
 	invitations, err := i.invitationDao.FindInvitationsByTeamID(ct, teamID)
 	if err != nil {
 		return nil, err
+	}
+
+	if i.featureToggles.EnableAuthorization {
+		authorizedInvitations, err := client.FilterAuthorizedItems(
+			ct,
+			i.authorizer,
+			invitations,
+			func(invitation entity.Invitation) cloudAuthorization.Query {
+				return authorization.NewReadInInvitationQuery(userID, invitation.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		invitations = authorizedInvitations
 	}
 
 	if filter != nil {
@@ -66,6 +101,26 @@ func (i Invitation) FindInvitations(ct context.Context, filter *InvitationFilter
 	invitations, err := i.invitationDao.FindAllInvitations(ct)
 	if err != nil {
 		return nil, err
+	}
+
+	if i.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		authorizedInvitations, err := client.FilterAuthorizedItems(
+			ct,
+			i.authorizer,
+			invitations,
+			func(invitation entity.Invitation) cloudAuthorization.Query {
+				return authorization.NewReadInInvitationQuery(userID, invitation.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		invitations = authorizedInvitations
 	}
 
 	if filter != nil {
@@ -158,31 +213,52 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 }
 
 func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, input UpdateInvitationInput) (entity.Invitation, *errs.Error) {
-	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
-	if err != nil {
-		return entity.Invitation{}, err
+	if i.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Invitation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewUpdateInInvitationQuery(userID, invitationID)
+		hasPermission, err := i.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Invitation{}, err
+		}
+
+		if !hasPermission {
+			return entity.Invitation{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
-	invitation.ReceiverFirstName = input.ReceiverFirstName
-	invitation.ReceiverLastName = input.ReceiverLastName
-	invitation.ExpireAt = input.ExpireAt
-	now := time.Now().UTC()
-	invitation.UpdatedAt = &now
-
+	var invitation entity.Invitation
 	txCtx := TransactionsContext{
 		logger:             i.logger,
 		transactionFactory: i.transactionFactory,
 		stateSyncer:        i.stateSyncer,
 		ct:                 ct,
 	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		invitation, internalErr = i.invitationDao.FindInvitationByIDWithTx(ct, tx, invitationID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		invitation.ReceiverFirstName = input.ReceiverFirstName
+		invitation.ReceiverLastName = input.ReceiverLastName
+		invitation.ExpireAt = input.ExpireAt
+		now := time.Now().UTC()
+		invitation.UpdatedAt = &now
+
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
 			i.invitationDao,
 			invitation,
 		)
-		internalErr := updateInvitationMutation.Execute(ct, tx)
+		internalErr = updateInvitationMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -199,25 +275,46 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 }
 
 func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (entity.Invitation, *errs.Error) {
-	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
-	if err != nil {
-		return entity.Invitation{}, err
+	if i.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Invitation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewDeleteInInvitationQuery(userID, invitationID)
+		hasPermission, err := i.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Invitation{}, err
+		}
+
+		if !hasPermission {
+			return entity.Invitation{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
+	var invitation entity.Invitation
 	txCtx := TransactionsContext{
 		logger:             i.logger,
 		transactionFactory: i.transactionFactory,
 		stateSyncer:        i.stateSyncer,
 		ct:                 ct,
 	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		invitation, internalErr = i.invitationDao.FindInvitationByID(ct, invitationID)
+		if internalErr != nil {
+			return internalErr
+		}
+
 		deleteInvitationMutation := mutation.NewDeleteInvitation(
 			i.logger,
 			i.stateSyncer,
 			i.invitationDao,
 			invitation,
 		)
-		internalErr := deleteInvitationMutation.Execute(ct, tx)
+		internalErr = deleteInvitationMutation.Execute(ct, tx)
 		if internalErr != nil {
 			return internalErr
 		}
@@ -230,46 +327,19 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 		return entity.Invitation{}, err
 	}
 
+	// TODO: update resource relations in authorization service
 	return invitation, nil
 }
 
 func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, invitationCode string) (entity.Invitation, *errs.Error) {
+	invitation, err := i.canRespondToInvitation(ct, invitationID, invitationCode)
+	if err != nil {
+		return entity.Invitation{}, err
+	}
+
 	receiverUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.Invitation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
-	}
-
-	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
-	if err != nil {
-		return entity.Invitation{}, err
-	}
-
-	if i.featureToggles.EnableAuthorization {
-		query := authorization.NewAddMemberToInTeamQuery(receiverUserID, invitation.TeamID)
-		hasPermission, internalErr := i.authorizer.HasPermission(ct, query)
-		if internalErr != nil {
-			return entity.Invitation{}, err
-		}
-
-		if !hasPermission {
-			return entity.Invitation{}, errs.NewError(
-				errs.PermissionDenied,
-				fmt.Sprintf("permission denied: authorization query=%v", query))
-		}
-	}
-
-	if invitation.Code != invitationCode {
-		return entity.Invitation{}, errs.NewError(
-			errs.InvalidArgument,
-			fmt.Sprintf("invalid invitation code: invitationID=%v, invitationCode=%v",
-				invitationID,
-				invitationCode,
-			))
-	}
-
-	err = i.ensureInvitationPending(ct, invitation)
-	if err != nil {
-		return entity.Invitation{}, err
 	}
 
 	invitation.Status = entity.InvitationStatusAccepted
@@ -325,7 +395,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 				return internalErr
 			}
 
-			now := time.Now().UTC()
+			now = time.Now().UTC()
 			currAndFutureSprints := collect.Filter(sprints, func(sprint entity.Sprint) bool {
 				if sprint.EndAt.UTC().Before(now) {
 					return false
@@ -367,26 +437,14 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 }
 
 func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, invitationCode string) (entity.Invitation, *errs.Error) {
+	invitation, err := i.canRespondToInvitation(ct, invitationID, invitationCode)
+	if err != nil {
+		return entity.Invitation{}, err
+	}
+
 	receiverUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.Invitation{}, errs.NewError(errs.Unauthenticated, "user ID not found")
-	}
-
-	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
-	if err != nil {
-		return entity.Invitation{}, err
-	}
-
-	if invitation.Code != invitationCode {
-		return entity.Invitation{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("invalid invitation code: invitationID=%v, invitationCode=%v",
-			invitationID,
-			invitationCode,
-		))
-	}
-
-	err = i.ensureInvitationPending(ct, invitation)
-	if err != nil {
-		return entity.Invitation{}, err
 	}
 
 	invitation.Status = entity.InvitationStatusDeclined
@@ -416,6 +474,33 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 		return nil
 	})
 
+	if err != nil {
+		return entity.Invitation{}, err
+	}
+
+	return invitation, nil
+}
+
+func (i Invitation) canRespondToInvitation(
+	ct context.Context,
+	invitationID uint64,
+	invitationCode string,
+) (entity.Invitation, *errs.Error) {
+	invitation, err := i.invitationDao.FindInvitationByID(ct, invitationID)
+	if err != nil {
+		return entity.Invitation{}, err
+	}
+
+	if invitation.Code != invitationCode {
+		return entity.Invitation{}, errs.NewError(
+			errs.InvalidArgument,
+			fmt.Sprintf("invalid invitation code: invitationID=%v, invitationCode=%v",
+				invitationID,
+				invitationCode,
+			))
+	}
+
+	err = i.ensureInvitationPending(ct, invitation)
 	if err != nil {
 		return entity.Invitation{}, err
 	}

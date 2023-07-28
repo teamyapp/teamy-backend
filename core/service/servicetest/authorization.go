@@ -11,6 +11,10 @@ import (
 	"github.com/teamyapp/teamy-backend/core/authorization"
 )
 
+const AutomationUserID = 0
+
+var AutomationCtx = ctx.NewContextWithUserID(context.Background(), AutomationUserID)
+
 func AddTeamPermission(
 	ct context.Context,
 	authorizationService service.Authorization,
@@ -36,10 +40,7 @@ func AddTeamPermission(
 		}
 	}
 
-	return authorizationService.RegisterResource(
-		ct,
-		authorization.TeamResourceType,
-		teamID)
+	return nil
 }
 
 func GetServiceAccountAPIToken(identityService service.Identity) (string, *errs.Error) {
@@ -105,8 +106,8 @@ func AddAllTeamPermissions(
 	return AddTeamPermission(
 		ct,
 		authorizationService,
-		group.ID,
 		teamID,
+		group.ID,
 		authorization.AllTeamResourceTypeOperations,
 		userID)
 }

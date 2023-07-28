@@ -21,20 +21,23 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/service/servicetest"
 )
 
 type InvitationTestRef struct {
 	invitationService  Invitation
 	invitationDao      dao.Invitation
 	transactionFactory transaction.Factory
+	cloudTestKit       testkit.TestKit
 }
 
-func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (InvitationTestRef, bool) {
+func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationTestRef {
 	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
 	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
 	virtualNetwork := networktest.NewVirtualNetwork()
@@ -55,7 +58,13 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 	cloudTestKit, internalErr := testkit.New(cloudTestKitConfig, virtualNetwork)
 	require.Nil(t, internalErr)
 
+	internalErr = servicetest.ApplyAuthorizationConfig(cloudTestKit.AuthorizationService)
+	require.Nil(t, internalErr)
+
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
+
+	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
+	require.Nil(t, internalErr)
 
 	teamyPrometheus := metricstest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
@@ -63,7 +72,7 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 		Port:          testkit.GRPCServerPort,
 		ShouldEncrypt: false,
 		GetAccessToken: func() string {
-			return "accessToken"
+			return apiToken
 		},
 		RequestTimeout: 10 * time.Second,
 	}
@@ -115,511 +124,1023 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) (Invitation
 		invitationService:  invitationService,
 		invitationDao:      invitationDao,
 		transactionFactory: transactionFactory,
-	}, true
+		cloudTestKit:       cloudTestKit,
+	}
 }
 
 func TestInvitationService_FindInvitationsInTeam(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
-	})
-	if !ok {
-		return
+	var teamID uint64 = 1
+	testCases := []struct {
+		name               string
+		toggles            feature.Toggles
+		prepareData        func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID    uint64
+		maxInvitationCount int
+		expectedErr        *errs.Error
+	}{
+		{
+			name: "succeed when user is team owner",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, servicetest.AutomationUserID)
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					teamID,
+					group.ID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID:    1,
+			maxInvitationCount: 3,
+			expectedErr:        nil,
+		},
+		{
+			name: "succeed when user is team admin",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					teamID,
+					group.ID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID:    1,
+			maxInvitationCount: 3,
+			expectedErr:        nil,
+		},
+		{
+			name: "hide invitations when user is team member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					teamID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID:    1,
+			maxInvitationCount: 0,
+			expectedErr:        nil,
+		},
+		{
+			name: "permission denied when user is not in team",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					teamID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					4)
+			},
+			requesterUserID:    3,
+			maxInvitationCount: 0,
+			expectedErr:        errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
 	}
 
-	var requesterUserID uint64 = 20
-	var invitationID1 uint64 = 12
-	var invitationID2 uint64 = 13
-	var invitationID3 uint64 = 14
-	var receiverFirstName = "Test_FirstName"
-	var receiverLastName = "Test_LastName"
-	var receiverEmail = "test@test.com"
-	var teamID1 uint64 = 5
-	var teamID2 uint64 = 6
-	var code1 = "Test code 1"
-	var code2 = "Test code 2"
-	ct := context.Background()
-	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			invitationRef := prepareInvitationTestRef(t, testCase.toggles)
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(invitationRef, testCase.requesterUserID)
+				require.Nil(t, err)
+			}
 
-	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	require.Nil(t, err)
+			err := servicetest.AddAllTeamPermissions(
+				invitationRef.cloudTestKit.AuthorizationService,
+				teamID,
+				servicetest.AutomationUserID)
+			require.Nil(t, err)
 
-	defer tx.Rollback()
+			var receiverFirstName = "Test_FirstName"
+			var receiverLastName = "Test_LastName"
+			var receiverEmail = "test@teamyapp.com"
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-	now := time.Now().UTC()
-	invitation1 := entity.Invitation{
-		ID:                invitationID1,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID1,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code2,
-		CreatedAt:         now,
-		UpdatedAt:         &now,
+			now := time.Now().UTC()
+			invitation1, err := invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				teamID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			_, err = invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				teamID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			_, err = invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				teamID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			filter1 := InvitationFilter{}
+			invitationsFound, internalErr := invitationRef.invitationService.FindInvitationsInTeam(ct, teamID, &filter1)
+			if testCase.expectedErr != nil {
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				return
+			} else {
+				require.Nil(t, internalErr)
+			}
+
+			require.Equal(t, testCase.maxInvitationCount, len(invitationsFound))
+
+			filter2 := InvitationFilter{InvitationID: &invitation1.ID}
+			invitationsFound, internalErr = invitationRef.invitationService.FindInvitationsInTeam(ct, teamID, &filter2)
+			if testCase.expectedErr != nil {
+				require.Equal(t, testCase.expectedErr.Code, internalErr.Code)
+				return
+			} else {
+				require.Nil(t, internalErr)
+			}
+
+			if testCase.maxInvitationCount > 0 {
+				require.Equal(t, 1, len(invitationsFound))
+				require.Equal(t, invitation1.ID, invitationsFound[0].ID)
+			}
+		})
 	}
-
-	invitation2 := entity.Invitation{
-		ID:                invitationID2,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID2,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code1,
-		CreatedAt:         now,
-		UpdatedAt:         &now,
-	}
-
-	invitation3 := entity.Invitation{
-		ID:                invitationID3,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID2,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code2,
-		CreatedAt:         now,
-		UpdatedAt:         &now,
-	}
-
-	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation1))
-	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation2))
-	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation3))
-
-	filter1 := InvitationFilter{InvitationID: &invitationID2, Code: &code1}
-	invitationsFound, internalErr := invitationRef.invitationService.FindInvitationsInTeam(ct, teamID2, &filter1)
-	require.Nil(t, internalErr)
-	require.Equal(t, 1, len(invitationsFound))
-	require.Equal(t, invitation2.ID, invitationsFound[0].ID)
-	require.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
-
-	filter2 := InvitationFilter{InvitationID: &invitationID2, Code: &code2}
-	invitationsFound, internalErr = invitationRef.invitationService.FindInvitationsInTeam(ct, teamID1, &filter2)
-	require.Nil(t, internalErr)
-	require.Equal(t, 0, len(invitationsFound))
 }
 
 func TestInvitationService_FindInvitations(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
-	})
-	if !ok {
-		return
+	var team1ID uint64 = 1
+	var team2ID uint64 = 2
+	testCases := []struct {
+		name               string
+		toggles            feature.Toggles
+		prepareData        func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID    uint64
+		maxInvitationCount int
+		expectedErr        *errs.Error
+	}{
+		{
+			name: "succeed when user is team 1 owner",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, servicetest.AutomationUserID)
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID:    1,
+			maxInvitationCount: 3,
+			expectedErr:        nil,
+		},
+		{
+			name: "succeed when user is team 1 admin",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID:    1,
+			maxInvitationCount: 3,
+			expectedErr:        nil,
+		},
+		{
+			name: "hide invitations when user is team 1 member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID:    1,
+			maxInvitationCount: 0,
+			expectedErr:        nil,
+		},
+		{
+			name: "hide invitations when user is not in team",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					4)
+			},
+			requesterUserID:    3,
+			maxInvitationCount: 0,
+			expectedErr:        nil,
+		},
 	}
 
-	var requesterUserID uint64 = 20
-	var invitationID1 uint64 = 12
-	var invitationID2 uint64 = 13
-	var invitationID3 uint64 = 14
-	var receiverFirstName = "Test_FirstName"
-	var receiverLastName = "Test_LastName"
-	var receiverEmail = "test@test.com"
-	var teamID1 uint64 = 5
-	var teamID2 uint64 = 6
-	var code1 = "Test code 1"
-	var code2 = "Test code 2"
-	ct := context.Background()
-	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			invitationRef := prepareInvitationTestRef(t, testCase.toggles)
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(invitationRef, testCase.requesterUserID)
+				require.Nil(t, err)
+			}
 
-	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	require.Nil(t, err)
+			err := servicetest.AddAllTeamPermissions(
+				invitationRef.cloudTestKit.AuthorizationService,
+				team1ID,
+				servicetest.AutomationUserID)
+			require.Nil(t, err)
 
-	defer tx.Rollback()
+			err = servicetest.AddAllTeamPermissions(
+				invitationRef.cloudTestKit.AuthorizationService,
+				team2ID,
+				servicetest.AutomationUserID)
+			require.Nil(t, err)
 
-	now := time.Now().UTC()
-	invitation1 := entity.Invitation{
-		ID:                invitationID1,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID1,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code2,
-		CreatedAt:         now,
-		UpdatedAt:         &now,
+			now := time.Now().UTC()
+			var receiverFirstName = "Test_FirstName"
+			var receiverLastName = "Test_LastName"
+			var receiverEmail = "test@test.com"
+			invitation1, err := invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				team1ID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			_, err = invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				team1ID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			_, err = invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				team1ID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			_, err = invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				team2ID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
+
+			filter1 := InvitationFilter{}
+			invitationsFound, internalErr := invitationRef.invitationService.FindInvitations(ct, &filter1)
+			require.Nil(t, internalErr)
+			require.Equal(t, testCase.maxInvitationCount, len(invitationsFound))
+
+			filter2 := InvitationFilter{InvitationID: &invitation1.ID}
+			invitationsFound, internalErr = invitationRef.invitationService.FindInvitations(ct, &filter2)
+			require.Nil(t, internalErr)
+
+			if testCase.maxInvitationCount > 0 {
+				require.Equal(t, 1, len(invitationsFound))
+				require.Equal(t, invitation1.ID, invitationsFound[0].ID)
+			}
+		})
 	}
-
-	invitation2 := entity.Invitation{
-		ID:                invitationID2,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID2,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code1,
-		CreatedAt:         now,
-		UpdatedAt:         &now,
-	}
-
-	invitation3 := entity.Invitation{
-		ID:                invitationID3,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID2,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code2,
-		CreatedAt:         now,
-		UpdatedAt:         &now,
-	}
-
-	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation1))
-	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation2))
-	require.Nil(t, invitationRef.invitationDao.CreateInvitation(ct, tx, invitation3))
-
-	filter1 := InvitationFilter{InvitationID: &invitationID2, Code: &code1}
-	invitationsFound, internalErr := invitationRef.invitationService.FindInvitations(ct, &filter1)
-	require.Nil(t, internalErr)
-	require.Equal(t, 1, len(invitationsFound))
-	require.True(t, areInvitationsEqual(invitation2, invitationsFound[0]))
-
-	filter2 := InvitationFilter{InvitationID: &invitationID2, Code: &code2}
-	invitationsFound, internalErr = invitationRef.invitationService.FindInvitations(ct, &filter2)
-	require.Nil(t, internalErr)
-	require.Equal(t, 0, len(invitationsFound))
 }
 
 func TestInvitationService_CreateInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
-	})
-	if !ok {
-		return
+	var team1ID uint64 = 1
+	testCases := []struct {
+		name            string
+		toggles         feature.Toggles
+		prepareData     func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID uint64
+		expectedErr     *errs.Error
+	}{
+		{
+			name: "succeed when user is team 1 owner",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, servicetest.AutomationUserID)
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team 1 admin",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "permission denied when user is team 1 member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
+		{
+			name: "permission denied when user is not team 1 member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					4)
+			},
+			requesterUserID: 3,
+			expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
 	}
 
-	var requesterUserID uint64 = 20
-	var receiverFirstName = "Test_FirstName"
-	var receiverLastName = "Test_LastName"
-	var receiverEmail = "test@test.com"
-	var teamID uint64 = 5
-	ct := context.Background()
-	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			invitationRef := prepareInvitationTestRef(t, testCase.toggles)
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(invitationRef, testCase.requesterUserID)
+				require.Nil(t, err)
+			}
 
-	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	require.Nil(t, err)
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-	defer tx.Rollback()
-
-	expiredAt := time.Now().Add(2 * time.Hour)
-	input := CreateInvitationInput{
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		ExpireAt:          expiredAt,
+			now := time.Now().UTC()
+			var receiverFirstName = "Test_FirstName"
+			var receiverLastName = "Test_LastName"
+			var receiverEmail = "test@test.com"
+			_, err := invitationRef.invitationService.CreateInvitation(
+				ct,
+				team1ID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			if testCase.expectedErr != nil {
+				require.Equal(t, testCase.expectedErr.Code, err.Code)
+				return
+			} else {
+				require.Nil(t, err)
+			}
+		})
 	}
-
-	invitation, err := invitationRef.invitationService.CreateInvitation(ct, teamID, input)
-	require.Nil(t, err)
-	require.Equal(t, receiverEmail, *(invitation.ReceiverEmail))
-	require.Equal(t, receiverLastName, *(invitation.ReceiverLastName))
-	require.Equal(t, receiverFirstName, *(invitation.ReceiverFirstName))
-	require.Equal(t, teamID, invitation.TeamID)
-	require.Equal(t, entity.InvitationStatusPending, invitation.Status)
-	require.Equal(t, expiredAt, invitation.ExpireAt)
-	require.NotNil(t, invitation.CreatedAt)
-	require.Nil(t, invitation.UpdatedAt)
-
-	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	require.Nil(t, err)
-	require.Equal(t, receiverEmail, *(invitationInMemory.ReceiverEmail))
-	require.Equal(t, receiverLastName, *(invitationInMemory.ReceiverLastName))
-	require.Equal(t, receiverFirstName, *(invitationInMemory.ReceiverFirstName))
-	require.Equal(t, teamID, invitationInMemory.TeamID)
-	require.Equal(t, entity.InvitationStatusPending, invitationInMemory.Status)
-	require.Equal(t, expiredAt, invitationInMemory.ExpireAt)
-	require.NotNil(t, invitationInMemory.CreatedAt)
-	require.Nil(t, invitationInMemory.UpdatedAt)
 }
 
 func TestInvitationService_UpdateInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
-	})
-	if !ok {
-		return
+	var team1ID uint64 = 1
+	testCases := []struct {
+		name            string
+		toggles         feature.Toggles
+		prepareData     func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID uint64
+		expectedErr     *errs.Error
+	}{
+		{
+			name: "succeed when user is team 1 owner",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, servicetest.AutomationUserID)
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team 1 admin",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "permission denied when user is team 1 member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
+		{
+			name: "permission denied when user is not team 1 member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					4)
+			},
+			requesterUserID: 3,
+			expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
 	}
 
-	var requesterUserID uint64 = 20
-	var invitationID uint64 = 32
-	var receiverFirstName = "Test_FirstName"
-	var receiverLastName = "Test_LastName"
-	var receiverEmail = "test@test.com"
-	var code = "Test code"
-	var teamID uint64 = 5
-	ct := context.Background()
-	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			invitationRef := prepareInvitationTestRef(t, testCase.toggles)
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(invitationRef, testCase.requesterUserID)
+				require.Nil(t, err)
+			}
 
-	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	require.Nil(t, err)
+			err := servicetest.AddAllTeamPermissions(
+				invitationRef.cloudTestKit.AuthorizationService,
+				team1ID,
+				servicetest.AutomationUserID)
+			require.Nil(t, err)
 
-	defer tx.Rollback()
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
 
-	now := time.Now()
-	invitation := entity.Invitation{
-		ID:                invitationID,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code,
-		CreatedAt:         now,
-		UpdatedAt:         nil,
+			now := time.Now().UTC()
+			var receiverFirstName = "Test_FirstName"
+			var receiverLastName = "Test_LastName"
+			var receiverEmail = "test@test.com"
+			invitation, err := invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				team1ID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
+
+			expiredAt := now.Add(3 * time.Hour)
+			updatedFirstName := "Updated_FirstName"
+			updatedLastName := "Updated_LastName"
+			input := UpdateInvitationInput{
+				ExpireAt:          expiredAt,
+				ReceiverFirstName: &updatedFirstName,
+				ReceiverLastName:  &updatedLastName,
+			}
+			updated, err := invitationRef.invitationService.UpdateInvitation(ct, invitation.ID, input)
+			if testCase.expectedErr != nil {
+				require.Equal(t, testCase.expectedErr.Code, err.Code)
+				return
+			} else {
+				require.Nil(t, err)
+			}
+
+			require.Equal(t, invitation.ID, updated.ID)
+			require.Equal(t, invitation.SenderUserID, updated.SenderUserID)
+			require.Equal(t, invitation.TeamID, updated.TeamID)
+			require.Equal(t, invitation.CreatedAt, updated.CreatedAt)
+			require.Equal(t, invitation.Status, updated.Status)
+			require.Equal(t, input.ReceiverFirstName, updated.ReceiverFirstName)
+			require.Equal(t, input.ReceiverLastName, updated.ReceiverLastName)
+			require.Equal(t, input.ExpireAt, updated.ExpireAt)
+		})
 	}
-
-	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
-	require.Nil(t, err)
-
-	expiredAt := now.Add(3 * time.Hour)
-	updatedFirstName := "Updated_FirstName"
-	updatedLastName := "Updated_LastName"
-	input := UpdateInvitationInput{
-		ExpireAt:          expiredAt,
-		ReceiverFirstName: &updatedFirstName,
-		ReceiverLastName:  &updatedLastName,
-	}
-	updated, err := invitationRef.invitationService.UpdateInvitation(ct, invitation.ID, input)
-	require.Nil(t, err)
-
-	invitation.ExpireAt = expiredAt
-	invitation.ReceiverFirstName = &updatedFirstName
-	invitation.ReceiverLastName = &updatedLastName
-	require.True(t, areInvitationsEqual(invitation, updated))
-
-	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	require.Nil(t, err)
-	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
 }
 
 func TestInvitationService_DeleteInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
-	})
-	if !ok {
-		return
+	var team1ID uint64 = 1
+	testCases := []struct {
+		name            string
+		toggles         feature.Toggles
+		prepareData     func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error
+		requesterUserID uint64
+		expectedErr     *errs.Error
+	}{
+		{
+			name: "succeed when user is team 1 owner",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				ct := context.Background()
+				ct = ctx.NewContextWithUserID(ct, servicetest.AutomationUserID)
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(ct, "Owner", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					ct,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamOwnerResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "succeed when user is team 1 admin",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Admin", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamAdminResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     nil,
+		},
+		{
+			name: "permission denied when user is team 1 member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					requesterUserID)
+			},
+			requesterUserID: 1,
+			expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
+		{
+			name: "permission denied when user is not team 1 member",
+			toggles: feature.Toggles{
+				EnableAuthorization: true,
+			},
+			prepareData: func(invitationTestRef InvitationTestRef, requesterUserID uint64) *errs.Error {
+				group, err := invitationTestRef.
+					cloudTestKit.
+					AuthorizationService.
+					CreateUserGroup(servicetest.AutomationCtx, "Member", nil)
+				if err != nil {
+					return err
+				}
+
+				return servicetest.AddTeamPermission(
+					servicetest.AutomationCtx,
+					invitationTestRef.
+						cloudTestKit.
+						AuthorizationService,
+					team1ID,
+					group.ID,
+					authorization.TeamMemberResourceTypeOperations,
+					4)
+			},
+			requesterUserID: 3,
+			expectedErr:     errs.NewError(errs.PermissionDenied, "permission denied"),
+		},
 	}
 
-	var requesterUserID uint64 = 20
-	var invitationID uint64 = 32
-	var receiverFirstName = "Test_FirstName"
-	var receiverLastName = "Test_LastName"
-	var receiverEmail = "test@test.com"
-	var code = "Test code"
-	var teamID uint64 = 5
-	ct := context.Background()
-	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			invitationRef := prepareInvitationTestRef(t, testCase.toggles)
+			if testCase.prepareData != nil {
+				err := testCase.prepareData(invitationRef, testCase.requesterUserID)
+				require.Nil(t, err)
+			}
 
-	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
-	require.Nil(t, err)
+			err := servicetest.AddAllTeamPermissions(
+				invitationRef.cloudTestKit.AuthorizationService,
+				team1ID,
+				servicetest.AutomationUserID)
+			require.Nil(t, err)
 
-	defer tx.Rollback()
+			now := time.Now().UTC()
+			var receiverFirstName = "Test_FirstName"
+			var receiverLastName = "Test_LastName"
+			var receiverEmail = "test@test.com"
+			invitation, err := invitationRef.invitationService.CreateInvitation(
+				servicetest.AutomationCtx,
+				team1ID,
+				CreateInvitationInput{
+					ReceiverFirstName: &receiverFirstName,
+					ReceiverLastName:  &receiverLastName,
+					ReceiverEmail:     &receiverEmail,
+					ExpireAt:          now.Add(2 * time.Hour),
+				})
+			require.Nil(t, err)
 
-	now := time.Now()
-	invitation := entity.Invitation{
-		ID:                invitationID,
-		SenderUserID:      requesterUserID,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code,
-		CreatedAt:         now,
-		UpdatedAt:         nil,
+			ct := context.Background()
+			ct = ctx.NewContextWithUserID(ct, testCase.requesterUserID)
+			deleted, err := invitationRef.invitationService.DeleteInvitation(ct, invitation.ID)
+			if testCase.expectedErr != nil {
+				require.Equal(t, testCase.expectedErr.Code, err.Code)
+				return
+			} else {
+				require.Nil(t, err)
+			}
+
+			require.Equal(t, invitation.ID, deleted.ID)
+			require.Equal(t, invitation.SenderUserID, deleted.SenderUserID)
+			require.Equal(t, invitation.TeamID, deleted.TeamID)
+			require.Equal(t, invitation.CreatedAt, deleted.CreatedAt)
+			require.Equal(t, invitation.Status, deleted.Status)
+			require.Equal(t, invitation.ReceiverFirstName, deleted.ReceiverFirstName)
+			require.Equal(t, invitation.ReceiverLastName, deleted.ReceiverLastName)
+			require.Equal(t, invitation.ExpireAt, deleted.ExpireAt)
+		})
 	}
-
-	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
-	require.Nil(t, err)
-
-	deleted, err := invitationRef.invitationService.DeleteInvitation(ct, invitation.ID)
-	require.Nil(t, err)
-	require.True(t, areInvitationsEqual(invitation, deleted))
-
-	_, err = invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	require.NotNil(t, err)
-	require.Equal(t, errs.NotFound, err.Code)
 }
 
 func TestInvitationService_AcceptInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
+	var team1ID uint64 = 1
+	var requesterUserID uint64 = 1
+	invitationRef := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: true,
 	})
-	if !ok {
-		return
-	}
+	err := servicetest.AddAllTeamPermissions(
+		invitationRef.cloudTestKit.AuthorizationService,
+		team1ID,
+		servicetest.AutomationUserID)
+	require.Nil(t, err)
 
-	var requesterUserID uint64 = 20
-	var invitationID uint64 = 32
+	now := time.Now().UTC()
 	var receiverFirstName = "Test_FirstName"
 	var receiverLastName = "Test_LastName"
 	var receiverEmail = "test@test.com"
-	var code = "Test code"
-	var teamID uint64 = 5
+	invitation, err := invitationRef.invitationService.CreateInvitation(
+		servicetest.AutomationCtx,
+		team1ID,
+		CreateInvitationInput{
+			ReceiverFirstName: &receiverFirstName,
+			ReceiverLastName:  &receiverLastName,
+			ReceiverEmail:     &receiverEmail,
+			ExpireAt:          now.Add(2 * time.Hour),
+		})
+	require.Nil(t, err)
+
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	accepted, err := invitationRef.invitationService.AcceptInvitation(ct, invitation.ID, "random")
+	require.NotNil(t, err)
+	require.Equal(t, errs.InvalidArgument, err.Code)
 
-	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
+	accepted, err = invitationRef.invitationService.AcceptInvitation(ct, invitation.ID, invitation.Code)
 	require.Nil(t, err)
-
-	defer tx.Rollback()
-
-	now := time.Now()
-	invitation := entity.Invitation{
-		ID:                invitationID,
-		SenderUserID:      10,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code,
-		CreatedAt:         now,
-		UpdatedAt:         nil,
-	}
-
-	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
-	require.Nil(t, err)
-
-	accepted, err := invitationRef.invitationService.AcceptInvitation(ct, invitation.ID, invitation.Code)
-	require.Nil(t, err)
-
-	invitation.Status = entity.InvitationStatusAccepted
-	invitation.ReceiverUserID = &requesterUserID
-	require.True(t, areInvitationsEqual(invitation, accepted))
-
-	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	require.Nil(t, err)
-	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
+	require.Equal(t, entity.InvitationStatusAccepted, accepted.Status)
 }
 
 func TestInvitationService_DeclineInvitation(t *testing.T) {
-	invitationRef, ok := prepareInvitationTestRef(t, feature.Toggles{
-		EnableAuthorization: false,
+	var team1ID uint64 = 1
+	var requesterUserID uint64 = 1
+	invitationRef := prepareInvitationTestRef(t, feature.Toggles{
+		EnableAuthorization: true,
 	})
-	if !ok {
-		return
-	}
+	err := servicetest.AddAllTeamPermissions(
+		invitationRef.cloudTestKit.AuthorizationService,
+		team1ID,
+		servicetest.AutomationUserID)
+	require.Nil(t, err)
 
-	var requesterUserID uint64 = 20
-	var invitationID uint64 = 32
+	now := time.Now().UTC()
 	var receiverFirstName = "Test_FirstName"
 	var receiverLastName = "Test_LastName"
 	var receiverEmail = "test@test.com"
-	var code = "Test code"
-	var teamID uint64 = 5
+	invitation, err := invitationRef.invitationService.CreateInvitation(
+		servicetest.AutomationCtx,
+		team1ID,
+		CreateInvitationInput{
+			ReceiverFirstName: &receiverFirstName,
+			ReceiverLastName:  &receiverLastName,
+			ReceiverEmail:     &receiverEmail,
+			ExpireAt:          now.Add(2 * time.Hour),
+		})
+	require.Nil(t, err)
+
 	ct := context.Background()
 	ct = ctx.NewContextWithUserID(ct, requesterUserID)
+	accepted, err := invitationRef.invitationService.DeclineInvitation(ct, invitation.ID, "random")
+	require.NotNil(t, err)
+	require.Equal(t, errs.InvalidArgument, err.Code)
 
-	tx, err := invitationRef.transactionFactory.BeginTx(ct, nil)
+	accepted, err = invitationRef.invitationService.DeclineInvitation(ct, invitation.ID, invitation.Code)
 	require.Nil(t, err)
-
-	defer tx.Rollback()
-
-	now := time.Now()
-	invitation := entity.Invitation{
-		ID:                invitationID,
-		SenderUserID:      10,
-		ReceiverFirstName: &receiverFirstName,
-		ReceiverLastName:  &receiverLastName,
-		ReceiverEmail:     &receiverEmail,
-		TeamID:            teamID,
-		ExpireAt:          now.Add(2 * time.Hour),
-		Status:            entity.InvitationStatusPending,
-		Code:              code,
-		CreatedAt:         now,
-		UpdatedAt:         nil,
-	}
-
-	err = invitationRef.invitationDao.CreateInvitation(ct, tx, invitation)
-	require.Nil(t, err)
-
-	accepted, err := invitationRef.invitationService.DeclineInvitation(ct, invitation.ID, invitation.Code)
-
-	invitation.Status = entity.InvitationStatusDeclined
-	invitation.ReceiverUserID = &requesterUserID
-	require.True(t, areInvitationsEqual(invitation, accepted))
-
-	invitationInMemory, err := invitationRef.invitationDao.FindInvitationByIDWithTx(ct, tx, invitation.ID)
-	require.Nil(t, err)
-	require.True(t, areInvitationsEqual(invitation, invitationInMemory))
-}
-
-func areInvitationsEqual(one entity.Invitation, other entity.Invitation) bool {
-	if one.ID != other.ID {
-		return false
-	}
-
-	if one.TeamID != other.TeamID {
-		return false
-	}
-
-	if one.Code != other.Code {
-		return false
-	}
-
-	if one.ExpireAt != other.ExpireAt {
-		return false
-	}
-
-	if one.CreatedAt != other.CreatedAt {
-		return false
-	}
-
-	if one.ReceiverUserID == nil || other.ReceiverUserID == nil {
-		if one.ReceiverUserID != nil || other.ReceiverUserID != nil {
-			return false
-		}
-	} else if *one.ReceiverUserID != *other.ReceiverUserID {
-		return false
-	}
-
-	if one.ReceiverLastName == nil || other.ReceiverLastName == nil {
-		if one.ReceiverLastName != nil || other.ReceiverLastName != nil {
-			return false
-		}
-	} else if *one.ReceiverLastName != *other.ReceiverLastName {
-		return false
-	}
-
-	if one.ReceiverFirstName == nil || other.ReceiverFirstName == nil {
-		if one.ReceiverFirstName != nil || other.ReceiverFirstName != nil {
-			return false
-		}
-	} else if *one.ReceiverFirstName != *other.ReceiverFirstName {
-		return false
-	}
-
-	if one.ReceiverEmail == nil || other.ReceiverEmail == nil {
-		if one.ReceiverEmail != nil || other.ReceiverEmail != nil {
-			return false
-		}
-	} else if *one.ReceiverEmail != *other.ReceiverEmail {
-		return false
-	}
-
-	if one.SenderUserID != other.SenderUserID {
-		return false
-	}
-
-	if one.Status != other.Status {
-		return false
-	}
-
-	return true
+	require.Equal(t, entity.InvitationStatusDeclined, accepted.Status)
 }

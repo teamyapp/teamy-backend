@@ -64,8 +64,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
-					group.ID,
 					teamID,
+					group.ID,
 					authorization.TeamOwnerResourceTypeOperations,
 					requesterUserID)
 			},
@@ -91,8 +91,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
-					group.ID,
 					teamID,
+					group.ID,
 					authorization.TeamAdminResourceTypeOperations,
 					requesterUserID)
 			},
@@ -118,8 +118,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
-					group.ID,
 					teamID,
+					group.ID,
 					authorization.TeamMemberResourceTypeOperations,
 					requesterUserID)
 			},
@@ -145,8 +145,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 				return servicetest.AddTeamPermission(
 					ct,
 					taskTestRef.cloudTestKit.AuthorizationService,
-					group.ID,
 					teamID,
+					group.ID,
 					authorization.TeamMemberResourceTypeOperations,
 					3)
 			},
