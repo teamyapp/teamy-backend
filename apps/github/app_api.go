@@ -636,7 +636,7 @@ func (a AppAPI) moveTaskToInProgress(ct context.Context, taskID uint64, teamID u
 	}
 
 	a.logger.InfoWithContext(ct, fmt.Sprintf("task moved to in progress: taskID=%v", taskID))
-	a.tryAddTaskToCurrentSprint(ct, teamID, taskID)
+	a.tryAddTaskToActiveSprint(ct, teamID, taskID)
 	return nil
 }
 
