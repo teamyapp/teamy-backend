@@ -816,44 +816,45 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 			return err
 		}
 
-		tasks, err := t.taskDao.FindTasksByTeamIDWithTx(ct, tx, task.OwningTeamID)
-		if err != nil {
-			return err
-		}
+		//tasks, err := t.taskDao.FindTasksByTeamIDWithTx(ct, tx, task.OwningTeamID)
+		//if err != nil {
+		//	return err
+		//}
 
 		if task.OwnerUserID == nil {
 			task.OwnerUserID = &userID
 		}
 
-		inProgressTasks := collect.Filter(tasks, func(eachTask entity.Task) bool {
-			if eachTask.OwnerUserID == nil {
-				return false
-			}
-
-			if *eachTask.OwnerUserID != *task.OwnerUserID {
-				return false
-			}
-
-			return eachTask.Status == entity.TaskStatusInProgress
-		})
-
 		now := time.Now().UTC()
-		if len(inProgressTasks) > 0 {
-			inProgressTask := inProgressTasks[0]
-			inProgressTask.Status = entity.TaskStatusPaused
-			inProgressTask.UpdatedAt = &now
-			updateTaskMutation := mutation.NewUpdateTask(
-				t.logger,
-				t.stateSyncer,
-				t.taskDao,
-				inProgressTask,
-			)
-			rtTx.AppendMutation(updateTaskMutation)
-			err = updateTaskMutation.Execute(ct, tx)
-			if err != nil {
-				return err
-			}
-		}
+
+		// TODO: enable based on team's setting
+		//inProgressTasks := collect.Filter(tasks, func(eachTask entity.Task) bool {
+		//	if eachTask.OwnerUserID == nil {
+		//		return false
+		//	}
+		//
+		//	if *eachTask.OwnerUserID != *task.OwnerUserID {
+		//		return false
+		//	}
+		//
+		//	return eachTask.Status == entity.TaskStatusInProgress
+		//})
+		//if len(inProgressTasks) > 0 {
+		//	inProgressTask := inProgressTasks[0]
+		//	inProgressTask.Status = entity.TaskStatusPaused
+		//	inProgressTask.UpdatedAt = &now
+		//	updateTaskMutation := mutation.NewUpdateTask(
+		//		t.logger,
+		//		t.stateSyncer,
+		//		t.taskDao,
+		//		inProgressTask,
+		//	)
+		//	rtTx.AppendMutation(updateTaskMutation)
+		//	err = updateTaskMutation.Execute(ct, tx)
+		//	if err != nil {
+		//		return err
+		//	}
+		//}
 
 		task.Status = entity.TaskStatusInProgress
 		task.UpdatedAt = &now

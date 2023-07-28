@@ -202,7 +202,7 @@ func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Spri
 	}
 
 	if sprint == nil {
-		return nil, nil
+		return nil, errs.NewError(errs.NotFound, "active sprint not found")
 	}
 
 	if s.featureToggles.EnableAuthorization {
