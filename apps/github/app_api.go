@@ -1241,7 +1241,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 		return err
 	}
 
-	return a.tryAddTaskToCurrentSprint(ct, teamID, createdTaskID)
+	return a.tryAddTaskToActiveSprint(ct, teamID, createdTaskID)
 }
 
 func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequestTaskID uint64, githubReviewerNodeID string, round int, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) (uint64, *errs.Error) {
@@ -1301,9 +1301,9 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	return createTaskRes.TaskId, nil
 }
 
-func (a AppAPI) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, taskID uint64) *errs.Error {
-	getCurrentSprintReq := &proto.GetActiveSprintRequest{TeamId: teamID}
-	getCurrentSprintRes, rpcErr := a.teamyClientRegistry.SprintClient().GetActiveSprint(ct, getCurrentSprintReq)
+func (a AppAPI) tryAddTaskToActiveSprint(ct context.Context, teamID uint64, taskID uint64) *errs.Error {
+	getActiveSprintReq := &proto.GetActiveSprintRequest{TeamId: teamID}
+	getActiveSprintRes, rpcErr := a.teamyClientRegistry.SprintClient().GetActiveSprint(ct, getActiveSprintReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
 		if internalErr.Code == errs.NotFound {
@@ -1313,7 +1313,7 @@ func (a AppAPI) tryAddTaskToCurrentSprint(ct context.Context, teamID uint64, tas
 		return internalErr
 	}
 
-	addTaskToSprintReq := &proto.AddTaskToSprintRequest{TaskId: taskID, SprintId: getCurrentSprintRes.Id}
+	addTaskToSprintReq := &proto.AddTaskToSprintRequest{TaskId: taskID, SprintId: getActiveSprintRes.Id}
 	_, rpcErr = a.teamyClientRegistry.SprintClient().AddTaskToSprint(ct, addTaskToSprintReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
