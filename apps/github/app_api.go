@@ -705,6 +705,84 @@ func (a AppAPI) removePullRequestTaskRelationAndCleanup(
 	return a.githubPullRequestInternalTaskRelationDao.DeletePullRequestInternalTaskRelationByNodeIDAndTaskID(ct, prTaskRelation.PullRequestNodeID, prTaskRelation.InternalTaskID)
 }
 
+func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, installation *client.Installation, teamID uint64, taskID uint64) *errs.Error {
+	prTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByInternalTaskID(ct, taskID)
+	if err != nil {
+		return err
+	}
+
+	for _, prTaskRelation := range prTaskRelations {
+		deleteTaskLinkReq := &proto.DeleteTaskLinkRequest{
+			LinkId: prTaskRelation.InternalTaskLinkID,
+		}
+		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			if internalErr.Code != errs.NotFound {
+				return internalErr
+			}
+		}
+
+		err = a.githubPullRequestInternalTaskRelationDao.DeletePullRequestInternalTaskRelationByNodeIDAndTaskID(ct, prTaskRelation.PullRequestNodeID, prTaskRelation.InternalTaskID)
+		if err != nil && err.Code != errs.NotFound {
+			return err
+		}
+
+		remainingPrTaskRelations, err := a.githubPullRequestInternalTaskRelationDao.FindPullRequestInternalTaskRelationsByNodeID(ct, prTaskRelation.PullRequestNodeID)
+		if err != nil {
+			return err
+		}
+
+		pullRequestNode, err := a.githubGraphQLAPI.GetPullRequestByNodeID(ct, installation, prTaskRelation.PullRequestNodeID)
+		if err != nil {
+			return err
+		}
+
+		var body string
+		if len(remainingPrTaskRelations) == 0 {
+			taskID, err = a.createAutomaticTrackingTask(
+				ct,
+				teamID,
+				pullRequestNode.Repository.Name,
+				pullRequestNode.Author.ID,
+				pullRequestNode.Number,
+				pullRequestNode.Title,
+				pullRequestNode.Body,
+				pullRequestNode.URL,
+				prTaskRelation.PullRequestNodeID,
+			)
+			if err != nil {
+				return err
+			}
+
+			prevTaskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
+			newTaskIDWithTaskURL := a.formatTaskIDWithTaskURL(teamID, taskID)
+			body = strings.ReplaceAll(
+				pullRequestNode.Body,
+				prevTaskIDWithTaskURL,
+				newTaskIDWithTaskURL,
+			)
+		} else {
+			taskIDWithTaskLink := a.formatTaskIDWithTaskURL(teamID, prTaskRelation.InternalTaskID)
+			body = strings.ReplaceAll(
+				pullRequestNode.Body,
+				taskIDWithTaskLink,
+				"",
+			)
+		}
+
+		_, err = a.githubGraphQLAPI.UpdatePullRequest(ct, installation, client.UpdatePullRequestInput{
+			Body:          &body,
+			PullRequestID: prTaskRelation.PullRequestNodeID,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (a AppAPI) createTasksForPullRequest(ct context.Context, teamID uint64, evt githubEntity.Event, prEvt githubEntity.PullRequestEvent) *errs.Error {
 	pr := entity.GithubPullRequest{
 		NodeID:          prEvt.PullRequest.NodeID,
@@ -760,6 +838,12 @@ func (a AppAPI) createTasksForPullRequest(ct context.Context, teamID uint64, evt
 	}
 
 	for _, task := range mentionedTasks {
+		// A task can only be related to one pull request
+		err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, task.TaskId)
+		if err != nil {
+			return err
+		}
+
 		err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID)
 		if err != nil {
 			return err
@@ -814,6 +898,12 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 	for _, mentionedTask := range mentionedTaskMap {
 		oldPPTaskRelation, ok := oldPRTaskRelationMap[mentionedTask.TaskId]
 		if !ok {
+			// A task can only be related to one pull request
+			err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, mentionedTask.TaskId)
+			if err != nil {
+				return err
+			}
+
 			err = a.createPullRequestTaskRelation(
 				ct,
 				mentionedTask.TaskId,
@@ -821,9 +911,9 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 				prEvt.PullRequest.HtmlURL,
 				prEvt.PullRequest.NodeID)
 			if err != nil {
-
 				return err
 			}
+
 			continue
 		}
 
