@@ -1,7 +1,7 @@
 package service
 
 import (
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -76,8 +76,14 @@ func filterSprints(sprints []entity.Sprint, filter SprintFilter) []entity.Sprint
 	})
 
 	if filter.SortByStartAt != nil {
-		sort.Slice(sprints, func(i, j int) bool {
-			return sprints[i].StartAt.Before(sprints[j].StartAt)
+		slices.SortStableFunc(sprints, func(sprint1 entity.Sprint, sprint2 entity.Sprint) int {
+			if sprint1.StartAt.Before(sprint2.StartAt) {
+				return -1
+			} else if sprint1.StartAt.After(sprint2.StartAt) {
+				return 1
+			}
+
+			return 0
 		})
 	}
 
