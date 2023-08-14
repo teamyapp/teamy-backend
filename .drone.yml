@@ -18,12 +18,11 @@ steps:
       storage_type: volume
       volume_cache_root_dir: /var/lib/cache
   - name: run unit tests
-    image: golang:1.21-alpine
+    image: golang:1.21
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
     commands:
-      - apk add git
       - go test ./...
   - name: persist cache
     image: ghcr.io/teamyapp/drone-cache:0.1.9
