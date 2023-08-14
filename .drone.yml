@@ -23,6 +23,7 @@ steps:
       - name: go-mod-cache
         path: /go/pkg/mod
     commands:
+      - apk add git
       - go test ./...
   - name: persist cache
     image: ghcr.io/teamyapp/drone-cache:0.1.9
