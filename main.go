@@ -146,13 +146,17 @@ func startServiceRunner(
 		ConfigContent: core.AuthorizationConfig,
 	}
 	ct := context.Background()
-	logger.Info("Start applying authorization config")
-	_, err = authorizationClient.ApplyAuthorizationConfig(ct, applyAuthorizationCfgReq)
-	if err != nil {
-		return errs.FromGRPCErr(err)
-	}
+	ensureSucceed(ct, logger, func() *errs.Error {
+		logger.Info("Start applying authorization config")
+		_, err = authorizationClient.ApplyAuthorizationConfig(ct, applyAuthorizationCfgReq)
+		if err != nil {
+			logger.Warning("failed to apply authorization config to cloud")
+			return errs.FromGRPCErr(err)
+		}
 
-	logger.Info("Finish applying authorization config")
+		logger.Info("successfully applied authorization config to cloud")
+		return nil
+	})
 	teamyClientRegistry, internalErr := teamyClient.NewRegistry(
 		logger,
 		nw,
@@ -277,6 +281,18 @@ func newLineFormatter(environment env.Environment) telemetry.LineFormatter {
 	}
 
 	return telemetry.NewJSONLineFormatter()
+}
+
+func ensureSucceed(ct context.Context, logger telemetry.Logger, execute func() *errs.Error) {
+	backOff := backoff.
+		NewUniformBuilder().
+		Delay(5 * time.Second).
+		Build()
+	runTime := runtime.NewBuiltInRuntime()
+	rt := retry.NewInfinite(logger, runTime, backOff, backOff, nil)
+	rt.WithRetry(ct, func() *errs.Error {
+		return execute()
+	})
 }
 
 func makeRetryFactory(logger telemetry.Logger, cfg config.App) func() retry.Retry {
