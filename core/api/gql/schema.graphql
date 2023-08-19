@@ -321,7 +321,7 @@ interface TeamGroup implements Group{
 	rollouts: [TeamRollout!]!
 }
 
-type StaticUserGroup implements Group, UserGroup{
+type StaticUserGroup implements UserGroup{
 	id: ID!
 	type: GroupType!
 	name: String!
@@ -331,7 +331,7 @@ type StaticUserGroup implements Group, UserGroup{
 	rollouts: [UserRollout!]!
 }
 
-type StaticTeamGroup implements Group, TeamGroup{
+type StaticTeamGroup implements TeamGroup{
 	id: ID!
 	type: GroupType!
 	name: String!
@@ -350,7 +350,7 @@ interface FilterGroup implements Group{
 	updatedAt: Time
 }
 
-type FilterUserGroup implements Group, FilterGroup, UserGroup{
+type FilterUserGroup implements FilterGroup, UserGroup{
 	id: ID!
 	type: GroupType!
 	name: String!
@@ -361,7 +361,7 @@ type FilterUserGroup implements Group, FilterGroup, UserGroup{
 	rollouts: [UserRollout!]!
 }
 
-type FilterTeamGroup implements Group, FilterGroup, TeamGroup{
+type FilterTeamGroup implements FilterGroup, TeamGroup{
 	id: ID!
 	type: GroupType!
 	name: String!
@@ -399,7 +399,7 @@ interface StaticRollout implements Rollout{
 	createdAt: Time!
 }
 
-type StaticUserRollout implements Rollout, UserRollout, StaticRollout{
+type StaticUserRollout implements UserRollout, StaticRollout{
 	id: ID!
 	type: RolloutType!
 	appVersion: AppVersion!
@@ -407,7 +407,7 @@ type StaticUserRollout implements Rollout, UserRollout, StaticRollout{
 	userGroups: [UserGroup!]!
 }
 
-type StaticTeamRollout implements Rollout, TeamRollout, StaticRollout{
+type StaticTeamRollout implements TeamRollout, StaticRollout{
 	id: ID!
 	type: RolloutType!
 	appVersion: AppVersion!
@@ -424,7 +424,7 @@ interface TimeRangeRollout implements Rollout{
 	createdAt: Time!
 }
 
-type TimeRangeUserRollout implements Rollout, UserRollout, StaticRollout{
+type TimeRangeUserRollout implements UserRollout, StaticRollout{
 	id: ID!
 	type: RolloutType!
 	appVersion: AppVersion!
@@ -434,7 +434,7 @@ type TimeRangeUserRollout implements Rollout, UserRollout, StaticRollout{
 	userGroups: [UserGroup!]!
 }
 
-type TimeRangeTeamRollout implements Rollout, TeamRollout, StaticRollout{
+type TimeRangeTeamRollout implements TeamRollout, StaticRollout{
 	id: ID!
 	type: RolloutType!
 	appVersion: AppVersion!
@@ -453,7 +453,7 @@ interface ExperimentRollout implements Rollout{
 	createdAt: Time!
 }
 
-type ExperimentUserRollout implements Rollout, UserRollout, ExperimentRollout{
+type ExperimentUserRollout implements UserRollout, ExperimentRollout{
 	id: ID!
 	type: RolloutType!
 	appVersions: [AppVersion!]!
@@ -463,7 +463,7 @@ type ExperimentUserRollout implements Rollout, UserRollout, ExperimentRollout{
 	userGroups: [UserGroup!]!
 }
 
-type ExperimentTeamRollout implements Rollout, TeamRollout, ExperimentRollout{
+type ExperimentTeamRollout implements TeamRollout, ExperimentRollout{
 	id: ID!
 	type: RolloutType!
 	appVersions: [AppVersion!]!
