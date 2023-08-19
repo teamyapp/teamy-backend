@@ -14,7 +14,6 @@ type Dependencies struct {
 	invitationService service.Invitation
 	userService       service.User
 	threadService     service.Thread
-	appService        service.App
 }
 
 func NewDependencies(
@@ -26,7 +25,6 @@ func NewDependencies(
 	userService service.User,
 	invitationService service.Invitation,
 	threadService service.Thread,
-	appService service.App,
 ) *Dependencies {
 	return &Dependencies{
 		logger:            logger,
@@ -37,6 +35,5 @@ func NewDependencies(
 		userService:       userService,
 		invitationService: invitationService,
 		threadService:     threadService,
-		appService:        appService,
 	}
 }

@@ -4,73 +4,79 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type AppVersion struct {
-	deps       *Dependencies
-	appVersion entity.AppVersion
 }
 
-func (a AppVersion) App(ct context.Context) (App, error) {
-	app, err := a.deps.appService.FindAppByID(ct, a.appVersion.AppID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ct, err)
-		return App{}, errs.ToResolverErr(err)
-	}
-
-	return newApp(a.deps, app), nil
+func (a AppVersion) Number(ctx context.Context) int32 {
+	panic("not implemented")
 }
 
-func (a AppVersion) VersionNumber() int32 {
-	return a.appVersion.VersionNumber
+func (a AppVersion) AppName(ctx context.Context) string {
+	panic("not implemented")
 }
 
-func (a AppVersion) IconURL() *string {
-	return a.appVersion.IconURL
+func (a AppVersion) Description(ctx context.Context) string {
+	panic("not implemented")
 }
 
-func (a AppVersion) HasUIExtension() bool {
-	return a.appVersion.HasUIExtension
+func (a AppVersion) Changes(ctx context.Context) []string {
+	panic("not implemented")
 }
 
-func (a AppVersion) UIExtensionEntrypointPath() *string {
-	return a.appVersion.UIExtensionEntrypointPath
+func (a AppVersion) CreatedAt(ctx context.Context) graphql.Time {
+	panic("not implemented")
 }
 
-func (a AppVersion) IsPublic() bool {
-	return a.appVersion.IsPublic
+func (a AppVersion) CreatedBy(ctx context.Context) User {
+	panic("not implemented")
 }
 
-func (a AppVersion) VisibleToTeams(ct context.Context) ([]Team, error) {
-	teams, err := a.deps.appService.FindAppVersionVisibleTeams(ct, a.appVersion.AppID, a.appVersion.VersionNumber)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ct, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	return collect.Map(teams, func(team entity.Team, _ int) Team {
-		return newTeam(a.deps, team)
-	}), nil
+func (a AppVersion) Prices(ctx context.Context) []Money {
+	panic("not implemented")
 }
 
-func (a AppVersion) Changes() *string {
-	return a.appVersion.Changes
+func (a AppVersion) IsReady(ctx context.Context) bool {
+	panic("not implemented")
 }
 
-func (a AppVersion) CreatedAt() graphql.Time {
-	return toGraphQLTime(a.appVersion.CreatedAt)
+func (a AppVersion) App(ctx context.Context) App {
+	panic("not implemented")
 }
 
-func (a AppVersion) UpdatedAt() *graphql.Time {
-	return toGraphQLTimePtr(a.appVersion.UpdateAt)
+func (m Mutation) CreateAppVersion(
+	ctx context.Context,
+	args struct {
+		AppID graphql.ID
+	}) AppVersion {
+	panic("not implemented")
 }
 
-func newAppVersion(deps *Dependencies, appVersion entity.AppVersion) AppVersion {
-	return AppVersion{
-		deps:       deps,
-		appVersion: appVersion,
-	}
+func (m Mutation) CreateAppPackageUploadSession(
+	ctx context.Context,
+	args struct {
+		AppID         graphql.ID
+		VersionNumber int32
+	}) graphql.ID {
+	panic("not implemented")
+}
+
+func (m Mutation) FinishAppPackageUploadSession(
+	ctx context.Context,
+	args struct {
+		AppID               graphql.ID
+		VersionNumber       int32
+		FileUploadSessionID graphql.ID
+	}) AppVersion {
+	panic("not implemented")
+}
+
+func (m Mutation) DeleteAppVersion(
+	ctx context.Context,
+	args struct {
+		AppID         graphql.ID
+		VersionNumber int32
+	}) AppVersion {
+	panic("not implemented")
 }

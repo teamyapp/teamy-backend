@@ -42,10 +42,6 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
-	wire.Bind(new(dao.App), new(sqldb.App)),
-	wire.Bind(new(dao.AppVersion), new(sqldb.AppVersion)),
-	wire.Bind(new(dao.AppVersionVisibleTeam), new(sqldb.AppVersionVisibleTeam)),
-	wire.Bind(new(dao.AppTeamInstallation), new(sqldb.AppTeamInstallation)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -61,10 +57,6 @@ var daoSet = wire.NewSet(
 	sqldb.NewTeamFileUploadSession,
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
-	sqldb.NewApp,
-	sqldb.NewAppVersion,
-	sqldb.NewAppVersionVisibleTeam,
-	sqldb.NewAppTeamInstallation,
 )
 
 var serviceSet = wire.NewSet(
@@ -75,7 +67,6 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
-	service.NewApp,
 )
 
 func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {

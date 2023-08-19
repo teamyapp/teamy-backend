@@ -9,6 +9,25 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+/*
+type Team {
+	id: ID!
+	name: String!
+	iconUrl: String
+	createdAt: Time!
+	creator: User!
+	owner: User!
+	members: [TeamMember!]!
+	tasks(filter: TaskFilter): [Task!]!
+	invitations(filter: InvitationFilter): [Invitation!]!
+	sprints(filter: SprintFilter): [Sprint!]!
+	appInstallations: [TeamAppInstallation!]!
+	managedApps: [App!]!
+	taskActivities: [TaskActivity!]!
+	activeSprint: Sprint
+}
+*/
+
 type Team struct {
 	deps *Dependencies
 	team entity.Team
@@ -156,16 +175,12 @@ func (t Team) Sprints(ct context.Context, args struct {
 	}), nil
 }
 
-func (t Team) AppInstallations(ct context.Context) ([]AppTeamInstallation, error) {
-	appInstallations, err := t.deps.appService.FindAppInstallationsByTeamID(ct, t.team.ID)
-	if err != nil {
-		t.deps.logger.ErrorWithContext(ct, err)
-		return nil, errs.ToResolverErr(err)
-	}
+func (t Team) AppInstallations(ct context.Context) ([]TeamAppInstallation, error) {
+	panic("not implemented")
+}
 
-	return collect.Map(appInstallations, func(appInstallation entity.AppTeamInstallation, _ int) AppTeamInstallation {
-		return newAppTeamInstallation(t.deps, appInstallation)
-	}), nil
+func (t Team) ManagedApps(ct context.Context) ([]App, error) {
+	panic("not implemented")
 }
 
 func newTeam(deps *Dependencies, team entity.Team) Team {
