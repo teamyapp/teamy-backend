@@ -30,6 +30,7 @@ type SprintFilter struct {
 }
 
 type AppFilter struct {
-	AppID  *graphql.ID
-	TeamID *graphql.ID
+	Query         *string
+	Tag           *string
+	IsOnPromotion *bool
 }

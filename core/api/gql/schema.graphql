@@ -80,35 +80,48 @@ type Mutation {
 	deleteFile(fileId: ID!): FileMetadata!
 
 	# App
-	createApp(name: String!): App!
-	updateApp(appId: ID!, input: UpdateAppInput!): App!
+	createApp(teamId: ID!, name: String!): App!
 	deleteApp(appId: ID!): App!
-	refreshAppSecret(appId: ID!): App!
+	installAppToTeam(appId: ID!, teamId: ID!): TeamAppInstallation!
+	uninstallAppFromTeam(installationId: ID!): TeamAppInstallation!
+
+	createAppSecret(appId: ID!, input: CreateAppSecretInput!): AppSecret!
+	updateAppSecret(secretId: ID!, input: UpdateAppSecretInput!): AppSecret!
+	deleteAppSecret(secretId: ID!): AppSecret!
+
 	createAppVersion(appId: ID!): AppVersion!
-	updateAppVersion(
+	createAppPackageUploadSession(appId: ID!, versionNumber: Int!): ID!
+	finishAppPackageUploadSession(
 		appId: ID!
 		versionNumber: Int!
-		input: UpdateAppVersionInput!
+		fileUploadSessionId: ID!
 	): AppVersion!
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
-	addVisibleTeamToAppVersion(
-		appId: ID!
-		versionNumber: Int!
-		teamId: ID!
-	): AppVersion!
-	removeVisibleTeamFromAppVersion(
-		appId: ID!
-		versionNumber: Int!
-		teamId: ID!
-	): AppVersion!
-	createAppTeamInstallation(appId: ID!, versionNumber: Int!, teamId: ID!): AppTeamInstallation!
-	updateAppTeamInstallation(appId: ID!, teamId: ID!, input: UpdateAppTeamInstallationInput!): AppTeamInstallation!
-	deleteAppTeamInstallation(appId: ID!, teamId: ID!): AppTeamInstallation!
+
+	createStaticUserGroup(appId: ID!, input: CreateStaticUserGroupInput!): StaticUserGroup!
+	updateStaticUserGroup(groupId: ID!,input: UpdateStaticUserGroupInput!): StaticUserGroup!
+	createFilterUserGroup(appId: ID!, input: CreateFilterUserGroupInput!): FilterUserGroup!
+	updateFilterUserGroup(groupId: ID!, input: UpdateFilterUserGroupInput!): FilterUserGroup!
+	createStaticTeamGroup(appId: ID!, input: CreateStaticTeamGroupInput!): StaticTeamGroup!
+	updateStaticTeamGroup(groupId: ID!,input: UpdateStaticTeamGroupInput!): StaticTeamGroup!
+	createFilterTeamGroup(appId: ID!, input: CreateFilterTeamGroupInput!): FilterTeamGroup!
+	updateFilterTeamGroup(groupId: ID!,input: UpdateFilterTeamGroupInput!): FilterTeamGroup!
+	deleteGroup(groupId: ID!): Group!
+
+	createStaticUserRollout(appId: ID!, input: CreateStaticUserRolloutInput!): StaticUserRollout!
+	updateStaticUserRollout(rolloutId: ID!,input: UpdateStaticUserRolloutInput!): StaticUserRollout!
+	createTimeRangeUserRollout(appId: ID!, input: CreateTimeRangeUserRolloutInput!): TimeRangeUserRollout!
+	updateTimeRangeUserRollout(rolloutId: ID!,input: UpdateTimeRangeRolloutInput!): TimeRangeUserRollout!
+	createExperimentUserRollout(appId: ID!, input: CreateExperimentUserRolloutInput!): ExperimentUserRollout!
+	updateExperimentUserRollout(rolloutId: ID!,input: UpdateExperimentUserRolloutInput!): ExperimentUserRollout!
+	createStaticTeamRollout(appId: ID!, input: CreateStaticTeamRolloutInput!): StaticTeamRollout!
+	updateStaticTeamRollout(rolloutId: ID!,input: UpdateStaticTeamRolloutInput!): StaticTeamRollout!
+	createTimeRangeTeamRollout(appId: ID!, input: CreateTimeRangeTeamRolloutInput!): TimeRangeTeamRollout!
+	updateTimeRangeTeamRollout(rolloutId: ID!,input: UpdateTimeRangeTeamRolloutInput!): TimeRangeTeamRollout!
+	createExperimentTeamRollout(appId: ID!, input: CreateExperimentTeamRolloutInput!): ExperimentTeamRollout!
+	updateExperimentTeamRollout(rolloutId: ID!,input: UpdateExperimentTeamRolloutInput!): ExperimentTeamRollout!
+	deleteRollout(rolloutId: ID!): Rollout!
 }
-
-scalar Duration
-
-scalar Time
 
 type Task {
 	id: ID!
@@ -186,7 +199,8 @@ type Team {
 	tasks(filter: TaskFilter): [Task!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
-	appInstallations: [AppTeamInstallation!]!
+	appInstallations: [TeamAppInstallation!]!
+	managedApps: [App!]!
 	taskActivities: [TaskActivity!]!
 	activeSprint: Sprint
 }
@@ -237,30 +251,6 @@ type FileMetadata {
 	owningTeam: Team!
 }
 
-enum InvitationStatus {
-	PENDING
-	ACCEPTED
-	DECLINED
-	EXPIRED
-}
-
-enum TaskAction {
-	START
-	DELETE
-	ASSIGN_OWNER
-	REPORT_BLOCKED
-	MARK_COMPLETE
-}
-
-enum TaskStatus {
-	TODO
-	IN_PROGRESS
-	PAUSED
-	AWAITING
-	BLOCK
-	DELIVERED
-}
-
 type User {
 	id: ID!
 	firstName: String!
@@ -273,37 +263,225 @@ type User {
 
 type App {
 	id: ID!
-	apiSecret: String!
-	activeVersion: AppVersion
-	name: String!
+	secrets: [AppSecret!]!
+	totalInstallations: Int!
+	installations: TeamAppInstallation!
 	versions: [AppVersion!]!
-	teamInstallations: [AppTeamInstallation!]!
-	installationCount: Int!
-	description: String!
-	creator: User!
-	createdAt: Time!
-	updatedAt: Time
+	userGroups: [UserGroup!]!
+	teamGroups: [TeamGroup!]!
+	userRollouts: [UserRollout!]!
+	teamRollouts: [TeamRollout!]!
+	ownedByTeam: Team!
+}
+
+type AppSecret {
+	id: ID!
+	name: String!
+	addedAt: Time!
+	addedBy: User!
+	lastUsedAt: Time
+	app: App!
 }
 
 type AppVersion {
+	number: Int!
+	appName: String!
+	description: String!
+	changes: [String!]!
+	createdAt: Time!
+	createdBy: User!
+	prices: [Money!]!
+	isReady: Boolean!
 	app: App!
-	versionNumber: Int!
-	iconUrl: String
-	hasUiExtension: Boolean!
-	uiExtensionEntrypointPath: String
-	isPublic: Boolean!
-	visibleToTeams: [Team!]!
-	changes: String
+}
+
+interface Group {
+	id: ID!
+	type: GroupType!
+	name: String!
 	createdAt: Time!
 	updatedAt: Time
 }
 
-type AppTeamInstallation {
-	app: App!
-	enabledVersion: AppVersion!
+interface UserGroup implements Group{
+	id: ID!
+	type: GroupType!
+	name: String!
+	createdAt: Time!
+	updatedAt: Time
+	rollouts: [UserRollout!]!
+}
+
+interface TeamGroup implements Group{
+	id: ID!
+	type: GroupType!
+	name: String!
+	createdAt: Time!
+	updatedAt: Time
+	rollouts: [TeamRollout!]!
+}
+
+type StaticUserGroup implements UserGroup{
+	id: ID!
+	type: GroupType!
+	name: String!
+	users: [User!]!
+	createdAt: Time!
+	updatedAt: Time
+	rollouts: [UserRollout!]!
+}
+
+type StaticTeamGroup implements TeamGroup{
+	id: ID!
+	type: GroupType!
+	name: String!
+	teams: [Team!]!
+	createdAt: Time!
+	updatedAt: Time
+	rollouts: [TeamRollout!]!
+}
+
+interface FilterGroup implements Group{
+	id: ID!
+	type: GroupType!
+	name: String!
+	filter: String!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type FilterUserGroup implements FilterGroup, UserGroup{
+	id: ID!
+	type: GroupType!
+	name: String!
+	filter: String!
+	userCount: Int!
+	createdAt: Time!
+	updatedAt: Time
+	rollouts: [UserRollout!]!
+}
+
+type FilterTeamGroup implements FilterGroup, TeamGroup{
+	id: ID!
+	type: GroupType!
+	name: String!
+	filter: String!
+	teamCount: Int!
+	createdAt: Time!
+	updatedAt: Time
+	rollouts: [TeamRollout!]!
+}
+
+interface Rollout {
+	id: ID!
+	type: RolloutType!
+	createdAt: Time!
+}
+
+interface UserRollout implements Rollout {
+	id: ID!
+	type: RolloutType!
+	createdAt: Time!
+	userGroups: [UserGroup!]!
+}
+
+interface TeamRollout implements Rollout{
+	id: ID!
+	type: RolloutType!
+	createdAt: Time!
+	teamGroups: [TeamGroup!]!
+}
+
+interface StaticRollout implements Rollout{
+	id: ID!
+	type: RolloutType!
+	appVersion: AppVersion!
+	createdAt: Time!
+}
+
+type StaticUserRollout implements UserRollout, StaticRollout{
+	id: ID!
+	type: RolloutType!
+	appVersion: AppVersion!
+	createdAt: Time!
+	userGroups: [UserGroup!]!
+}
+
+type StaticTeamRollout implements TeamRollout, StaticRollout{
+	id: ID!
+	type: RolloutType!
+	appVersion: AppVersion!
+	createdAt: Time!
+	teamGroups: [TeamGroup!]!
+}
+
+interface TimeRangeRollout implements Rollout{
+	id: ID!
+	type: RolloutType!
+	appVersion: AppVersion!
+	startAt: Time
+	endAt: Time
+	createdAt: Time!
+}
+
+type TimeRangeUserRollout implements UserRollout, StaticRollout{
+	id: ID!
+	type: RolloutType!
+	appVersion: AppVersion!
+	startAt: Time
+	endAt: Time
+	createdAt: Time!
+	userGroups: [UserGroup!]!
+}
+
+type TimeRangeTeamRollout implements TeamRollout, StaticRollout{
+	id: ID!
+	type: RolloutType!
+	appVersion: AppVersion!
+	startAt: Time
+	endAt: Time
+	createdAt: Time!
+	teamGroups: [TeamGroup!]!
+}
+
+interface ExperimentRollout implements Rollout{
+	id: ID!
+	type: RolloutType!
+	appVersions: [AppVersion!]!
+	startAt: Time
+	endAt: Time
+	createdAt: Time!
+}
+
+type ExperimentUserRollout implements UserRollout, ExperimentRollout{
+	id: ID!
+	type: RolloutType!
+	appVersions: [AppVersion!]!
+	startAt: Time
+	endAt: Time
+	createdAt: Time!
+	userGroups: [UserGroup!]!
+}
+
+type ExperimentTeamRollout implements TeamRollout, ExperimentRollout{
+	id: ID!
+	type: RolloutType!
+	appVersions: [AppVersion!]!
+	startAt: Time
+	endAt: Time
+	createdAt: Time!
+	teamGroups: [TeamGroup!]!
+}
+
+type TeamAppInstallation {
+	id: ID!
 	installedTeam: Team!
-	installedBy: User
-	installedAt: Time!
+	activeAppVersion: AppVersion
+}
+
+type Money {
+	currency: Currency!
+	amount: Int!
 }
 
 # Filters
@@ -332,8 +510,9 @@ input SprintFilter {
 }
 
 input AppFilter {
-	appId: ID
-	teamId: ID
+	query: String
+	tag: String
+	isOnPromotion: Boolean
 }
 
 # Inputs
@@ -409,20 +588,175 @@ input FileMetadataInput {
 	name: String!
 }
 
-input UpdateAppInput {
-	Name: String
-	description: String
-	activeVersionNumber: Int
+input CreateAppSecretInput {
+	name: String!
 }
 
-input UpdateAppVersionInput {
-	iconUrl: String
-	hasUiExtension: Boolean!
-	uiExtensionEntryPointPath: String
-	changes: String
-	isPublic: Boolean!
+input UpdateAppSecretInput {
+	name: String!
 }
 
-input UpdateAppTeamInstallationInput {
-	enabledVersionNumber: Int!
+input CreateStaticUserGroupInput {
+	name: String!
+	userIds: [ID!]!
 }
+
+input UpdateStaticUserGroupInput {
+	name: String!
+	userIds: [ID!]!
+}
+
+input CreateFilterUserGroupInput {
+	name: String!
+	filter: String!
+}
+
+input UpdateFilterUserGroupInput {
+	name: String!
+	filter: String!
+}
+
+input CreateStaticTeamGroupInput {
+	name: String!
+	teamIds: [ID!]!
+}
+
+input UpdateStaticTeamGroupInput {
+	name: String!
+	teamIds: [ID!]!
+}
+
+input CreateFilterTeamGroupInput {
+	name: String!
+	filter: String!
+}
+
+input UpdateFilterTeamGroupInput {
+	name: String!
+	filter: String!
+}
+
+input CreateStaticUserRolloutInput {
+	versionNumber: Int!
+	userGroupIds: [ID!]!
+}
+
+input UpdateStaticUserRolloutInput {
+	appId: ID!
+	versionNumber: Int!
+	userGroupIds: [ID!]!
+}
+
+input CreateTimeRangeUserRolloutInput {
+	versionNumber: Int!
+	startAt: Time
+	endAt: Time
+	userGroupIds: [ID!]!
+}
+
+input UpdateTimeRangeRolloutInput {
+	appId: ID!
+	versionNumber: Int!
+	startAt: Time
+	endAt: Time
+	userGroupIds: [ID!]!
+}
+
+input CreateExperimentUserRolloutInput {
+	versionNumbers: [Int!]!
+	startAt: Time
+	endAt: Time
+	userGroupIds: [ID!]!
+}
+
+input UpdateExperimentUserRolloutInput {
+	appId: ID!
+	versionNumbers: [Int!]!
+	startAt: Time
+	endAt: Time
+	userGroupIds: [ID!]!
+}
+
+input CreateStaticTeamRolloutInput {
+	versionNumber: Int!
+	teamGroupIds: [ID!]!
+}
+
+input UpdateStaticTeamRolloutInput {
+	appId: ID!
+	versionNumber: Int!
+	teamGroupIds: [ID!]!
+}
+
+input CreateTimeRangeTeamRolloutInput {
+	versionNumber: Int!
+	startAt: Time
+	endAt: Time
+	teamGroupIds: [ID!]!
+}
+
+input UpdateTimeRangeTeamRolloutInput {
+	appId: ID!
+	versionNumber: Int!
+	startAt: Time
+	endAt: Time
+	teamGroupIds: [ID!]!
+}
+
+input CreateExperimentTeamRolloutInput {
+	versionNumbers: [Int!]!
+	startAt: Time
+	endAt: Time
+	teamGroupIds: [ID!]!
+}
+
+input UpdateExperimentTeamRolloutInput {
+	appId: ID!
+	versionNumbers: [Int!]!
+	startAt: Time
+	endAt: Time
+	teamGroupIds: [ID!]!
+}
+
+enum InvitationStatus {
+	PENDING
+	ACCEPTED
+	DECLINED
+	EXPIRED
+}
+
+enum TaskAction {
+	START
+	DELETE
+	ASSIGN_OWNER
+	REPORT_BLOCKED
+	MARK_COMPLETE
+}
+
+enum TaskStatus {
+	TODO
+	IN_PROGRESS
+	PAUSED
+	AWAITING
+	BLOCK
+	DELIVERED
+}
+
+enum Currency {
+	USD
+}
+
+enum GroupType {
+	STATIC
+	FILTER
+}
+
+enum RolloutType {
+	STATIC
+	TIME_RANGE
+	EXPERIMENT
+}
+
+scalar Duration
+
+scalar Time

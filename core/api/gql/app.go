@@ -4,96 +4,81 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type App struct {
-	deps *Dependencies
-	app  entity.App
 }
 
-func (a App) ID() graphql.ID {
-	return toGraphQLID(a.app.ID)
+func (a App) ID(ctx context.Context) graphql.ID {
+	panic("not implemented")
 }
 
-func (a App) APISecret() string {
-	return a.app.APISecret
+func (a App) Secrets(ctx context.Context) []AppSecret {
+	panic("not implemented")
 }
 
-func (a App) ActiveVersion(ct context.Context) (*AppVersion, error) {
-	if a.app.ActiveVersionNumber == nil {
-		return nil, nil
-	}
-
-	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndVersionNumber(ct, a.app.ID, *a.app.ActiveVersionNumber)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ct, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	activeVersion := newAppVersion(a.deps, appVersion)
-	return &activeVersion, nil
+func (a App) TotalInstallations(ctx context.Context) int32 {
+	panic("not implemented")
 }
 
-func (a App) Name() string {
-	return a.app.Name
+func (a App) Installations(ctx context.Context) TeamAppInstallation {
+	panic("not implemented")
 }
 
-func (a App) Versions(ct context.Context) ([]AppVersion, error) {
-	appVersions, err := a.deps.appService.FindAppVersionByAppID(ct, a.app.ID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ct, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	return collect.Map(appVersions, func(appVersion entity.AppVersion, _ int) AppVersion {
-		return newAppVersion(a.deps, appVersion)
-	}), nil
+func (a App) Versions(ctx context.Context) []AppVersion {
+	panic("not implemented")
 }
 
-func (a App) TeamInstallations(ct context.Context) ([]AppTeamInstallation, error) {
-	appTeamInstallations, err := a.deps.appService.FindAppTeamInstallationsByAppID(ct, a.app.ID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ct, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	return collect.Map(appTeamInstallations, func(appTeamInstallation entity.AppTeamInstallation, _ int) AppTeamInstallation {
-		return newAppTeamInstallation(a.deps, appTeamInstallation)
-	}), nil
+func (a App) UserGroups(ctx context.Context) []UserGroup {
+	panic("not implemented")
 }
 
-func (a App) InstallationCount() int32 {
-	return int32(a.app.InstallationCount)
+func (a App) TeamGroups(ctx context.Context) []TeamGroup {
+	panic("not implemented")
 }
 
-func (a App) Description() string {
-	return a.app.Description
+func (a App) UserRollouts(ctx context.Context) []UserRollout {
+	panic("not implemented")
 }
 
-func (a App) Creator(ct context.Context) (User, error) {
-	user, err := a.deps.userService.FindUserByID(ct, a.app.CreatorUserID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ct, err)
-		return User{}, errs.ToResolverErr(err)
-	}
-
-	return newUser(a.deps, user), nil
+func (a App) TeamRollouts(ctx context.Context) []TeamRollout {
+	panic("not implemented")
 }
 
-func (a App) CreatedAt() graphql.Time {
-	return toGraphQLTime(a.app.CreatedAt)
+func (a App) OwnedByTeam(ctx context.Context) Team {
+	panic("not implemented")
 }
 
-func (a App) UpdatedAt() *graphql.Time {
-	return toGraphQLTimePtr(a.app.UpdatedAt)
+func (m Mutation) CreateApp(
+	ctx context.Context,
+	args struct {
+		TeamID graphql.ID
+		Name   string
+	}) App {
+	panic("not implemented")
 }
 
-func newApp(deps *Dependencies, app entity.App) App {
-	return App{
-		deps: deps,
-		app:  app,
-	}
+func (m Mutation) DeleteApp(
+	ctx context.Context,
+	args struct {
+		AppID graphql.ID
+	}) App {
+	panic("not implemented")
+}
+
+func (m Mutation) InstallAppToTeam(
+	ctx context.Context,
+	args struct {
+		AppID  graphql.ID
+		TeamID graphql.ID
+	}) TeamAppInstallation {
+	panic("not implemented")
+}
+
+func (m Mutation) UninstallAppFromTeam(
+	ctx context.Context,
+	args struct {
+		InstallationID graphql.ID
+	}) TeamAppInstallation {
+	panic("not implemented")
 }
