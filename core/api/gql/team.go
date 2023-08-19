@@ -9,25 +9,6 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
-/*
-type Team {
-	id: ID!
-	name: String!
-	iconUrl: String
-	createdAt: Time!
-	creator: User!
-	owner: User!
-	members: [TeamMember!]!
-	tasks(filter: TaskFilter): [Task!]!
-	invitations(filter: InvitationFilter): [Invitation!]!
-	sprints(filter: SprintFilter): [Sprint!]!
-	appInstallations: [TeamAppInstallation!]!
-	managedApps: [App!]!
-	taskActivities: [TaskActivity!]!
-	activeSprint: Sprint
-}
-*/
-
 type Team struct {
 	deps *Dependencies
 	team entity.Team
