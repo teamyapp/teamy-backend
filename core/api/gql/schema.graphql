@@ -292,6 +292,7 @@ type AppVersion {
 	createdBy: User!
 	prices: [Money!]!
 	isReady: Boolean!
+	app: App!
 }
 
 interface Group {
