@@ -46,6 +46,7 @@ func (m Mutation) DeleteRollout(
 	ctx context.Context,
 	args struct {
 		RolloutID graphql.ID
-	}) Rollout {
+	},
+) Rollout {
 	panic("implement me")
 }

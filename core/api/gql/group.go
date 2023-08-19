@@ -28,6 +28,7 @@ func (m Mutation) DeleteGroup(
 	ctx context.Context,
 	args struct {
 		GroupID graphql.ID
-	}) Group {
+	},
+) Group {
 	panic("implement me")
 }
