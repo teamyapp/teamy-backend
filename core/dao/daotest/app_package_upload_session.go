@@ -44,7 +44,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 
 			return &errs.Error{
 				Code:    errs.NotFound,
-				Message: fmt.Sprint("row not found: appID=%v, versionNumber=%v, fileUploadSessionID=%v", appID, versionNumber, fileUploadSessionID),
+				Message: fmt.Sprintf("row not found: appID=%v, versionNumber=%v, fileUploadSessionID=%v", appID, versionNumber, fileUploadSessionID),
 			}
 		},
 	})
@@ -65,7 +65,7 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Conte
 					currUploadSession.VersionNumber == session.VersionNumber {
 					return &errs.Error{
 						Code:    errs.AlreadyExists,
-						Message: fmt.Sprint("row already exists: appID=%v, versionNumber=%v", session.AppID, session.VersionNumber),
+						Message: fmt.Sprintf("row already exists: appID=%v, versionNumber=%v", session.AppID, session.VersionNumber),
 					}
 				}
 			}
@@ -124,7 +124,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 
 			return &errs.Error{
 				Code: errs.NotFound,
-				Message: fmt.Sprint("row not found: appID=%v, versionNumber=%v",
+				Message: fmt.Sprintf("row not found: appID=%v, versionNumber=%v",
 					session.AppID,
 					session.VersionNumber),
 			}
@@ -146,7 +146,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 
 			return &errs.Error{
 				Code: errs.NotFound,
-				Message: fmt.Sprint("row not found: appID=%v, versionNumber=%v",
+				Message: fmt.Sprintf("row not found: appID=%v, versionNumber=%v",
 					session.AppID,
 					session.VersionNumber),
 			}
