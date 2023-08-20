@@ -13,18 +13,17 @@ type AppPackageUploadSession interface {
 		ct context.Context,
 		tx *transaction.Transaction,
 		appID uint64,
-		userID uint64,
 		versionNumber int,
 		fileUploadSessionID uint64,
 	) (entity.AppPackageUploadSession, *errs.Error)
 	CreateAppPackageUploadSession(
-	    ct context.Context, 
-	    tx *transaction.Transaction, 
-	    session entity.AppPackageUploadSession,
+		ct context.Context,
+		tx *transaction.Transaction,
+		session entity.AppPackageUploadSession,
 	) *errs.Error
 	UpdateAppPackageFileUploadSession(
-	    ct context.Context, 
-	    tx *transaction.Transaction, 
-	    session entity.AppPackageUploadSession,
+		ct context.Context,
+		tx *transaction.Transaction,
+		session entity.AppPackageUploadSession,
 	) *errs.Error
 }
