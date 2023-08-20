@@ -52,7 +52,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 			&appPackageUploadSession.UpdatedAt,
 		)
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.AppPackageUploadSession{}, errs.NewError(errs.NotFound, fmt.Sprintf("AppPackageUploadSession not found: appID=%v, userID=%v, versionNumber=%v",
+		return entity.AppPackageUploadSession{}, errs.NewError(errs.NotFound, fmt.Sprintf("AppPackageUploadSession not found: appID=%v, versionNumber=%v",
 			appID,
 			versionNumber))
 	}
