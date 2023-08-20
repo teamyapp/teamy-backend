@@ -6,7 +6,7 @@ import (
 
 type AppPackageUploadSession struct {
 	AppID               uint64
-	VersionNumber       int32
+	VersionNumber       int
 	FileUploadSessionID uint64
 	IsCompleted         bool
 	CreatedAt           time.Time

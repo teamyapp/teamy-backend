@@ -21,8 +21,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	appID uint64,
-	userID uint64,
-	versionNumber int32,
+	versionNumber int,
 	fileUploadSessionID uint64,
 ) (entity.AppPackageUploadSession, *errs.Error) {
 	var uploadSession entity.AppPackageUploadSession
@@ -36,7 +35,6 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 			for _, rawRow := range table.Rows {
 				currUploadSession := rawRow.(entity.AppPackageUploadSession)
 				if currUploadSession.AppID == appID &&
-					currUploadSession.UserID == userID &&
 					currUploadSession.VersionNumber == versionNumber &&
 					currUploadSession.FileUploadSessionID == fileUploadSessionID {
 					uploadSession = currUploadSession
@@ -46,7 +44,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 
 			return &errs.Error{
 				Code:    errs.NotFound,
-				Message: fmt.Sprint("row not found: appID=%v, userID=%v, versionNumber=%v, fileUploadSessionID=%v", appID, userID, versionNumber, fileUploadSessionID),
+				Message: fmt.Sprint("row not found: appID=%v, versionNumber=%v, fileUploadSessionID=%v", appID, versionNumber, fileUploadSessionID),
 			}
 		},
 	})
@@ -63,17 +61,16 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Conte
 
 			for _, rawRow := range table.Rows {
 				currUploadSession := rawRow.(entity.AppPackageUploadSession)
-				if currUploadSession.AppID == appPackageUploadSession.AppID &&
-					currUploadSession.UserID == appPackageUploadSession.UserID &&
-					currUploadSession.VersionNumber == appPackageUploadSession.VersionNumber {
+				if currUploadSession.AppID == session.AppID &&
+					currUploadSession.VersionNumber == session.VersionNumber {
 					return &errs.Error{
 						Code:    errs.AlreadyExists,
-						Message: fmt.Sprint("row already exists: appID=%v, userID=%v, versionNumber=%v", appPackageUploadSession.AppID, appPackageUploadSession.UserID, appPackageUploadSession.VersionNumber),
+						Message: fmt.Sprint("row already exists: appID=%v, versionNumber=%v", session.AppID, session.VersionNumber),
 					}
 				}
 			}
 
-			table.Rows = append(table.Rows, appPackageUploadSession)
+			table.Rows = append(table.Rows, session)
 			return nil
 		},
 		Undo: func() *errs.Error {
@@ -85,9 +82,8 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Conte
 			rows := make([]interface{}, 0)
 			for _, rawRow := range table.Rows {
 				currUploadSession := rawRow.(entity.AppPackageUploadSession)
-				if currUploadSession.AppID == appPackageUploadSession.AppID &&
-					currUploadSession.UserID == appPackageUploadSession.UserID &&
-					currUploadSession.VersionNumber == appPackageUploadSession.VersionNumber {
+				if currUploadSession.AppID == session.AppID &&
+					currUploadSession.VersionNumber == session.VersionNumber {
 					continue
 				}
 
@@ -101,11 +97,11 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Conte
 }
 
 func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
-    ct context.Context, 
-    tx *transaction.Transaction, 
-    session entity.AppPackageUploadSession,
+	ct context.Context,
+	tx *transaction.Transaction,
+	session entity.AppPackageUploadSession,
 ) *errs.Error {
-	oldAppPackageUploadSession, err := a.FindAppPackageUploadSessionWithTx(ct, tx, appPackageUploadSession.AppID, appPackageUploadSession.UserID, appPackageUploadSession.VersionNumber, appPackageUploadSession.FileUploadSessionID)
+	oldAppPackageUploadSession, err := a.FindAppPackageUploadSessionWithTx(ct, tx, session.AppID, session.VersionNumber, session.FileUploadSessionID)
 	if err != nil {
 		return err
 	}
@@ -119,20 +115,18 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 
 			for index, rawRow := range table.Rows {
 				currUploadSession := rawRow.(entity.AppPackageUploadSession)
-				if currUploadSession.AppID == appPackageUploadSession.AppID &&
-					currUploadSession.UserID == appPackageUploadSession.UserID &&
-					currUploadSession.VersionNumber == appPackageUploadSession.VersionNumber {
-					table.Rows[i] = appPackageUploadSession
+				if currUploadSession.AppID == session.AppID &&
+					currUploadSession.VersionNumber == session.VersionNumber {
+					table.Rows[index] = session
 					return nil
 				}
 			}
 
 			return &errs.Error{
 				Code: errs.NotFound,
-				Message: fmt.Sprint("row not found: appID=%v, userID=%v, versionNumber=%v",
-					appPackageUploadSession.AppID,
-					appPackageUploadSession.UserID,
-					appPackageUploadSession.VersionNumber),
+				Message: fmt.Sprint("row not found: appID=%v, versionNumber=%v",
+					session.AppID,
+					session.VersionNumber),
 			}
 		},
 		Undo: func() *errs.Error {
@@ -143,20 +137,18 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 
 			for index, rawRow := range table.Rows {
 				currUploadSession := rawRow.(entity.AppPackageUploadSession)
-				if currUploadSession.AppID == appPackageUploadSession.AppID &&
-					currUploadSession.UserID == appPackageUploadSession.UserID &&
-					currUploadSession.VersionNumber == appPackageUploadSession.VersionNumber {
-					table.Rows[i] = oldAppPackageUploadSession
+				if currUploadSession.AppID == session.AppID &&
+					currUploadSession.VersionNumber == session.VersionNumber {
+					table.Rows[index] = oldAppPackageUploadSession
 					return nil
 				}
 			}
 
 			return &errs.Error{
 				Code: errs.NotFound,
-				Message: fmt.Sprint("row not found: appID=%v, userID=%v, versionNumber=%v",
-					appPackageUploadSession.AppID,
-					appPackageUploadSession.UserID,
-					appPackageUploadSession.VersionNumber),
+				Message: fmt.Sprint("row not found: appID=%v, versionNumber=%v",
+					session.AppID,
+					session.VersionNumber),
 			}
 		},
 	})
