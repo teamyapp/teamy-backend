@@ -45,7 +45,7 @@ func (a App) TeamRollouts(ctx context.Context) []TeamRollout {
 	panic("not implemented")
 }
 
-func (a App) OwnedByTeam(ctx context.Context) Team {
+func (a App) ManagedByTeam(ctx context.Context) Team {
 	panic("not implemented")
 }
 
