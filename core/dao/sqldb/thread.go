@@ -2,47 +2,45 @@ package sqldb
 
 import (
 	"context"
-	"database/sql"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 type Thread struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
 }
 
 var _ dao.Thread = (*Thread)(nil)
 
-func (t Thread) CreateThread(ct context.Context, threadID uint64) error {
-	_, err := t.db.Exec(`
+func (t Thread) CreateThread(ct context.Context, tx *transaction.Transaction, threadID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO thread (id)
 		VALUES ($1);
 		`,
 		threadID)
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (t Thread) DeleteThread(ct context.Context, threadID uint64) error {
-	_, err := t.db.Exec(`
+func (t Thread) DeleteThread(ct context.Context, tx *transaction.Transaction, threadID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM thread
 		WHERE id = $1;
 		`,
 		threadID)
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewThread(dataCollector obs.DataCollector, sqlDB *sql.DB) Thread {
-	return Thread{dataCollector: dataCollector, db: sqlDB}
+func NewThread(logger telemetry.Logger) Thread {
+	return Thread{logger: logger}
 }

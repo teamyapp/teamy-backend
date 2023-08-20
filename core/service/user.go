@@ -2,16 +2,20 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -29,200 +33,285 @@ type UpdateUserInput struct {
 }
 
 type User struct {
-	dataCollector              obs.DataCollector
+	logger                     telemetry.Logger
+	toggles                    feature.Toggles
 	cloudWebAPIExternalBaseURL string
-	cloudClientRegistry        *cloudAPI.ClientRegistry
+	cloudClientRegistry        *client.Registry
+	authorizer                 client.Authorizer
 	stateSyncer                *realtime.StateSyncer
+	transactionFactory         transaction.Factory
 	userDao                    dao.User
-	userFileUploadSessionDao   dao.UserFileUploadSession
 	teamMemberDao              dao.TeamMember
+	userFileUploadSessionDao   dao.UserFileUploadSession
 }
 
-func (u User) Me(ct context.Context) (entity.User, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
+func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
+	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.toggles.EnableAuthorization {
+		query := authorization.NewReadInUserQuery(currUserID, currUserID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
+
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	return u.userDao.FindUserByID(ct, currUserID)
+}
+
+func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
+	currUserID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.toggles.EnableAuthorization {
+		query := authorization.NewReadInUserQuery(currUserID, userID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
+
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	return u.userDao.FindUserByID(ct, userID)
 }
 
-func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
-	return u.userDao.FindUserByID(ct, userID)
-}
-
-func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
+func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, *errs.Error) {
+	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
 	user := entity.User{
-		ID:         userID,
-		CreatedAt:  time.Now(),
+		ID:         currUserID,
+		CreatedAt:  time.Now().UTC(),
 		FirstName:  input.FirstName,
 		LastName:   input.LastName,
 		ProfileURL: input.ProfileURL,
 	}
-
-	err := u.userDao.CreateUser(ct, user)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
+	txCtx := TransactionsContext{
+		logger:             u.logger,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
 	}
-
-	return user, nil
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return u.userDao.CreateUser(ct, tx, user)
+	})
+	return user, err
 }
 
-func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, error) {
-	user, err := u.userDao.FindUserByID(ct, userID)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
-	}
-
-	user.FirstName = input.FirstName
-	user.LastName = input.LastName
-	updatedAt := time.Now()
-	user.UpdatedAt = &updatedAt
-	realTimeTransaction := realtime.NewTransaction(u.dataCollector, u.stateSyncer)
-	userMutation := mutation.NewUpdateUserMutation(
-		u.dataCollector,
-		u.stateSyncer,
-		u.teamMemberDao,
-		u.userDao,
-		user)
-	err = realTimeTransaction.ApplyMutation(ct, userMutation)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
-	}
-
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
-	}
-
-	return user, nil
-}
-
-func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, error) {
-	userID, ok := ctx.UserIDFromContext(ct)
+func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInput) (entity.User, *errs.Error) {
+	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return 0, err
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	res, err := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return 0, err
+	if u.toggles.EnableAuthorization {
+		query := authorization.NewUpdateInUserQuery(currUserID, userID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
+
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	var user entity.User
+	txCtx := TransactionsContext{
+		logger:             u.logger,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
+		if err != nil {
+			return err
+		}
+
+		user.FirstName = input.FirstName
+		user.LastName = input.LastName
+		updatedAt := time.Now().UTC()
+		user.UpdatedAt = &updatedAt
+		userMutation := mutation.NewUpdateUser(
+			u.logger,
+			u.stateSyncer,
+			u.userDao,
+			u.teamMemberDao,
+			user)
+		rtTx.AppendMutation(userMutation)
+		return userMutation.Execute(ct, tx)
+	})
+
+	return user, err
+}
+
+func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.Error) {
+	currUserID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	if u.toggles.EnableAuthorization {
+		query := authorization.NewUpdateInUserQuery(currUserID, currUserID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return 0, err
+		}
+
+		if !hasPermission {
+			return 0, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	res, rpcErr := u.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return 0, internalErr
 	}
 
 	fileUploadSession := entity.UserFileUploadSession{
-		UserID:              userID,
+		UserID:              currUserID,
 		Type:                entity.ProfileUserFileUploadSessionType,
 		FileUploadSessionID: res.UploadSessionId,
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	err = u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, fileUploadSession)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return 0, err
+
+	txCtx := TransactionsContext{
+		logger:             u.logger,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, tx, fileUploadSession)
+	})
 
 	return res.UploadSessionId, err
 }
 
-func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (entity.User, error) {
+func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessionID uint64) (entity.User, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
-		err := errors.New("user id not found")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
+		return entity.User{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserID(
-		ct,
-		userID,
-		entity.ProfileUserFileUploadSessionType,
-		fileUploadSessionID)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
-	}
+	if u.toggles.EnableAuthorization {
+		query := authorization.NewUpdateInUserQuery(userID, userID)
+		hasPermission, err := u.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.User{}, err
+		}
 
-	if profileUploadSession.IsCompleted {
-		err = errors.New("profile upload session is already completed")
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"UserID":              userID,
-				"FileUploadSessionID": fileUploadSessionID,
-			},
-		})
-		return entity.User{}, err
-	}
-
-	now := time.Now()
-	profileUploadSession.IsCompleted = true
-	profileUploadSession.UpdatedAt = &now
-	err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, profileUploadSession)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
+		if !hasPermission {
+			return entity.User{}, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
 	findUploadSessionReq := proto.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
-
-	uploadSession, err := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
+	uploadSession, rpcErr := u.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.User{}, internalErr
 	}
 
-	user, err := u.userDao.FindUserByID(ct, userID)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.User{}, err
+	var user entity.User
+	txCtx := TransactionsContext{
+		logger:             u.logger,
+		transactionFactory: u.transactionFactory,
+		stateSyncer:        u.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(
+			ct,
+			tx,
+			userID,
+			entity.ProfileUserFileUploadSessionType,
+			fileUploadSessionID)
+		if err != nil {
+			return err
+		}
 
-	profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
-	user.ProfileURL = &profileURL
-	user.UpdatedAt = &now
-	err = u.userDao.UpdateUser(ct, user)
-	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-	}
+		if profileUploadSession.IsCompleted {
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
+				userID,
+				fileUploadSessionID))
+		}
 
-	return user, nil
+		now := time.Now().UTC()
+		profileUploadSession.IsCompleted = true
+		profileUploadSession.UpdatedAt = &now
+		err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
+		if err != nil {
+			return err
+		}
+
+		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
+		if err != nil {
+			return err
+		}
+
+		profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
+		user.ProfileURL = &profileURL
+		user.UpdatedAt = &now
+		err = u.userDao.UpdateUser(ct, tx, user)
+		return err
+	})
+
+	return user, err
 }
 
 func NewUser(
-	dataCollector obs.DataCollector,
+	logger telemetry.Logger,
+	toggles feature.Toggles,
 	cloudWebAPIExternalBaseURL string,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
+	transactionFactory transaction.Factory,
 	userDao dao.User,
-	userFileUploadSessionDao dao.UserFileUploadSession,
 	teamMemberDao dao.TeamMember,
+	userFileUploadSessionDao dao.UserFileUploadSession,
 ) User {
 	return User{
-		dataCollector:              dataCollector,
+		logger:                     logger,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
+		toggles:                    toggles,
+		authorizer:                 authorizer,
 		stateSyncer:                stateSyncer,
+		transactionFactory:         transactionFactory,
 		userDao:                    userDao,
-		userFileUploadSessionDao:   userFileUploadSessionDao,
 		teamMemberDao:              teamMemberDao,
+		userFileUploadSessionDao:   userFileUploadSessionDao,
 	}
 }

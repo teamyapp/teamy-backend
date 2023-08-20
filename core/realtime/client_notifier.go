@@ -6,13 +6,14 @@ import (
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 )
 
 const clientBufferSize = 50
 
 type ClientNotifier struct {
-	dataCollector               obs.DataCollector
+	logger                      telemetry.Logger
 	clientDisconnectSubscribers []chan bool
 	clientID                    uint64
 	messages                    chan Message
@@ -34,18 +35,10 @@ func (c *ClientNotifier) onInitialStateReady() {
 }
 
 func (c *ClientNotifier) notifyTransaction(ct context.Context, clientTransaction *ClientTransaction) {
-	c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
-			"Summary": "process transaction",
-		},
-	})
+	c.logger.InfoWithContext(ct, "process transaction")
 
 	if !c.acceptTransaction {
-		c.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
-				"Summary": "discard transaction",
-			},
-		})
+		c.logger.InfoWithContext(ct, "discard transaction")
 		return
 	}
 
@@ -66,28 +59,24 @@ func (c *ClientNotifier) sentMetadata() {
 	c.messages <- message
 }
 
-func newClientNotifier(dataCollector obs.DataCollector, conn connection.Connection, clientID uint64) *ClientNotifier {
+func newClientNotifier(logger telemetry.Logger, conn connection.Connection, clientID uint64) *ClientNotifier {
 	messages := make(chan Message, clientBufferSize)
 	ct := context.Background()
 	ct = ctx.WithClientID(ct, clientID)
 	go func() {
 		for message := range messages {
 			jsonBuf, err := json.MarshalIndent(message, "", "  ")
-
 			if err != nil {
-				dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+				logger.ErrorWithContext(ct, errs.NewError(errs.Serialization, err.Error()))
 				continue
 			}
+
 			conn.SendMessage(jsonBuf)
-			dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-				obs.MessageProp: obs.Props{
-					"Summary": "notification sent",
-				},
-			})
+			logger.InfoWithContext(ct, "notification sent")
 		}
 	}()
 	clientNotifier := &ClientNotifier{
-		dataCollector:               dataCollector,
+		logger:                      logger,
 		clientDisconnectSubscribers: make([]chan bool, 0),
 		clientID:                    clientID,
 		messages:                    messages,

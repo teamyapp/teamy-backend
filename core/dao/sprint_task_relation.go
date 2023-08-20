@@ -3,12 +3,14 @@ package dao
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type SprintTaskRelation interface {
-	FindTaskIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, error)
-	FindSprintIDsByTaskID(ct context.Context, taskID uint64) ([]uint64, error)
-	CreateSprintTaskRelation(ct context.Context, relation entity.SprintTaskRelation) error
-	DeleteSprintTaskRelation(ct context.Context, sprintID uint64, taskID uint64) error
+	FindTaskIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error)
+	FindSprintIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error)
+	CreateSprintTaskRelation(ct context.Context, tx *transaction.Transaction, relation entity.SprintTaskRelation) *errs.Error
+	DeleteSprintTaskRelation(ct context.Context, tx *transaction.Transaction, sprintID uint64, taskID uint64) *errs.Error
 }

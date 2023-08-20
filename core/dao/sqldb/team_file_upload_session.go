@@ -6,26 +6,28 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamFileUploadSession struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
 }
 
 var _ dao.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
 
-func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
+func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamIDWithTx(
 	ct context.Context,
+	tx *transaction.Transaction,
 	teamID uint64,
 	teamFileUploadSessionType entity.TeamFileUploadSessionType,
 	fileUploadSessionID uint64,
-) (entity.TeamFileUploadSession, error) {
+) (entity.TeamFileUploadSession, *errs.Error) {
 	teamFileUploadSession := entity.TeamFileUploadSession{}
-	err := t.db.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			team_id,
 			type,
@@ -45,25 +47,24 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamID(
 			&teamFileUploadSession.UpdatedAt,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.TeamFileUploadSession{}, dao.ErrNotFound(fmt.Sprintf(
-			"TeamFileUploadSession not found: teamID=%v, type=%v",
-			teamID,
-			teamFileUploadSessionType))
-	}
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.TeamFileUploadSession{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"TeamFileUploadSession not found: teamID=%v, teamFileUploadSessionType=%v", teamID, teamFileUploadSessionType))
+		}
+
+		return entity.TeamFileUploadSession{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return teamFileUploadSession, err
+	return teamFileUploadSession, nil
 }
 
 func (t TeamFileUploadSession) CreateTeamFileUploadSession(
 	ct context.Context,
+	tx *transaction.Transaction,
 	teamFileUploadSession entity.TeamFileUploadSession,
-) error {
-	_, err := t.db.Exec(`
+) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO team_file_upload_session
 		(
 			team_id,
@@ -83,17 +84,18 @@ func (t TeamFileUploadSession) CreateTeamFileUploadSession(
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
 func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 	ct context.Context,
+	tx *transaction.Transaction,
 	teamFileUploadSession entity.TeamFileUploadSession,
-) error {
-	_, err := t.db.Exec(`
+) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE team_file_upload_session
 		SET
 			team_id = $1,
@@ -115,12 +117,12 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewTeamFileUploadSession(dataCollector obs.DataCollector, sqlDB *sql.DB) TeamFileUploadSession {
-	return TeamFileUploadSession{dataCollector: dataCollector, db: sqlDB}
+func NewTeamFileUploadSession(logger telemetry.Logger) TeamFileUploadSession {
+	return TeamFileUploadSession{logger: logger}
 }

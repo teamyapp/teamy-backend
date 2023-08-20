@@ -6,26 +6,28 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type UserFileUploadSession struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
 }
 
 var _ dao.UserFileUploadSession = (*UserFileUploadSession)(nil)
 
-func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
+func (u UserFileUploadSession) FindUserFileUploadSessionByUserIDWithTx(
 	ct context.Context,
+	tx *transaction.Transaction,
 	userID uint64,
 	userFileUploadSessionType entity.UserFileUploadSessionType,
 	fileUploadSessionID uint64,
-) (entity.UserFileUploadSession, error) {
+) (entity.UserFileUploadSession, *errs.Error) {
 	userFileUploadSession := entity.UserFileUploadSession{}
-	err := u.db.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			user_id,
 			type,
@@ -35,7 +37,9 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 			updated_at
 		FROM user_file_upload_session
 		WHERE user_id = $1 AND type = $2 AND file_upload_session_id = $3;`,
-		userID, userFileUploadSessionType, fileUploadSessionID).
+		userID,
+		userFileUploadSessionType,
+		fileUploadSessionID).
 		Scan(
 			&userFileUploadSession.UserID,
 			&userFileUploadSession.Type,
@@ -46,24 +50,24 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserID(
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.UserFileUploadSession{}, dao.ErrNotFound(fmt.Sprintf(
-			"UserFileUploadSession not found: userID=%v, type=%v",
+		return entity.UserFileUploadSession{}, errs.NewError(errs.NotFound, fmt.Sprintf("UserFileUploadSession not found: userID=%v, userFileUploadSessionType=%v",
 			userID,
 			userFileUploadSessionType))
 	}
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.UserFileUploadSession{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return userFileUploadSession, err
+	return userFileUploadSession, nil
 }
 
 func (u UserFileUploadSession) CreateUserFileUploadSession(
 	ct context.Context,
+	tx *transaction.Transaction,
 	userFileUploadSession entity.UserFileUploadSession,
-) error {
-	_, err := u.db.Exec(`
+) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO user_file_upload_session
 		(
 			user_id,
@@ -83,17 +87,18 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
 func (u UserFileUploadSession) UpdateUserFileUploadSession(
 	ct context.Context,
+	tx *transaction.Transaction,
 	userFileUploadSession entity.UserFileUploadSession,
-) error {
-	_, err := u.db.Exec(`
+) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE user_file_upload_session
 		SET
 			user_id = $1,
@@ -115,12 +120,12 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewUserFileUploadSession(dataCollector obs.DataCollector, sqlDB *sql.DB) UserFileUploadSession {
-	return UserFileUploadSession{dataCollector: dataCollector, db: sqlDB}
+func NewUserFileUploadSession(logger telemetry.Logger) UserFileUploadSession {
+	return UserFileUploadSession{logger: logger}
 }

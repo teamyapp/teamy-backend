@@ -5,12 +5,13 @@ import (
 
 	"github.com/teamyapp/cloud/app/config"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
 )
 
-type Config struct {
+type App struct {
 	sqldb.Config
 	config.Repo
+	config.Service
 	CloudWebAPIExternalBaseURL  string        `envconfig:"CLOUD_WEB_API_EXTERNAL_BASE_URL" default:"http://localhost:9011"`
 	CloudWebAPIBaseURL          string        `envconfig:"CLOUD_WEB_API_BASE_URL" default:"http://localhost:9011"`
 	CloudGRPCAPIHost            string        `envconfig:"CLOUD_GRPC_API_HOST" default:"localhost"`
@@ -23,14 +24,15 @@ type Config struct {
 	TeamyAPIShouldEncrypt       bool          `envconfig:"TEAMY_API_SHOULD_ENCRYPT" default:"false"`
 	RequestTimeout              time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10s"`
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
+	TeamyWebUIBaseURL           string        `envconfig:"TEAMY_WEB_UI_BASE_URL" default:"http://localhost:3000"`
 }
 
-func FromEnv(dataCollector obs.DataCollector) (Config, error) {
-	cfg := Config{}
-	err := config.FromEnv(dataCollector, &cfg)
+func AppFromEnv() (App, *errs.Error) {
+	cfg := App{}
+	err := config.FromEnv(&cfg)
 	if err != nil {
-		dataCollector.Logger.Log(obs.Error, obs.Props{obs.CauseProp: err})
-		return Config{}, err
+		return App{}, err
 	}
+
 	return cfg, nil
 }

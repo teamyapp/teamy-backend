@@ -6,21 +6,62 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Invitation struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger             telemetry.Logger
+	transactionFactory transaction.Factory
 }
 
 var _ dao.Invitation = (*Invitation)(nil)
 
-func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) (entity.Invitation, error) {
+func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) (entity.Invitation, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := i.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Invitation{}, err
+	}
+
+	defer tx.Rollback()
+	return i.FindInvitationByIDWithTx(ct, tx, invitationID)
+}
+
+func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := i.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return i.FindInvitationsByTeamIDWithTx(ct, tx, teamID)
+}
+
+func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := i.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return i.FindAllInvitationsWithTx(ct, tx)
+}
+
+func (i Invitation) FindInvitationByIDWithTx(ct context.Context, tx *transaction.Transaction, invitationID uint64) (entity.Invitation, *errs.Error) {
 	invitation := entity.Invitation{}
-	err := i.db.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 	SELECT
 		id,
 		sender_user_id,
@@ -53,20 +94,21 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 			&invitation.UpdatedAt,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Invitation{}, dao.ErrNotFound(fmt.Sprintf(
-			"invitation not found: id=%v", invitationID))
-	}
-
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Invitation{}, errs.NewError(
+				errs.NotFound,
+				fmt.Sprintf("invitation not found: invitationID=%v", invitationID))
+		}
+
+		return entity.Invitation{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return invitation, err
+	return invitation, nil
 }
 
-func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, error) {
-	rows, err := i.db.Query(`
+func (i Invitation) FindInvitationsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Invitation, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
 		sender_user_id,
@@ -85,8 +127,7 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 `,
 		teamID)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -108,20 +149,18 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 			&invitation.CreatedAt,
 			&invitation.UpdatedAt,
 		)
-
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		invitations = append(invitations, invitation)
 	}
 
-	return invitations, err
+	return invitations, nil
 }
 
-func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, error) {
-	rows, err := i.db.Query(`
+func (i Invitation) FindAllInvitationsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Invitation, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
 		sender_user_id,
@@ -138,8 +177,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 	FROM invitation;
 `)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -162,18 +200,17 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 			&invitation.UpdatedAt,
 		)
 		if err != nil {
-			i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		invitations = append(invitations, invitation)
 	}
 
-	return invitations, err
+	return invitations, nil
 }
 
-func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invitation) error {
-	_, err := i.db.Exec(`
+func (i Invitation) CreateInvitation(ct context.Context, tx *transaction.Transaction, invitation entity.Invitation) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 	INSERT INTO invitation
 	(
 	    id,
@@ -201,14 +238,14 @@ func (i Invitation) CreateInvitation(ct context.Context, invitation entity.Invit
 		invitation.CreatedAt,
 	)
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invitation) error {
-	_, err := i.db.Exec(`
+func (i Invitation) UpdateInvitation(ct context.Context, tx *transaction.Transaction, invitation entity.Invitation) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE invitation
 		SET
 			receiver_first_name = $1,
@@ -230,26 +267,26 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitation entity.Invit
 	)
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) error {
-	_, err := i.db.Exec(`
+func (i Invitation) DeleteInvitation(ct context.Context, tx *transaction.Transaction, invitationID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM invitation
 		WHERE id = $1;
 		`,
 		invitationID)
 
 	if err != nil {
-		i.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewInvitation(dataCollector obs.DataCollector, sqlDB *sql.DB) Invitation {
-	return Invitation{dataCollector: dataCollector, db: sqlDB}
+func NewInvitation(logger telemetry.Logger, transactionFactory transaction.Factory) Invitation {
+	return Invitation{logger: logger, transactionFactory: transactionFactory}
 }

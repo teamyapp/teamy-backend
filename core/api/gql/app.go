@@ -1,49 +1,84 @@
 package gql
 
 import (
+	"context"
+
 	"github.com/graph-gophers/graphql-go"
 )
 
 type App struct {
-	deps Dependencies
 }
 
-func (a App) ID() graphql.ID {
-	panic("implement me")
+func (a App) ID(ctx context.Context) graphql.ID {
+	panic("not implemented")
 }
 
-func (a App) APISecret() string {
-	panic("implement me")
+func (a App) Secrets(ctx context.Context) []AppSecret {
+	panic("not implemented")
 }
 
-func (a App) ActiveVersion() (*AppVersion, error) {
-	panic("implement me")
+func (a App) TotalInstallations(ctx context.Context) int32 {
+	panic("not implemented")
 }
 
-func (a App) Versions() ([]AppVersion, error) {
-	panic("implement me")
+func (a App) Installations(ctx context.Context) []TeamAppInstallation {
+	panic("not implemented")
 }
 
-func (a App) Installations() ([]AppInstallation, error) {
-	panic("implement me")
+func (a App) Versions(ctx context.Context) []AppVersion {
+	panic("not implemented")
 }
 
-func (a App) InstallationCount() int32 {
-	panic("implement me")
+func (a App) UserGroups(ctx context.Context) []UserGroup {
+	panic("not implemented")
 }
 
-func (a App) Creator() (User, error) {
-	panic("implement me")
+func (a App) TeamGroups(ctx context.Context) []TeamGroup {
+	panic("not implemented")
 }
 
-func (a App) CreatedAt() graphql.Time {
-	panic("implement me")
+func (a App) UserRollouts(ctx context.Context) []UserRollout {
+	panic("not implemented")
 }
 
-func (a App) UpdatedAt() *graphql.Time {
-	panic("implement me")
+func (a App) TeamRollouts(ctx context.Context) []TeamRollout {
+	panic("not implemented")
 }
 
-func newApp(deps Dependencies) App {
-	return App{deps: deps}
+func (a App) ManagedByTeam(ctx context.Context) Team {
+	panic("not implemented")
+}
+
+func (m Mutation) CreateApp(
+	ctx context.Context,
+	args struct {
+		TeamID graphql.ID
+		Name   string
+	}) App {
+	panic("not implemented")
+}
+
+func (m Mutation) DeleteApp(
+	ctx context.Context,
+	args struct {
+		AppID graphql.ID
+	}) App {
+	panic("not implemented")
+}
+
+func (m Mutation) InstallAppToTeam(
+	ctx context.Context,
+	args struct {
+		AppID  graphql.ID
+		TeamID graphql.ID
+	}) TeamAppInstallation {
+	panic("not implemented")
+}
+
+func (m Mutation) UninstallAppFromTeam(
+	ctx context.Context,
+	args struct {
+		InstallationID graphql.ID
+	}) TeamAppInstallation {
+	panic("not implemented")
 }

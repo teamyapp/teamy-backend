@@ -3,21 +3,50 @@ package sqldb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Team struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger             telemetry.Logger
+	transactionFactory transaction.Factory
 }
 
 var _ dao.Team = (*Team)(nil)
 
-func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
+func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Team{}, err
+	}
+
+	defer tx.Rollback()
+	return t.FindTeamByIDWithTx(ct, tx, teamID)
+}
+
+func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return t.FindAllTeamsWithTx(ct, tx)
+}
+
+func (t Team) FindAllTeamsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Team, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -29,11 +58,11 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 		updated_at
 	FROM team;
 `
-	rows, err := t.db.Query(statement)
+	rows, err := tx.SQLTx().Query(statement)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
+
 	defer rows.Close()
 
 	teams := make([]entity.Team, 0)
@@ -49,8 +78,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 			&team.UpdatedAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teams = append(teams, team)
@@ -59,7 +87,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, error) {
 	return teams, nil
 }
 
-func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, error) {
+func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) (entity.Team, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -67,30 +95,37 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, erro
 		icon_url,
 		creator_id,
 		owner_id,
+		active_sprint_id,
 		created_at,
 		updated_at
 	FROM team
 	WHERE id = $1;
 `
 	team := entity.Team{}
-	err := t.db.QueryRow(statement, teamID).
+	err := tx.SQLTx().QueryRow(statement, teamID).
 		Scan(
 			&team.ID,
 			&team.Name,
 			&team.IconURL,
 			&team.CreatorUserID,
 			&team.OwnerUserID,
+			&team.ActiveSprintID,
 			&team.CreatedAt,
 			&team.UpdatedAt,
 		)
+
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Team{}, errs.NewError(errs.NotFound, fmt.Sprintf("team not found: teamID=%v", teamID))
+		}
+
+		return entity.Team{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return team, err
+	return team, nil
 }
 
-func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Team, error) {
+func (t Team) FindTeamsByIDsWithTx(ct context.Context, tx *transaction.Transaction, teamIDs []uint64) ([]entity.Team, *errs.Error) {
 	if len(teamIDs) == 0 {
 		return []entity.Team{}, nil
 	}
@@ -106,14 +141,14 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 		created_at,
 		updated_at
 	FROM team
-	WHERE id IN (%s);`, idsString)
-	rows, err := t.db.Query(query)
+	WHERE id IN (%v);`, idsString)
+	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
+
 	var teams []entity.Team
 	for rows.Next() {
 		var team entity.Team
@@ -128,8 +163,7 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 				&team.UpdatedAt,
 			)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		teams = append(teams, team)
@@ -138,8 +172,8 @@ func (t Team) FindTeamsByIDs(ct context.Context, teamIDs []uint64) ([]entity.Tea
 	return teams, nil
 }
 
-func (t Team) CreateTeam(ct context.Context, team entity.Team) error {
-	_, err := t.db.Exec(`
+func (t Team) CreateTeam(ct context.Context, tx *transaction.Transaction, team entity.Team) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO team
 		    (
 				 id,
@@ -155,37 +189,50 @@ func (t Team) CreateTeam(ct context.Context, team entity.Team) error {
 		team.OwnerUserID,
 		team.CreatedAt,
 	)
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (t Team) UpdateTeam(ct context.Context, team entity.Team) error {
-	_, err := t.db.Exec(`
+func (t Team) UpdateTeam(ct context.Context, tx *transaction.Transaction, team entity.Team) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE team
 		SET
 			name = $1,
 			icon_url = $2,
 			owner_id = $3,
-			updated_at = $4
-		WHERE id = $5;`,
+			active_sprint_id = $4,
+			updated_at = $5
+		WHERE id = $6;`,
 		team.Name,
 		team.IconURL,
 		team.OwnerUserID,
+		team.ActiveSprintID,
 		team.UpdatedAt,
 		team.ID,
 	)
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewTeam(dataCollector obs.DataCollector, sqlDB *sql.DB) Team {
-	return Team{dataCollector: dataCollector, db: sqlDB}
+func (t Team) DeleteTeam(ct context.Context, tx *transaction.Transaction, teamID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
+		DELETE FROM team
+		WHERE id = $1;`,
+		teamID,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func NewTeam(logger telemetry.Logger, transactionFactory transaction.Factory) Team {
+	return Team{logger: logger, transactionFactory: transactionFactory}
 }

@@ -1,7 +1,0 @@
-package authorization
-
-type ResourceOperation struct {
-	ResourceType ResourceType
-	Operation    string
-	ResourceID   uint64
-}

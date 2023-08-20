@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -24,8 +24,8 @@ func (m Message) Body(ct context.Context) string {
 func (m Message) Author(ct context.Context) (User, error) {
 	user, err := m.deps.userService.FindUserByID(ct, m.message.AuthorUserID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return User{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return User{}, errs.ToResolverErr(err)
 	}
 
 	return newUser(m.deps, user), nil

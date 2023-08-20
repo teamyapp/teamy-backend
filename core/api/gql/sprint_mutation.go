@@ -5,7 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
@@ -17,10 +17,14 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 		EndAt   graphql.Time
 	}
 }) (Sprint, error) {
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Sprint{}, err
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Sprint{}, errs.ToResolverErr(internalErr)
 	}
 
 	input := service.CreateSprintInput{
@@ -29,8 +33,8 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 	}
 	sprint, err := m.deps.sprintService.CreateSprint(ct, teamID, input)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Sprint{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Sprint{}, errs.ToResolverErr(err)
 	}
 
 	return newSprint(m.deps, sprint), nil
@@ -39,16 +43,20 @@ func (m Mutation) CreateSprint(ct context.Context, args struct {
 func (m Mutation) DeleteSprint(ct context.Context, args struct {
 	SprintID graphql.ID
 }) (Sprint, error) {
-	sprintID, err := fromGraphQLID(args.SprintID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Sprint{}, err
+	sprintID, argErr := fromGraphQLID(args.SprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Sprint{}, errs.ToResolverErr(internalErr)
 	}
 
 	sprint, err := m.deps.sprintService.DeleteSprint(ct, sprintID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Sprint{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Sprint{}, errs.ToResolverErr(err)
 	}
 
 	return newSprint(m.deps, sprint), nil
@@ -58,22 +66,30 @@ func (m Mutation) AddTaskToSprint(ct context.Context, args struct {
 	SprintID graphql.ID
 	TaskID   graphql.ID
 }) (Task, error) {
-	sprintID, err := fromGraphQLID(args.SprintID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Task{}, err
+	sprintID, argErr := fromGraphQLID(args.SprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.sprintService.AddTaskToSprint(ct, sprintID, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Task{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -83,22 +99,30 @@ func (m Mutation) RemoveTaskFromSprint(ct context.Context, args struct {
 	SprintID graphql.ID
 	TaskID   graphql.ID
 }) (Task, error) {
-	sprintID, err := fromGraphQLID(args.SprintID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Task{}, err
+	sprintID, argErr := fromGraphQLID(args.SprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	taskID, err := fromGraphQLID(args.TaskID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Task{}, err
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
 	task, err := m.deps.sprintService.RemoveTaskFromSprint(ct, sprintID, taskID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Task{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Task{}, errs.ToResolverErr(err)
 	}
 
 	return newTask(m.deps, task), nil
@@ -108,22 +132,25 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 	ToSprintID graphql.ID
 	TaskIDs    []graphql.ID
 }) ([]Task, error) {
-	toSprintID, err := fromGraphQLID(args.ToSprintID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []Task{}, err
+	toSprintID, argErr := fromGraphQLID(args.ToSprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	taskIDs := make([]uint64, 0)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []Task{}, err
-	}
-
 	for _, TaskID := range args.TaskIDs {
 		taskID, err := fromGraphQLID(TaskID)
 		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				argErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ct, internalErr)
 			continue
 		}
 
@@ -132,8 +159,8 @@ func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 
 	tasks, err := m.deps.sprintService.CopyTasksToSprint(ct, toSprintID, taskIDs)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []Task{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return []Task{}, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(tasks, func(task entity.Task, _ int) Task {
@@ -146,23 +173,35 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 	ToSprintID   graphql.ID
 	TaskIDs      []graphql.ID
 }) ([]Task, error) {
-	fromSprintID, err := fromGraphQLID(args.FromSprintID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []Task{}, err
+	fromSprintID, argErr := fromGraphQLID(args.FromSprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	toSprintID, err := fromGraphQLID(args.ToSprintID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []Task{}, err
+	toSprintID, argErr := fromGraphQLID(args.ToSprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
 	taskIDs := make([]uint64, 0)
 	for _, TaskID := range args.TaskIDs {
 		taskID, err := fromGraphQLID(TaskID)
 		if err != nil {
-			m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				argErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ct, internalErr)
 			continue
 		}
 
@@ -171,8 +210,8 @@ func (m Mutation) MoveTasksToSprint(ct context.Context, args struct {
 
 	tasks, err := m.deps.sprintService.MoveTasksToSprint(ct, fromSprintID, toSprintID, taskIDs)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []Task{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return []Task{}, errs.ToResolverErr(err)
 	}
 
 	gqlTasks := make([]Task, 0)

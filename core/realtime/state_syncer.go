@@ -2,13 +2,13 @@ package realtime
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/teamyapp/cloud/libs/connection"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
@@ -19,18 +19,9 @@ import (
 // Client disconnect
 // 1) Remove client for that user
 // 2) Clean up user and team if no subscription
-type ErrTeamNotFound struct {
-	TeamID uint64
-}
-
-var _ error = (*ErrTeamNotFound)(nil)
-
-func (e ErrTeamNotFound) Error() string {
-	return fmt.Sprintf("team not found: teamID=%v", e.TeamID)
-}
 
 type StateSyncer struct {
-	dataCollector           obs.DataCollector
+	logger                  telemetry.Logger
 	teamMemberDao           dao.TeamMember
 	teamNotifiers           map[uint64]*TeamNotifier
 	userNotifiers           map[uint64]*UserNotifier
@@ -53,17 +44,16 @@ func (s *StateSyncer) EndTransaction() {
 	s.transactionMut.Unlock()
 }
 
-func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) error {
+func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection) *errs.Error {
 	ct := ctx.WithClientID(context.Background(), s.nextClientID)
-	s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-		obs.MessageProp: obs.Props{
-			"Summary": "client connected",
-			"UserID":  userID,
-		},
-	})
-	userNotifier, err := s.GetUserNotifier(ct, userID)
+	s.logger.InfoWithContext(ct, fmt.Sprintf("client connected: userID=%v", userID))
+	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return err
+	}
+
+	userNotifier, err := s.GetUserNotifier(ct, userID, teamIDs)
+	if err != nil {
 		return err
 	}
 
@@ -72,7 +62,7 @@ func (s *StateSyncer) OnClientConnect(userID uint64, conn connection.Connection)
 	s.nextClientID++
 	s.clientIDMut.Unlock()
 
-	clientNotifier := newClientNotifier(s.dataCollector, conn, nextClientID)
+	clientNotifier := newClientNotifier(s.logger, conn, nextClientID)
 	userNotifier.registerClientNotifier(nextClientID, clientNotifier)
 	clientNotifier.sentMetadata()
 
@@ -103,72 +93,46 @@ func (s *StateSyncer) NextClientTransactionID() uint64 {
 	return clientTransactionID
 }
 
-func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) error {
-	ct := ctx.WithClientID(context.Background(), s.nextClientID)
+func (s *StateSyncer) OnInitialStateReady(userID uint64, clientID uint64) *errs.Error {
 	userNotifier, ok := s.userNotifiers[userID]
 	if !ok {
-		err := errors.New("userNotifier not found")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"UserID": userID,
-			},
-		})
-		return err
+		return errs.NewError(errs.NotFound, fmt.Sprintf("userNotifier not found: userID=%v", userID))
 	}
 
 	clientNotifier, ok := userNotifier.clientNotifiers[clientID]
 	if !ok {
-		err := errors.New("clientNotifier not found")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"ClientID": clientID,
-			},
-		})
-		return err
+		return errs.NewError(errs.NotFound, fmt.Sprintf("clientNotifier not found: clientID=%v", clientID))
 	}
 
 	clientNotifier.onInitialStateReady()
 	return nil
 }
 
-func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64) (*UserNotifier, error) {
-	userNotifier := newUserNotifier(s.dataCollector, userID)
+func (s *StateSyncer) newUserNotifier(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
+	userNotifier := newUserNotifier(s.logger, userID)
 	go func() {
 		<-userNotifier.subscribeUserDisconnect()
 		delete(s.userNotifiers, userID)
 	}()
 	s.userNotifiers[userID] = userNotifier
-	err := s.SubscribeToTeams(ct, userID, userNotifier)
+	err := s.SubscribeToTeams(ct, userID, userNotifier, teamIDs)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
 	return userNotifier, nil
 }
 
-func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier) error {
-	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return err
-	}
-
+func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNotifier *UserNotifier, teamIDs []uint64) *errs.Error {
 	for _, teamID := range teamIDs {
 		teamNotifier, ok := s.teamNotifiers[teamID]
 		if !ok {
 			teamNotifier = s.newTeamNotifier(teamID)
 		}
 
-		s.dataCollector.Logger.LogWithContext(ct, obs.Info, obs.Props{
-			obs.MessageProp: obs.Props{
-				"Summary": "subscribed to team",
-				"TeamID":  teamID,
-				"UserID":  userID,
-			},
-		})
+		s.logger.InfoWithContext(ct, fmt.Sprintf("subscribed to team: teamID=%v, userID=%v",
+			teamID,
+			userID))
 		teamNotifier.registerUserNotifier(userID, userNotifier)
 	}
 
@@ -178,7 +142,7 @@ func (s *StateSyncer) SubscribeToTeams(ct context.Context, userID uint64, userNo
 func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
-		teamNotifier = newTeamNotifier(s.dataCollector, teamID)
+		teamNotifier = newTeamNotifier(s.logger, teamID)
 		go func() {
 			<-teamNotifier.subscribeTeamDisconnect()
 			delete(s.teamNotifiers, teamID)
@@ -189,13 +153,12 @@ func (s *StateSyncer) newTeamNotifier(teamID uint64) *TeamNotifier {
 	return teamNotifier
 }
 
-func (s StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserNotifier, error) {
+func (s *StateSyncer) GetUserNotifier(ct context.Context, userID uint64, teamIDs []uint64) (*UserNotifier, *errs.Error) {
 	userNotifier, ok := s.userNotifiers[userID]
-	var err error
+	var err *errs.Error
 	if !ok {
-		userNotifier, err = s.newUserNotifier(ct, userID)
+		userNotifier, err = s.newUserNotifier(ct, userID, teamIDs)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return nil, err
 		}
 	}
@@ -203,33 +166,41 @@ func (s StateSyncer) GetUserNotifier(ct context.Context, userID uint64) (*UserNo
 	return userNotifier, nil
 }
 
-func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamNotifier, error) {
+func (s *StateSyncer) GetTeamNotifier(ct context.Context, teamID uint64) (*TeamNotifier, *errs.Error) {
 	teamNotifier, ok := s.teamNotifiers[teamID]
 	if !ok {
-		err := ErrTeamNotFound{
-			TeamID: teamID,
-		}
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-		})
-		return nil, err
+		return nil, errs.NewError(errs.NotFound, fmt.Sprintf("teamNotifier not found: teamID=%v", teamID))
 	}
 
 	return teamNotifier, nil
 }
 
-func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID uint64) ([]*ClientNotifier, error) {
-	teamIDs, err := s.teamMemberDao.FindTeamIDsByUserID(ct, userID)
+func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, *errs.Error) {
+	teamNotifier, err := s.GetTeamNotifier(ct, teamID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return []*ClientNotifier{}, err
+		if err.Code != errs.NotFound {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 
+	// There can be only 1 user client for a given team on a given device.
+	clientNotifiers := make([]*ClientNotifier, 0)
+	for _, userNotifier := range teamNotifier.GetUserNotifiers() {
+		for _, clientNotifier := range userNotifier.GetClientNotifiers() {
+			clientNotifiers = append(clientNotifiers, clientNotifier)
+		}
+	}
+
+	return clientNotifiers, nil
+}
+
+func (s *StateSyncer) GetClientNotifiersByTeamIDs(ct context.Context, teamIDs []uint64) ([]*ClientNotifier, *errs.Error) {
 	clientNotifiersMap := make(map[uint64]*ClientNotifier)
 	for _, teamID := range teamIDs {
 		teamClientNotifiers, err := s.GetClientNotifiersByTeamID(ct, teamID)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return []*ClientNotifier{}, err
 		}
 
@@ -246,33 +217,12 @@ func (s *StateSyncer) GetAllClientNotifiersByUserID(ct context.Context, userID u
 	return clientNotifiers, nil
 }
 
-func (s *StateSyncer) GetClientNotifiersByTeamID(ct context.Context, teamID uint64) ([]*ClientNotifier, error) {
-	teamNotifier, err := s.GetTeamNotifier(ct, teamID)
-	if err != nil {
-		if _, ok := err.(ErrTeamNotFound); ok {
-			return []*ClientNotifier{}, nil
-		}
-
-		return nil, err
-	}
-
-	// There can be only 1 user client for a given team on a given device.
-	clientNotifiers := make([]*ClientNotifier, 0)
-	for _, userNotifier := range teamNotifier.GetUserNotifiers() {
-		for _, clientNotifier := range userNotifier.GetClientNotifiers() {
-			clientNotifiers = append(clientNotifiers, clientNotifier)
-		}
-	}
-
-	return clientNotifiers, nil
-}
-
 func NewStateSyncer(
-	dataCollector obs.DataCollector,
+	logger telemetry.Logger,
 	teamMemberDao dao.TeamMember,
 ) *StateSyncer {
 	stateSyncer := &StateSyncer{
-		dataCollector:           dataCollector,
+		logger:                  logger,
 		teamMemberDao:           teamMemberDao,
 		teamNotifiers:           map[uint64]*TeamNotifier{},
 		userNotifiers:           map[uint64]*UserNotifier{},

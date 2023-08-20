@@ -6,21 +6,60 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Sprint struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	transactionFactory transaction.Factory
 }
 
 var _ dao.Sprint = (*Sprint)(nil)
 
-func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, error) {
+func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Sprint{}, err
+	}
+
+	defer tx.Rollback()
+	return s.FindSprintByIDWithTx(ct, tx, sprintID)
+}
+
+func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return s.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+}
+
+func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := s.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return s.FindAllSprintsWithTx(ct, tx)
+}
+
+func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
 	sprint := entity.Sprint{}
-	err := s.db.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
 			start_at,
@@ -39,19 +78,20 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Sprint{}, dao.ErrNotFound(fmt.Sprintf(
-			"sprint not found: id=%v",
-			sprintID))
+		return entity.Sprint{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf(
+				"sprint not found: sprintID=%v", sprintID))
 	}
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Sprint{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return sprint, err
+	return sprint, nil
 }
 
-func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]entity.Sprint, error) {
+func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Transaction, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
 	if len(sprintIDs) == 0 {
 		return []entity.Sprint{}, nil
 	}
@@ -65,14 +105,14 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 		created_at,
 		owning_team_id
 	FROM sprint
-	WHERE id IN (%s);`, idsString)
-	rows, err := s.db.Query(query)
+	WHERE id IN (%v);`, idsString)
+	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
+
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -85,8 +125,7 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprints = append(sprints, sprint)
@@ -95,8 +134,8 @@ func (s Sprint) FindSprintsByIDs(ct context.Context, sprintIDs []uint64) ([]enti
 	return sprints, nil
 }
 
-func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity.Sprint, error) {
-	rows, err := s.db.Query(
+func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		id,
@@ -109,11 +148,11 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 `,
 		teamID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
+
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -126,8 +165,7 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprints = append(sprints, sprint)
@@ -136,8 +174,8 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 	return sprints, nil
 }
 
-func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, error) {
-	rows, err := s.db.Query(`
+func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
 		start_at,
@@ -147,11 +185,11 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, error) {
 	FROM sprint;
 `)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
+
 	var sprints []entity.Sprint
 	for rows.Next() {
 		var sprint entity.Sprint
@@ -164,8 +202,7 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, error) {
 				&sprint.OwningTeamID,
 			)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		sprints = append(sprints, sprint)
@@ -174,8 +211,8 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, error) {
 	return sprints, nil
 }
 
-func (s Sprint) CreateSprint(ct context.Context, sprint entity.Sprint) error {
-	_, err := s.db.Exec(`
+func (s Sprint) CreateSprint(ct context.Context, tx *transaction.Transaction, sprint entity.Sprint) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO sprint
 		(
 			id,
@@ -193,26 +230,28 @@ func (s Sprint) CreateSprint(ct context.Context, sprint entity.Sprint) error {
 	)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) error {
-	_, err := s.db.Exec(`
+func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sprintID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM sprint
 		WHERE id = $1;
 		`,
 		sprintID)
 
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewSprint(dataCollector obs.DataCollector, sqlDB *sql.DB) Sprint {
-	return Sprint{dataCollector: dataCollector, db: sqlDB}
+func NewSprint(transactionFactory transaction.Factory) Sprint {
+	return Sprint{
+		transactionFactory: transactionFactory,
+	}
 }

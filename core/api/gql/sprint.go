@@ -5,7 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -33,16 +33,20 @@ func (s Sprint) CreatedAt(ct context.Context) graphql.Time {
 func (s Sprint) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
-	filter, err := fromGraphQLTaskFilterPtr(ct, s.deps.dataCollector, args.Filter)
-	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		s.deps.logger.ErrorWithContext(ct, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	tasks, err := s.deps.sprintService.FindTasksInSprint(ct, s.sprint.ID, filter)
+	tasks, err := s.deps.taskService.FindTasksInSprint(ct, s.sprint.ID, filter)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		s.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(tasks, func(task entity.Task, index int) Task {
@@ -53,8 +57,8 @@ func (s Sprint) Tasks(ct context.Context, args struct {
 func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 	team, err := s.deps.teamService.FindTeamByID(ct, s.sprint.OwningTeamID)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Team{}, err
+		s.deps.logger.ErrorWithContext(ct, err)
+		return Team{}, errs.ToResolverErr(err)
 	}
 
 	return newTeam(s.deps, team), nil
@@ -63,8 +67,8 @@ func (s Sprint) OwningTeam(ct context.Context) (Team, error) {
 func (s Sprint) Participants(ct context.Context) ([]SprintParticipant, error) {
 	participants, err := s.deps.sprintService.FindParticipantsInSprint(ct, s.sprint.ID)
 	if err != nil {
-		s.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		s.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(participants, func(participant entity.SprintParticipant, index int) SprintParticipant {

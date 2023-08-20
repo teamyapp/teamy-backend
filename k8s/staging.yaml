@@ -45,7 +45,10 @@ spec:
           ports:
             - containerPort: 9000
             - containerPort: 9001
+            - containerPort: 10000
           env:
+            - name: ENVIRONMENT
+              value: staging
             - name: DB_HOST
               value: postgres.db.svc.cluster.local
             - name: DB_USER
@@ -73,14 +76,29 @@ spec:
               value: "81"
             - name: CLOUD_GRPC_API_SHOULD_ENCRYPT
               value: "false"
+            - name: REQUEST_RETRY_MAX_COUNT # Temporary set to 1 before error category is implemented
+              value: "1"
             - name: SERVICE_RUNNER_WEB_SERVER_PORT
               value: "9000"
             - name: SERVICE_RUNNER_GRPC_SERVER_PORT
               value: "9001"
+            - name: SERVICE_RUNNER_MONITORING_SERVER_PORT
+              value: "10000"
+            - name: SERVICE_RUNNER_ENABLE_TRACING
+              value: "true"
+            - name: SERVICE_RUNNER_TRACE_COLLECTOR_ENDPOINT
+              value: "tempo.monitoring:4317"
             - name: SERVICE_RUNNER_IDENTITY_API_ENDPOINT
               value: http://cloud/identity
             - name: APPS_GITHUB_APP_NAME
               value: teamy-apps-staging
+            - name: APPS_GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: apps
+                  key: github-app-id
+            - name: APPS_GITHUB_PRIVATE_KEY_PEM_FILE_PATH
+              value: /var/lib/vault/github/private-key.pem
             - name: APPS_GITHUB_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
@@ -96,20 +114,38 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: internal-service-account-api-token
+            - name: TEAMY_WEB_UI_BASE_URL
+              value: "https://staging.teamyapp.com"
+          volumeMounts:
+            - mountPath: /var/lib/vault
+              name: vault
+      volumes:
+        - name: vault
+          secret:
+            secretName: apps
+            defaultMode: 0600
+            items:
+              - key: github-private-key.pem
+                path: github/private-key.pem
 ---
 apiVersion: v1
 kind: Service
 metadata:
   namespace: staging
   name: teamy-backend
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '10000'
 spec:
   selector:
     app: teamy-backend
   ports:
-    - name: web-services
+    - name: web
       port: 9000
-    - name: rpc-services
+    - name: rpc
       port: 9001
+    - name: monitoring
+      port: 10000
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
@@ -138,4 +174,4 @@ spec:
           passHostHeader: true
           scheme: h2c
   tls:
-    secretName: certs-teamyapp.com
+    secretName: cert-teamyapp.com

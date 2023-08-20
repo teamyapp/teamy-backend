@@ -6,19 +6,23 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubAppInstallState struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubAppInstallState = (*GithubAppInstallState)(nil)
 
-func (g GithubAppInstallState) FindStateByID(ct context.Context, stateID uint64) (entity.GithubAppInstallState, error) {
+func (g GithubAppInstallState) FindStateByID(
+	ct context.Context,
+	stateID uint64,
+) (entity.GithubAppInstallState, *errs.Error) {
 	state := entity.GithubAppInstallState{}
 	err := g.db.QueryRow(`
 	SELECT
@@ -37,19 +41,22 @@ func (g GithubAppInstallState) FindStateByID(ct context.Context, stateID uint64)
 			&state.CreatedAt,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubAppInstallState{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubAppInstallState not found: id=%v", stateID))
-	}
-
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubAppInstallState{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"GithubAppInstallState not found: stateID=%v", stateID))
+		}
+
+		return entity.GithubAppInstallState{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return state, err
+	return state, nil
 }
 
-func (g GithubAppInstallState) CreateState(ct context.Context, state entity.GithubAppInstallState) error {
+func (g GithubAppInstallState) CreateState(
+	ct context.Context,
+	state entity.GithubAppInstallState,
+) *errs.Error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_app_install_state
 	(
@@ -67,13 +74,13 @@ func (g GithubAppInstallState) CreateState(ct context.Context, state entity.Gith
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) error {
+func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) *errs.Error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_app_install_state
 		WHERE id = $1;
@@ -81,15 +88,15 @@ func (g GithubAppInstallState) DeleteState(ct context.Context, stateID uint64) e
 		stateID)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewGithubAppInstallState(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubAppInstallState {
+func NewGithubAppInstallState(logger telemetry.Logger, sqlDB *sql.DB) GithubAppInstallState {
 	return GithubAppInstallState{
-		dataCollector: dataCollector,
-		db:            sqlDB,
+		logger: logger,
+		db:     sqlDB,
 	}
 }

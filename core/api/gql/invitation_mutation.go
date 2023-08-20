@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -17,10 +17,14 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		ExpireAt          graphql.Time
 	}
 }) (Invitation, error) {
-	teamID, err := fromGraphQLID(args.TeamID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.CreateInvitation(ct, teamID, service.CreateInvitationInput{
@@ -30,11 +34,11 @@ func (m Mutation) CreateInvitation(ct context.Context, args struct {
 		ExpireAt:          args.Invitation.ExpireAt.Time,
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Invitation{}, errs.ToResolverErr(err)
 	}
 
-	return newInvitation(m.deps, invitation), err
+	return newInvitation(m.deps, invitation), nil
 }
 
 func (m Mutation) UpdateInvitation(ct context.Context, args struct {
@@ -45,10 +49,14 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 		ExpireAt          graphql.Time
 	}
 }) (Invitation, error) {
-	invitationID, err := fromGraphQLID(args.InvitationID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+	invitationID, argErr := fromGraphQLID(args.InvitationID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.UpdateInvitation(ct, invitationID, service.UpdateInvitationInput{
@@ -57,8 +65,8 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 		ExpireAt:          args.Input.ExpireAt.Time,
 	})
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Invitation{}, errs.ToResolverErr(err)
 	}
 
 	return newInvitation(m.deps, invitation), nil
@@ -67,16 +75,20 @@ func (m Mutation) UpdateInvitation(ct context.Context, args struct {
 func (m Mutation) DeleteInvitation(ct context.Context, args struct {
 	InvitationID graphql.ID
 }) (Invitation, error) {
-	invitationID, err := fromGraphQLID(args.InvitationID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+	invitationID, argErr := fromGraphQLID(args.InvitationID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.DeleteInvitation(ct, invitationID)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Invitation{}, errs.ToResolverErr(err)
 	}
 
 	return newInvitation(m.deps, invitation), nil
@@ -86,16 +98,20 @@ func (m Mutation) AcceptInvitation(ct context.Context, args struct {
 	InvitationID   graphql.ID
 	InvitationCode string
 }) (Invitation, error) {
-	invitationID, err := fromGraphQLID(args.InvitationID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+	invitationID, argErr := fromGraphQLID(args.InvitationID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.AcceptInvitation(ct, invitationID, args.InvitationCode)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Invitation{}, errs.ToResolverErr(err)
 	}
 
 	return newInvitation(m.deps, invitation), nil
@@ -105,16 +121,20 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 	InvitationID   graphql.ID
 	InvitationCode string
 }) (Invitation, error) {
-	invitationID, err := fromGraphQLID(args.InvitationID)
-	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+	invitationID, argErr := fromGraphQLID(args.InvitationID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
 	}
 
 	invitation, err := m.deps.invitationService.DeclineInvitation(ct, invitationID, args.InvitationCode)
 	if err != nil {
-		m.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return Invitation{}, err
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Invitation{}, errs.ToResolverErr(err)
 	}
 
 	return newInvitation(m.deps, invitation), nil

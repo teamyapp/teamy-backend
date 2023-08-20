@@ -5,7 +5,7 @@ import (
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
@@ -41,16 +41,20 @@ func (u User) UpdatedAt(ct context.Context) *graphql.Time {
 func (u User) Teams(ct context.Context, args struct {
 	Filter *TeamFilter
 }) ([]Team, error) {
-	filter, err := fromGraphQLTeamFilterPtr(ct, u.deps.dataCollector, args.Filter)
-	if err != nil {
-		u.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+	filter, argErr := fromGraphQLTeamFilterPtr(args.Filter)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		u.deps.logger.ErrorWithContext(ct, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	teams, err := u.deps.teamService.FindUserTeams(ct, u.user.ID, filter)
+	teams, err := u.deps.teamService.FindTeamsForUser(ct, u.user.ID, filter)
 	if err != nil {
-		u.deps.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		u.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(teams, func(team entity.Team, _ int) Team {

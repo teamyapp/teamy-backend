@@ -3,16 +3,19 @@ package dao
 import (
 	"context"
 
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type UserFileUploadSession interface {
-	FindUserFileUploadSessionByUserID(
+	FindUserFileUploadSessionByUserIDWithTx(
 		ct context.Context,
+		tx *transaction.Transaction,
 		userID uint64,
 		userFileUploadSessionType entity.UserFileUploadSessionType,
 		fileUploadSessionID uint64,
-	) (entity.UserFileUploadSession, error)
-	CreateUserFileUploadSession(ct context.Context, userFileUploadSession entity.UserFileUploadSession) error
-	UpdateUserFileUploadSession(ct context.Context, userFileUploadSession entity.UserFileUploadSession) error
+	) (entity.UserFileUploadSession, *errs.Error)
+	CreateUserFileUploadSession(ct context.Context, tx *transaction.Transaction, userFileUploadSession entity.UserFileUploadSession) *errs.Error
+	UpdateUserFileUploadSession(ct context.Context, tx *transaction.Transaction, userFileUploadSession entity.UserFileUploadSession) *errs.Error
 }

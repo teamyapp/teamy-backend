@@ -4,9 +4,12 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -14,15 +17,15 @@ import (
 )
 
 type TaskRPC struct {
-	dataCollector obs.DataCollector
-	taskService   service.Task
+	logger      telemetry.Logger
+	taskService service.Task
 	proto.UnimplementedTaskServer
 }
 
 var _ runner.Service = (*TaskRPC)(nil)
 var _ proto.TaskServer = (*TaskRPC)(nil)
 
-func (t TaskRPC) Start(runner *runner.ServiceRunner) error {
+func (t TaskRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
 		proto.RegisterTaskServer(server, t)
 	})
@@ -32,8 +35,8 @@ func (t TaskRPC) Start(runner *runner.ServiceRunner) error {
 func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.TaskMsg, error) {
 	task, err := t.taskService.FindTaskByID(ct, req.TaskId)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
 	return &proto.TaskMsg{
@@ -52,6 +55,33 @@ func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.
 	}, nil
 }
 
+func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *proto.GetAwaitForTasksRequest) (*proto.GetAwaitForTasksResponse, error) {
+	tasks, err := t.taskService.FindAwaitForTasks(ct, req.AwaitingTaskId)
+	if err != nil {
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	taskMsgs := collect.Map(tasks, func(task entity.Task, _ int) *proto.TaskMsg {
+		return &proto.TaskMsg{
+			TaskId:          task.ID,
+			Goal:            task.Goal,
+			Context:         task.Context,
+			Effort:          toProtoDurationPtr(task.Effort),
+			DueAt:           toProtoTimePtr(task.DueAt),
+			Status:          protoTaskStatuses[task.Status],
+			CreatedAt:       timestamppb.New(task.CreatedAt),
+			UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
+			OwnerUserId:     task.OwnerUserID,
+			OwningTeamId:    task.OwningTeamID,
+			CreatorUserId:   task.CreatorUserID,
+			CommentThreadId: task.CommentsThreadID,
+		}
+	})
+
+	return &proto.GetAwaitForTasksResponse{Tasks: taskMsgs}, nil
+}
+
 func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*proto.CreateTaskResponse, error) {
 	input := service.CreateTaskInput{
 		Goal:        req.Goal,
@@ -61,11 +91,11 @@ func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*
 	}
 	task, err := t.taskService.CreateTask(ct, req.TeamId, input)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &proto.CreateTaskResponse{TaskId: task.ID}, err
+	return &proto.CreateTaskResponse{TaskId: task.ID}, nil
 }
 
 func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*emptypb.Empty, error) {
@@ -75,90 +105,90 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 		OwnerUserID:  req.OwnerUserId,
 		OwningTeamID: req.OwningTeamId,
 		Effort:       fromProtoDurationPtr(req.Effort),
-		DueAt:        nil,
+		DueAt:        fromProtoTimePtr(req.DueAt),
 	}
 	_, err := t.taskService.UpdateTask(ct, req.TaskId, input)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) DeleteTask(ct context.Context, req *proto.DeleteTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.DeleteTask(ct, req.TaskId)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *proto.MoveTaskToUpcomingRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToUpcoming(ct, req.TaskId, true)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToInProgress(ct context.Context, req *proto.MoveTaskToInProgressRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToInProgress(ct, req.TaskId)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToDelivered(ct context.Context, req *proto.MoveTaskToDeliveredRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToDelivered(ct, req.TaskId)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *proto.MoveTaskToBlockedRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToBlocked(ct, req.TaskId, req.Reason)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) AddAwaitForTask(ct context.Context, req *proto.AddAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.AddAwaitForTask(ct, req.AwaitingTaskId, req.AwaitForTaskId)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *proto.RemoveAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.RemoveAwaitForTask(ct, req.AwaitForTaskId, req.AwaitForTaskId)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
-func NewTaskRPC(dataCollector obs.DataCollector, taskService service.Task) TaskRPC {
+func NewTaskRPC(logger telemetry.Logger, taskService service.Task) TaskRPC {
 	return TaskRPC{
-		dataCollector: dataCollector,
-		taskService:   taskService,
+		logger:      logger,
+		taskService: taskService,
 	}
 }

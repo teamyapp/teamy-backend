@@ -2,15 +2,18 @@ package service
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"fmt"
 	"time"
 
-	cloudAPI "github.com/teamyapp/cloud/app/api"
 	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
+	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -21,63 +24,70 @@ import (
 
 const timePerWeek = 7 * 24 * time.Hour
 
+const (
+	TooManySprints errs.ErrorCode = "TooManySprints"
+)
+
 type CreateSprintInput struct {
 	StartAt time.Time
 	EndAt   time.Time
 }
 
 type Sprint struct {
-	dataCollector         obs.DataCollector
-	cloudClientRegistry   *cloudAPI.ClientRegistry
+	logger                telemetry.Logger
+	cloudClientRegistry   *client.Registry
 	stateSyncer           *realtime.StateSyncer
-	authorizer            Authorizer
+	authorizer            client.Authorizer
+	featureToggles        feature.Toggles
+	transactionFactory    transaction.Factory
 	taskDao               dao.Task
 	sprintDao             dao.Sprint
+	teamDao               dao.Team
 	sprintTaskRelationDao dao.SprintTaskRelation
 	sprintParticipantDao  dao.SprintParticipant
 	teamMemberDao         dao.TeamMember
-	taskService           Task
+	threadDao             dao.Thread
+	db                    *sql.DB
 }
 
-func (s Sprint) FindTasksInSprint(
-	ct context.Context,
-	sprintID uint64,
-	filter *TaskFilter,
-) ([]entity.Task, error) {
-	taskIDs, err := s.sprintTaskRelationDao.FindTaskIDsBySprintID(ct, sprintID)
+func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if s.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	tasks, err := s.taskDao.FindTasksByIDs(ct, taskIDs)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
-	}
+	if s.featureToggles.EnableAuthorization {
+		authorizedSprints, err := client.FilterAuthorizedItems(
+			ct,
+			s.authorizer,
+			sprints,
+			func(sprint entity.Sprint) cloudAuthorization.Query {
+				return authorization.NewReadInSprintQuery(userID, sprint.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
 
-	if filter != nil {
-		tasks = filterTasks(tasks, *filter)
-	}
-
-	return tasks, nil
-}
-
-func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, error) {
-	participants, err := s.sprintParticipantDao.FindParticipantsBySprintID(ct, sprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
-	}
-
-	return participants, nil
-}
-
-func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, error) {
-	sprints, err := s.sprintDao.FindAllSprints(ct)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		sprints = authorizedSprints
 	}
 
 	if filter != nil {
@@ -87,379 +97,883 @@ func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.
 	return sprints, nil
 }
 
-func (s Sprint) FindCurrentSprint(ct context.Context, teamID uint64) (entity.Sprint, error) {
-	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
-	}
-
-	now := time.Now().UTC()
-	sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
-		if now.Before(sprint.StartAt.UTC()) || now.After(sprint.EndAt.UTC()) {
-			return false
+func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		return true
-	})
-	if len(sprints) < 1 {
-		err = ErrNotFound("team has no active sprint")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"TeamID":      teamID,
-				"CurrentTime": now.UTC(),
-			},
-		})
-		return entity.Sprint{}, err
+		query := authorization.NewReadInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(
+				errs.PermissionDenied,
+				fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
 	}
 
-	if len(sprints) > 1 {
-		err = errors.New("team has more than one sprint")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"TeamID": teamID,
-			},
-		})
-		return entity.Sprint{}, err
-	}
-
-	return sprints[0], nil
+	return s.sprintParticipantDao.FindParticipantsBySprintID(ct, sprintID)
 }
 
-func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) ([]entity.Sprint, error) {
-	sprints, err := s.sprintDao.FindSprintsByTeamID(ct, teamID)
+func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
+	sprints, err := s.sprintDao.FindAllSprints(ct)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return nil, err
 	}
 
-	now := time.Now().UTC()
-	return collect.Filter(sprints, func(sprint entity.Sprint) bool {
-		if sprint.EndAt.UTC().Before(now) {
-			return false
-		}
-
-		return true
-	}), nil
-}
-
-func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, error) {
-	return s.sprintDao.FindSprintByID(ct, sprintID)
-}
-
-func (s Sprint) CreateSprint(ct context.Context, teamID uint64, sprint CreateSprintInput) (entity.Sprint, error) {
-	if feature.EnableAuthorization {
+	if s.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
 		if !ok {
-			err := errors.New("user id not found")
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Sprint{}, err
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
 		}
 
-		query := authorization.NewCreateSprintQuery(userID, teamID)
-		hasPermission, err := s.authorizer.hasPermission(ct, query)
+		authorizedSprints, err := client.FilterAuthorizedItems(
+			ct,
+			s.authorizer,
+			sprints,
+			func(sprint entity.Sprint) cloudAuthorization.Query {
+				return authorization.NewReadInSprintQuery(userID, sprint.ID)
+			})
 		if err != nil {
-			s.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return nil, err
+		}
+
+		sprints = authorizedSprints
+	}
+
+	if filter != nil {
+		sprints = filterSprints(sprints, *filter)
+	}
+
+	return sprints, nil
+}
+
+func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Sprint, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if s.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	var sprint *entity.Sprint
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		team, err := s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
+		if team.ActiveSprintID == nil {
+			return nil
+		}
+
+		sprintRes, err := s.sprintDao.FindSprintByID(ct, *team.ActiveSprintID)
+		if err != nil {
+			return err
+		}
+
+		sprint = &sprintRes
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if sprint == nil {
+		return nil, errs.NewError(errs.NotFound, "active sprint not found")
+	}
+
+	if s.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInSprintQuery(userID, sprint.ID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	return sprint, nil
+}
+
+func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID uint64) (entity.Team, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewUpdateInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Team{}, err
+		}
+
+		if !hasPermission {
+			return entity.Team{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	var team entity.Team
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		team, err = s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
+		sprint, err := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+		if err != nil {
+			return err
+		}
+
+		if sprint.OwningTeamID != teamID {
+			return errs.NewError(errs.InvalidArgument, "Sprint does not belong to team")
+		}
+
+		team.ActiveSprintID = &sprintID
+		updatedAt := time.Now().UTC()
+		team.UpdatedAt = &updatedAt
+		updateTeamMutation := mutation.NewUpdateTeam(
+			s.logger,
+			s.stateSyncer,
+			s.teamDao,
+			team,
+		)
+		rtTx.AppendMutation(updateTeamMutation)
+		return updateTeamMutation.Execute(ct, tx)
+	})
+
+	if err != nil {
+		return entity.Team{}, err
+	}
+
+	return team, nil
+}
+
+func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if s.featureToggles.EnableAuthorization {
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	var sprints []entity.Sprint
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		sprints, err = s.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now().UTC()
+		sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
+			if sprint.EndAt.UTC().Before(now) {
+				return false
+			}
+
+			return true
+		})
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if s.featureToggles.EnableAuthorization {
+		authorizedSprints, err := client.FilterAuthorizedItems(
+			ct,
+			s.authorizer,
+			sprints,
+			func(sprint entity.Sprint) cloudAuthorization.Query {
+				return authorization.NewReadInSprintQuery(userID, sprint.ID)
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		sprints = authorizedSprints
+	}
+
+	return sprints, nil
+}
+
+func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewReadInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
 			return entity.Sprint{}, err
 		}
 
 		if !hasPermission {
-			return entity.Sprint{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
-			}
+			return entity.Sprint{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	var sprint entity.Sprint
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		sprint, err = s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+		return err
+	})
+
+	if err != nil {
+		return entity.Sprint{}, err
+	}
+
+	return sprint, nil
+}
+
+func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSprintInput) (entity.Sprint, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewCreateSprintInTeamQuery(userID, teamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Sprint{}, err
+		}
+
+		if !hasPermission {
+			return entity.Sprint{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
 	genSprintIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "sprintID"}
-	genSprintIDRes, err := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSprintIDReq)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
+	genSprintIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSprintIDReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.Sprint{}, internalErr
 	}
 
-	sp := entity.Sprint{
-		ID:           genSprintIDRes.UniqueNumber,
-		StartAt:      sprint.StartAt.UTC(),
-		EndAt:        sprint.EndAt.UTC(),
-		CreatedAt:    time.Now().UTC(),
-		OwningTeamID: teamID,
+	var sprint entity.Sprint
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
-	err = s.sprintDao.CreateSprint(ct, sp)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
-	}
-
-	if feature.EnableAuthorization {
-		err = s.authorizer.registerResource(ct, authorization.SprintResourceType, sp.ID)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Sprint{}, err
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		sprint = entity.Sprint{
+			ID:           genSprintIDRes.UniqueNumber,
+			StartAt:      input.StartAt.UTC(),
+			EndAt:        input.EndAt.UTC(),
+			CreatedAt:    time.Now().UTC(),
+			OwningTeamID: teamID,
 		}
 
-		err = s.authorizer.assignParentResource(ct, authorization.SprintResourceType, sp.ID, authorization.TeamResourceType, sp.OwningTeamID)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Sprint{}, err
-		}
-	}
-
-	teamMembers, err := s.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
-	}
-
-	sprintLength := sprint.EndAt.UTC().Sub(sprint.StartAt.UTC())
-	numOfWeeks := sprintLength / timePerWeek
-	// TODO: fetch from team settings
-
-	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
-	for _, teamMember := range teamMembers {
-		totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
-		participant := entity.SprintParticipant{
-			SprintID:        sp.ID,
-			UserID:          teamMember.UserID,
-			TotalBandwidth:  totalBandwidth,
-			UnusedBandwidth: totalBandwidth,
-			CreatedAt:       time.Now(),
-		}
-		createSprintParticipantMutation := mutation.NewCreateSprintParticipantMutation(
-			s.dataCollector,
+		createSprintMutation := mutation.NewCreateSprintMutation(
+			s.logger,
 			s.stateSyncer,
-			s.sprintParticipantDao,
 			s.sprintDao,
-			participant)
-		err = realTimeTransaction.ApplyMutation(ct, createSprintParticipantMutation)
+			sprint)
+
+		rtTx.AppendMutation(createSprintMutation)
+		err := createSprintMutation.Execute(ct, tx)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			return err
+		}
+
+		teamMembers, err := s.teamMemberDao.FindTeamMembersByTeamIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
+		sprintLength := input.EndAt.UTC().Sub(input.StartAt.UTC())
+		numOfWeeks := sprintLength / timePerWeek
+		// TODO: fetch from team settings
+
+		for _, teamMember := range teamMembers {
+			totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
+			participant := entity.SprintParticipant{
+				SprintID:        sprint.ID,
+				UserID:          teamMember.UserID,
+				TotalBandwidth:  totalBandwidth,
+				UnusedBandwidth: totalBandwidth,
+				CreatedAt:       time.Now(),
+			}
+			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
+				s.logger,
+				s.stateSyncer,
+				s.sprintParticipantDao,
+				s.sprintDao,
+				participant)
+			rtTx.AppendMutation(createSprintParticipantMutation)
+			err = createSprintParticipantMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return entity.Sprint{}, err
+	}
+
+	// TODO(magicoder10): if failed to register/assign resource, there will be inconsistent state. Cross-service transaction
+	// protection will be covered in stage 2
+	if s.featureToggles.EnableAuthorization {
+		err = s.authorizer.RegisterResource(ct, authorization.SprintResourceType, sprint.ID)
+		if err != nil {
+			return entity.Sprint{}, err
+		}
+
+		err = s.authorizer.AssignParentResource(ct, authorization.SprintResourceType, sprint.ID, authorization.TeamResourceType, sprint.OwningTeamID)
+		if err != nil {
 			return entity.Sprint{}, err
 		}
 	}
 
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
-	}
-
-	return sp, nil
+	return sprint, nil
 }
 
-func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, error) {
-	taskIds, err := s.sprintTaskRelationDao.FindTaskIDsBySprintID(ct, sprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
-	}
+func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Sprint{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
 
-	for _, taskId := range taskIds {
-		_, err = s.RemoveTaskFromSprint(ct, sprintID, taskId)
+		query := authorization.NewDeleteInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Sprint{}, err
+		}
+
+		if !hasPermission {
+			return entity.Sprint{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
 		}
 	}
 
-	participantUserIDs, err := s.sprintParticipantDao.FindParticipantIDsBySprintID(ct, sprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
+	var sprint entity.Sprint
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
 	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		taskIds, err := s.sprintTaskRelationDao.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
+		if err != nil {
+			return err
+		}
 
-	sprint, err := s.sprintDao.FindSprintByID(ct, sprintID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Sprint{}, err
-	}
+		for _, taskId := range taskIds {
+			_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId, false)
+			if err != nil {
+				return err
+			}
+		}
 
-	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
-	for _, participantUserID := range participantUserIDs {
-		deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipantMutation(
-			s.dataCollector,
+		participantUserIDs, err := s.sprintParticipantDao.FindParticipantIDsBySprintIDWithTx(ct, tx, sprintID)
+		if err != nil {
+			return err
+		}
+
+		sprint, err = s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+		if err != nil {
+			return err
+		}
+
+		for _, participantUserID := range participantUserIDs {
+			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
+				s.logger,
+				s.stateSyncer,
+				s.sprintParticipantDao,
+				s.sprintDao,
+				participantUserID,
+				sprintID)
+			rtTx.AppendMutation(deleteSprintParticipantMutation)
+			err = deleteSprintParticipantMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			// we need to prepare notifier in advance since sprint will be actually deleted later
+			deleteSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
+		}
+
+		deleteSprintMutation := mutation.NewDeleteSprint(
+			s.logger,
 			s.stateSyncer,
-			s.sprintParticipantDao,
 			s.sprintDao,
-			participantUserID,
-			sprintID)
-		err = realTimeTransaction.ApplyMutation(ct, deleteSprintParticipantMutation)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return entity.Sprint{}, err
-		}
-	}
+			sprint,
+		)
 
-	err = realTimeTransaction.Commit(ct)
+		rtTx.AppendMutation(deleteSprintMutation)
+		return deleteSprintMutation.Execute(ct, tx)
+	})
+
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Sprint{}, err
 	}
 
-	return sprint, s.sprintDao.DeleteSprint(ct, sprintID)
+	// TODO: clean up resource relations in authorization service
+	return sprint, nil
 }
 
-func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, error) {
-	task, err := s.taskDao.FindTaskByID(ct, taskID)
+func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewAddTaskToInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	var task entity.Task
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		task, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+		if err != nil {
+			return err
+		}
+
+		sprint, err := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+		if err != nil {
+			return err
+		}
+
+		if sprint.OwningTeamID != task.OwningTeamID {
+			return errs.NewError(errs.InvalidArgument, fmt.Sprintf("sprint and task must belong to the same team: sprintID=%v, taskID=%v", sprintID, taskID))
+		}
+
+		relation := entity.SprintTaskRelation{
+			SprintID:  sprintID,
+			TaskID:    taskID,
+			CreatedAt: time.Now().UTC(),
+		}
+		createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
+			s.logger,
+			s.stateSyncer,
+			s.sprintTaskRelationDao,
+			s.sprintDao,
+			relation)
+		rtTx.AppendMutation(createSprintTaskRelationMutation)
+		err = createSprintTaskRelationMutation.Execute(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		if !task.IsPlanned {
+			task.IsPlanned = true
+			updateTaskMutation := mutation.NewUpdateTask(
+				s.logger,
+				s.stateSyncer,
+				s.taskDao,
+				task)
+			rtTx.AppendMutation(updateTaskMutation)
+			err = updateTaskMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = s.tryReduceBandwidth(ct, tx, rtTx, sprintID, task)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	sprint, err := s.sprintDao.FindSprintByID(ct, sprintID)
+	// TODO: update resource relations in authorization service
+	return task, nil
+}
+
+func (s Sprint) CopyTasksToSprint(
+	ct context.Context,
+	toSprintID uint64,
+	taskIDs []uint64,
+) ([]entity.Task, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		for _, taskID := range taskIDs {
+			query := authorization.NewReadInTaskQuery(userID, taskID)
+			hasPermission, err := s.authorizer.HasPermission(ct, query)
+			if err != nil {
+				return nil, err
+			}
+
+			if !hasPermission {
+				return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+			}
+		}
+
+		sprint, err := s.sprintDao.FindSprintByID(ct, toSprintID)
+		if err != nil {
+			return nil, err
+		}
+
+		query := authorization.NewCreateTaskInTeamQuery(userID, sprint.OwningTeamID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+
+		query = authorization.NewAddTaskToInSprintQuery(userID, toSprintID)
+		hasPermission, err = s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	var tasks []entity.Task
+	var newTaskIDs []uint64
+	var newThreadIDs []uint64
+	// TODO(magicoder10): these genID requests should be batched in a single RPC
+	for range taskIDs {
+		genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
+		genTaskIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			return nil, internalErr
+		}
+
+		genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
+		genThreadIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
+		if rpcErr != nil {
+			internalErr := errs.FromGRPCErr(rpcErr)
+			return nil, internalErr
+		}
+
+		newTaskIDs = append(newTaskIDs, genTaskIDRes.UniqueNumber)
+		newThreadIDs = append(newThreadIDs, genThreadIDRes.UniqueNumber)
+	}
+
+	var err *errs.Error
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		for idx, taskID := range taskIDs {
+			var task entity.Task
+			task, err = s.copyTaskToSprint(ct, tx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx])
+			if err != nil {
+				continue
+			}
+
+			tasks = append(tasks, task)
+		}
+
+		return nil
+	})
+
+	// TODO: update resource relations in authorization service
+	return tasks, nil
+}
+
+func (s Sprint) MoveTasksToSprint(
+	ct context.Context,
+	fromSprintID uint64,
+	toSprintID uint64,
+	taskIDs []uint64,
+) ([]entity.Task, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewRemoveTaskFromInSprintQuery(userID, fromSprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+
+		query = authorization.NewAddTaskToInSprintQuery(userID, toSprintID)
+		hasPermission, err = s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPermission {
+			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	var tasks []entity.Task
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		for _, taskID := range taskIDs {
+			task, err := s.moveTaskToSprint(ct, tx, rtTx, fromSprintID, toSprintID, taskID)
+
+			if err != nil {
+				continue
+			}
+
+			tasks = append(tasks, task)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return nil, err
+	}
+
+	// TODO: update resource relations in authorization service
+	return tasks, nil
+}
+
+func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
+	if s.featureToggles.EnableAuthorization {
+		userID, ok := ctx.UserIDFromContext(ct)
+		if !ok {
+			return entity.Task{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+		}
+
+		query := authorization.NewRemoveTaskFromInSprintQuery(userID, sprintID)
+		hasPermission, err := s.authorizer.HasPermission(ct, query)
+		if err != nil {
+			return entity.Task{}, err
+		}
+
+		if !hasPermission {
+			return entity.Task{}, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
+		}
+	}
+
+	var task entity.Task
+	txCtx := TransactionsContext{
+		logger:             s.logger,
+		transactionFactory: s.transactionFactory,
+		stateSyncer:        s.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID, true)
+		return err
+	})
+
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	// TODO: update resource relations in authorization service
+	return task, nil
+}
+
+func (s Sprint) copyTaskToSprint(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rtTx *realtime.Transaction,
+	toSprintID uint64,
+	taskID uint64,
+	newTaskID uint64,
+	newThreadID uint64,
+) (entity.Task, *errs.Error) {
+	task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	sprint, err := s.sprintDao.FindSprintByIDWithTx(ct, tx, toSprintID)
+	if err != nil {
 		return entity.Task{}, err
 	}
 
 	if sprint.OwningTeamID != task.OwningTeamID {
-		err = errors.New("sprint and task must belong to the same team")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.Task{}, errs.NewError(
+			errs.InvalidArgument,
+			fmt.Sprintf("sprint and task must belong to the same team: sprintID=%v, taskID=%v", toSprintID, newTaskID))
+	}
+
+	err = s.threadDao.CreateThread(ct, tx, newThreadID)
+	if err != nil {
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
+	newTask := entity.Task{
+		ID:               newTaskID,
+		Goal:             task.Goal,
+		Context:          task.Context,
+		Status:           task.Status,
+		IsPlanned:        task.IsPlanned,
+		CreatorUserID:    task.CreatorUserID,
+		OwningTeamID:     task.OwningTeamID,
+		Effort:           task.Effort,
+		OwnerUserID:      task.OwnerUserID,
+		CommentsThreadID: newThreadID,
+		CreatedAt:        time.Now().UTC(),
+		DueAt:            task.DueAt,
+		DeliveredAt:      task.DeliveredAt,
+	}
+
+	createTaskMutation := mutation.NewCreateTask(
+		s.logger,
+		s.stateSyncer,
+		s.taskDao,
+		newTask,
+	)
+	err = createTaskMutation.Execute(ct, tx)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	rtTx.AppendMutation(createTaskMutation)
 	relation := entity.SprintTaskRelation{
-		SprintID:  sprintID,
-		TaskID:    taskID,
+		SprintID:  toSprintID,
+		TaskID:    newTaskID,
 		CreatedAt: time.Now().UTC(),
 	}
-	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelationMutation(
-		s.dataCollector,
+	createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
+		s.logger,
 		s.stateSyncer,
 		s.sprintTaskRelationDao,
 		s.sprintDao,
 		relation)
-	err = realTimeTransaction.ApplyMutation(ct, createSprintTaskRelationMutation)
+	rtTx.AppendMutation(createSprintTaskRelationMutation)
+	err = createSprintTaskRelationMutation.Execute(ct, tx)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	if !task.IsPlanned {
 		task.IsPlanned = true
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			s.dataCollector,
+		updateTaskMutation := mutation.NewUpdateTask(
+			s.logger,
 			s.stateSyncer,
 			s.taskDao,
 			task)
-		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+		rtTx.AppendMutation(updateTaskMutation)
+		err = updateTaskMutation.Execute(ct, tx)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 	}
 
-	err = s.tryReduceBandwidth(ct, realTimeTransaction, sprintID, task)
+	err = s.tryReduceBandwidth(ct, tx, rtTx, toSprintID, task)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	return task, nil
+	return newTask, nil
 }
 
-func (s Sprint) CopyTasksToSprint(ct context.Context, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
-	if feature.EnableAuthorization {
-		userID, ok := ctx.UserIDFromContext(ct)
-		if !ok {
-			err := errors.New("Unauthorized")
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return []entity.Task{}, err
-		}
-
-		sprint, err := s.sprintDao.FindSprintByID(ct, toSprintID)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return []entity.Task{}, err
-		}
-
-		query := authorization.NewCloneTaskQuery(userID, sprint.OwningTeamID)
-		hasPermission, err := s.authorizer.hasPermission(ct, query)
-		if err != nil {
-			s.authorizer.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			return []entity.Task{}, err
-		}
-
-		if !hasPermission {
-			return []entity.Task{}, authorization.Error{
-				Code:    authorization.UnauthorizedErrorCode,
-				Message: fmt.Sprintf("Unauthorized: %v", query),
-			}
-		}
-	}
-
-	res := make([]entity.Task, 0)
-	for _, taskID := range taskIDs {
-		task, err := s.copyTaskToSprint(ct, toSprintID, taskID)
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
-		}
-
-		res = append(res, task)
-	}
-
-	return res, nil
-}
-
-func (s Sprint) MoveTasksToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskIDs []uint64) ([]entity.Task, error) {
-	res := make([]entity.Task, 0)
-	for _, taskID := range taskIDs {
-		task, err := s.moveTaskToSprint(ct, fromSprintID, toSprintID, taskID)
-
-		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
-		}
-
-		res = append(res, task)
-	}
-
-	return res, nil
-}
-
-func (s Sprint) copyTaskToSprint(ct context.Context, toSprintID uint64, taskID uint64) (entity.Task, error) {
-	task, err := s.taskDao.FindTaskByID(ct, taskID)
+func (s Sprint) moveTaskToSprint(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rtTx *realtime.Transaction,
+	fromSprintID uint64,
+	toSprintID uint64,
+	taskID uint64,
+) (entity.Task, *errs.Error) {
+	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	cloneTask := createTaskInput{
-		Goal:          task.Goal,
-		Context:       task.Context,
-		OwnerUserID:   task.OwnerUserID,
-		CreatorUserID: task.CreatorUserID,
-		Status:        task.Status,
-		DueAt:         task.DueAt,
-		DeliveredAt:   task.DeliveredAt,
-		IsPlanned:     task.IsPlanned,
-		Effort:        task.Effort,
-	}
-	createdTask, err := s.taskService.createTask(ct, task.OwningTeamID, cloneTask)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	s.AddTaskToSprint(ct, toSprintID, createdTask.ID)
-
-	return createdTask, nil
-}
-
-func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSprintID uint64, taskID uint64) (entity.Task, error) {
-	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -467,25 +981,13 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		return currSprintID == fromSprintID
 	})
 	if len(foundSprintIDs) < 1 {
-		err = errors.New("relation not found")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"SprintID": fromSprintID,
-				"TaskID":   taskID,
-			},
-		})
-		return entity.Task{}, err
+		return entity.Task{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", fromSprintID, taskID))
 	}
 
+	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, tx, fromSprintID, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	err = s.sprintTaskRelationDao.DeleteSprintTaskRelation(ct, fromSprintID, taskID)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -495,44 +997,39 @@ func (s Sprint) moveTaskToSprint(ct context.Context, fromSprintID uint64, toSpri
 		CreatedAt: time.Now().UTC(),
 	}
 
-	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(ct, relation)
+	err = s.sprintTaskRelationDao.CreateSprintTaskRelation(ct, tx, relation)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	task, err := s.taskDao.FindTaskByID(ct, taskID)
+	task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
-	err = s.tryIncreaseBandwidth(ct, realTimeTransaction, fromSprintID, task)
+	err = s.tryIncreaseBandwidth(ct, tx, rtTx, fromSprintID, task)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	err = s.tryReduceBandwidth(ct, realTimeTransaction, toSprintID, task)
+	err = s.tryReduceBandwidth(ct, tx, rtTx, toSprintID, task)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	return task, nil
 }
 
-func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, error) {
-	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskID(ct, taskID)
+func (s Sprint) removeTaskFromSprint(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rtTx *realtime.Transaction,
+	sprintID uint64,
+	taskID uint64,
+	adjustBandwidth bool,
+) (entity.Task, *errs.Error) {
+	sprintIDs, err := s.sprintTaskRelationDao.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
@@ -540,90 +1037,82 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 		return currSprintID == sprintID
 	})
 	if len(foundSprintIDs) < 1 {
-		err = errors.New("relation not found")
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{
-			obs.CauseProp: err,
-			obs.MessageProp: obs.Props{
-				"SprintID": sprintID,
-				"TaskID":   taskID,
-			},
-		})
-		return entity.Task{}, err
+		return entity.Task{}, errs.NewError(
+			errs.NotFound,
+			fmt.Sprintf("relation not found: sprintID=%v, taskID=%v", sprintID, taskID))
 	}
 
-	task, err := s.taskDao.FindTaskByID(ct, taskID)
+	task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
-	realTimeTransaction := realtime.NewTransaction(s.dataCollector, s.stateSyncer)
-	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelationMutation(
-		s.dataCollector,
+	deleteSprintTaskRelationMutation := mutation.NewDeleteSprintTaskRelation(
+		s.logger,
 		s.stateSyncer,
 		s.sprintTaskRelationDao,
 		sprintID,
 		task,
 	)
-	err = realTimeTransaction.ApplyMutation(ct, deleteSprintTaskRelationMutation)
+	rtTx.AppendMutation(deleteSprintTaskRelationMutation)
+	err = deleteSprintTaskRelationMutation.Execute(ct, tx)
 	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 		return entity.Task{}, err
 	}
 
 	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
 		task.IsPlanned = false
-		updateTaskMutation := mutation.NewUpdateTaskMutation(
-			s.dataCollector,
+		updateTaskMutation := mutation.NewUpdateTask(
+			s.logger,
 			s.stateSyncer,
 			s.taskDao,
 			task)
-		err = realTimeTransaction.ApplyMutation(ct, updateTaskMutation)
+		rtTx.AppendMutation(updateTaskMutation)
+		err = updateTaskMutation.Execute(ct, tx)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return entity.Task{}, err
 		}
 	}
 
-	err = s.tryIncreaseBandwidth(ct, realTimeTransaction, sprintID, task)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
-	}
-
-	err = realTimeTransaction.Commit(ct)
-	if err != nil {
-		s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return entity.Task{}, err
+	if adjustBandwidth {
+		err = s.tryIncreaseBandwidth(ct, tx, rtTx, sprintID, task)
+		if err != nil {
+			return entity.Task{}, err
+		}
 	}
 
 	return task, nil
 }
 
-func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction, sprintID uint64, task entity.Task) error {
+func (s Sprint) tryReduceBandwidth(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rtTx *realtime.Transaction,
+	sprintID uint64,
+	task entity.Task,
+) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
-		newSprintParticipant, err := s.sprintParticipantDao.FindParticipant(ct, sprintID, *task.OwnerUserID)
+		newSprintParticipant, err := s.sprintParticipantDao.FindParticipantWithTx(ct, tx, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
-			if errors.As(err, &dao.ErrorNotFound) {
+			if err.Code == errs.NotFound {
 				return nil
 			}
 
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
 
 		newSprintParticipant.UnusedBandwidth -= *task.Effort
-		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-			s.dataCollector,
+		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
+			s.logger,
 			s.stateSyncer,
 			s.sprintParticipantDao,
 			s.sprintDao,
 			newSprintParticipant)
-		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
+		rtTx.AppendMutation(updateSprintParticipantMutation)
+		err = updateSprintParticipantMutation.Execute(ct, tx)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
 	}
@@ -631,29 +1120,35 @@ func (s Sprint) tryReduceBandwidth(ct context.Context, tx *realtime.Transaction,
 	return nil
 }
 
-func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transaction, sprintID uint64, task entity.Task) error {
+func (s Sprint) tryIncreaseBandwidth(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rtTx *realtime.Transaction,
+	sprintID uint64,
+	task entity.Task,
+) *errs.Error {
 	if task.OwnerUserID != nil && task.Effort != nil {
-		oldSprintParticipant, err := s.sprintParticipantDao.FindParticipant(ct, sprintID, *task.OwnerUserID)
+		oldSprintParticipant, err := s.sprintParticipantDao.FindParticipantWithTx(ct, tx, sprintID, *task.OwnerUserID)
 		if err != nil {
 			// TODO: this should be removed once the sprint participants are backfilled
-			if errors.As(err, &dao.ErrorNotFound) {
+			if err.Code == errs.NotFound {
 				return nil
 			}
 
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
 
 		oldSprintParticipant.UnusedBandwidth += *task.Effort
-		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipantMutation(
-			s.dataCollector,
+		updateSprintParticipantMutation := mutation.NewUpdateSprintParticipant(
+			s.logger,
 			s.stateSyncer,
 			s.sprintParticipantDao,
 			s.sprintDao,
 			oldSprintParticipant)
-		err = tx.ApplyMutation(ct, updateSprintParticipantMutation)
+		rtTx.AppendMutation(updateSprintParticipantMutation)
+
+		err = updateSprintParticipantMutation.Execute(ct, tx)
 		if err != nil {
-			s.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
 			return err
 		}
 	}
@@ -662,27 +1157,33 @@ func (s Sprint) tryIncreaseBandwidth(ct context.Context, tx *realtime.Transactio
 }
 
 func NewSprint(
-	dataCollector obs.DataCollector,
-	cloudClientRegistry *cloudAPI.ClientRegistry,
+	logger telemetry.Logger,
+	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
-	authorizer Authorizer,
+	authorizer client.Authorizer,
+	featureToggles feature.Toggles,
+	transactionFactory transaction.Factory,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
+	teamDao dao.Team,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	sprintParticipantDao dao.SprintParticipant,
 	teamMemberDao dao.TeamMember,
-	taskService Task,
+	threadDao dao.Thread,
 ) Sprint {
 	return Sprint{
-		dataCollector:         dataCollector,
+		logger:                logger,
 		cloudClientRegistry:   cloudClientRegistry,
 		stateSyncer:           stateSyncer,
 		authorizer:            authorizer,
+		featureToggles:        featureToggles,
+		transactionFactory:    transactionFactory,
 		taskDao:               taskDao,
 		sprintDao:             sprintDao,
+		teamDao:               teamDao,
 		sprintTaskRelationDao: sprintTaskRelationDao,
 		sprintParticipantDao:  sprintParticipantDao,
 		teamMemberDao:         teamMemberDao,
-		taskService:           taskService,
+		threadDao:             threadDao,
 	}
 }

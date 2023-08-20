@@ -7,49 +7,76 @@ import (
 )
 
 type AppVersion struct {
-	deps *Dependencies
 }
 
-func (a AppVersion) App(ct context.Context) (App, error) {
-	panic("implement me")
+func (a AppVersion) Number(ctx context.Context) int32 {
+	panic("not implemented")
 }
 
-func (a AppVersion) VersionNumber() int32 {
-	panic("implement me")
+func (a AppVersion) AppName(ctx context.Context) string {
+	panic("not implemented")
 }
 
-func (a AppVersion) AppName() string {
-	panic("implement me")
+func (a AppVersion) Description(ctx context.Context) string {
+	panic("not implemented")
 }
 
-func (a AppVersion) IconURL() *string {
-	panic("implement me")
+func (a AppVersion) Changes(ctx context.Context) []string {
+	panic("not implemented")
 }
 
-func (a AppVersion) HasUIExtension() bool {
-	panic("implement me")
+func (a AppVersion) CreatedAt(ctx context.Context) graphql.Time {
+	panic("not implemented")
 }
 
-func (a AppVersion) UIExtensionEntrypointPath() *string {
-	panic("implement me")
+func (a AppVersion) CreatedBy(ctx context.Context) User {
+	panic("not implemented")
 }
 
-func (a AppVersion) IsPublic() bool {
-	panic("implement me")
+func (a AppVersion) Prices(ctx context.Context) []Money {
+	panic("not implemented")
 }
 
-func (a AppVersion) VisibleToTeams() []Team {
-	panic("implement me")
+func (a AppVersion) IsReady(ctx context.Context) bool {
+	panic("not implemented")
 }
 
-func (a AppVersion) CreatedAt() graphql.Time {
-	panic("implement me")
+func (a AppVersion) App(ctx context.Context) App {
+	panic("not implemented")
 }
 
-func (a AppVersion) UpdatedAt() *graphql.Time {
-	panic("implement me")
+func (m Mutation) CreateAppVersion(
+	ctx context.Context,
+	args struct {
+		AppID graphql.ID
+	}) AppVersion {
+	panic("not implemented")
 }
 
-func newAppVersion(deps *Dependencies) AppVersion {
-	return AppVersion{deps: deps}
+func (m Mutation) CreateAppPackageUploadSession(
+	ctx context.Context,
+	args struct {
+		AppID         graphql.ID
+		VersionNumber int32
+	}) graphql.ID {
+	panic("not implemented")
+}
+
+func (m Mutation) FinishAppPackageUploadSession(
+	ctx context.Context,
+	args struct {
+		AppID               graphql.ID
+		VersionNumber       int32
+		FileUploadSessionID graphql.ID
+	}) AppVersion {
+	panic("not implemented")
+}
+
+func (m Mutation) DeleteAppVersion(
+	ctx context.Context,
+	args struct {
+		AppID         graphql.ID
+		VersionNumber int32
+	}) AppVersion {
+	panic("not implemented")
 }

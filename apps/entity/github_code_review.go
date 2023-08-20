@@ -2,7 +2,7 @@ package entity
 
 type GithubCodeReview struct {
 	GithubPullRequestNodeID       string
-	GithubReviewerID              uint64
+	GithubReviewerNodeID          string
 	InternalCodeReviewTaskID      uint64
 	InternalAddressFeedbackTaskID *uint64
 	Round                         int

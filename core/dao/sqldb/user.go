@@ -6,19 +6,34 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type User struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger             telemetry.Logger
+	transactionFactory transaction.Factory
 }
 
 var _ dao.User = (*User)(nil)
 
-func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, error) {
+func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := u.transactionFactory.BeginTx(ct, &opt)
+	defer tx.Rollback()
+	if err != nil {
+		return entity.User{}, err
+	}
+
+	return u.FindUserByIDWithTx(ct, tx, userID)
+}
+
+func (u User) FindUserByIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) (entity.User, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -31,7 +46,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, erro
 	WHERE id = $1;
 `
 	user := entity.User{}
-	err := u.db.QueryRow(statement, userID).
+	err := tx.SQLTx().QueryRow(statement, userID).
 		Scan(
 			&user.ID,
 			&user.FirstName,
@@ -40,23 +55,20 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, erro
 			&user.CreatedAt,
 			&user.UpdatedAt,
 		)
-
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.User{}, dao.ErrNotFound(fmt.Sprintf(
-			"user not found: id=%v",
-			userID))
+		return entity.User{}, errs.NewError(errs.NotFound, fmt.Sprintf("user not found: userID=%v", userID))
 	}
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return entity.User{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return user, err
+	return user, nil
 }
 
-func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.User, error) {
+func (u User) FindUsersByIDsWithTx(ct context.Context, tx *transaction.Transaction, userIDs []uint64) ([]entity.User, *errs.Error) {
 	if len(userIDs) == 0 {
-		return []entity.User{}, nil
+		return nil, nil
 	}
 
 	idsString := toIDsString(userIDs)
@@ -69,14 +81,15 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 		created_at,
 		updated_at
 	FROM "user"
-	WHERE id IN (%s)`, idsString)
-	rows, err := u.db.Query(query)
+	WHERE id IN (%v)`, idsString)
+	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
+
 	defer rows.Close()
 
+	var internalErr *errs.Error
 	var users []entity.User
 	for rows.Next() {
 		var user entity.User
@@ -90,18 +103,25 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 				&user.UpdatedAt,
 			)
 		if err != nil {
-			u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+			if internalErr == nil {
+				internalErr = errs.NewError(errs.Unknown, err.Error())
+			}
+
 			continue
 		}
 
 		users = append(users, user)
 	}
 
-	return users, nil
+	return users, internalErr
 }
 
-func (u User) CreateUser(ct context.Context, user entity.User) error {
-	_, err := u.db.Exec(`
+func (u User) CreateUser(ct context.Context, tx *transaction.Transaction, user entity.User) *errs.Error {
+	if tx.SQLTx() == nil {
+		panic("It's nil")
+	}
+
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO "user"
 		(
 			id,
@@ -119,14 +139,14 @@ func (u User) CreateUser(ct context.Context, user entity.User) error {
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (u User) UpdateUser(ct context.Context, user entity.User) error {
-	_, err := u.db.Exec(`
+func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user entity.User) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE "user"
 		SET
 			first_name = $1,
@@ -142,12 +162,12 @@ func (u User) UpdateUser(ct context.Context, user entity.User) error {
 	)
 
 	if err != nil {
-		u.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewUser(dataCollector obs.DataCollector, sqlDB *sql.DB) User {
-	return User{dataCollector: dataCollector, db: sqlDB}
+func NewUser(logger telemetry.Logger, transactionFactory transaction.Factory) User {
+	return User{logger: logger, transactionFactory: transactionFactory}
 }

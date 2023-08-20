@@ -32,6 +32,10 @@ func (t TaskLink) IconURL() *string {
 	return t.taskLink.IconURL
 }
 
+func (t TaskLink) IconHoverURL() *string {
+	return t.taskLink.IconHoverURL
+}
+
 func (t TaskLink) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(t.taskLink.CreatedAt)
 }

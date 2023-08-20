@@ -6,21 +6,62 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Task struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger             telemetry.Logger
+	transactionFactory transaction.Factory
 }
 
 var _ dao.Task = (*Task)(nil)
 
-func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, error) {
+func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	defer tx.Rollback()
+	return t.FindTaskByIDWithTx(ct, tx, taskID)
+}
+
+func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return t.FindTasksByTeamIDWithTx(ct, tx, teamID)
+}
+
+func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return t.FindAllTasksWithTx(ct, tx)
+}
+
+func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
-	err := t.db.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
 			goal,
@@ -55,21 +96,18 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, erro
 			&task.UpdatedAt,
 			&task.DeliveredAt,
 		)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Task{}, dao.ErrNotFound(fmt.Sprintf(
-			"task not found: id=%v",
-			taskID))
-	}
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: taskID=%v", taskID))
+		}
+
+		return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return task, err
+	return task, nil
 }
 
-func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Task, error) {
+func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -92,14 +130,14 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 		updated_at,
 		delivered_at
 	FROM task
-	WHERE id IN (%s);`, idsString)
-	rows, err := t.db.Query(query)
+	WHERE id IN (%v);`, idsString)
+	rows, err := tx.SQLTx().Query(query)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
+
 	var tasks []entity.Task
 	for rows.Next() {
 		var task entity.Task
@@ -121,8 +159,7 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 				&task.DeliveredAt,
 			)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
@@ -131,9 +168,9 @@ func (t Task) FindTasksByIDs(ct context.Context, taskIDs []uint64) ([]entity.Tas
 	return tasks, nil
 }
 
-func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uint64) (entity.Task, error) {
+func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
 	task := entity.Task{}
-	err := t.db.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
 			goal,
@@ -168,22 +205,19 @@ func (t Task) FindTaskByCommentsThreadID(ct context.Context, commentThreadID uin
 			&task.UpdatedAt,
 			&task.DeliveredAt,
 		)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Task{}, dao.ErrNotFound(fmt.Sprintf(
-			"task not found: commentsThreadID=%v",
-			commentThreadID))
-	}
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Task{}, errs.NewError(errs.NotFound, fmt.Sprintf("task not found: commentsThreadID=%v", commentThreadID))
+		}
+
+		return entity.Task{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return task, err
+	return task, nil
 }
 
-func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
-	rows, err := t.db.Query(`
+func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
+	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
 		goal,
@@ -202,11 +236,11 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
 	FROM task;
 `)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
+
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
 		task := entity.Task{}
@@ -227,8 +261,7 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
@@ -237,8 +270,8 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, error) {
 	return tasks, nil
 }
 
-func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, error) {
-	rows, err := t.db.Query(
+func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
+	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
 		id,
@@ -260,11 +293,11 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 `,
 		teamID)
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
+
 	tasks := make([]entity.Task, 0)
 	for rows.Next() {
 		task := entity.Task{}
@@ -285,8 +318,7 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 			&task.DeliveredAt,
 		)
 		if err != nil {
-			t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		tasks = append(tasks, task)
@@ -295,8 +327,8 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 	return tasks, nil
 }
 
-func (t Task) CreateTask(ct context.Context, task entity.Task) error {
-	_, err := t.db.Exec(`
+func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO task
 		(
 			id,
@@ -328,14 +360,14 @@ func (t Task) CreateTask(ct context.Context, task entity.Task) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (t Task) UpdateTask(ct context.Context, task entity.Task) error {
-	_, err := t.db.Exec(`
+func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE task
 		SET
 			goal = $1,
@@ -363,26 +395,28 @@ func (t Task) UpdateTask(ct context.Context, task entity.Task) error {
 	)
 
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (t Task) DeleteTask(ct context.Context, taskID uint64) error {
-	_, err := t.db.Exec(`
+func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM task
 		WHERE id = $1;
 		`,
 		taskID)
-
 	if err != nil {
-		t.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewTask(dataCollector obs.DataCollector, sqlDB *sql.DB) Task {
-	return Task{dataCollector: dataCollector, db: sqlDB}
+func NewTask(logger telemetry.Logger, transactionFactory transaction.Factory) Task {
+	return Task{
+		logger:             logger,
+		transactionFactory: transactionFactory,
+	}
 }

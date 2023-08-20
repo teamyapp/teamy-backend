@@ -1,0 +1,103 @@
+package client
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+)
+
+type Installation struct {
+	logger      telemetry.Logger
+	app         *GithubApp
+	id          int
+	accessToken *string
+	expireAt    *time.Time
+}
+
+func (i *Installation) GetOrRefreshAccessToken(ct context.Context) (string, *errs.Error) {
+	if i.accessToken != nil && i.expireAt != nil {
+		// access token is not expired
+		if time.Now().UTC().Before(*i.expireAt) {
+			return *i.accessToken, nil
+		}
+	}
+
+	appJWT, internalErr := i.app.getOrRefreshAppJWT(ct)
+	if internalErr != nil {
+		return "", internalErr
+	}
+
+	githubAppAccessTokenURL := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", i.id)
+	req, err := http.NewRequest("POST", githubAppAccessTokenURL, nil)
+	if err != nil {
+		return "", errs.NewError(errs.Unknown, err.Error())
+	}
+
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", gitHubAPIVersion)
+
+	bearerToken := fmt.Sprintf("Bearer %s", appJWT)
+	req.Header.Set("Authorization", bearerToken)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", errs.NewError(errs.Unknown, err.Error())
+	}
+
+	switch res.StatusCode {
+	case http.StatusUnauthorized:
+		return "", errs.NewError(errs.Unauthenticated, "unauthorized")
+	case http.StatusForbidden:
+		return "", errs.NewError(errs.PermissionDenied, "forbidden")
+	case http.StatusNotFound:
+		return "", errs.NewError(errs.NotFound, "not found")
+	case http.StatusUnprocessableEntity:
+		return "", errs.NewError(errs.Unknown, "unprocessable entity")
+	}
+
+	buf, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", errs.NewError(errs.IO, err.Error())
+	}
+
+	// GitHub's authentication token format:
+	// ghp_ for Personal Access Tokens
+	// gho_ for OAuth Access tokens
+	// ghu_ for GitHub App user-to-server tokens
+	// ghs_ for GitHub App server-to-server tokens
+	// ghr_ for GitHub App refresh tokens
+	var body struct {
+		Token       string    `json:"token"` // ghs_
+		ExpiresAt   time.Time `json:"expires_at"`
+		Permissions struct {
+			Contents     string `json:"contents"`
+			Metadata     string `json:"metadata"`
+			PullRequests string `json:"pull_requests"`
+			Statuses     string `json:"statuses"`
+		} `json:"permissions"`
+		RepositorySelection string `json:"repository_selection"`
+	}
+	err = json.Unmarshal(buf, &body)
+	if err != nil {
+		return "", errs.NewError(errs.Deserialization, err.Error())
+	}
+
+	i.accessToken = &body.Token
+	i.expireAt = &body.ExpiresAt
+	i.logger.InfoWithContext(ct, fmt.Sprintf("Refreshed access token expiring at %v", i.expireAt))
+	return body.Token, nil
+}
+
+func newInstallation(logger telemetry.Logger, app *GithubApp, id int) *Installation {
+	return &Installation{
+		logger: logger,
+		app:    app,
+		id:     id,
+	}
+}

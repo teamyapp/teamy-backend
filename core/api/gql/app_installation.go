@@ -1,33 +1,22 @@
 package gql
 
 import (
+	"context"
+
 	"github.com/graph-gophers/graphql-go"
 )
 
-type AppInstallation struct {
-	deps Dependencies
+type TeamAppInstallation struct {
 }
 
-func (a AppInstallation) ID() graphql.ID {
-	panic("implement me")
+func (t TeamAppInstallation) ID(ctx context.Context) graphql.ID {
+	panic("not implemented")
 }
 
-func (a AppInstallation) App() (App, error) {
-	panic("implement me")
+func (t TeamAppInstallation) InstalledTeam(ctx context.Context) Team {
+	panic("not implemented")
 }
 
-func (a AppInstallation) InstalledTeam() (Team, error) {
-	panic("implement me")
-}
-
-func (a AppInstallation) InstalledBy() (User, error) {
-	panic("implement me")
-}
-
-func (a AppInstallation) InstalledAt() graphql.Time {
-	panic("implement me")
-}
-
-func newAppInstallation(deps Dependencies) AppInstallation {
-	return AppInstallation{deps: deps}
+func (t TeamAppInstallation) ActiveAppVersion(ctx context.Context) *AppVersion {
+	panic("not implemented")
 }

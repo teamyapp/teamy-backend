@@ -1,0 +1,97 @@
+package mutation
+
+import (
+	"context"
+
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/realtime"
+)
+
+type CreateTaskLink struct {
+	logger           telemetry.Logger
+	stateSyncer      *realtime.StateSyncer
+	taskLinkDao      dao.TaskLink
+	taskDao          dao.Task
+	id               uint64
+	taskLink         entity.TaskLink
+	clientNotifiers  []*realtime.ClientNotifier
+	notifierPrepared bool
+}
+
+var _ realtime.Mutation = (*CreateTaskLink)(nil)
+
+func (c *CreateTaskLink) GetID() uint64 {
+	return c.id
+}
+
+func (c *CreateTaskLink) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	err := c.taskLinkDao.CreateTaskLink(ct, tx, c.taskLink)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *CreateTaskLink) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	if c.notifierPrepared {
+		return nil
+	}
+
+	task, err := c.taskDao.FindTaskByIDWithTx(ct, tx, c.taskLink.TaskID)
+	if err != nil {
+		return err
+	}
+
+	var internalErr *errs.Error
+	c.clientNotifiers, internalErr = c.stateSyncer.GetClientNotifiersByTeamID(ct, task.OwningTeamID)
+	if internalErr != nil {
+		return internalErr
+	}
+
+	c.notifierPrepared = true
+	return nil
+}
+
+func (c *CreateTaskLink) Undo() *errs.Error {
+	return nil
+}
+
+func (c *CreateTaskLink) GetClientNotifiers() []*realtime.ClientNotifier {
+	return c.clientNotifiers
+}
+
+func (c *CreateTaskLink) ToMessage() realtime.MutationMessage {
+	return realtime.MutationMessage{
+		ID:             c.id,
+		CollectionType: realtime.TaskLinkCollectionType,
+		MutationType:   realtime.CreateMutationType,
+		Payload:        c.taskLink,
+	}
+}
+
+func (c *CreateTaskLink) CleanUp(ct context.Context) *errs.Error {
+	return nil
+}
+
+func NewCreateTaskLink(
+	logger telemetry.Logger,
+	stateSyncer *realtime.StateSyncer,
+	taskLinkDao dao.TaskLink,
+	taskDao dao.Task,
+	taskLink entity.TaskLink,
+) *CreateTaskLink {
+	return &CreateTaskLink{
+		logger:           logger,
+		stateSyncer:      stateSyncer,
+		taskLinkDao:      taskLinkDao,
+		taskDao:          taskDao,
+		id:               stateSyncer.NextMutationID(),
+		taskLink:         taskLink,
+		notifierPrepared: false,
+	}
+}

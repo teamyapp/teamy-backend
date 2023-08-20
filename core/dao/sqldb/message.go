@@ -6,21 +6,49 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Message struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger             telemetry.Logger
+	transactionFactory transaction.Factory
 }
 
 var _ dao.Message = (*Message)(nil)
 
-func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.Message, error) {
+func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.Message, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := m.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.Message{}, err
+	}
+
+	defer tx.Rollback()
+	return m.FindMessageByIDWithTx(ct, tx, messageID)
+}
+
+func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]entity.Message, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := m.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return m.FindMessagesByThreadIDWithTx(ct, tx, threadID)
+}
+
+func (m Message) FindMessageByIDWithTx(ct context.Context, tx *transaction.Transaction, messageID uint64) (entity.Message, *errs.Error) {
 	message := entity.Message{}
-	err := m.db.QueryRow(`
+	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
 			body,
@@ -39,21 +67,19 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 			&message.CreatedAt,
 			&message.UpdatedAt,
 		)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Message{}, dao.ErrNotFound(fmt.Sprintf(
-			"message not found: id=%v",
-			messageID))
-	}
-
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Message{}, errs.NewError(errs.NotFound, fmt.Sprintf(
+				"message not found: messageID=%v", messageID))
+		}
+
+		return entity.Message{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return message, err
+	return message, nil
 }
 
-func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]entity.Message, error) {
+func (m Message) FindMessagesByThreadIDWithTx(ct context.Context, tx *transaction.Transaction, threadID uint64) ([]entity.Message, *errs.Error) {
 	statement := `
 	SELECT
 		id,
@@ -65,10 +91,9 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 	FROM message
 	WHERE thread_id = $1;
 `
-	rows, err := m.db.Query(statement, threadID)
+	rows, err := tx.SQLTx().Query(statement, threadID)
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-		return nil, err
+		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	defer rows.Close()
@@ -85,8 +110,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 			&message.UpdatedAt,
 		)
 		if err != nil {
-			m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
-			continue
+			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
 		messages = append(messages, message)
@@ -95,8 +119,8 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 	return messages, nil
 }
 
-func (m Message) CreateMessage(ct context.Context, message entity.Message) error {
-	_, err := m.db.Exec(`
+func (m Message) CreateMessage(ct context.Context, tx *transaction.Transaction, message entity.Message) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		INSERT INTO message
 		(
 			id,
@@ -114,14 +138,14 @@ func (m Message) CreateMessage(ct context.Context, message entity.Message) error
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (m Message) UpdateMessage(ct context.Context, message entity.Message) error {
-	_, err := m.db.Exec(`
+func (m Message) UpdateMessage(ct context.Context, tx *transaction.Transaction, message entity.Message) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		UPDATE message
 		SET
 			body = $1,
@@ -133,26 +157,26 @@ func (m Message) UpdateMessage(ct context.Context, message entity.Message) error
 	)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (m Message) DeleteMessage(ct context.Context, messageID uint64) error {
-	_, err := m.db.Exec(`
+func (m Message) DeleteMessage(ct context.Context, tx *transaction.Transaction, messageID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
 		DELETE FROM message
 		WHERE id = $1;
 		`,
 		messageID)
 
 	if err != nil {
-		m.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewMessage(dataCollector obs.DataCollector, sqlDB *sql.DB) Message {
-	return Message{dataCollector: dataCollector, db: sqlDB}
+func NewMessage(logger telemetry.Logger, transactionFactory transaction.Factory) Message {
+	return Message{logger: logger, transactionFactory: transactionFactory}
 }

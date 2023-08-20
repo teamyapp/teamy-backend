@@ -1,9 +1,11 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
 option go_package = "github.com/teamy-backend/core/api/proto";
 
 service TaskLink {
 	rpc CreateTaskLink(CreateTaskLinkRequest) returns (CreateTaskLinkResponse);
+	rpc DeleteTaskLink(DeleteTaskLinkRequest) returns (google.protobuf.Empty);
 }
 
 message CreateTaskLinkRequest {
@@ -11,8 +13,13 @@ message CreateTaskLinkRequest {
 	string title = 2;
 	string url = 3;
 	optional string iconUrl  = 4;
+	optional string iconHoverUrl = 5;
 }
 
 message CreateTaskLinkResponse {
+	uint64 linkId = 1;
+}
+
+message DeleteTaskLinkRequest {
 	uint64 linkId = 1;
 }

@@ -1,39 +1,39 @@
 package gql
 
 import (
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Dependencies struct {
-	dataCollector     obs.DataCollector
+	logger            telemetry.Logger
 	taskService       service.Task
 	taskLinkService   service.TaskLink
 	teamService       service.Team
 	sprintService     service.Sprint
 	invitationService service.Invitation
 	userService       service.User
-	messageService    service.Message
+	threadService     service.Thread
 }
 
 func NewDependencies(
-	dataCollector obs.DataCollector,
+	logger telemetry.Logger,
 	taskService service.Task,
 	taskLinkService service.TaskLink,
 	teamService service.Team,
 	sprintService service.Sprint,
 	userService service.User,
 	invitationService service.Invitation,
-	messageService service.Message,
+	threadService service.Thread,
 ) *Dependencies {
 	return &Dependencies{
-		dataCollector:     dataCollector,
+		logger:            logger,
 		taskService:       taskService,
 		taskLinkService:   taskLinkService,
 		teamService:       teamService,
 		sprintService:     sprintService,
 		userService:       userService,
 		invitationService: invitationService,
-		messageService:    messageService,
+		threadService:     threadService,
 	}
 }

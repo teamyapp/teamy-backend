@@ -6,58 +6,69 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teamyapp/cloud/libs/obs"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 )
 
 type GithubCodeReview struct {
-	dataCollector obs.DataCollector
-	db            *sql.DB
+	logger telemetry.Logger
+	db     *sql.DB
 }
 
 var _ dao.GithubCodeReview = (*GithubCodeReview)(nil)
 
-func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(ct context.Context, githubPullRequestNodeID string, githubReviewerID uint64) (entity.GithubCodeReview, error) {
+func (g GithubCodeReview) FindCodeReviewByGithubReviewerID(
+	ct context.Context,
+	githubPullRequestNodeID string,
+	githubReviewerNodeID string,
+) (entity.GithubCodeReview, *errs.Error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
 	SELECT
 	    github_pull_request_node_id,
-    	github_reviewer_id,
+    	github_reviewer_node_id,
     	internal_code_review_task_id,
     	internal_address_feedback_task_id,
     	round
 	FROM apps_github_code_review
-	WHERE github_pull_request_node_id=$1 AND github_reviewer_id = $2;
+	WHERE github_pull_request_node_id=$1 AND github_reviewer_node_id = $2;
 `,
 		githubPullRequestNodeID,
-		githubReviewerID).
+		githubReviewerNodeID).
 		Scan(
 			&codeReview.GithubPullRequestNodeID,
-			&codeReview.GithubReviewerID,
+			&codeReview.GithubReviewerNodeID,
 			&codeReview.InternalCodeReviewTaskID,
 			&codeReview.InternalAddressFeedbackTaskID,
 			&codeReview.Round,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubCodeReview{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubCodeReview not found: githubReviewerID=%v", githubReviewerID))
-	}
-
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubCodeReview{}, errs.NewError(
+				errs.NotFound,
+				fmt.Sprintf(
+					"GithubCodeReview not found: githubReviewerNodeID=%v",
+					githubReviewerNodeID))
+		}
+
+		return entity.GithubCodeReview{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return codeReview, err
+	return codeReview, nil
 }
 
-func (g GithubCodeReview) FindCodeReviewByInternalTaskID(ct context.Context, internalTaskID uint64) (entity.GithubCodeReview, error) {
+func (g GithubCodeReview) FindCodeReviewByInternalTaskID(
+	ct context.Context,
+	internalTaskID uint64,
+) (entity.GithubCodeReview, *errs.Error) {
 	codeReview := entity.GithubCodeReview{}
 	err := g.db.QueryRow(`
 	SELECT
 	    github_pull_request_node_id,
-    	github_reviewer_id,
+    	github_reviewer_node_id,
     	internal_code_review_task_id,
     	internal_address_feedback_task_id,
     	round
@@ -67,30 +78,36 @@ func (g GithubCodeReview) FindCodeReviewByInternalTaskID(ct context.Context, int
 		internalTaskID).
 		Scan(
 			&codeReview.GithubPullRequestNodeID,
-			&codeReview.GithubReviewerID,
+			&codeReview.GithubReviewerNodeID,
 			&codeReview.InternalCodeReviewTaskID,
 			&codeReview.InternalAddressFeedbackTaskID,
 			&codeReview.Round,
 		)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.GithubCodeReview{}, dao.ErrNotFound(fmt.Sprintf(
-			"GithubCodeReview not found: internalTaskID=%v", internalTaskID))
-	}
-
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.GithubCodeReview{}, errs.NewError(
+				errs.NotFound,
+				fmt.Sprintf(
+					"GithubCodeReview not found: internalTaskID=%v",
+					internalTaskID))
+		}
+
+		return entity.GithubCodeReview{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return codeReview, err
+	return codeReview, nil
 }
 
-func (g GithubCodeReview) CreateCodeReview(ct context.Context, codeReview entity.GithubCodeReview) error {
+func (g GithubCodeReview) CreateCodeReview(
+	ct context.Context,
+	codeReview entity.GithubCodeReview,
+) *errs.Error {
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_code_review
 	(
 	    github_pull_request_node_id,
-    	github_reviewer_id,
+    	github_reviewer_node_id,
     	internal_code_review_task_id,
     	internal_address_feedback_task_id,
     	round
@@ -98,71 +115,80 @@ func (g GithubCodeReview) CreateCodeReview(ct context.Context, codeReview entity
 	VALUES ($1, $2, $3, $4, $5);
 `,
 		codeReview.GithubPullRequestNodeID,
-		codeReview.GithubReviewerID,
+		codeReview.GithubReviewerNodeID,
 		codeReview.InternalCodeReviewTaskID,
 		codeReview.InternalAddressFeedbackTaskID,
 		codeReview.Round,
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubCodeReview) UpdateCodeReview(ct context.Context, codeReview entity.GithubCodeReview) error {
+func (g GithubCodeReview) UpdateCodeReview(
+	ct context.Context,
+	codeReview entity.GithubCodeReview,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		UPDATE apps_github_code_review
 		SET
 			github_pull_request_node_id = $1,
-    		github_reviewer_id = $2,
+    		github_reviewer_node_id = $2,
 			internal_code_review_task_id = $3,
 			internal_address_feedback_task_id = $4,
 			round = $5
-		WHERE github_pull_request_node_id=$6 AND github_reviewer_id = $7;`,
+		WHERE github_pull_request_node_id=$6 AND github_reviewer_node_id = $7;`,
 		codeReview.GithubPullRequestNodeID,
-		codeReview.GithubReviewerID,
+		codeReview.GithubReviewerNodeID,
 		codeReview.InternalCodeReviewTaskID,
 		codeReview.InternalAddressFeedbackTaskID,
 		codeReview.Round,
 		codeReview.GithubPullRequestNodeID,
-		codeReview.GithubReviewerID,
+		codeReview.GithubReviewerNodeID,
 	)
 
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(ct context.Context, internalTaskID uint64) error {
+func (g GithubCodeReview) DeleteCodeReviewByInternalTaskID(
+	ct context.Context,
+	internalTaskID uint64,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_code_review
 		WHERE internal_task_id = $1;
 		`,
 		internalTaskID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(ct context.Context, githubReviewerID uint64) error {
+func (g GithubCodeReview) DeleteCodeReviewByGithubReviewerID(
+	ct context.Context,
+	githubReviewerID uint64,
+) *errs.Error {
 	_, err := g.db.Exec(`
 		DELETE FROM apps_github_code_review
 		WHERE github_reviewer_id = $1;
 		`,
 		githubReviewerID)
 	if err != nil {
-		g.dataCollector.Logger.LogWithContext(ct, obs.Error, obs.Props{obs.CauseProp: err})
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return err
+	return nil
 }
 
-func NewGithubCodeReview(dataCollector obs.DataCollector, sqlDB *sql.DB) GithubCodeReview {
-	return GithubCodeReview{dataCollector: dataCollector, db: sqlDB}
+func NewGithubCodeReview(logger telemetry.Logger, sqlDB *sql.DB) GithubCodeReview {
+	return GithubCodeReview{logger: logger, db: sqlDB}
 }

@@ -30,5 +30,7 @@ type SprintFilter struct {
 }
 
 type AppFilter struct {
-	IsPublic *bool
+	Query         *string
+	Tag           *string
+	IsOnPromotion *bool
 }
