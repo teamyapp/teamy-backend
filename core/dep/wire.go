@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/env"
 	cloudGQL "github.com/teamyapp/cloud/libs/gql"
+	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/api"
@@ -42,6 +43,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
+	wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -57,6 +59,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewTeamFileUploadSession,
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
+	sqldb.NewAppPackageUploadSession,
 )
 
 var serviceSet = wire.NewSet(
@@ -67,6 +70,9 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
+	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
+	newHTTPClient,
+	service.NewApp,
 )
 
 func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {
@@ -90,7 +96,6 @@ func InitGraphQLAPI(
 ) (cloudGQL.Service[gql.Resolver], error) {
 	wire.Build(
 		wire.Bind(new(tracer.Tracer), new(cloudGQL.PrometheusTracer)),
-
 		newPrometheusTracer,
 		daoSet,
 		transaction.NewFactory,
@@ -165,6 +170,12 @@ func InitTaskLinkRPCAPI(
 		api.NewTaskLinkRPC,
 	)
 	return api.TaskLinkRPC{}
+}
+
+func newHTTPClient(
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+) *storage.HTTPClient {
+	return storage.NewHTTPClient(string(cloudWebAPIExternalBaseURL))
 }
 
 func newUserService(

@@ -45,38 +45,6 @@ func (a AppVersion) App(ctx context.Context) App {
 	panic("not implemented")
 }
 
-func (m Mutation) CreateAppVersion(
-	ctx context.Context,
-	args struct {
-		AppID graphql.ID
-	}) AppVersion {
-	panic("not implemented")
-}
-
-func (m Mutation) CreateAppPackageUploadSession(
-	ctx context.Context,
-	args struct {
-		AppID         graphql.ID
-		VersionNumber int32
-	}) graphql.ID {
-	panic("not implemented")
-}
-
-func (m Mutation) FinishAppPackageUploadSession(
-	ctx context.Context,
-	args struct {
-		AppID               graphql.ID
-		VersionNumber       int32
-		FileUploadSessionID graphql.ID
-	}) AppVersion {
-	panic("not implemented")
-}
-
-func (m Mutation) DeleteAppVersion(
-	ctx context.Context,
-	args struct {
-		AppID         graphql.ID
-		VersionNumber int32
-	}) AppVersion {
-	panic("not implemented")
+func newAppVersion(deps *Dependencies, appVersion entity) AppVersion {
+	return AppVersion{}
 }
