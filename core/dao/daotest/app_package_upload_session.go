@@ -53,7 +53,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 	return uploadSession, err
 }
 
-func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Context, tx *transaction.Transaction, appPackageUploadSession entity.AppPackageUploadSession) *errs.Error {
+func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Context, tx *transaction.Transaction, session entity.AppPackageUploadSession) *errs.Error {
 	return tx.ExecuteCommand(transaction.Command{
 		Execute: func() *errs.Error {
 			table, err := a.db.GetTable(AppPackageUploadSessionTableName)
@@ -78,7 +78,6 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Conte
 		},
 		Undo: func() *errs.Error {
 			table, err := a.db.GetTable(AppPackageUploadSessionTableName)
-
 			if err != nil {
 				return err
 			}
@@ -101,7 +100,11 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Conte
 	})
 }
 
-func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(ct context.Context, tx *transaction.Transaction, appPackageUploadSession entity.AppPackageUploadSession) *errs.Error {
+func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
+    ct context.Context, 
+    tx *transaction.Transaction, 
+    session entity.AppPackageUploadSession,
+) *errs.Error {
 	oldAppPackageUploadSession, err := a.FindAppPackageUploadSessionWithTx(ct, tx, appPackageUploadSession.AppID, appPackageUploadSession.UserID, appPackageUploadSession.VersionNumber, appPackageUploadSession.FileUploadSessionID)
 	if err != nil {
 		return err
@@ -114,7 +117,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(ct context.C
 				return err
 			}
 
-			for i, rawRow := range table.Rows {
+			for index, rawRow := range table.Rows {
 				currUploadSession := rawRow.(entity.AppPackageUploadSession)
 				if currUploadSession.AppID == appPackageUploadSession.AppID &&
 					currUploadSession.UserID == appPackageUploadSession.UserID &&
@@ -138,7 +141,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(ct context.C
 				return err
 			}
 
-			for i, rawRow := range table.Rows {
+			for index, rawRow := range table.Rows {
 				currUploadSession := rawRow.(entity.AppPackageUploadSession)
 				if currUploadSession.AppID == appPackageUploadSession.AppID &&
 					currUploadSession.UserID == appPackageUploadSession.UserID &&

@@ -39,7 +39,10 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 			created_at,
 			updated_at
 		FROM app_package_upload_session
-		WHERE app_id = $1 AND user_id = $2 AND version_number = $3 and file_upload_session_id = $4;`,
+		WHERE app_id = $1 
+		    AND user_id = $2 
+		    AND version_number = $3 
+		    AND file_upload_session_id = $4;`,
 		appID,
 		userID,
 		versionNumber,
@@ -53,7 +56,6 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 			&appPackageUploadSession.CreatedAt,
 			&appPackageUploadSession.UpdatedAt,
 		)
-
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.AppPackageUploadSession{}, errs.NewError(errs.NotFound, fmt.Sprintf("AppPackageUploadSession not found: appID=%v, userID=%v, versionNumber=%v",
 			appID,
@@ -99,7 +101,8 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(ct context.Conte
 func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 	ct context.Context,
 	tx *transaction.Transaction,
-	AppPackageUploadSession entity.AppPackageUploadSession) *errs.Error {
+	session entity.AppPackageUploadSession,
+) *errs.Error {
 	_, err := tx.SQLTx().Exec(`
 		UPDATE app_package_upload_session
 		SET
