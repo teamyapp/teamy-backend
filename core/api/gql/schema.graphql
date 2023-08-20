@@ -265,13 +265,13 @@ type App {
 	id: ID!
 	secrets: [AppSecret!]!
 	totalInstallations: Int!
-	installations: TeamAppInstallation!
+	installations: [TeamAppInstallation!]!
 	versions: [AppVersion!]!
 	userGroups: [UserGroup!]!
 	teamGroups: [TeamGroup!]!
 	userRollouts: [UserRollout!]!
 	teamRollouts: [TeamRollout!]!
-	ownedByTeam: Team!
+	managedByTeam: Team!
 }
 
 type AppSecret {

@@ -21,7 +21,7 @@ func (a App) TotalInstallations(ctx context.Context) int32 {
 	panic("not implemented")
 }
 
-func (a App) Installations(ctx context.Context) TeamAppInstallation {
+func (a App) Installations(ctx context.Context) []TeamAppInstallation {
 	panic("not implemented")
 }
 
