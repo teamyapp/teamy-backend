@@ -28,10 +28,10 @@ import (
 )
 
 const (
-	readAhead      = 28
-	maxRead        = 4096
+	readAheadBytes      = 28
+	maxReadBytes        = 4096
 	bufferSize     = maxRead + readAhead
-	appPackageRoot = "apps/packages"
+	appPackageRoot = path.Join("app","packages")
 )
 
 type App struct {
@@ -53,19 +53,7 @@ type AppFilter struct {
 	TeamID *uint64
 }
 
-type UpdateAppInput struct {
-	Name                *string
-	Description         *string
-	ActiveVersionNumber *int32
-}
 
-type UpdateAppVersionInput struct {
-	IconURL                   *string
-	HasUIExtension            bool
-	UIExtensionEntryPointPath *string
-	Changes                   *string
-	IsPublic                  bool
-}
 
 type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
@@ -212,7 +200,7 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 		return entity.App{}, err
 	}
 
-	// TODO(yuhang): delete registered app resource and groups
+	// TODO: delete registered app resource and groups
 
 	return app, nil
 }
@@ -311,7 +299,6 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 		IsCompleted:         false,
 		CreatedAt:           time.Now().UTC(),
 	}
-
 	txCtx := TransactionsContext{
 		logger:             a.logger,
 		transactionFactory: a.transactionFactory,
@@ -321,7 +308,6 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return a.appPackageUploadSessionDao.CreateAppPackageUploadSession(ct, tx, fileUploadSession)
 	})
-
 	return res.UploadSessionId, err
 }
 
@@ -331,19 +317,19 @@ func (a App) uploadAppPackageFiles(
 	versionNumber int,
 	uploadSession *proto.UploadSession,
 ) *errs.Error {
-	zipReader, err := a.storageMapClient.Get(strconv.Itoa(int(uploadSession.FileId)))
+	fileReader, err := a.storageMapClient.Get(strconv.Itoa(int(uploadSession.FileId)))
 	if err != nil {
 		return err
 	}
 
-	gzf, error := gzip.NewReader(bufio.NewReaderSize(zipReader, bufferSize))
+	gzipReader, error := gzip.NewReader(bufio.NewReaderSize(zipReader, bufferSize))
 	if error != nil {
 		return errs.NewError(errs.IO, error.Error())
 	}
 
 	tarReader := tar.NewReader(gzf)
 	appIDStr := strconv.Itoa(int(appID))
-	versionNumberStr := strconv.Itoa(int(versionNumber))
+	versionNumberStr := strconv.Itoa(versionNumber)
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -360,7 +346,6 @@ func (a App) uploadAppPackageFiles(
 		case tar.TypeReg:
 			fullPath := path.Join(appPackageRoot, appIDStr, versionNumberStr, header.Name)
 			err := a.storageMapClient.Put(fullPath, tarReader)
-
 			if err != nil {
 				return err
 			}
@@ -439,12 +424,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		now := time.Now().UTC()
 		appPackageUploadSession.IsCompleted = true
 		appPackageUploadSession.UpdatedAt = &now
-		err = a.appPackageUploadSessionDao.UpdateAppPackageFileUploadSession(ct, tx, appPackageUploadSession)
-		if err != nil {
-			return err
-		}
-
-		return err
+		return a.appPackageUploadSessionDao.UpdateAppPackageFileUploadSession(ct, tx, appPackageUploadSession)
 	})
 
 	return appVersion, err
@@ -482,12 +462,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 			return internalErr
 		}
 
-		internalErr = a.appVersionDao.DeleteAppVersion(ct, tx, appID, versionNumber)
-		if internalErr != nil {
-			return internalErr
-		}
-
-		return nil
+		return a.appVersionDao.DeleteAppVersion(ct, tx, appID, versionNumber)
 	})
 
 	if err != nil {
