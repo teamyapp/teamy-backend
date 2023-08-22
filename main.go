@@ -202,6 +202,7 @@ func startServiceRunner(
 		cfg.Environment,
 		logger,
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
+		dep.MapServerURL(cfg.CloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)

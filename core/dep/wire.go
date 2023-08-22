@@ -26,6 +26,7 @@ import (
 type AppMame string
 type ServiceName string
 type CloudWebAPIExternalBaseURL string
+type MapServerURL string
 
 var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Task), new(sqldb.Task)),
@@ -67,6 +68,8 @@ var daoSet = wire.NewSet(
 )
 
 var serviceSet = wire.NewSet(
+	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
+	newHTTPClient,
 	service.NewThread,
 	service.NewTask,
 	service.NewTaskLink,
@@ -74,8 +77,6 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
-	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
-	newHTTPClient,
 	service.NewApp,
 )
 
@@ -94,6 +95,7 @@ func InitGraphQLAPI(
 	environment env.Environment,
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	mapServerURL MapServerURL,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,

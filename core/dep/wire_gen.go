@@ -34,7 +34,7 @@ func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.S
 	return stateSyncer
 }
 
-func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
+func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, mapServerURL MapServerURL, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
 	prometheusTracer := newPrometheusTracer(appName, serviceName, environment)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
@@ -58,7 +58,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	user := sqldb.NewUser(logger, factory)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(logger)
 	serviceUser := newUserService(logger, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, user, teamMember, userFileUploadSession)
-	httpClient := newHTTPClient(cloudWebAPIExternalBaseURL)
+	httpClient := newHTTPClient(mapServerURL)
 	app := sqldb.NewApp(logger, factory)
 	appVersion := sqldb.NewAppVersion(logger, factory)
 	appPackageUploadSession := sqldb.NewAppPackageUploadSession(logger, factory)
@@ -129,14 +129,16 @@ type ServiceName string
 
 type CloudWebAPIExternalBaseURL string
 
+type MapServerURL string
+
 var daoSet = wire.NewSet(wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.TeamGroup), new(sqldb.TeamGroup)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)), wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)), wire.Bind(new(dao.App), new(*sqldb.App)), sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintParticipant, sqldb.NewSprint, sqldb.NewSprintTaskRelation, sqldb.NewThread, sqldb.NewTeamMember, sqldb.NewTeamGroup, sqldb.NewUser, sqldb.NewUserFileUploadSession, sqldb.NewTeam, sqldb.NewTeamFileUploadSession, sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewAppPackageUploadSession, sqldb.NewAppVersion, sqldb.NewApp)
 
-var serviceSet = wire.NewSet(service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)), newHTTPClient, service.NewApp)
+var serviceSet = wire.NewSet(wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)), newHTTPClient, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp)
 
 func newHTTPClient(
-	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	mapServerURL MapServerURL,
 ) *storage.HTTPClient {
-	return storage.NewHTTPClient(string(cloudWebAPIExternalBaseURL))
+	return storage.NewHTTPClient(string(mapServerURL))
 }
 
 func newUserService(

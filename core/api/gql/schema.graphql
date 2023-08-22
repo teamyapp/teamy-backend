@@ -96,8 +96,6 @@ type Mutation {
 		versionNumber: Int!
 		fileUploadSessionId: ID!
 	): AppVersion!
-	createAppPackageUploadSession(appId: ID! versionNumber: Int!): ID!
-	finishAppPackageUploadSession(appId: ID! versionNumber: Int!, fileUploadSessionId: ID!): AppVersion!
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
 
 	createStaticUserGroup(appId: ID!, input: CreateStaticUserGroupInput!): StaticUserGroup!
