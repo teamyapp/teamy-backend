@@ -61,10 +61,13 @@ func (m Mutation) CreateAppVersion(
 	panic("not implemented")
 }
 
-func (m Mutation) CreateAppPackageUploadSession(ct context.Context, args struct {
-	AppID         graphql.ID
-	VersionNumber int
-}) (graphql.ID, error) {
+func (m Mutation) CreateAppPackageUploadSession(
+    ct context.Context, 
+    args struct {
+	    AppID         graphql.ID
+	    VersionNumber int
+	},
+) (graphql.ID, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
 		internalErr := errs.NewError(
@@ -84,11 +87,14 @@ func (m Mutation) CreateAppPackageUploadSession(ct context.Context, args struct 
 	return toGraphQLID(fileUploadSessionID), nil
 }
 
-func (m Mutation) FinishAppPackageUploadSession(ct context.Context, args struct {
-	AppID               graphql.ID
-	VersionNumber       int
-	FileUploadSessionID graphql.ID
-}) (AppVersion, error) {
+func (m Mutation) FinishAppPackageUploadSession(
+    ct context.Context, 
+    args struct {
+	    AppID               graphql.ID
+	    VersionNumber       int
+	    FileUploadSessionID graphql.ID
+	    },
+) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
 		internalErr := errs.NewError(
@@ -108,7 +114,6 @@ func (m Mutation) FinishAppPackageUploadSession(ct context.Context, args struct 
 	}
 
 	appVersion, err := m.deps.appService.FinishAppPackageFileUploadSession(ct, appID, args.VersionNumber, fileUploadSessionID)
-
 	if err != nil {
 		m.deps.logger.Error(err)
 		return AppVersion{}, errs.ToResolverErr(err)

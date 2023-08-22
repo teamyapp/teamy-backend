@@ -36,19 +36,19 @@ func (a *App) FindAppByIDWithTx(ct context.Context, tx *transaction.Transaction,
 	err := tx.SQLTx().QueryRow(`
 		SELECT
 			id,
-			managed_by_team_id,
 			total_installations,
 			created_at,
-			updated_at
+			updated_at,
+			managed_by_team_id
 		FROM app
 		WHERE id = $1;`,
 		appID).
 		Scan(
 			&app.ID,
-			&app.ManagedByTeamID,
 			&app.TotalInstallations,
 			&app.CreatedAt,
 			&app.UpdatedAt,
+			&app.ManagedByTeamID,
 		)
 	if err != nil {
 		return entity.App{}, errs.NewError(errs.Unknown, err.Error())
@@ -61,10 +61,10 @@ func (a *App) CreateApp(ct context.Context, tx *transaction.Transaction, app ent
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO app (
 			id,
-			managed_by_team_id,
 			total_installations,
 			created_at,
-			updated_at
+			updated_at,
+			managed_by_team_id
 		) VALUES (
 			$1,
 			$2,
@@ -73,10 +73,10 @@ func (a *App) CreateApp(ct context.Context, tx *transaction.Transaction, app ent
 			$5
 		);`,
 		app.ID,
-		app.ManagedByTeamID,
 		app.TotalInstallations,
 		app.CreatedAt,
 		app.UpdatedAt,
+		app.ManagedByTeamID,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())

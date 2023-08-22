@@ -177,9 +177,9 @@ func InitTaskLinkRPCAPI(
 }
 
 func newHTTPClient(
-	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	mapServerURL MapServerURL,
 ) *storage.HTTPClient {
-	return storage.NewHTTPClient(string(cloudWebAPIExternalBaseURL))
+	return storage.NewHTTPClient(string(mapServerURL))
 }
 
 func newUserService(

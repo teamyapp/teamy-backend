@@ -60,8 +60,3 @@ ALTER TABLE app_version
 	ADD ui_extension_entrypoint_path VARCHAR(4096);
 ALTER TABLE app_version
 	ADD "changes" TEXT;
-
-
-
-
-
