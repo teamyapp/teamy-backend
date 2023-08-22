@@ -44,6 +44,8 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
 	wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)),
+	wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)),
+	wire.Bind(new(dao.App), new(*sqldb.App)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -60,6 +62,8 @@ var daoSet = wire.NewSet(
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
 	sqldb.NewAppPackageUploadSession,
+	sqldb.NewAppVersion,
+	sqldb.NewApp,
 )
 
 var serviceSet = wire.NewSet(
