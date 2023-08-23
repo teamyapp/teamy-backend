@@ -14,7 +14,7 @@ type AppVersion struct {
 }
 
 func (a AppVersion) Number(ctx context.Context) int32 {
-	panic("not implemented")
+	return int32(a.appVersion.Number)
 }
 
 func (a AppVersion) AppName(ctx context.Context) string {
@@ -62,10 +62,10 @@ func (m Mutation) CreateAppVersion(
 }
 
 func (m Mutation) CreateAppPackageUploadSession(
-    ct context.Context, 
-    args struct {
-	    AppID         graphql.ID
-	    VersionNumber int
+	ct context.Context,
+	args struct {
+		AppID         graphql.ID
+		VersionNumber int32
 	},
 ) (graphql.ID, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
@@ -88,12 +88,12 @@ func (m Mutation) CreateAppPackageUploadSession(
 }
 
 func (m Mutation) FinishAppPackageUploadSession(
-    ct context.Context, 
-    args struct {
-	    AppID               graphql.ID
-	    VersionNumber       int
-	    FileUploadSessionID graphql.ID
-	    },
+	ct context.Context,
+	args struct {
+		AppID               graphql.ID
+		VersionNumber       int32
+		FileUploadSessionID graphql.ID
+	},
 ) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {

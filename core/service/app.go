@@ -27,11 +27,12 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var appPackageRoot = path.Join("app", "packages")
+
 const (
-	readAheadBytes      = 28
-	maxReadBytes        = 4096
-	bufferSize     = maxRead + readAhead
-	appPackageRoot = path.Join("app","packages")
+	readAheadBytes = 28
+	maxReadBytes   = 4096
+	bufferSize     = maxReadBytes + readAheadBytes
 )
 
 type App struct {
@@ -52,8 +53,6 @@ type AppFilter struct {
 	AppID  *uint64
 	TeamID *uint64
 }
-
-
 
 type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
@@ -266,7 +265,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64, appName string, 
 	return av, nil
 }
 
-func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int) (uint64, *errs.Error) {
+func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int32) (uint64, *errs.Error) {
 	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -294,7 +293,7 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 
 	fileUploadSession := entity.AppPackageUploadSession{
 		AppID:               appID,
-		VersionNumber:       versionNumber,
+		VersionNumber:       int(versionNumber),
 		FileUploadSessionID: res.UploadSessionId,
 		IsCompleted:         false,
 		CreatedAt:           time.Now().UTC(),
@@ -311,53 +310,7 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 	return res.UploadSessionId, err
 }
 
-func (a App) uploadAppPackageFiles(
-	ct context.Context,
-	appID uint64,
-	versionNumber int,
-	uploadSession *proto.UploadSession,
-) *errs.Error {
-	fileReader, err := a.storageMapClient.Get(strconv.Itoa(int(uploadSession.FileId)))
-	if err != nil {
-		return err
-	}
-
-	gzipReader, error := gzip.NewReader(bufio.NewReaderSize(zipReader, bufferSize))
-	if error != nil {
-		return errs.NewError(errs.IO, error.Error())
-	}
-
-	tarReader := tar.NewReader(gzf)
-	appIDStr := strconv.Itoa(int(appID))
-	versionNumberStr := strconv.Itoa(versionNumber)
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			return errs.NewError(errs.IO, err.Error())
-		}
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			continue
-		case tar.TypeReg:
-			fullPath := path.Join(appPackageRoot, appIDStr, versionNumberStr, header.Name)
-			err := a.storageMapClient.Put(fullPath, tarReader)
-			if err != nil {
-				return err
-			}
-		default:
-			return errs.NewError(errs.IO, fmt.Sprintf("unknown type: %v in %s", header.Typeflag, header.Name))
-		}
-	}
-
-	return nil
-}
-
-func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int, fileUploadSessionID uint64) (entity.AppVersion, *errs.Error) {
+func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int32, fileUploadSessionID uint64) (entity.AppVersion, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -393,8 +346,9 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		ct:                 ct,
 	}
 
+	versionNumberInt := int(versionNumber)
 	go func() {
-		err := a.uploadAppPackageFiles(ct, appID, versionNumber, uploadSession)
+		err := a.uploadAppPackageFiles(ct, appID, versionNumberInt, uploadSession)
 		if err != nil {
 			a.logger.ErrorWithContext(ct, err)
 			return
@@ -407,7 +361,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 			ct,
 			tx,
 			appID,
-			versionNumber,
+			versionNumberInt,
 			fileUploadSessionID)
 		if err != nil {
 			return err
@@ -470,6 +424,53 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 	}
 
 	return av, nil
+}
+
+func (a App) uploadAppPackageFiles(
+	ct context.Context,
+	appID uint64,
+	versionNumber int,
+	uploadSession *proto.UploadSession,
+) *errs.Error {
+	fileReader, err := a.storageMapClient.Get(strconv.FormatInt(int64(uploadSession.FileId), 10))
+	if err != nil {
+		return err
+	}
+
+	gzipReader, error := gzip.NewReader(bufio.NewReaderSize(fileReader, bufferSize))
+	if error != nil {
+		return errs.NewError(errs.IO, error.Error())
+	}
+
+	tarReader := tar.NewReader(gzipReader)
+	appIDStr := strconv.FormatInt(int64(appID), 10)
+	versionNumberStr := strconv.Itoa(versionNumber)
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return errs.NewError(errs.IO, err.Error())
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			continue
+		case tar.TypeReg:
+			//TODO use separate storage map client for reading gzip file and for uploading extracted files
+			fullPath := path.Join(appPackageRoot, appIDStr, versionNumberStr, header.Name)
+			err := a.storageMapClient.Put(fullPath, tarReader)
+			if err != nil {
+				return err
+			}
+		default:
+			return errs.NewError(errs.IO, fmt.Sprintf("unknown type: %v in %s", header.Typeflag, header.Name))
+		}
+	}
+
+	return nil
 }
 
 func NewApp(

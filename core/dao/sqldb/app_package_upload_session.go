@@ -77,7 +77,7 @@ func (a *AppPackageUploadSession) CreateAppPackageUploadSession(
 			is_completed,
 			created_at,
 			updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7);`,
+		) VALUES ($1, $2, $3, $4, $5, $6);`,
 		session.AppID,
 		session.FileUploadSessionID,
 		session.VersionNumber,
@@ -103,7 +103,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 		SET
 			is_completed = $1,
 			updated_at = $2
-		WHERE app_id = $3 AND version_number = $5 and file_upload_session_id = $6;`,
+		WHERE app_id = $3 AND version_number = $4 and file_upload_session_id = $5;`,
 		session.IsCompleted,
 		session.UpdatedAt,
 		session.AppID,
