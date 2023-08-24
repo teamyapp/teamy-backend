@@ -78,7 +78,7 @@ func (m Mutation) CreateAppPackageUploadSession(
 		return "", errs.ToResolverErr(internalErr)
 	}
 
-	fileUploadSessionID, err := m.deps.appService.CreateAppPackageFileUploadSession(ct, appID, args.VersionNumber)
+	fileUploadSessionID, err := m.deps.appService.CreateAppPackageFileUploadSession(ct, appID, int(args.VersionNumber))
 	if err != nil {
 		m.deps.logger.Error(err)
 		return "", errs.ToResolverErr(err)
@@ -113,7 +113,7 @@ func (m Mutation) FinishAppPackageUploadSession(
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
-	appVersion, err := m.deps.appService.FinishAppPackageFileUploadSession(ct, appID, args.VersionNumber, fileUploadSessionID)
+	appVersion, err := m.deps.appService.FinishAppPackageFileUploadSession(ct, appID, int(args.VersionNumber), fileUploadSessionID)
 	if err != nil {
 		m.deps.logger.Error(err)
 		return AppVersion{}, errs.ToResolverErr(err)

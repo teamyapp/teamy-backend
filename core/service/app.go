@@ -265,7 +265,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64, appName string, 
 	return av, nil
 }
 
-func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int32) (uint64, *errs.Error) {
+func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int) (uint64, *errs.Error) {
 	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return 0, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -293,7 +293,7 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 
 	fileUploadSession := entity.AppPackageUploadSession{
 		AppID:               appID,
-		VersionNumber:       int(versionNumber),
+		VersionNumber:       versionNumber,
 		FileUploadSessionID: res.UploadSessionId,
 		IsCompleted:         false,
 		CreatedAt:           time.Now().UTC(),
@@ -310,7 +310,7 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 	return res.UploadSessionId, err
 }
 
-func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int32, fileUploadSessionID uint64) (entity.AppVersion, *errs.Error) {
+func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int, fileUploadSessionID uint64) (entity.AppVersion, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -346,22 +346,12 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		ct:                 ct,
 	}
 
-	versionNumberInt := int(versionNumber)
-	go func() {
-		err := a.uploadAppPackageFiles(ct, appID, versionNumberInt, uploadSession)
-		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
-			return
-		}
-		// TODO: change app version status to ready
-	}()
-
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		appPackageUploadSession, err := a.appPackageUploadSessionDao.FindAppPackageUploadSessionWithTx(
 			ct,
 			tx,
 			appID,
-			versionNumberInt,
+			versionNumber,
 			fileUploadSessionID)
 		if err != nil {
 			return err
@@ -380,6 +370,15 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		appPackageUploadSession.UpdatedAt = &now
 		return a.appPackageUploadSessionDao.UpdateAppPackageFileUploadSession(ct, tx, appPackageUploadSession)
 	})
+
+	go func() {
+		err := a.uploadAppPackageFiles(ct, appID, versionNumber, uploadSession)
+		if err != nil {
+			a.logger.ErrorWithContext(ct, err)
+			return
+		}
+		// TODO: change app version status to ready
+	}()
 
 	return appVersion, err
 }
