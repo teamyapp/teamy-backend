@@ -60,8 +60,3 @@ ALTER TABLE app
 ALTER TABLE app
 	RENAME COLUMN total_installations TO installation_count;
 
-
-
-
-
-
