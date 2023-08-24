@@ -437,7 +437,8 @@ func (a App) uploadAppPackageFiles(
 		return err
 	}
 
-	gzipReader, error := gzip.NewReader(bufio.NewReaderSize(fileReader, bufferSize))
+	buffedFiledReader := bufio.NewReaderSize(fileReader, bufferSize)
+	gzipReader, error := gzip.NewReader(buffedFiledReader)
 	if error != nil {
 		return errs.NewError(errs.IO, error.Error())
 	}
