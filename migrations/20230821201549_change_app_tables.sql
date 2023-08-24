@@ -30,21 +30,6 @@ ALTER TABLE app_version
 	DROP COLUMN "changes";
 
 -- +migrate Down
-ALTER TABLE app
-	ADD "description" TEXT NOT NULL;
-ALTER TABLE app
-	ADD "name" VARCHAR(100) NOT NULL;
-ALTER TABLE app
-	ADD creator_user_id BIGINT NOT NULL REFERENCES "user" (id) ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE app
-	ADD active_version_number INT;
-ALTER TABLE app
-	ADD api_secret VARCHAR(128) NOT NULL;
-ALTER TABLE app
-	DROP COLUMN managed_by_team_id;
-ALTER TABLE app
-	RENAME COLUMN total_installations TO installation_count;
-
 ALTER TABLE app_version
 	ADD "changes" TEXT;
 ALTER TABLE app_version
@@ -59,6 +44,21 @@ ALTER TABLE app_version
 	RENAME COLUMN "number" TO version_number;
 ALTER TABLE app_version 
 	RENAME COLUMN is_ready TO is_public;
+
+ALTER TABLE app
+	ADD "description" TEXT NOT NULL;
+ALTER TABLE app
+	ADD "name" VARCHAR(100) NOT NULL;
+ALTER TABLE app
+	ADD creator_user_id BIGINT NOT NULL REFERENCES "user" (id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE app
+	ADD active_version_number INT;
+ALTER TABLE app
+	ADD api_secret VARCHAR(128) NOT NULL;
+ALTER TABLE app
+	DROP COLUMN managed_by_team_id;
+ALTER TABLE app
+	RENAME COLUMN total_installations TO installation_count;
 
 
 
