@@ -353,7 +353,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 			a.logger.ErrorWithContext(ct, err)
 			return
 		}
-		// TODO, change app version status to ready
+		// TODO: change app version status to ready
 	}()
 
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
