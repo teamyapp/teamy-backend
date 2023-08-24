@@ -459,7 +459,7 @@ func (a App) uploadAppPackageFiles(
 		case tar.TypeDir:
 			continue
 		case tar.TypeReg:
-			//TODO use separate storage map client for reading gzip file and for uploading extracted files
+			// TODO: use separate storage map client for reading gzip file and for uploading extracted files
 			fullPath := path.Join(appPackageRoot, appIDStr, versionNumberStr, header.Name)
 			err := a.storageMapClient.Put(fullPath, tarReader)
 			if err != nil {
