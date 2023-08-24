@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/env"
 	cloudGQL "github.com/teamyapp/cloud/libs/gql"
+	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/api"
@@ -25,6 +26,7 @@ import (
 type AppMame string
 type ServiceName string
 type CloudWebAPIExternalBaseURL string
+type MapServerURL string
 
 var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Task), new(sqldb.Task)),
@@ -42,6 +44,9 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)),
 	wire.Bind(new(dao.Invitation), new(sqldb.Invitation)),
 	wire.Bind(new(dao.Message), new(sqldb.Message)),
+	wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)),
+	wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)),
+	wire.Bind(new(dao.App), new(*sqldb.App)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -57,9 +62,14 @@ var daoSet = wire.NewSet(
 	sqldb.NewTeamFileUploadSession,
 	sqldb.NewInvitation,
 	sqldb.NewMessage,
+	sqldb.NewAppPackageUploadSession,
+	sqldb.NewAppVersion,
+	sqldb.NewApp,
 )
 
 var serviceSet = wire.NewSet(
+	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
+	newHTTPClient,
 	service.NewThread,
 	service.NewTask,
 	service.NewTaskLink,
@@ -67,6 +77,7 @@ var serviceSet = wire.NewSet(
 	newTeamService,
 	service.NewSprint,
 	newUserService,
+	service.NewApp,
 )
 
 func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {
@@ -84,13 +95,13 @@ func InitGraphQLAPI(
 	environment env.Environment,
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	mapServerURL MapServerURL,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) (cloudGQL.Service[gql.Resolver], error) {
 	wire.Build(
 		wire.Bind(new(tracer.Tracer), new(cloudGQL.PrometheusTracer)),
-
 		newPrometheusTracer,
 		daoSet,
 		transaction.NewFactory,
@@ -165,6 +176,12 @@ func InitTaskLinkRPCAPI(
 		api.NewTaskLinkRPC,
 	)
 	return api.TaskLinkRPC{}
+}
+
+func newHTTPClient(
+	mapServerURL MapServerURL,
+) *storage.HTTPClient {
+	return storage.NewHTTPClient(string(mapServerURL))
 }
 
 func newUserService(
