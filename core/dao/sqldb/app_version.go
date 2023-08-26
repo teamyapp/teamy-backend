@@ -2,6 +2,7 @@ package sqldb
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -16,6 +17,75 @@ type AppVersion struct {
 }
 
 var _ dao.AppVersion = (*AppVersion)(nil)
+
+func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppVersion, *errs.Error) {
+	appVersions := []entity.AppVersion{}
+	rows, err := tx.SQLTx().Query(`
+		SELECT
+			app_id,
+			number,
+			app_name,
+			has_ui_extension,
+			description,
+			created_at,
+			created_by_user_id,
+			is_ready
+		FROM app_version
+		WHERE app_id = $1;`,
+		appID,
+	)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+	
+	defer rows.Close()
+	
+	for rows.Next() {
+		appVersion := entity.AppVersion{}
+		err := rows.Scan(
+			&appVersion.AppID,
+			&appVersion.Number,
+			&appVersion.AppName,
+			&appVersion.HasUiExtension,
+			&appVersion.Description,
+			&appVersion.CreatedAt,
+			&appVersion.CreatedByUserID,
+			&appVersion.IsReady,
+		)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		appVersions = append(appVersions, appVersion)
+	}
+
+	return appVersions, nil
+}
+
+func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+
+	tx, err := a.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+	
+	defer tx.Rollback()
+
+	appVersions, err := a.FindAppVersionsByAppIDWithTx(ct, tx, appID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return appVersions, nil
+}
 
 func (a *AppVersion) FindMaxVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (int, *errs.Error) {
 	var versionNumber int
@@ -41,6 +111,7 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			app_id,
 			number,
 			app_name,
+			has_ui_extension,
 			description,
 			created_at,
 			created_by_user_id,
@@ -52,10 +123,13 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			$4,
 			$5,
 			$6,
-			$7
+			$7,
+			$8
 		);`,
 		appVersion.AppID,
 		appVersion.Number,
+		appVersion.AppName,
+		appVersion.HasUiExtension,
 		appVersion.Description,
 		appVersion.CreatedAt,
 		appVersion.CreatedByUserID,
@@ -86,10 +160,10 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 	appVersion := entity.AppVersion{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
-			id,
 			app_id,
 			number,
 			app_name,
+			has_ui_extension,
 			description,
 			created_at,
 			created_by_user_id,
@@ -102,6 +176,7 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 		&appVersion.AppID,
 		&appVersion.Number,
 		&appVersion.AppName,
+		&appVersion.HasUiExtension,
 		&appVersion.Description,
 		&appVersion.CreatedAt,
 		&appVersion.CreatedByUserID,

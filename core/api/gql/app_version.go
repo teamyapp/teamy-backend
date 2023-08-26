@@ -18,11 +18,11 @@ func (a AppVersion) Number(ctx context.Context) int32 {
 }
 
 func (a AppVersion) AppName(ctx context.Context) string {
-	panic("not implemented")
+	return a.appVersion.AppName
 }
 
 func (a AppVersion) Description(ctx context.Context) string {
-	panic("not implemented")
+	return a.appVersion.Description
 }
 
 func (a AppVersion) Changes(ctx context.Context) []string {
@@ -30,7 +30,7 @@ func (a AppVersion) Changes(ctx context.Context) []string {
 }
 
 func (a AppVersion) CreatedAt(ctx context.Context) graphql.Time {
-	panic("not implemented")
+	return toGraphQLTime(a.appVersion.CreatedAt)
 }
 
 func (a AppVersion) CreatedBy(ctx context.Context) User {
@@ -42,7 +42,7 @@ func (a AppVersion) Prices(ctx context.Context) []Money {
 }
 
 func (a AppVersion) IsReady(ctx context.Context) bool {
-	panic("not implemented")
+	return a.appVersion.IsReady
 }
 
 func (a AppVersion) App(ctx context.Context) App {
