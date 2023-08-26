@@ -196,12 +196,14 @@ func startServiceRunner(
 	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(
 		logger,
 		realTimeStateSyncer)
+	mapServerURL := dep.MapServerURL(fmt.Sprintf("%s/stream", cfg.CloudWebAPIExternalBaseURL))
 	graphQLAPI, err := dep.InitGraphQLAPI(
 		appName,
 		serviceName,
 		cfg.Environment,
 		logger,
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
+		mapServerURL,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)

@@ -9,6 +9,7 @@ type AppVersion struct {
 	Number          int
 	AppName         string
 	Description     string
+	HasUiExtension  bool
 	CreatedAt       time.Time
 	CreatedByUserID uint64
 	IsReady         bool

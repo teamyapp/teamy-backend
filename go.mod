@@ -8,7 +8,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.5.0
 	github.com/stretchr/testify v1.8.4
-	github.com/teamyapp/cloud v0.0.0-20230725073824-59b47284d536
+	github.com/teamyapp/cloud v0.0.0-20230824014334-597ed84e5212
 	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
 )
@@ -52,7 +52,6 @@ require (
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
-	google.golang.org/genproto v0.0.0-20230807174057-1744710a1577 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230807174057-1744710a1577 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
