@@ -110,7 +110,6 @@ func (m Mutation) DeleteApp(
 	}
 
 	app, err := m.deps.appService.DeleteApp(ctx, appID)
-
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return App{}
