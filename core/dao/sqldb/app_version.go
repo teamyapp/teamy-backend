@@ -71,6 +71,7 @@ func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([
 	if err != nil {
 		return nil, err
 	}
+	
 	defer tx.Rollback()
 
 	appVersions, err := a.FindAppVersionsByAppIDWithTx(ct, tx, appID)
