@@ -37,7 +37,9 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
+	
 	defer rows.Close()
+	
 	for rows.Next() {
 		appVersion := entity.AppVersion{}
 		err := rows.Scan(
