@@ -204,6 +204,10 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 	return app, nil
 }
 
+func (a App) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
+	return a.appVersionDao.FindAppVersionsByAppID(ct, appID)
+}
+
 func (a App) CreateAppVersion(ct context.Context, appID uint64, appName string, description string) (entity.AppVersion, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
