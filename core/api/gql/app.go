@@ -60,7 +60,6 @@ func (a App) TeamRollouts(ctx context.Context) []TeamRollout {
 
 func (a App) ManagedByTeam(ctx context.Context) Team {
 	teamID := a.app.ManagedByTeamID
-
 	team, err := a.deps.teamService.FindTeamByID(ctx, teamID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
