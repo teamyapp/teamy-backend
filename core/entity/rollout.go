@@ -4,22 +4,20 @@ import (
 	"time"
 )
 
-type RolloutType string
+type SelectorType string
 
 const (
-	RolloutTypeStatic     RolloutType = "STATIC"
-	RolloutTypeTimeRange  RolloutType = "TIME_RANGE"
-	RolloutTypeExperiment RolloutType = "EXPERIMENT"
+	SelectorTypeStatic     SelectorType = "STATIC"
+	SelectorTypeExperiment SelectorType = "EXPERIMENT"
 )
 
 type Rollout struct {
-	ID        uint64
-	Type      RolloutType
-	CreatedAt time.Time
-}
-
-type TimeRangeRollout struct {
-	Rollout
-	StartAt *time.Time
-	EndAt   *time.Time
+	ID            uint64
+	ActivatorID   uint64
+	SelectorID    uint64
+	ActivatorType ActivatorType
+	SelectorType  SelectorType
+	IsEnabled     bool
+	CreatedAt     time.Time
+	UpdatedAt     *time.Time
 }

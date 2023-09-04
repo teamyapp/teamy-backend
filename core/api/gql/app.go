@@ -18,55 +18,130 @@ func (a App) ID(ctx context.Context) graphql.ID {
 	return toGraphQLID(a.app.ID)
 }
 
-func (a App) Secrets(ctx context.Context) []AppSecret {
-	panic("not implemented")
+func (a App) Secrets(ctx context.Context) ([]AppSecret, error) {
+	secrets, err := a.deps.appService.FindAppSecretsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return []AppSecret{}, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(secrets, func(appSecret entity.AppSecret, index int) AppSecret {
+		return newAppSecret(a.deps, appSecret)
+	}), nil
+
 }
 
 func (a App) TotalInstallations(ctx context.Context) int32 {
 	return int32(a.app.TotalInstallations)
 }
 
-func (a App) Installations(ctx context.Context) []TeamAppInstallation {
-	panic("not implemented")
+func (a App) Installations(ctx context.Context) ([]TeamAppInstallation, error) {
+	teamAppInstallations, err := a.deps.appService.FindTeamAppInstallationsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(teamAppInstallations, func(teamAppInstallation entity.TeamAppInstallation, index int) TeamAppInstallation {
+		return newTeamAppInstallation(a.deps, teamAppInstallation)
+	}), nil
 }
 
-func (a App) Versions(ctx context.Context) []AppVersion {
+func (a App) Versions(ctx context.Context) ([]AppVersion, error) {
 	appVersions, err := a.deps.appService.FindAppVersionsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
-		return []AppVersion{}
+		return nil, errs.ToResolverErr(err)
 	}
 
 	return collect.Map(appVersions, func(appVersion entity.AppVersion, index int) AppVersion {
 		return newAppVersion(a.deps, appVersion)
-	})
+	}), nil
 }
 
-func (a App) UserGroups(ctx context.Context) []UserGroup {
-	panic("not implemented")
+func (a App) UserGroups(ctx context.Context) ([]UserGroup, error) {
+	groups, err := a.deps.groupService.FindStaticUserGroupsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	userGroups := make([]UserGroup, 0)
+	for _, group := range groups {
+		userGroups = append(userGroups, newStaticUserGroup(a.deps, group))
+	}
+
+	filterGroups, err := a.deps.groupService.FindFilterUserGroupsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	for _, group := range filterGroups {
+		userGroups = append(userGroups, newFilterUserGroup(a.deps, group))
+	}
+
+	return userGroups, nil
 }
 
-func (a App) TeamGroups(ctx context.Context) []TeamGroup {
-	panic("not implemented")
+func (a App) TeamGroups(ctx context.Context) ([]TeamGroup, error) {
+	groups, err := a.deps.groupService.FindStaticTeamGroupsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	teamGroups := make([]TeamGroup, 0)
+	for _, group := range groups {
+		teamGroups = append(teamGroups, newStaticUserGroup(a.deps, group))
+	}
+
+	filterGroups, err := a.deps.groupService.FindFilterTeamGroupsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	for _, group := range filterGroups {
+		teamGroups = append(teamGroups, newFilterUserGroup(a.deps, group))
+	}
+
+	return teamGroups, nil
 }
 
-func (a App) UserRollouts(ctx context.Context) []UserRollout {
-	panic("not implemented")
+func (a App) UserRollouts(ctx context.Context) ([]Rollout, error) {
+	userRollouts, err := a.deps.rolloutService.FindUserRolloutsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(userRollouts, func(userRollout entity.Rollout, index int) Rollout {
+		return newRollout(a.deps, userRollout)
+	}), nil
 }
 
-func (a App) TeamRollouts(ctx context.Context) []TeamRollout {
-	panic("not implemented")
+func (a App) TeamRollouts(ctx context.Context) ([]Rollout, error) {
+	teamRollouts, err := a.deps.rolloutService.FindTeamRolloutsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(teamRollouts, func(teamRollout entity.Rollout, index int) Rollout {
+		return newRollout(a.deps, teamRollout)
+	}), nil
 }
 
-func (a App) ManagedByTeam(ctx context.Context) Team {
+func (a App) ManagedByTeam(ctx context.Context) (Team, error) {
 	teamID := a.app.ManagedByTeamID
 	team, err := a.deps.teamService.FindTeamByID(ctx, teamID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
-		return newTeam(a.deps, entity.Team{})
+		return Team{}, errs.ToResolverErr(err)
 	}
 
-	return newTeam(a.deps, team)
+	return newTeam(a.deps, team), nil
 }
 
 func (m Mutation) CreateApp(
@@ -74,7 +149,7 @@ func (m Mutation) CreateApp(
 	args struct {
 		TeamID graphql.ID
 		Name   string
-	}) App {
+	}) (App, error) {
 	teamID, internalErr := fromGraphQLID(args.TeamID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
@@ -82,23 +157,23 @@ func (m Mutation) CreateApp(
 			internalErr.Error(),
 		)
 		m.deps.logger.ErrorWithContext(ctx, internalErr)
-		return App{}
+		return App{}, errs.ToResolverErr(internalErr)
 	}
 
 	app, err := m.deps.appService.CreateApp(ctx, args.Name, teamID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
-		return App{}
+		return App{}, errs.ToResolverErr(err)
 	}
 
-	return newApp(m.deps, app)
+	return newApp(m.deps, app), nil
 }
 
 func (m Mutation) DeleteApp(
 	ctx context.Context,
 	args struct {
 		AppID graphql.ID
-	}) App {
+	}) (App, error) {
 	appID, internalErr := fromGraphQLID(args.AppID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
@@ -106,16 +181,16 @@ func (m Mutation) DeleteApp(
 			internalErr.Error(),
 		)
 		m.deps.logger.ErrorWithContext(ctx, internalErr)
-		return App{}
+		return App{}, errs.ToResolverErr(internalErr)
 	}
 
 	app, err := m.deps.appService.DeleteApp(ctx, appID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
-		return App{}
+		return App{}, errs.ToResolverErr(err)
 	}
 
-	return newApp(m.deps, app)
+	return newApp(m.deps, app), nil
 }
 
 func (m Mutation) InstallAppToTeam(
@@ -123,16 +198,58 @@ func (m Mutation) InstallAppToTeam(
 	args struct {
 		AppID  graphql.ID
 		TeamID graphql.ID
-	}) TeamAppInstallation {
-	panic("not implemented")
+	}) (TeamAppInstallation, error) {
+	appID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return TeamAppInstallation{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamID, internalErr := fromGraphQLID(args.TeamID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return TeamAppInstallation{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamAppInstallation, err := m.deps.appService.InstallAppToTeam(ctx, appID, teamID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return TeamAppInstallation{}, errs.ToResolverErr(err)
+	}
+
+	return newTeamAppInstallation(m.deps, teamAppInstallation), nil
 }
 
 func (m Mutation) UninstallAppFromTeam(
 	ctx context.Context,
 	args struct {
 		InstallationID graphql.ID
-	}) TeamAppInstallation {
-	panic("not implemented")
+	}) (TeamAppInstallation, error) {
+	teamAppInstallationID, internalErr := fromGraphQLID(args.InstallationID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return TeamAppInstallation{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamAppInstallation, err := m.deps.appService.UninstallAppFromTeam(ctx, teamAppInstallationID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return TeamAppInstallation{}, errs.ToResolverErr(err)
+	}
+
+	return newTeamAppInstallation(m.deps, teamAppInstallation), nil
 }
 
 func newApp(deps *Dependencies, app entity.App) App {
