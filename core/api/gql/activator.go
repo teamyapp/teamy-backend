@@ -113,7 +113,6 @@ func (m Mutation) CreateTimeRangeActivator(
 ) (TimeRangeActivator, error) {
 	startAt := fromGraphQLTimePtr(args.Input.StartAt)
 	endAt := fromGraphQLTimePtr(args.Input.EndAt)
-
 	timeRangeActivator, err := m.deps.rolloutService.CreateTimeRangeActivator(ctx, startAt, endAt)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
@@ -132,7 +131,6 @@ func (m Mutation) CreateMaxViewersActivator(
 	},
 ) (MaxViewersActivator, error) {
 	maxViewers := int(args.Input.MaxViewers)
-
 	maxViewersActivator, err := m.deps.rolloutService.CreateMaxViewersActivator(ctx, maxViewers)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
@@ -151,7 +149,6 @@ func (m Mutation) CreatePercentageActivator(
 	},
 ) (PercentageActivator, error) {
 	percentage := int(args.Input.Percentage)
-
 	percentageActivator, err := m.deps.rolloutService.CreatePercentageActivator(ctx, percentage)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)

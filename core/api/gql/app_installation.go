@@ -33,7 +33,7 @@ func (t TeamAppInstallation) ActiveAppVersion(ctx context.Context) (*AppVersion,
 		return nil, errs.ToResolverErr(err)
 	}
 
-	appVersion, err := t.deps.appService.FindAppVersionByAppIDAndNumber(ctx, t.teamAppInstallation.AppID, appVersionNumber)
+	appVersion, err := t.deps.appService.FindAppVersionByAppIDAndNumber(ctx, t.teamAppInstallation.AppID, *appVersionNumber)
 	if err != nil {
 		return nil, errs.ToResolverErr(err)
 	}

@@ -177,24 +177,19 @@ func (r *Rollout) FindVersionNumbersByVersionSelectorID(ct context.Context, roll
 	return r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, rolloutID)
 }
 
-func (r *Rollout) newRollout(ct context.Context, rolloutEntity entity.Rollout) (rollout.Rollout, *errs.Error) {
-	activatorID := rolloutEntity.ActivatorID
-	versionNumbers, err := r.FindVersionNumbersByVersionSelectorID(ct, rolloutEntity.SelectorID)
+func (r *Rollout) newRollout(ct context.Context, rawRollout entity.Rollout) (rollout.Rollout, *errs.Error) {
+	activatorID := rawRollout.ActivatorID
+	versionSelector, err := r.getRolloutVersionSelector(ct, rawRollout.ID, rawRollout.SelectorID)
 	if err != nil {
 		return rollout.Rollout{}, err
 	}
 
-	versionSelector, err := r.getRolloutVersionSelector(ct, rolloutEntity.ID, rolloutEntity.SelectorID, versionNumbers)
+	activator, err := r.getRolloutVersionActivator(ct, rawRollout.ID, activatorID)
 	if err != nil {
 		return rollout.Rollout{}, err
 	}
 
-	activator, err := r.getRolloutVersionActivator(ct, rolloutEntity.ID, activatorID)
-	if err != nil {
-		return rollout.Rollout{}, err
-	}
-
-	rolloutStore := NewRolloutStore(r.rolloutDao, rolloutEntity.ID)
+	rolloutStore := NewRolloutStore(r.rolloutDao, rawRollout.ID)
 	return rollout.NewRollout(ct, rolloutStore, activator, versionSelector)
 }
 
@@ -270,14 +265,14 @@ func (r *Rollout) getTeamGroupActiveVersion(ct context.Context, teamID uint64, g
 	sortedRolloutIDs := collect.Map(groupRolloutRelations, func(groupRolloutRelation entity.GroupRolloutRelation, index int) uint64 {
 		return groupRolloutRelation.RolloutID
 	})
-	rolloutEntities, err := r.rolloutDao.FindRolloutsByIDs(ct, sortedRolloutIDs)
+	rawRollouts, err := r.rolloutDao.FindRolloutsByIDs(ct, sortedRolloutIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	rollouts := make([]rollout.Rollout, 0)
-	for _, rolloutEntity := range rolloutEntities {
-		rollout, err := r.newRollout(ct, rolloutEntity)
+	for _, rawRollout := range rawRollouts {
+		rollout, err := r.newRollout(ct, rawRollout)
 		if err != nil {
 			return nil, err
 		}
@@ -321,18 +316,23 @@ func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType 
 	return versionSelector, nil
 }
 
-func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64, selectorID uint64, versionNumbers []int) (rollout.VersionSelector, *errs.Error) {
+func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64, selectorID uint64) (rollout.VersionSelector, *errs.Error) {
+	versionNumbers, err := r.FindVersionNumbersByVersionSelectorID(ct, selectorID)
+	if err != nil {
+		return nil, err
+	}
+
 	var versionSelector rollout.VersionSelector
 	if len(versionNumbers) == 0 {
 		return nil, errs.NewError(errs.NotFound, "app version not found")
 	}
 
-	versionSelectorEntity, err := r.FindVersionSelectorByID(ct, selectorID)
+	rawVersionSelector, err := r.FindVersionSelectorByID(ct, selectorID)
 	if err != nil {
 		return nil, err
 	}
 
-	switch versionSelectorEntity.Type {
+	switch rawVersionSelector.Type {
 	case entity.VersionSelectorTypeStatic:
 		if len(versionNumbers) > 1 {
 			r.logger.WarningWithContext(ct, "multiple app versions found for a static selector, use the first one")
@@ -342,6 +342,8 @@ func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64
 	case entity.VersionSelectorTypeExperiment:
 		store := NewExperimentVersionSelectorStore(r.rolloutViewerDao, rolloutID)
 		versionSelector = rollout.NewExperimentVersionSelector(store, randgen.NewBuiltinRanGen(), versionNumbers)
+	default:
+		return nil, errs.NewError(errs.NotReady, "unknown version selector type")
 	}
 
 	return versionSelector, nil
@@ -356,31 +358,33 @@ func (r *Rollout) getRolloutVersionActivator(ct context.Context, rolloutID uint6
 
 	switch activatorType {
 	case entity.ActivatorTypeTimeRange:
-		activatorEntity, err := r.FindTimeRangeActivatorByID(ct, activatorID)
-		activator = rollout.NewTimeRangeActivator(clock.New(), activatorEntity.StartAt, activatorEntity.EndAt)
+		rawActivator, err := r.FindTimeRangeActivatorByID(ct, activatorID)
+		activator = rollout.NewTimeRangeActivator(clock.New(), rawActivator.StartAt, rawActivator.EndAt)
 
 		if err != nil {
 			return nil, err
 		}
 	case entity.ActivatorTypeMaxViewers:
-		activatorEntity, err := r.FindMaxViewersActivatorByID(ct, activatorID)
+		rawActivator, err := r.FindMaxViewersActivatorByID(ct, activatorID)
 		if err != nil {
 			return nil, err
 		}
 
 		store := NewMaxViewersActivatorStore(r.rolloutViewerDao, r.rolloutStoreDao, rolloutID)
-		activator, err = rollout.NewMaxViewersActivator(ct, store, activatorEntity.MaxViewers)
+		activator, err = rollout.NewMaxViewersActivator(ct, store, rawActivator.MaxViewers)
 		if err != nil {
 			return nil, err
 		}
 	case entity.ActivatorTypePercentage:
-		activatorEntity, err := r.FindPercentageActivatorByID(ct, activatorID)
+		rawActivator, err := r.FindPercentageActivatorByID(ct, activatorID)
 		if err != nil {
 			return nil, err
 		}
 
 		store := NewPercentageActivatorStore(r.rolloutViewerDao, rolloutID)
-		activator = rollout.NewPercentageActivator(store, randgen.NewBuiltinRanGen(), activatorEntity.Percentage)
+		activator = rollout.NewPercentageActivator(store, randgen.NewBuiltinRanGen(), rawActivator.Percentage)
+	default:
+		return nil, errs.NewError(errs.NotReady, "unknown activator type")
 	}
 
 	return activator, nil
