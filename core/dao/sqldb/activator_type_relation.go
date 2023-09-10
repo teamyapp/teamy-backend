@@ -17,6 +17,10 @@ func (*ActivatorTypeRelation) FindActivatorTypeByID(ct context.Context, activato
 	panic("unimplemented")
 }
 
+func (*ActivatorTypeRelation) CreateActivatorTypeRelation(ct context.Context, ActivatorTypeRelation entity.ActivatorTypeRelation) (entity.ActivatorType, *errs.Error) {
+	panic("unimplemented")
+}
+
 func NewActivatorTypeRelation() *ActivatorTypeRelation {
 	return &ActivatorTypeRelation{}
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/store"
 )
 
@@ -39,16 +40,13 @@ type Rollout struct {
 	cloudClientRegistry               *client.Registry
 	transactionFactory                transaction.Factory
 	stateSyncer                       *realtime.StateSyncer
+	activatorRepository               repository.Activator
 	appGroupRelationDao               dao.AppGroupRelation
 	rolloutDao                        dao.Rollout
 	rolloutViewerDao                  dao.RolloutViewer
 	groupRolloutRelationDao           dao.GroupRolloutRelation
 	appRolloutRelationDao             dao.AppRolloutRelation
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation
-	timeRangeActivatorDao             dao.TimeRangeActivator
-	maxViewersActivatorDao            dao.MaxViewersActivator
-	percentageActivatorDao            dao.PercentageActivator
-	activatorTypeRelationDao          dao.ActivatorTypeRelation
 	versionSelectorDao                dao.VersionSelector
 	appVersionDao                     dao.AppVersion
 }
@@ -197,35 +195,7 @@ func (r *Rollout) newRollout(ct context.Context, rawRollout entity.Rollout) (rol
 }
 
 func (r *Rollout) FindActivatorByID(ct context.Context, activatorID uint64) (entity.ActivatorUnion, *errs.Error) {
-	activatorType, err := r.FindActivatorTypeByID(ct, activatorID)
-	if err != nil {
-		return entity.ActivatorUnion{}, err
-	}
-
-	var timeRangeActivator entity.TimeRangeActivator = entity.TimeRangeActivator{}
-	var maxViewersActivator entity.MaxViewersActivator = entity.MaxViewersActivator{}
-	var percentageActivator entity.PercentageActivator = entity.PercentageActivator{}
-	switch activatorType {
-	case entity.ActivatorTypeTimeRange:
-		timeRangeActivator, err = r.FindTimeRangeActivatorByID(ct, activatorID)
-	case entity.ActivatorTypeMaxViewers:
-		maxViewersActivator, err = r.FindMaxViewersActivatorByID(ct, activatorID)
-	case entity.ActivatorTypePercentage:
-		percentageActivator, err = r.FindPercentageActivatorByID(ct, activatorID)
-	default:
-		err = errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorType))
-	}
-
-	if err != nil {
-		return entity.ActivatorUnion{}, err
-	}
-
-	return entity.ActivatorUnion{
-		Type:                activatorType,
-		TimeRangeActivator:  timeRangeActivator,
-		MaxViewersActivator: maxViewersActivator,
-		PercentageActivator: percentageActivator,
-	}, nil
+	return r.activatorRepository.FindActivatorByID(ct, activatorID)
 }
 
 func (r *Rollout) CreateTimeRangeActivator(ct context.Context, startAt *time.Time, endAt *time.Time) (entity.TimeRangeActivator, *errs.Error) {
@@ -237,11 +207,7 @@ func (r *Rollout) CreateTimeRangeActivator(ct context.Context, startAt *time.Tim
 		},
 	}
 
-	return r.timeRangeActivatorDao.CreateTimeRangeActivator(ct, timeRangeActivator)
-}
-
-func (r *Rollout) FindTimeRangeActivatorByID(ct context.Context, activatorID uint64) (entity.TimeRangeActivator, *errs.Error) {
-	return r.timeRangeActivatorDao.FindTimeRangeActivatorByID(ct, activatorID)
+	return r.activatorRepository.CreateTimeRangeActivator(ct, timeRangeActivator)
 }
 
 func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) (entity.MaxViewersActivator, *errs.Error) {
@@ -251,11 +217,7 @@ func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) 
 			CreatedAt: time.Now().UTC(),
 		},
 	}
-	return r.maxViewersActivatorDao.CreateMaxViewersActivator(ct, maxViewersActivator)
-}
-
-func (r *Rollout) FindMaxViewersActivatorByID(ct context.Context, activatorID uint64) (entity.MaxViewersActivator, *errs.Error) {
-	return r.maxViewersActivatorDao.FindMaxViewersActivatorByID(ct, activatorID)
+	return r.activatorRepository.CreateMaxViewersActivator(ct, maxViewersActivator)
 }
 
 func (r *Rollout) CreatePercentageActivator(ct context.Context, percentage int) (entity.PercentageActivator, *errs.Error) {
@@ -265,11 +227,7 @@ func (r *Rollout) CreatePercentageActivator(ct context.Context, percentage int) 
 			CreatedAt: time.Now().UTC(),
 		},
 	}
-	return r.percentageActivatorDao.CreatePercentageActivator(ct, percentageActivator)
-}
-
-func (r *Rollout) FindPercentageActivatorByID(ct context.Context, activatorID uint64) (entity.PercentageActivator, *errs.Error) {
-	return r.percentageActivatorDao.FindPercentageActivatorByID(ct, activatorID)
+	return r.activatorRepository.CreatePercentageActivator(ct, percentageActivator)
 }
 
 func (r *Rollout) FindVersionSelectorByID(ct context.Context, selectorID uint64) (entity.VersionSelector, *errs.Error) {
@@ -282,10 +240,6 @@ func (r *Rollout) CreateStaticVersionSelector(ct context.Context, versionNumber 
 
 func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, versionNumbers []int) (entity.VersionSelector, *errs.Error) {
 	return r.createVersionSelector(ct, entity.VersionSelectorTypeExperiment, versionNumbers)
-}
-
-func (r *Rollout) FindActivatorTypeByID(ct context.Context, activatorID uint64) (entity.ActivatorType, *errs.Error) {
-	return r.activatorTypeRelationDao.FindActivatorTypeByID(ct, activatorID)
 }
 
 func (r *Rollout) getTeamGroupActiveVersion(ct context.Context, teamID uint64, groupID uint64) (*int, *errs.Error) {
@@ -385,21 +339,21 @@ func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64
 
 func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, activatorID uint64) (rollout.Activator, *errs.Error) {
 	var activator rollout.Activator
-	activatorType, err := r.activatorTypeRelationDao.FindActivatorTypeByID(ct, activatorID)
+	activatorType, err := r.activatorRepository.FindActivatorTypeByID(ct, activatorID)
 	if err != nil {
 		return nil, err
 	}
 
 	switch activatorType {
 	case entity.ActivatorTypeTimeRange:
-		rawActivator, err := r.FindTimeRangeActivatorByID(ct, activatorID)
+		rawActivator, err := r.activatorRepository.FindTimeRangeActivatorByID(ct, activatorID)
 		activator = rollout.NewTimeRangeActivator(clock.New(), rawActivator.StartAt, rawActivator.EndAt)
 
 		if err != nil {
 			return nil, err
 		}
 	case entity.ActivatorTypeMaxViewers:
-		rawActivator, err := r.FindMaxViewersActivatorByID(ct, activatorID)
+		rawActivator, err := r.activatorRepository.FindMaxViewersActivatorByID(ct, activatorID)
 		if err != nil {
 			return nil, err
 		}
@@ -410,7 +364,7 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 			return nil, err
 		}
 	case entity.ActivatorTypePercentage:
-		rawActivator, err := r.FindPercentageActivatorByID(ct, activatorID)
+		rawActivator, err := r.activatorRepository.FindPercentageActivatorByID(ct, activatorID)
 		if err != nil {
 			return nil, err
 		}
@@ -435,10 +389,6 @@ func NewRollout(
 	groupRolloutRelationDao dao.GroupRolloutRelation,
 	appRolloutRelationDao dao.AppRolloutRelation,
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation,
-	timeRangeActivatorDao dao.TimeRangeActivator,
-	maxViewersActivatorDao dao.MaxViewersActivator,
-	percentageActivatorDao dao.PercentageActivator,
-	activatorTypeRelationDao dao.ActivatorTypeRelation,
 	versionSelectorDao dao.VersionSelector,
 	appVersionDao dao.AppVersion,
 ) *Rollout {
@@ -453,10 +403,6 @@ func NewRollout(
 		groupRolloutRelationDao:           groupRolloutRelationDao,
 		appRolloutRelationDao:             appRolloutRelationDao,
 		versionSelectorVersionRelationDao: versionSelectorVersionRelationDao,
-		timeRangeActivatorDao:             timeRangeActivatorDao,
-		maxViewersActivatorDao:            maxViewersActivatorDao,
-		percentageActivatorDao:            percentageActivatorDao,
-		activatorTypeRelationDao:          activatorTypeRelationDao,
 		versionSelectorDao:                versionSelectorDao,
 		appVersionDao:                     appVersionDao,
 	}

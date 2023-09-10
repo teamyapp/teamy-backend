@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 )
 
 type CreateFilterGroupInput struct {
@@ -49,8 +50,7 @@ type Group struct {
 	cloudClientRegistry  *client.Registry
 	transactionFactory   transaction.Factory
 	stateSyncer          *realtime.StateSyncer
-	staticGroupDao       dao.StaticGroup
-	filterGroupDao       dao.FilterGroup
+	groupRepository      repository.Group
 	userGroupRelationDao dao.UserGroupRelation
 	appGroupRelationDao  dao.AppGroupRelation
 	teamGroupRelationDao dao.TeamGroupRelation
@@ -82,7 +82,7 @@ func (g *Group) CreateStaticUserGroup(
 	}
 
 	//TODO: add transaction
-	group, err := g.staticGroupDao.CreateStaticGroup(ct, group)
+	group, err := g.groupRepository.CreateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
 	}
@@ -126,7 +126,7 @@ func (g *Group) UpdateStaticUserGroup(
 	}
 
 	//TODO: add transaction
-	err := g.staticGroupDao.UpdateStaticGroup(ct, group)
+	err := g.groupRepository.UpdateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
 	}
@@ -197,7 +197,7 @@ func (g *Group) CreateFilterUserGroup(
 	}
 
 	//TODO: add transaction
-	filterGroup, err := g.filterGroupDao.CreateFilterGroup(ct, filterGroup)
+	filterGroup, err := g.groupRepository.CreateFilterGroup(ct, filterGroup)
 	if err != nil {
 		return entity.FilterGroup{}, err
 	}
@@ -223,7 +223,7 @@ func (g *Group) UpdateFilterGroup(ct context.Context, groupID uint64, input Upda
 		Filter: input.Filter,
 		Count:  0,
 	}
-	err := g.filterGroupDao.UpdateFilterGroup(ct, filterGroup)
+	err := g.groupRepository.UpdateFilterGroup(ct, filterGroup)
 	return filterGroup, err
 }
 
@@ -249,7 +249,7 @@ func (g *Group) CreateStaticTeamGroup(
 	}
 
 	//TODO: add transaction
-	group, err := g.staticGroupDao.CreateStaticGroup(ct, group)
+	group, err := g.groupRepository.CreateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
 	}
@@ -293,7 +293,7 @@ func (g *Group) UpdateStaticTeamGroup(
 	}
 
 	//TODO: add transaction
-	err := g.staticGroupDao.UpdateStaticGroup(ct, group)
+	err := g.groupRepository.UpdateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
 	}
@@ -365,7 +365,7 @@ func (g *Group) CreateFilterTeamGroup(
 	}
 
 	//TODO: add transaction
-	filterGroup, err := g.filterGroupDao.CreateFilterGroup(ct, filterGroup)
+	filterGroup, err := g.groupRepository.CreateFilterGroup(ct, filterGroup)
 	if err != nil {
 		return entity.FilterGroup{}, err
 	}
@@ -452,32 +452,7 @@ func (g *Group) findGroupsByAppID(ct context.Context, appID uint64, appGroupRela
 		return nil, err
 	}
 
-	staticGroups, err := g.staticGroupDao.FindStaticGroupsByIDs(ct, groupIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	filterGroups, err := g.filterGroupDao.FindFilterGroupsByIDs(ct, groupIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	groupUnions := make([]entity.GroupUnion, 0)
-	for _, staticGroup := range staticGroups {
-		groupUnions = append(groupUnions, entity.GroupUnion{
-			Type:        entity.GroupTypeStatic,
-			StaticGroup: staticGroup,
-		})
-	}
-
-	for _, filterGroup := range filterGroups {
-		groupUnions = append(groupUnions, entity.GroupUnion{
-			Type:        entity.GroupTypeFilter,
-			FilterGroup: filterGroup,
-		})
-	}
-
-	return groupUnions, nil
+	return g.groupRepository.FindGroupsByIDs(ct, groupIDs)
 }
 
 func NewGroup(
@@ -485,8 +460,6 @@ func NewGroup(
 	cloudClientRegistry *client.Registry,
 	transactionFactory transaction.Factory,
 	stateSyncer *realtime.StateSyncer,
-	staticGroupDao dao.StaticGroup,
-	filterGroupDao dao.FilterGroup,
 	userGroupRelationDao dao.UserGroupRelation,
 	appGroupRelationDao dao.AppGroupRelation,
 	teamGroupRelationDao dao.TeamGroupRelation,
@@ -499,8 +472,6 @@ func NewGroup(
 		cloudClientRegistry:  cloudClientRegistry,
 		transactionFactory:   transactionFactory,
 		stateSyncer:          stateSyncer,
-		staticGroupDao:       staticGroupDao,
-		filterGroupDao:       filterGroupDao,
 		userGroupRelationDao: userGroupRelationDao,
 		appGroupRelationDao:  appGroupRelationDao,
 		teamGroupRelationDao: teamGroupRelationDao,
