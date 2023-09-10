@@ -19,7 +19,7 @@ func (a App) ID(ctx context.Context) graphql.ID {
 }
 
 func (a App) Secrets(ctx context.Context) ([]AppSecret, error) {
-	secrets, err := a.deps.appService.FindAppSecretsByAppID(ctx, a.app.ID)
+	secrets, err := a.deps.appService.FindSecretsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return []AppSecret{}, errs.ToResolverErr(err)
@@ -28,7 +28,6 @@ func (a App) Secrets(ctx context.Context) ([]AppSecret, error) {
 	return collect.Map(secrets, func(appSecret entity.AppSecret, index int) AppSecret {
 		return newAppSecret(a.deps, appSecret)
 	}), nil
-
 }
 
 func (a App) TotalInstallations(ctx context.Context) int32 {
@@ -59,14 +58,14 @@ func (a App) Versions(ctx context.Context) ([]AppVersion, error) {
 	}), nil
 }
 
-func (a App) UserGroups(ctx context.Context) ([]UserGroup, error) {
+func (a App) UserGroups(ctx context.Context) ([]Group, error) {
 	groups, err := a.deps.groupService.FindStaticUserGroupsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	userGroups := make([]UserGroup, 0)
+	userGroups := make([]Group, 0)
 	for _, group := range groups {
 		userGroups = append(userGroups, newStaticUserGroup(a.deps, group))
 	}
@@ -78,22 +77,22 @@ func (a App) UserGroups(ctx context.Context) ([]UserGroup, error) {
 	}
 
 	for _, group := range filterGroups {
-		userGroups = append(userGroups, newFilterUserGroup(a.deps, group))
+		userGroups = append(userGroups, newFilterGroup(a.deps, group))
 	}
 
 	return userGroups, nil
 }
 
-func (a App) TeamGroups(ctx context.Context) ([]TeamGroup, error) {
+func (a App) TeamGroups(ctx context.Context) ([]Group, error) {
 	groups, err := a.deps.groupService.FindStaticTeamGroupsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	teamGroups := make([]TeamGroup, 0)
+	teamGroups := make([]Group, 0)
 	for _, group := range groups {
-		teamGroups = append(teamGroups, newStaticUserGroup(a.deps, group))
+		teamGroups = append(teamGroups, newStaticTeamGroup(a.deps, group))
 	}
 
 	filterGroups, err := a.deps.groupService.FindFilterTeamGroupsByAppID(ctx, a.app.ID)
@@ -103,7 +102,7 @@ func (a App) TeamGroups(ctx context.Context) ([]TeamGroup, error) {
 	}
 
 	for _, group := range filterGroups {
-		teamGroups = append(teamGroups, newFilterUserGroup(a.deps, group))
+		teamGroups = append(teamGroups, newFilterGroup(a.deps, group))
 	}
 
 	return teamGroups, nil
@@ -198,7 +197,8 @@ func (m Mutation) InstallAppToTeam(
 	args struct {
 		AppID  graphql.ID
 		TeamID graphql.ID
-	}) (TeamAppInstallation, error) {
+	},
+) (TeamAppInstallation, error) {
 	appID, internalErr := fromGraphQLID(args.AppID)
 	if internalErr != nil {
 		internalErr := errs.NewError(

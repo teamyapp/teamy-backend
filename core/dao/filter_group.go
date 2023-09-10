@@ -9,6 +9,7 @@ import (
 
 type FilterGroup interface {
 	FindFilterGroupsByIDs(ct context.Context, groupID []uint64) ([]entity.FilterGroup, *errs.Error)
+	FindFilterGroupByID(ct context.Context, groupID uint64) (entity.FilterGroup, *errs.Error)
 	CreateFilterGroup(ct context.Context, group entity.FilterGroup) (entity.FilterGroup, *errs.Error)
-	UpdateFilterGroup(ct context.Context, groupID uint64, group entity.FilterGroup) *errs.Error
+	UpdateFilterGroup(ct context.Context, group entity.FilterGroup) *errs.Error
 }

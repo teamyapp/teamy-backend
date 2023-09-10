@@ -56,7 +56,8 @@ func (m Mutation) CreateAppSecret(
 		Input struct {
 			Name string
 		}
-	}) (AppSecret, error) {
+	},
+) (AppSecret, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
 		internalErr := errs.NewError(
@@ -83,7 +84,8 @@ func (m Mutation) UpdateAppSecret(
 		Input    struct {
 			Name string
 		}
-	}) (AppSecret, error) {
+	},
+) (AppSecret, error) {
 	appID, internalErr := fromGraphQLID(args.SecretID)
 	if internalErr != nil {
 		internalErr := errs.NewError(

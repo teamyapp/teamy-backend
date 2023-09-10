@@ -18,7 +18,6 @@ type AppVersion struct {
 
 var _ dao.AppVersion = (*AppVersion)(nil)
 
-// FindAppVersionByAppIDAndVersionNumber implements dao.AppVersion.
 func (*AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
 	panic("unimplemented")
 }

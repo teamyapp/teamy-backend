@@ -13,6 +13,7 @@ type Rollout interface {
 	FindRolloutsByIDs(ct context.Context, rolloutIDs []uint64) ([]entity.Rollout, *errs.Error)
 	CreateRollout(ct context.Context, rollout entity.Rollout) (entity.Rollout, *errs.Error)
 	UpdateRollout(ct context.Context, rollout entity.Rollout) *errs.Error
+	UpdateRolloutWithTx(ct context.Context, tx *transaction.Transaction, rollout entity.Rollout) *errs.Error
 	FindRolloutByIDWithTx(ct context.Context, tx *transaction.Transaction, rolloutID uint64) (entity.Rollout, *errs.Error)
 	DeleteRolloutWithTx(ct context.Context, tx *transaction.Transaction, rolloutID uint64) *errs.Error
 }

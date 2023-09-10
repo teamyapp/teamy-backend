@@ -61,13 +61,35 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	httpClient := newHTTPClient(mapServerURL)
 	app := sqldb.NewApp(logger, factory)
 	appVersion := sqldb.NewAppVersion(logger, factory)
+	appVersionPrice := sqldb.NewAppVersionPrice()
+	appVersionChange := sqldb.NewAppVersionChange()
+	appSecret := sqldb.NewAppSecret()
 	appPackageUploadSession := sqldb.NewAppPackageUploadSession(logger, factory)
-	serviceApp := service.NewApp(logger, httpClient, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, app, appVersion, appPackageUploadSession, team)
+	teamAppInstallation := sqldb.NewTeamAppInstallation()
+	serviceApp := service.NewApp(logger, httpClient, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, app, appVersion, appVersionPrice, appVersionChange, appSecret, appPackageUploadSession, teamAppInstallation, team)
 	invitation := sqldb.NewInvitation(logger, factory)
 	serviceInvitation := service.NewInvitation(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, invitation, teamMember, sprintParticipant, sprint)
 	message := sqldb.NewMessage(logger, factory)
 	serviceThread := service.NewThread(logger, toggles, cloudAPIClientRegistry, realTimeStateSyncer, factory, task, thread, message)
-	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceApp, serviceInvitation, serviceThread)
+	staticGroup := sqldb.NewStaticGroup()
+	filterGroup := sqldb.NewFilterGroup()
+	userGroupRelation := sqldb.NewUserGroupRelation()
+	appGroupRelation := sqldb.NewAppGroupRelation()
+	teamGroupRelation := sqldb.NewTeamGroupRelation()
+	group := service.NewGroup(logger, cloudAPIClientRegistry, factory, realTimeStateSyncer, staticGroup, filterGroup, userGroupRelation, appGroupRelation, teamGroupRelation, user, team, app)
+	rollout := sqldb.NewRollout()
+	rolloutStore := sqldb.NewRolloutStore()
+	rolloutViewer := sqldb.NewRolloutViewer()
+	groupRolloutRelation := sqldb.NewGroupRolloutRelation()
+	appRolloutRelation := sqldb.NewAppRolloutRelation()
+	versionSelectorVersionRelation := sqldb.NewVersionSelectorVersionRelation()
+	timeRangeActivator := sqldb.NewTimeRangeActivator()
+	maxViewersActivator := sqldb.NewMaxViewersActivator()
+	percentageActivator := sqldb.NewPercentageActivator()
+	activatorTypeRelation := sqldb.NewActivatorTypeRelation()
+	versionSelector := sqldb.NewVersionSelector()
+	serviceRollout := service.NewRollout(logger, cloudAPIClientRegistry, factory, realTimeStateSyncer, appGroupRelation, rollout, rolloutStore, rolloutViewer, groupRolloutRelation, appRolloutRelation, versionSelectorVersionRelation, timeRangeActivator, maxViewersActivator, percentageActivator, activatorTypeRelation, versionSelector, appVersion)
+	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceApp, serviceInvitation, serviceThread, group, serviceRollout)
 	resolver := gql2.NewResolver(dependencies)
 	gqlService := api.NewGraphQL(logger, prometheusTracer, resolver)
 	return gqlService, nil
@@ -131,9 +153,9 @@ type CloudWebAPIExternalBaseURL string
 
 type MapServerURL string
 
-var daoSet = wire.NewSet(wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.TeamGroup), new(sqldb.TeamGroup)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)), wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)), wire.Bind(new(dao.App), new(*sqldb.App)), sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintParticipant, sqldb.NewSprint, sqldb.NewSprintTaskRelation, sqldb.NewThread, sqldb.NewTeamMember, sqldb.NewTeamGroup, sqldb.NewUser, sqldb.NewUserFileUploadSession, sqldb.NewTeam, sqldb.NewTeamFileUploadSession, sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewAppPackageUploadSession, sqldb.NewAppVersion, sqldb.NewApp)
+var daoSet = wire.NewSet(wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.TeamGroup), new(sqldb.TeamGroup)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)), wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)), wire.Bind(new(dao.App), new(*sqldb.App)), wire.Bind(new(dao.AppSecret), new(*sqldb.AppSecret)), wire.Bind(new(dao.TeamAppInstallation), new(*sqldb.TeamAppInstallation)), wire.Bind(new(dao.ActivatorTypeRelation), new(*sqldb.ActivatorTypeRelation)), wire.Bind(new(dao.AppGroupRelation), new(*sqldb.AppGroupRelation)), wire.Bind(new(dao.AppRolloutRelation), new(*sqldb.AppRolloutRelation)), wire.Bind(new(dao.AppVersionChange), new(*sqldb.AppVersionChange)), wire.Bind(new(dao.AppVersionPrice), new(*sqldb.AppVersionPrice)), wire.Bind(new(dao.FilterGroup), new(*sqldb.FilterGroup)), wire.Bind(new(dao.GroupRolloutRelation), new(*sqldb.GroupRolloutRelation)), wire.Bind(new(dao.MaxViewersActivator), new(*sqldb.MaxViewersActivator)), wire.Bind(new(dao.PercentageActivator), new(*sqldb.PercentageActivator)), wire.Bind(new(dao.RolloutStore), new(*sqldb.RolloutStore)), wire.Bind(new(dao.RolloutViewer), new(*sqldb.RolloutViewer)), wire.Bind(new(dao.Rollout), new(*sqldb.Rollout)), wire.Bind(new(dao.StaticGroup), new(*sqldb.StaticGroup)), wire.Bind(new(dao.TeamGroupRelation), new(*sqldb.TeamGroupRelation)), wire.Bind(new(dao.TimeRangeActivator), new(*sqldb.TimeRangeActivator)), wire.Bind(new(dao.UserGroupRelation), new(*sqldb.UserGroupRelation)), wire.Bind(new(dao.VersionSelectorVersionRelation), new(*sqldb.VersionSelectorVersionRelation)), wire.Bind(new(dao.VersionSelector), new(*sqldb.VersionSelector)), sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintParticipant, sqldb.NewSprint, sqldb.NewSprintTaskRelation, sqldb.NewThread, sqldb.NewTeamMember, sqldb.NewTeamGroup, sqldb.NewUser, sqldb.NewUserFileUploadSession, sqldb.NewTeam, sqldb.NewTeamFileUploadSession, sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewAppPackageUploadSession, sqldb.NewAppVersion, sqldb.NewApp, sqldb.NewAppSecret, sqldb.NewTeamAppInstallation, sqldb.NewActivatorTypeRelation, sqldb.NewAppGroupRelation, sqldb.NewAppRolloutRelation, sqldb.NewAppVersionChange, sqldb.NewAppVersionPrice, sqldb.NewFilterGroup, sqldb.NewGroupRolloutRelation, sqldb.NewMaxViewersActivator, sqldb.NewPercentageActivator, sqldb.NewRolloutStore, sqldb.NewRolloutViewer, sqldb.NewRollout, sqldb.NewStaticGroup, sqldb.NewTeamGroupRelation, sqldb.NewTimeRangeActivator, sqldb.NewUserGroupRelation, sqldb.NewVersionSelectorVersionRelation, sqldb.NewVersionSelector)
 
-var serviceSet = wire.NewSet(wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)), newHTTPClient, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp)
+var serviceSet = wire.NewSet(wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)), newHTTPClient, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp, service.NewGroup, service.NewRollout)
 
 func newHTTPClient(
 	mapServerURL MapServerURL,

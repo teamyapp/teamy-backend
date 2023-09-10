@@ -10,24 +10,29 @@ const (
 	ActivatorTypePercentage ActivatorType = "PERCENTAGE"
 )
 
-type TimeRangeActivator struct {
+type Activator struct {
 	ID        uint64
-	StartAt   time.Time
-	EndAt     time.Time
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 }
 
+type ActivatorTypeRelation struct {
+	ID            uint64
+	ActivatorType ActivatorType
+}
+
+type TimeRangeActivator struct {
+	Activator
+	StartAt *time.Time
+	EndAt   *time.Time
+}
+
 type MaxViewersActivator struct {
-	ID         uint64
+	Activator
 	MaxViewers int
-	CreatedAt  time.Time
-	UpdatedAt  *time.Time
 }
 
 type PercentageActivator struct {
-	ID         uint64
+	Activator
 	Percentage int
-	CreatedAt  time.Time
-	UpdatedAt  *time.Time
 }

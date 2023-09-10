@@ -1,33 +1,35 @@
 package gql
 
 import (
+	"context"
+
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Activator interface {
-	ID() uint64
+	ID() graphql.ID
 	CreatedAt() graphql.Time
 	UpdatedAt() *graphql.Time
 }
 
 type TimeRangeActivator struct {
-	deps               *Dependencies
 	timeRangeActivator entity.TimeRangeActivator
 }
 
 var _ Activator = (*TimeRangeActivator)(nil)
 
-func (t TimeRangeActivator) ID() uint64 {
-	return t.timeRangeActivator.ID
+func (t TimeRangeActivator) ID() graphql.ID {
+	return toGraphQLID(t.timeRangeActivator.ID)
 }
 
-func (t TimeRangeActivator) StartAt() graphql.Time {
-	return toGraphQLTime(t.timeRangeActivator.StartAt)
+func (t TimeRangeActivator) StartAt() *graphql.Time {
+	return toGraphQLTimePtr(t.timeRangeActivator.StartAt)
 }
 
-func (t TimeRangeActivator) EndAt() graphql.Time {
-	return toGraphQLTime(t.timeRangeActivator.EndAt)
+func (t TimeRangeActivator) EndAt() *graphql.Time {
+	return toGraphQLTimePtr(t.timeRangeActivator.EndAt)
 }
 
 func (t TimeRangeActivator) CreatedAt() graphql.Time {
@@ -39,21 +41,19 @@ func (t TimeRangeActivator) UpdatedAt() *graphql.Time {
 }
 
 func newTimeRangeActivator(
-	deps *Dependencies,
 	timeRangeActivator entity.TimeRangeActivator,
 ) TimeRangeActivator {
-	return TimeRangeActivator{deps: deps, timeRangeActivator: timeRangeActivator}
+	return TimeRangeActivator{timeRangeActivator: timeRangeActivator}
 }
 
 type MaxViewersActivator struct {
-	deps                *Dependencies
 	maxViewersActivator entity.MaxViewersActivator
 }
 
 var _ Activator = (*MaxViewersActivator)(nil)
 
-func (m MaxViewersActivator) ID() uint64 {
-	return m.maxViewersActivator.ID
+func (m MaxViewersActivator) ID() graphql.ID {
+	return toGraphQLID(m.maxViewersActivator.ID)
 }
 
 func (m MaxViewersActivator) MaxViewers() int32 {
@@ -69,21 +69,19 @@ func (m MaxViewersActivator) UpdatedAt() *graphql.Time {
 }
 
 func newMaxViewersActivator(
-	deps *Dependencies,
 	maxViewersActivator entity.MaxViewersActivator,
 ) MaxViewersActivator {
-	return MaxViewersActivator{deps: deps, maxViewersActivator: maxViewersActivator}
+	return MaxViewersActivator{maxViewersActivator: maxViewersActivator}
 }
 
 type PercentageActivator struct {
-	deps                *Dependencies
 	percentageActivator entity.PercentageActivator
 }
 
 var _ Activator = (*PercentageActivator)(nil)
 
-func (p PercentageActivator) ID() uint64 {
-	return p.percentageActivator.ID
+func (p PercentageActivator) ID() graphql.ID {
+	return toGraphQLID(p.percentageActivator.ID)
 }
 
 func (p PercentageActivator) Percentage() int32 {
@@ -99,8 +97,66 @@ func (p PercentageActivator) UpdatedAt() *graphql.Time {
 }
 
 func newPercentageActivator(
-	deps *Dependencies,
 	percentageActivator entity.PercentageActivator,
 ) PercentageActivator {
-	return PercentageActivator{deps: deps, percentageActivator: percentageActivator}
+	return PercentageActivator{percentageActivator: percentageActivator}
+}
+
+func (m Mutation) CreateTimeRangeActivator(
+	ctx context.Context,
+	args struct {
+		Input struct {
+			StartAt *graphql.Time
+			EndAt   *graphql.Time
+		}
+	},
+) (TimeRangeActivator, error) {
+	startAt := fromGraphQLTimePtr(args.Input.StartAt)
+	endAt := fromGraphQLTimePtr(args.Input.EndAt)
+
+	timeRangeActivator, err := m.deps.rolloutService.CreateTimeRangeActivator(ctx, startAt, endAt)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return TimeRangeActivator{}, errs.ToResolverErr(err)
+	}
+
+	return newTimeRangeActivator(timeRangeActivator), nil
+}
+
+func (m Mutation) CreateMaxViewersActivator(
+	ctx context.Context,
+	args struct {
+		Input struct {
+			MaxViewers int32
+		}
+	},
+) (MaxViewersActivator, error) {
+	maxViewers := int(args.Input.MaxViewers)
+
+	maxViewersActivator, err := m.deps.rolloutService.CreateMaxViewersActivator(ctx, maxViewers)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return MaxViewersActivator{}, errs.ToResolverErr(err)
+	}
+
+	return newMaxViewersActivator(maxViewersActivator), nil
+}
+
+func (m Mutation) CreatePercentageActivator(
+	ctx context.Context,
+	args struct {
+		Input struct {
+			Percentage int32
+		}
+	},
+) (PercentageActivator, error) {
+	percentage := int(args.Input.Percentage)
+
+	percentageActivator, err := m.deps.rolloutService.CreatePercentageActivator(ctx, percentage)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return PercentageActivator{}, errs.ToResolverErr(err)
+	}
+
+	return newPercentageActivator(percentageActivator), nil
 }

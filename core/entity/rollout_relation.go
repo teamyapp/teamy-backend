@@ -13,11 +13,6 @@ type AppRolloutRelation struct {
 	Type      AppRolloutRelationType
 }
 
-type RolloutVersionRelation struct {
-	RolloutID     uint64
-	VersionNumber int
-}
-
 type GroupRolloutRelation struct {
 	GroupID    uint64
 	RolloutID  uint64

@@ -51,7 +51,7 @@ func (a AppVersion) CreatedBy(ctx context.Context) (User, error) {
 }
 
 func (a AppVersion) Prices(ctx context.Context) ([]Money, error) {
-	prices, err := a.deps.appService.FindAppVersionPricesByAppVersionID(ctx, a.appVersion.AppID, a.appVersion.Number)
+	prices, err := a.deps.appService.FindPricesByAppVersionID(ctx, a.appVersion.AppID, a.appVersion.Number)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
@@ -86,14 +86,15 @@ func (m Mutation) CreateAppVersion(
 		AppID       graphql.ID
 		AppName     string
 		Description string
-	}) (AppVersion, error) {
+	},
+) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
 			argErr.Error(),
 		)
-		m.deps.logger.Error(internalErr)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -119,13 +120,13 @@ func (m Mutation) CreateAppPackageUploadSession(
 			errs.InvalidArgument,
 			argErr.Error(),
 		)
-		m.deps.logger.Error(internalErr)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return "", errs.ToResolverErr(internalErr)
 	}
 
 	fileUploadSessionID, err := m.deps.appService.CreateAppPackageFileUploadSession(ct, appID, int(args.VersionNumber))
 	if err != nil {
-		m.deps.logger.Error(err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return "", errs.ToResolverErr(err)
 	}
 
@@ -146,6 +147,7 @@ func (m Mutation) FinishAppPackageUploadSession(
 			errs.InvalidArgument,
 			argErr.Error(),
 		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
@@ -155,12 +157,13 @@ func (m Mutation) FinishAppPackageUploadSession(
 			errs.InvalidArgument,
 			argErr.Error(),
 		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	appVersion, err := m.deps.appService.FinishAppPackageFileUploadSession(ct, appID, int(args.VersionNumber), fileUploadSessionID)
 	if err != nil {
-		m.deps.logger.Error(err)
+		m.deps.logger.ErrorWithContext(ct, err)
 		return AppVersion{}, errs.ToResolverErr(err)
 	}
 
@@ -179,13 +182,13 @@ func (m Mutation) DeleteAppVersion(
 			errs.InvalidArgument,
 			argErr.Error(),
 		)
-		m.deps.logger.Error(internalErr)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
 	appVersion, err := m.deps.appService.DeleteAppVersion(ctx, appID, int(args.VersionNumber))
 	if err != nil {
-		m.deps.logger.Error(err)
+		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppVersion{}, errs.ToResolverErr(err)
 	}
 

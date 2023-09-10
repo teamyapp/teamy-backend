@@ -46,7 +46,7 @@ type App struct {
 	appDao                     dao.App
 	appVersionDao              dao.AppVersion
 	appVersionPriceDao         dao.AppVersionPrice
-	appVersionChangeDaO        dao.AppVersionChange
+	appVersionChangeDao        dao.AppVersionChange
 	appSecretDao               dao.AppSecret
 	appPackageUploadSessionDao dao.AppPackageUploadSession
 	teamAppInstallationDao     dao.TeamAppInstallation
@@ -66,8 +66,8 @@ func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Er
 	return a.appDao.FindAppByID(ct, appID)
 }
 
-func (a App) FindAppSecretsByAppID(ct context.Context, appID uint64) ([]entity.AppSecret, *errs.Error) {
-	return a.appSecretDao.FindAppSecretsByAppID(ct, appID)
+func (a App) FindSecretsByAppID(ct context.Context, appID uint64) ([]entity.AppSecret, *errs.Error) {
+	return a.appSecretDao.FindSecretsByAppID(ct, appID)
 }
 
 func (a App) CreateAppSecret(ct context.Context, appID uint64, name string) (entity.AppSecret, *errs.Error) {
@@ -111,11 +111,7 @@ func (a App) UpdateAppSecret(ct context.Context, appID uint64, appSecretID uint6
 		return a.appSecretDao.UpdateAppSecretWithTx(ct, tx, appSecretID, appSecret)
 	})
 
-	if err != nil {
-		return entity.AppSecret{}, err
-	}
-
-	return appSecret, nil
+	return appSecret, err
 }
 
 func (a App) DeleteAppSecret(ct context.Context, appSecretID uint64) (entity.AppSecret, *errs.Error) {
@@ -136,11 +132,7 @@ func (a App) DeleteAppSecret(ct context.Context, appSecretID uint64) (entity.App
 		return a.appSecretDao.DeleteAppSecretWithTx(ct, tx, appSecretID)
 	})
 
-	if err != nil {
-		return entity.AppSecret{}, err
-	}
-
-	return appSecret, nil
+	return appSecret, err
 }
 
 func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (entity.TeamAppInstallation, *errs.Error) {
@@ -155,7 +147,6 @@ func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (
 		AppID:           appID,
 		InstalledTeamID: teamID,
 	}
-
 	return a.teamAppInstallationDao.CreateTeamAppInstallation(ct, teamAppInstallation)
 }
 
@@ -176,11 +167,7 @@ func (a App) UninstallAppFromTeam(ct context.Context, appInstallationID uint64) 
 		return a.teamAppInstallationDao.DeleteTeamAppInstallationByIDWithTx(ct, tx, appInstallationID)
 	})
 
-	if err != nil {
-		return entity.TeamAppInstallation{}, err
-	}
-
-	return teamAppInstallation, nil
+	return teamAppInstallation, err
 }
 
 func (a App) FindTeamAppInstallationsByAppID(ct context.Context, appID uint64) ([]entity.TeamAppInstallation, *errs.Error) {
@@ -558,12 +545,12 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 	return av, nil
 }
 
-func (a App) FindAppVersionPricesByAppVersionID(ct context.Context, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
+func (a App) FindPricesByAppVersionID(ct context.Context, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
 	return a.appVersionPriceDao.FindAppVersionPricesByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
 func (a App) FindAppVersionChangesByAppVersionID(ct context.Context, appID uint64, versionNumber int) ([]string, *errs.Error) {
-	return a.appVersionChangeDaO.FindAppVersionChangesByAppIDAndVersionNumber(ct, appID, versionNumber)
+	return a.appVersionChangeDao.FindAppVersionChangesByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
 func (a App) uploadAppPackageFiles(
@@ -625,7 +612,7 @@ func NewApp(
 	appDao dao.App,
 	appVersionDao dao.AppVersion,
 	appVersionPriceDao dao.AppVersionPrice,
-	appVersionChangeDaO dao.AppVersionChange,
+	appVersionChangeDao dao.AppVersionChange,
 	appSecretDao dao.AppSecret,
 	appPackageUploadSessionDao dao.AppPackageUploadSession,
 	teamAppInstallationDao dao.TeamAppInstallation,
@@ -642,7 +629,7 @@ func NewApp(
 		appDao:                     appDao,
 		appVersionDao:              appVersionDao,
 		appVersionPriceDao:         appVersionPriceDao,
-		appVersionChangeDaO:        appVersionChangeDaO,
+		appVersionChangeDao:        appVersionChangeDao,
 		appSecretDao:               appSecretDao,
 		appPackageUploadSessionDao: appPackageUploadSessionDao,
 		teamAppInstallationDao:     teamAppInstallationDao,
