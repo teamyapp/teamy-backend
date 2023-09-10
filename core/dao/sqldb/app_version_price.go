@@ -10,12 +10,11 @@ import (
 
 type AppVersionPrice struct{}
 
-// FindAppVersionPricesByAppIDAndVersionNumber implements dao.AppVersionPrice.
+var _ dao.AppVersionPrice = (*AppVersionPrice)(nil)
+
 func (*AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
 	panic("unimplemented")
 }
-
-var _ dao.AppVersionPrice = (*AppVersionPrice)(nil)
 
 func NewAppVersionPrice() *AppVersionPrice {
 	return &AppVersionPrice{}

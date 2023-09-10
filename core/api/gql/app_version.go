@@ -100,7 +100,7 @@ func (m Mutation) CreateAppVersion(
 
 	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID, args.AppName, args.Description)
 	if err != nil {
-		m.deps.logger.Error(err)
+		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppVersion{}, errs.ToResolverErr(err)
 	}
 
@@ -175,7 +175,8 @@ func (m Mutation) DeleteAppVersion(
 	args struct {
 		AppID         graphql.ID
 		VersionNumber int32
-	}) (AppVersion, error) {
+	},
+) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
 	if argErr != nil {
 		internalErr := errs.NewError(

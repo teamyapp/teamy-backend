@@ -31,7 +31,6 @@ func (s StaticUserGroup) Name(ctx context.Context) string {
 
 func (s StaticUserGroup) Users(ctx context.Context) ([]User, error) {
 	users, err := s.deps.groupService.FindUsersByGroupID(ctx, s.group.ID)
-
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
@@ -106,11 +105,11 @@ func (m Mutation) CreateStaticUserGroup(
 		userIDs = append(userIDs, id)
 	}
 
-	createUserStaticGroupInput := service.CreateUserStaticGroupInput{
+	createStaticUserGroupInput := service.CreateStaticUserGroupInput{
 		Name:    args.Input.Name,
 		UserIDs: userIDs,
 	}
-	group, err := m.deps.groupService.CreateStaticUserGroup(ctx, appID, createUserStaticGroupInput)
+	group, err := m.deps.groupService.CreateStaticUserGroup(ctx, appID, createStaticUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticUserGroup{}
@@ -150,15 +149,15 @@ func (m Mutation) UpdateStaticUserGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return StaticUserGroup{}, errs.ToResolverErr(internalErr)
 		}
+
 		userIDs = append(userIDs, id)
 	}
 
-	updateUserStaticInput := service.UpdateUserStaticGroupInput{
+	updateStatcUserGroupInput := service.UpdateStaticUserGroupInput{
 		Name:    args.Input.Name,
 		UserIDs: userIDs,
 	}
-
-	group, err := m.deps.groupService.UpdateStaticUserGroup(ctx, groupID, updateUserStaticInput)
+	group, err := m.deps.groupService.UpdateStaticUserGroup(ctx, groupID, updateStatcUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticUserGroup{}, errs.ToResolverErr(err)

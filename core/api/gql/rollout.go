@@ -76,7 +76,7 @@ func (r Rollout) Activator(ctx context.Context) (Activator, error) {
 	}
 
 	err = errs.NewError(
-		errs.NotReady, fmt.Sprintf("activator type: %v is not ready", activatorType),
+		errs.NotReady, fmt.Sprintf("activator type: %v is not supported", activatorType),
 	)
 	return nil, errs.ToResolverErr(err)
 }
@@ -113,7 +113,7 @@ func (m Mutation) CreateAppRollout(
 		return Rollout{}, errs.ToResolverErr(internalErr)
 	}
 
-	selectorID, internalErr := fromGraphQLID(args.Input.VersionSelectorID)
+	versionSelectorID, internalErr := fromGraphQLID(args.Input.VersionSelectorID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
@@ -124,7 +124,7 @@ func (m Mutation) CreateAppRollout(
 	}
 
 	createAppRolloutInput := service.CreateRolloutInput{
-		VersionSelectorID: selectorID,
+		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,
 	}
@@ -174,7 +174,7 @@ func (m Mutation) UpdateRollout(
 		return Rollout{}, errs.ToResolverErr(internalErr)
 	}
 
-	selectorID, internalErr := fromGraphQLID(args.Input.VersionSelectorID)
+	versionSelectorID, internalErr := fromGraphQLID(args.Input.VersionSelectorID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
@@ -185,7 +185,7 @@ func (m Mutation) UpdateRollout(
 	}
 
 	updateRolloutInput := service.UpdateRolloutInput{
-		VersionSelectorID: selectorID,
+		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,
 	}

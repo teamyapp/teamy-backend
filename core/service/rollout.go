@@ -297,7 +297,6 @@ func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType 
 		ID:   genSelectorIDRes.UniqueNumber,
 		Type: versionSelectorType,
 	}
-
 	versionSelector, err := r.versionSelectorDao.CreateVersionSelector(ct, versionSelector)
 	if err != nil {
 		return entity.VersionSelector{}, err

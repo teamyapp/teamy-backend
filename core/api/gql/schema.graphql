@@ -104,7 +104,8 @@ type Mutation {
 	createStaticTeamGroup(appId: ID!, input: CreateStaticTeamGroupInput!): StaticTeamGroup!
 	updateStaticTeamGroup(groupId: ID!,input: UpdateStaticTeamGroupInput!): StaticTeamGroup!
 	createFilterTeamGroup(appId: ID!, input: CreateFilterTeamGroupInput!): FilterGroup!
-	updateFilterGroup(groupId: ID!, input: UpdateFilterUserGroupInput!): FilterGroup!
+	
+	updateFilterGroup(groupId: ID!, input: UpdateFilterGroupInput!): FilterGroup!
 	deleteGroup(groupId: ID!): Group!
 
 	createTimeRangeActivator(input: CreateTimeRangeActivatorInput!): TimeRangeActivator!
@@ -510,7 +511,7 @@ input CreateFilterUserGroupInput {
 	filter: String!
 }
 
-input UpdateFilterUserGroupInput {
+input UpdateFilterGroupInput {
 	name: String!
 	filter: String!
 }
@@ -526,11 +527,6 @@ input UpdateStaticTeamGroupInput {
 }
 
 input CreateFilterTeamGroupInput {
-	name: String!
-	filter: String!
-}
-
-input UpdateFilterTeamGroupInput {
 	name: String!
 	filter: String!
 }

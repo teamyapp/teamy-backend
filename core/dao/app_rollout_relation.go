@@ -8,6 +8,6 @@ import (
 )
 
 type AppRolloutRelation interface {
-	CreateAppRolloutRelation(ct context.Context, appRolloutRelation entity.AppRolloutRelation) (entity.AppRolloutRelation, *errs.Error)
 	FindRolloutIDsByAppIDAndRelationType(ct context.Context, appID uint64, rolloutType entity.AppRolloutRelationType) ([]uint64, *errs.Error)
+	CreateAppRolloutRelation(ct context.Context, appRolloutRelation entity.AppRolloutRelation) (entity.AppRolloutRelation, *errs.Error)
 }

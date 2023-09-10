@@ -10,12 +10,11 @@ import (
 type AppVersionChange struct {
 }
 
-// FindAppVersionChangesByAppIDAndVersionNumber implements dao.AppVersionChange.
+var _ dao.AppVersionChange = (*AppVersionChange)(nil)
+
 func (*AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]string, *errs.Error) {
 	panic("unimplemented")
 }
-
-var _ dao.AppVersionChange = (*AppVersionChange)(nil)
 
 func NewAppVersionChange() *AppVersionChange {
 	return &AppVersionChange{}

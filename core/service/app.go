@@ -62,6 +62,15 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
+type CreateAppSecretInput struct {
+	Name string
+}
+
+type UpdateAppSecretInput struct {
+	AppSecretID uint64
+	Name        string
+}
+
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
 	return a.appDao.FindAppByID(ct, appID)
 }
@@ -70,7 +79,7 @@ func (a App) FindSecretsByAppID(ct context.Context, appID uint64) ([]entity.AppS
 	return a.appSecretDao.FindSecretsByAppID(ct, appID)
 }
 
-func (a App) CreateAppSecret(ct context.Context, appID uint64, name string) (entity.AppSecret, *errs.Error) {
+func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSecretInput) (entity.AppSecret, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.AppSecret{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -84,7 +93,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, name string) (ent
 
 	appSecret := entity.AppSecret{
 		ID:            genAppSecretIDRes.UniqueNumber,
-		Name:          name,
+		Name:          input.Name,
 		AppID:         appID,
 		AddedAt:       time.Now().UTC(),
 		AddedByUserID: userID,
@@ -92,7 +101,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, name string) (ent
 	return a.appSecretDao.CreateAppSecret(ct, appSecret)
 }
 
-func (a App) UpdateAppSecret(ct context.Context, appID uint64, appSecretID uint64, name string) (entity.AppSecret, *errs.Error) {
+func (a App) UpdateAppSecret(ct context.Context, appID uint64, input UpdateAppSecretInput) (entity.AppSecret, *errs.Error) {
 	var appSecret entity.AppSecret
 	txCtx := TransactionsContext{
 		logger:             a.logger,
@@ -102,13 +111,13 @@ func (a App) UpdateAppSecret(ct context.Context, appID uint64, appSecretID uint6
 	}
 	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, appSecretID)
+		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, input.AppSecretID)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		appSecret.Name = name
-		return a.appSecretDao.UpdateAppSecretWithTx(ct, tx, appSecretID, appSecret)
+		appSecret.Name = input.Name
+		return a.appSecretDao.UpdateAppSecretWithTx(ct, tx, input.AppSecretID, appSecret)
 	})
 
 	return appSecret, err

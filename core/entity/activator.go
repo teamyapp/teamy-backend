@@ -16,9 +16,11 @@ type Activator struct {
 	UpdatedAt *time.Time
 }
 
-type ActivatorTypeRelation struct {
-	ID            uint64
-	ActivatorType ActivatorType
+type ActivatorUnion struct {
+	Type                ActivatorType
+	TimeRangeActivator  TimeRangeActivator
+	MaxViewersActivator MaxViewersActivator
+	PercentageActivator PercentageActivator
 }
 
 type TimeRangeActivator struct {
@@ -35,4 +37,9 @@ type MaxViewersActivator struct {
 type PercentageActivator struct {
 	Activator
 	Percentage int
+}
+
+type ActivatorTypeRelation struct {
+	ActivatorID   uint64
+	ActivatorType ActivatorType
 }

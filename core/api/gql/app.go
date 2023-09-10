@@ -232,7 +232,8 @@ func (m Mutation) UninstallAppFromTeam(
 	ctx context.Context,
 	args struct {
 		InstallationID graphql.ID
-	}) (TeamAppInstallation, error) {
+	},
+) (TeamAppInstallation, error) {
 	teamAppInstallationID, internalErr := fromGraphQLID(args.InstallationID)
 	if internalErr != nil {
 		internalErr := errs.NewError(

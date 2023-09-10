@@ -106,11 +106,11 @@ func (m Mutation) CreateStaticTeamGroup(
 		teamIDs = append(teamIDs, teamID)
 	}
 
-	createTeamStaticGroupInput := service.CreateTeamStaticGroupInput{
+	createStaticTeamGroupInput := service.CreateStaticTeamGroupInput{
 		Name:    args.Input.Name,
 		TeamIDs: teamIDs,
 	}
-	group, err := m.deps.groupService.CreateStaticTeamGroup(ctx, appID, createTeamStaticGroupInput)
+	group, err := m.deps.groupService.CreateStaticTeamGroup(ctx, appID, createStaticTeamGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticTeamGroup{}, errs.ToResolverErr(err)
@@ -154,11 +154,11 @@ func (m Mutation) UpdateStaticTeamGroup(
 		teamIDs = append(teamIDs, teamID)
 	}
 
-	updateTeamStaticGroupInput := service.UpdateTeamStaticGroupInput{
+	updateStaticTeamGroupInput := service.UpdateStaticTeamGroupInput{
 		Name:    args.Input.Name,
 		TeamIDs: teamIDs,
 	}
-	group, err := m.deps.groupService.UpdateStaticTeamGroup(ctx, groupID, updateTeamStaticGroupInput)
+	group, err := m.deps.groupService.UpdateStaticTeamGroup(ctx, groupID, updateStaticTeamGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticTeamGroup{}, errs.ToResolverErr(err)

@@ -6,6 +6,7 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type AppSecret struct {
@@ -68,7 +69,10 @@ func (m Mutation) CreateAppSecret(
 		return AppSecret{}, errs.ToResolverErr(internalErr)
 	}
 
-	appSecret, err := m.deps.appService.CreateAppSecret(ctx, appID, args.Input.Name)
+	createAppSecretInput := service.CreateAppSecretInput{
+		Name: args.Input.Name,
+	}
+	appSecret, err := m.deps.appService.CreateAppSecret(ctx, appID, createAppSecretInput)
 	if err != nil {
 		m.deps.logger.Error(err)
 		return AppSecret{}, errs.ToResolverErr(err)
@@ -106,7 +110,11 @@ func (m Mutation) UpdateAppSecret(
 		return AppSecret{}, errs.ToResolverErr(internalErr)
 	}
 
-	appSecret, err := m.deps.appService.UpdateAppSecret(ctx, appID, secretID, args.Input.Name)
+	updateAppSecretInput := service.UpdateAppSecretInput{
+		AppSecretID: secretID,
+		Name:        args.Input.Name,
+	}
+	appSecret, err := m.deps.appService.UpdateAppSecret(ctx, appID, updateAppSecretInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppSecret{}, errs.ToResolverErr(err)

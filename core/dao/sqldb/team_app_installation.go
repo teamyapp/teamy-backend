@@ -11,27 +11,22 @@ import (
 
 type TeamAppInstallation struct{}
 
-// CreateTeamAppInstallation implements dao.TeamAppInstallation.
-func (*TeamAppInstallation) CreateTeamAppInstallation(ct context.Context, teamAppInstallation entity.TeamAppInstallation) (entity.TeamAppInstallation, *errs.Error) {
-	panic("unimplemented")
-}
+var _ dao.TeamAppInstallation = (*TeamAppInstallation)(nil)
 
-// DeleteTeamAppInstallationByIDWithTx implements dao.TeamAppInstallation.
-func (*TeamAppInstallation) DeleteTeamAppInstallationByIDWithTx(ct context.Context, tx *transaction.Transaction, appInstallationID uint64) *errs.Error {
-	panic("unimplemented")
-}
-
-// FindTeamAppInstallationByIDWithTx implements dao.TeamAppInstallation.
 func (*TeamAppInstallation) FindTeamAppInstallationByIDWithTx(ct context.Context, tx *transaction.Transaction, appInstallationID uint64) (entity.TeamAppInstallation, *errs.Error) {
 	panic("unimplemented")
 }
 
-// FindTeamAppInstallationsByAppID implements dao.TeamAppInstallation.
 func (*TeamAppInstallation) FindTeamAppInstallationsByAppID(ct context.Context, appID uint64) ([]entity.TeamAppInstallation, *errs.Error) {
 	panic("unimplemented")
 }
+func (*TeamAppInstallation) CreateTeamAppInstallation(ct context.Context, teamAppInstallation entity.TeamAppInstallation) (entity.TeamAppInstallation, *errs.Error) {
+	panic("unimplemented")
+}
 
-var _ dao.TeamAppInstallation = (*TeamAppInstallation)(nil)
+func (*TeamAppInstallation) DeleteTeamAppInstallationByIDWithTx(ct context.Context, tx *transaction.Transaction, appInstallationID uint64) *errs.Error {
+	panic("unimplemented")
+}
 
 func NewTeamAppInstallation() *TeamAppInstallation {
 	return &TeamAppInstallation{}

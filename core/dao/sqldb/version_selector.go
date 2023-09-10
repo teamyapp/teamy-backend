@@ -10,17 +10,15 @@ import (
 
 type VersionSelector struct{}
 
-// CreateVersionSelector implements dao.VersionSelector.
-func (*VersionSelector) CreateVersionSelector(ct context.Context, versionSelector entity.VersionSelector) (entity.VersionSelector, *errs.Error) {
-	panic("unimplemented")
-}
+var _ dao.VersionSelector = (*VersionSelector)(nil)
 
-// FindVersionSelectorByID implements dao.VersionSelector.
 func (*VersionSelector) FindVersionSelectorByID(ct context.Context, selectorID uint64) (entity.VersionSelector, *errs.Error) {
 	panic("unimplemented")
 }
 
-var _ dao.VersionSelector = (*VersionSelector)(nil)
+func (*VersionSelector) CreateVersionSelector(ct context.Context, versionSelector entity.VersionSelector) (entity.VersionSelector, *errs.Error) {
+	panic("unimplemented")
+}
 
 func NewVersionSelector() *VersionSelector {
 	return &VersionSelector{}

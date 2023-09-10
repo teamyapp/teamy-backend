@@ -10,17 +10,14 @@ import (
 
 type VersionSelectorVersionRelation struct{}
 
-// CreateVersionSelectorVersionRelation implements dao.VersionSelectorVersionRelation.
-func (*VersionSelectorVersionRelation) CreateVersionSelectorVersionRelation(ct context.Context, versionSelectorVersionRelation entity.VersionSelectorVersionRelation) (dao.VersionSelectorVersionRelation, *errs.Error) {
-	panic("unimplemented")
-}
+var _ dao.VersionSelectorVersionRelation = (*VersionSelectorVersionRelation)(nil)
 
-// FindVersionNumbersBySelectorID implements dao.VersionSelectorVersionRelation.
 func (*VersionSelectorVersionRelation) FindVersionNumbersBySelectorID(ct context.Context, selectorID uint64) ([]int, *errs.Error) {
 	panic("unimplemented")
 }
-
-var _ dao.VersionSelectorVersionRelation = (*VersionSelectorVersionRelation)(nil)
+func (*VersionSelectorVersionRelation) CreateVersionSelectorVersionRelation(ct context.Context, versionSelectorVersionRelation entity.VersionSelectorVersionRelation) (dao.VersionSelectorVersionRelation, *errs.Error) {
+	panic("unimplemented")
+}
 
 func NewVersionSelectorVersionRelation() *VersionSelectorVersionRelation {
 	return &VersionSelectorVersionRelation{}

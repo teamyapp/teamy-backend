@@ -15,32 +15,31 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
+type CreateFilterGroupInput struct {
+	Name   string
+	Filter string
+}
 type UpdateFilterGroupInput struct {
 	Name   string
 	Filter string
 }
 
-type CreateFilterGroupInput struct {
-	Name   string
-	Filter string
-}
-
-type CreateTeamStaticGroupInput struct {
+type CreateStaticTeamGroupInput struct {
 	Name    string
 	TeamIDs []uint64
 }
 
-type UpdateTeamStaticGroupInput struct {
+type UpdateStaticTeamGroupInput struct {
 	Name    string
 	TeamIDs []uint64
 }
 
-type CreateUserStaticGroupInput struct {
+type CreateStaticUserGroupInput struct {
 	Name    string
 	UserIDs []uint64
 }
 
-type UpdateUserStaticGroupInput struct {
+type UpdateStaticUserGroupInput struct {
 	Name    string
 	UserIDs []uint64
 }
@@ -63,7 +62,7 @@ type Group struct {
 func (g *Group) CreateStaticUserGroup(
 	ct context.Context,
 	appID uint64,
-	input CreateUserStaticGroupInput,
+	input CreateStaticUserGroupInput,
 ) (entity.StaticGroup, *errs.Error) {
 	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
 	genGroupIDRes, rpcErr := g.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
@@ -81,6 +80,8 @@ func (g *Group) CreateStaticUserGroup(
 			CreatedAt: now,
 		},
 	}
+
+	//TODO: add transaction
 	group, err := g.staticGroupDao.CreateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
@@ -112,7 +113,7 @@ func (g *Group) CreateStaticUserGroup(
 func (g *Group) UpdateStaticUserGroup(
 	ct context.Context,
 	groupID uint64,
-	input UpdateUserStaticGroupInput,
+	input UpdateStaticUserGroupInput,
 ) (entity.StaticGroup, *errs.Error) {
 	now := time.Now().UTC()
 	group := entity.StaticGroup{
@@ -124,6 +125,7 @@ func (g *Group) UpdateStaticUserGroup(
 		},
 	}
 
+	//TODO: add transaction
 	err := g.staticGroupDao.UpdateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
@@ -144,7 +146,12 @@ func (g *Group) UpdateStaticUserGroup(
 		userIDsSet[userID] = true
 	}
 
-	detected := delta.DetectMapDelta(currentUserIDsSet, userIDsSet, delta.DetectValueDelta[bool], delta.ToValueDelta[bool])
+	detected := delta.DetectMapDelta(
+		currentUserIDsSet,
+		userIDsSet,
+		delta.DetectValueDelta[bool],
+		delta.ToValueDelta[bool],
+	)
 	for userID, detectedValue := range detected.Value {
 		switch detectedValue.KeyStatus {
 		case delta.AddedStatus:
@@ -166,7 +173,11 @@ func (g *Group) UpdateStaticUserGroup(
 	return group, nil
 }
 
-func (g *Group) CreateFilterUserGroup(ct context.Context, appID uint64, input CreateFilterGroupInput) (entity.FilterGroup, *errs.Error) {
+func (g *Group) CreateFilterUserGroup(
+	ct context.Context,
+	appID uint64,
+	input CreateFilterGroupInput,
+) (entity.FilterGroup, *errs.Error) {
 	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
 	genGroupIDRes, rpcErr := g.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
 	if rpcErr != nil {
@@ -184,6 +195,8 @@ func (g *Group) CreateFilterUserGroup(ct context.Context, appID uint64, input Cr
 		Filter: input.Filter,
 		Count:  0,
 	}
+
+	//TODO: add transaction
 	filterGroup, err := g.filterGroupDao.CreateFilterGroup(ct, filterGroup)
 	if err != nil {
 		return entity.FilterGroup{}, err
@@ -217,7 +230,7 @@ func (g *Group) UpdateFilterGroup(ct context.Context, groupID uint64, input Upda
 func (g *Group) CreateStaticTeamGroup(
 	ct context.Context,
 	appID uint64,
-	input CreateTeamStaticGroupInput,
+	input CreateStaticTeamGroupInput,
 ) (entity.StaticGroup, *errs.Error) {
 	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
 	genGroupIDRes, rpcErr := g.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
@@ -234,6 +247,8 @@ func (g *Group) CreateStaticTeamGroup(
 			CreatedAt: now,
 		},
 	}
+
+	//TODO: add transaction
 	group, err := g.staticGroupDao.CreateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
@@ -265,7 +280,7 @@ func (g *Group) CreateStaticTeamGroup(
 func (g *Group) UpdateStaticTeamGroup(
 	ct context.Context,
 	groupID uint64,
-	input UpdateTeamStaticGroupInput,
+	input UpdateStaticTeamGroupInput,
 ) (entity.StaticGroup, *errs.Error) {
 	now := time.Now().UTC()
 	group := entity.StaticGroup{
@@ -276,6 +291,8 @@ func (g *Group) UpdateStaticTeamGroup(
 			CreatedAt: now,
 		},
 	}
+
+	//TODO: add transaction
 	err := g.staticGroupDao.UpdateStaticGroup(ct, group)
 	if err != nil {
 		return entity.StaticGroup{}, err
@@ -296,7 +313,12 @@ func (g *Group) UpdateStaticTeamGroup(
 		teamIDsSet[teamID] = true
 	}
 
-	detected := delta.DetectMapDelta(currentTeamIDsSet, teamIDsSet, delta.DetectValueDelta[bool], delta.ToValueDelta[bool])
+	detected := delta.DetectMapDelta(
+		currentTeamIDsSet,
+		teamIDsSet,
+		delta.DetectValueDelta[bool],
+		delta.ToValueDelta[bool],
+	)
 	for teamID, detectedValue := range detected.Value {
 		switch detectedValue.KeyStatus {
 		case delta.AddedStatus:
@@ -342,6 +364,7 @@ func (g *Group) CreateFilterTeamGroup(
 		Count:  0,
 	}
 
+	//TODO: add transaction
 	filterGroup, err := g.filterGroupDao.CreateFilterGroup(ct, filterGroup)
 	if err != nil {
 		return entity.FilterGroup{}, err
@@ -352,7 +375,6 @@ func (g *Group) CreateFilterTeamGroup(
 		GroupID: filterGroup.ID,
 		Type:    entity.AppGroupRelationTypeTeam,
 	}
-
 	_, err = g.appGroupRelationDao.CreateAppGroupRelation(ct, appGroupRelation)
 	return filterGroup, err
 }
@@ -379,7 +401,6 @@ func (g *Group) FindUsersByGroupID(ct context.Context, groupID uint64) ([]entity
 
 		return nil
 	})
-
 	return users, err
 }
 
@@ -405,7 +426,6 @@ func (g *Group) FindTeamsByGroupID(ct context.Context, groupID uint64) ([]entity
 
 		return nil
 	})
-
 	return teams, err
 }
 

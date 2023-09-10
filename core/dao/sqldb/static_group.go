@@ -10,27 +10,23 @@ import (
 
 type StaticGroup struct{}
 
-// CreateStaticGroup implements dao.StaticGroup.
-func (*StaticGroup) CreateStaticGroup(ct context.Context, group entity.StaticGroup) (entity.StaticGroup, *errs.Error) {
-	panic("unimplemented")
-}
+var _ dao.StaticGroup = (*StaticGroup)(nil)
 
-// FindStaticGroupsByID implements dao.StaticGroup.
 func (*StaticGroup) FindStaticGroupsByID(ct context.Context, groupID uint64) (entity.StaticGroup, *errs.Error) {
 	panic("unimplemented")
 }
 
-// FindStaticGroupsByIDs implements dao.StaticGroup.
 func (*StaticGroup) FindStaticGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity.StaticGroup, *errs.Error) {
 	panic("unimplemented")
 }
 
-// UpdateStaticGroup implements dao.StaticGroup.
-func (*StaticGroup) UpdateStaticGroup(ct context.Context, Group entity.StaticGroup) *errs.Error {
+func (*StaticGroup) CreateStaticGroup(ct context.Context, group entity.StaticGroup) (entity.StaticGroup, *errs.Error) {
 	panic("unimplemented")
 }
 
-var _ dao.StaticGroup = (*StaticGroup)(nil)
+func (*StaticGroup) UpdateStaticGroup(ct context.Context, Group entity.StaticGroup) *errs.Error {
+	panic("unimplemented")
+}
 
 func NewStaticGroup() *StaticGroup {
 	return &StaticGroup{}

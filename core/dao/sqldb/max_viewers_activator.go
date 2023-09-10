@@ -10,17 +10,15 @@ import (
 
 type MaxViewersActivator struct{}
 
-// CreateMaxViewersActivator implements dao.MaxViewersActivator.
-func (*MaxViewersActivator) CreateMaxViewersActivator(ct context.Context, activator entity.MaxViewersActivator) (entity.MaxViewersActivator, *errs.Error) {
-	panic("unimplemented")
-}
+var _ dao.MaxViewersActivator = (*MaxViewersActivator)(nil)
 
-// FindMaxViewersActivatorByID implements dao.MaxViewersActivator.
 func (*MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, ActivatorID uint64) (entity.MaxViewersActivator, *errs.Error) {
 	panic("unimplemented")
 }
 
-var _ dao.MaxViewersActivator = (*MaxViewersActivator)(nil)
+func (*MaxViewersActivator) CreateMaxViewersActivator(ct context.Context, activator entity.MaxViewersActivator) (entity.MaxViewersActivator, *errs.Error) {
+	panic("unimplemented")
+}
 
 func NewMaxViewersActivator() *MaxViewersActivator {
 	return &MaxViewersActivator{}

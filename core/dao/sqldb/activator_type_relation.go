@@ -13,7 +13,6 @@ type ActivatorTypeRelation struct {
 
 var _ dao.ActivatorTypeRelation = (*ActivatorTypeRelation)(nil)
 
-// FindActivatorTypeByID implements dao.ActivatorTypeRelation.
 func (*ActivatorTypeRelation) FindActivatorTypeByID(ct context.Context, activatorID uint64) (entity.ActivatorType, *errs.Error) {
 	panic("unimplemented")
 }
