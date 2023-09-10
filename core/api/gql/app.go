@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -59,7 +60,7 @@ func (a App) Versions(ctx context.Context) ([]AppVersion, error) {
 }
 
 func (a App) UserGroups(ctx context.Context) ([]Group, error) {
-	groups, err := a.deps.groupService.FindStaticUserGroupsByAppID(ctx, a.app.ID)
+	groups, err := a.deps.groupService.FindUserGroupsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
@@ -67,24 +68,21 @@ func (a App) UserGroups(ctx context.Context) ([]Group, error) {
 
 	userGroups := make([]Group, 0)
 	for _, group := range groups {
-		userGroups = append(userGroups, newStaticUserGroup(a.deps, group))
-	}
-
-	filterGroups, err := a.deps.groupService.FindFilterUserGroupsByAppID(ctx, a.app.ID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ctx, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	for _, group := range filterGroups {
-		userGroups = append(userGroups, newFilterGroup(a.deps, group))
+		switch group.Type {
+		case entity.GroupTypeStatic:
+			userGroups = append(userGroups, newStaticUserGroup(a.deps, group.StaticGroup))
+		case entity.GroupTypeFilter:
+			userGroups = append(userGroups, newFilterGroup(a.deps, group.FilterGroup))
+		default:
+			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
+		}
 	}
 
 	return userGroups, nil
 }
 
 func (a App) TeamGroups(ctx context.Context) ([]Group, error) {
-	groups, err := a.deps.groupService.FindStaticTeamGroupsByAppID(ctx, a.app.ID)
+	groups, err := a.deps.groupService.FindTeamGroupsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
@@ -92,17 +90,14 @@ func (a App) TeamGroups(ctx context.Context) ([]Group, error) {
 
 	teamGroups := make([]Group, 0)
 	for _, group := range groups {
-		teamGroups = append(teamGroups, newStaticTeamGroup(a.deps, group))
-	}
-
-	filterGroups, err := a.deps.groupService.FindFilterTeamGroupsByAppID(ctx, a.app.ID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ctx, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	for _, group := range filterGroups {
-		teamGroups = append(teamGroups, newFilterGroup(a.deps, group))
+		switch group.Type {
+		case entity.GroupTypeStatic:
+			teamGroups = append(teamGroups, newStaticTeamGroup(a.deps, group.StaticGroup))
+		case entity.GroupTypeFilter:
+			teamGroups = append(teamGroups, newFilterGroup(a.deps, group.FilterGroup))
+		default:
+			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
+		}
 	}
 
 	return teamGroups, nil

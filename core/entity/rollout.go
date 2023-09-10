@@ -8,6 +8,7 @@ type Rollout struct {
 	ID          uint64
 	ActivatorID uint64
 	SelectorID  uint64
+	Viewers     int
 	IsEnabled   bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time

@@ -438,40 +438,46 @@ func (g *Group) FindAppByGroupID(ct context.Context, groupID uint64) (entity.App
 	return g.appDao.FindAppByID(ct, appID)
 }
 
-func (g *Group) FindFilterUserGroupsByAppID(ct context.Context, appID uint64) ([]entity.FilterGroup, *errs.Error) {
-	groupIDs, err := g.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, entity.AppGroupRelationTypeUser)
-	if err != nil {
-		return nil, err
-	}
-
-	return g.filterGroupDao.FindFilterGroupsByIDs(ct, groupIDs)
+func (g *Group) FindUserGroupsByAppID(ct context.Context, appID uint64) ([]entity.GroupUnion, *errs.Error) {
+	return g.findGroupsByAppID(ct, appID, entity.AppGroupRelationTypeUser)
 }
 
-func (g *Group) FindStaticUserGroupsByAppID(ct context.Context, appID uint64) ([]entity.StaticGroup, *errs.Error) {
-	groupIDs, err := g.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, entity.AppGroupRelationTypeUser)
-	if err != nil {
-		return nil, err
-	}
-
-	return g.staticGroupDao.FindStaticGroupsByIDs(ct, groupIDs)
+func (g *Group) FindTeamGroupsByAppID(ct context.Context, appID uint64) ([]entity.GroupUnion, *errs.Error) {
+	return g.findGroupsByAppID(ct, appID, entity.AppGroupRelationTypeTeam)
 }
 
-func (g *Group) FindStaticTeamGroupsByAppID(ct context.Context, appID uint64) ([]entity.StaticGroup, *errs.Error) {
-	groupIDs, err := g.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, entity.AppGroupRelationTypeTeam)
+func (g *Group) findGroupsByAppID(ct context.Context, appID uint64, appGroupRelationType entity.AppGroupRelationType) ([]entity.GroupUnion, *errs.Error) {
+	groupIDs, err := g.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, appGroupRelationType)
 	if err != nil {
 		return nil, err
 	}
 
-	return g.staticGroupDao.FindStaticGroupsByIDs(ct, groupIDs)
-}
-
-func (g *Group) FindFilterTeamGroupsByAppID(ct context.Context, appID uint64) ([]entity.FilterGroup, *errs.Error) {
-	groupIDs, err := g.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, entity.AppGroupRelationTypeTeam)
+	staticGroups, err := g.staticGroupDao.FindStaticGroupsByIDs(ct, groupIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	return g.filterGroupDao.FindFilterGroupsByIDs(ct, groupIDs)
+	filterGroups, err := g.filterGroupDao.FindFilterGroupsByIDs(ct, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	groupUnions := make([]entity.GroupUnion, 0)
+	for _, staticGroup := range staticGroups {
+		groupUnions = append(groupUnions, entity.GroupUnion{
+			Type:        entity.GroupTypeStatic,
+			StaticGroup: staticGroup,
+		})
+	}
+
+	for _, filterGroup := range filterGroups {
+		groupUnions = append(groupUnions, entity.GroupUnion{
+			Type:        entity.GroupTypeFilter,
+			FilterGroup: filterGroup,
+		})
+	}
+
+	return groupUnions, nil
 }
 
 func NewGroup(

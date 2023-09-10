@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/store"
 )
 
 type CreateRolloutInput struct {
@@ -39,7 +41,6 @@ type Rollout struct {
 	stateSyncer                       *realtime.StateSyncer
 	appGroupRelationDao               dao.AppGroupRelation
 	rolloutDao                        dao.Rollout
-	rolloutStoreDao                   dao.RolloutStore
 	rolloutViewerDao                  dao.RolloutViewer
 	groupRolloutRelationDao           dao.GroupRolloutRelation
 	appRolloutRelationDao             dao.AppRolloutRelation
@@ -80,7 +81,9 @@ func (r *Rollout) CreateAppRollout(
 		SelectorID:  input.VersionSelectorID,
 		ActivatorID: input.ActivatorID,
 		IsEnabled:   input.IsEnabled,
+		Viewers:     0,
 	}
+
 	rollout, err := r.rolloutDao.CreateRollout(ct, rollout)
 	if err != nil {
 		return entity.Rollout{}, err
@@ -184,13 +187,45 @@ func (r *Rollout) newRollout(ct context.Context, rawRollout entity.Rollout) (rol
 		return rollout.Rollout{}, err
 	}
 
-	activator, err := r.getRolloutVersionActivator(ct, rawRollout.ID, activatorID)
+	activator, err := r.getRolloutActivator(ct, rawRollout.ID, activatorID)
 	if err != nil {
 		return rollout.Rollout{}, err
 	}
 
-	rolloutStore := NewRolloutStore(r.rolloutDao, rawRollout.ID)
+	rolloutStore := store.NewRollout(r.rolloutDao, rawRollout.ID)
 	return rollout.NewRollout(ct, rolloutStore, activator, versionSelector)
+}
+
+func (r *Rollout) FindActivatorByID(ct context.Context, activatorID uint64) (entity.ActivatorUnion, *errs.Error) {
+	activatorType, err := r.FindActivatorTypeByID(ct, activatorID)
+	if err != nil {
+		return entity.ActivatorUnion{}, err
+	}
+
+	var timeRangeActivator entity.TimeRangeActivator = entity.TimeRangeActivator{}
+	var maxViewersActivator entity.MaxViewersActivator = entity.MaxViewersActivator{}
+	var percentageActivator entity.PercentageActivator = entity.PercentageActivator{}
+	switch activatorType {
+	case entity.ActivatorTypeTimeRange:
+		timeRangeActivator, err = r.FindTimeRangeActivatorByID(ct, activatorID)
+	case entity.ActivatorTypeMaxViewers:
+		maxViewersActivator, err = r.FindMaxViewersActivatorByID(ct, activatorID)
+	case entity.ActivatorTypePercentage:
+		percentageActivator, err = r.FindPercentageActivatorByID(ct, activatorID)
+	default:
+		err = errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorType))
+	}
+
+	if err != nil {
+		return entity.ActivatorUnion{}, err
+	}
+
+	return entity.ActivatorUnion{
+		Type:                activatorType,
+		TimeRangeActivator:  timeRangeActivator,
+		MaxViewersActivator: maxViewersActivator,
+		PercentageActivator: percentageActivator,
+	}, nil
 }
 
 func (r *Rollout) CreateTimeRangeActivator(ct context.Context, startAt *time.Time, endAt *time.Time) (entity.TimeRangeActivator, *errs.Error) {
@@ -339,16 +374,16 @@ func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64
 
 		versionSelector = rollout.NewStaticVersionSelector(versionNumbers[0])
 	case entity.VersionSelectorTypeExperiment:
-		store := NewExperimentVersionSelectorStore(r.rolloutViewerDao, rolloutID)
+		store := store.NewExperimentVersionSelector(r.rolloutViewerDao, rolloutID)
 		versionSelector = rollout.NewExperimentVersionSelector(store, randgen.NewBuiltinRanGen(), versionNumbers)
 	default:
-		return nil, errs.NewError(errs.NotReady, "unknown version selector type")
+		return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown version selector type %s", rawVersionSelector.Type))
 	}
 
 	return versionSelector, nil
 }
 
-func (r *Rollout) getRolloutVersionActivator(ct context.Context, rolloutID uint64, activatorID uint64) (rollout.Activator, *errs.Error) {
+func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, activatorID uint64) (rollout.Activator, *errs.Error) {
 	var activator rollout.Activator
 	activatorType, err := r.activatorTypeRelationDao.FindActivatorTypeByID(ct, activatorID)
 	if err != nil {
@@ -369,8 +404,8 @@ func (r *Rollout) getRolloutVersionActivator(ct context.Context, rolloutID uint6
 			return nil, err
 		}
 
-		store := NewMaxViewersActivatorStore(r.rolloutViewerDao, r.rolloutStoreDao, rolloutID)
-		activator, err = rollout.NewMaxViewersActivator(ct, store, rawActivator.MaxViewers)
+		activatorStore := store.NewMaxViewersActivator(r.rolloutViewerDao, r.rolloutDao, rolloutID)
+		activator, err = rollout.NewMaxViewersActivator(ct, activatorStore, rawActivator.MaxViewers)
 		if err != nil {
 			return nil, err
 		}
@@ -380,10 +415,10 @@ func (r *Rollout) getRolloutVersionActivator(ct context.Context, rolloutID uint6
 			return nil, err
 		}
 
-		store := NewPercentageActivatorStore(r.rolloutViewerDao, rolloutID)
+		store := store.NewPercentageActivator(r.rolloutViewerDao, rolloutID)
 		activator = rollout.NewPercentageActivator(store, randgen.NewBuiltinRanGen(), rawActivator.Percentage)
 	default:
-		return nil, errs.NewError(errs.NotReady, "unknown activator type")
+		return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorType))
 	}
 
 	return activator, nil
@@ -396,7 +431,6 @@ func NewRollout(
 	stateSyncer *realtime.StateSyncer,
 	appGroupRelationDao dao.AppGroupRelation,
 	rolloutDao dao.Rollout,
-	rolloutStoreDao dao.RolloutStore,
 	rolloutViewerDao dao.RolloutViewer,
 	groupRolloutRelationDao dao.GroupRolloutRelation,
 	appRolloutRelationDao dao.AppRolloutRelation,
@@ -415,7 +449,6 @@ func NewRollout(
 		stateSyncer:                       stateSyncer,
 		appGroupRelationDao:               appGroupRelationDao,
 		rolloutDao:                        rolloutDao,
-		rolloutStoreDao:                   rolloutStoreDao,
 		rolloutViewerDao:                  rolloutViewerDao,
 		groupRolloutRelationDao:           groupRolloutRelationDao,
 		appRolloutRelationDao:             appRolloutRelationDao,

@@ -42,43 +42,22 @@ func (r Rollout) UpdatedAt() *graphql.Time {
 }
 
 func (r Rollout) Activator(ctx context.Context) (Activator, error) {
-	activatorType, err := r.deps.rolloutService.FindActivatorTypeByID(ctx, r.rollout.ActivatorID)
+	activator, err := r.deps.rolloutService.FindActivatorByID(ctx, r.rollout.ActivatorID)
 	if err != nil {
 		r.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch activatorType {
+	switch activator.Type {
 	case entity.ActivatorTypeTimeRange:
-		activator, err := r.deps.rolloutService.FindTimeRangeActivatorByID(ctx, r.rollout.ActivatorID)
-		if err != nil {
-			r.deps.logger.ErrorWithContext(ctx, err)
-			return nil, errs.ToResolverErr(err)
-		}
-
-		return newTimeRangeActivator(activator), nil
+		return newTimeRangeActivator(activator.TimeRangeActivator), nil
 	case entity.ActivatorTypeMaxViewers:
-		activator, err := r.deps.rolloutService.FindMaxViewersActivatorByID(ctx, r.rollout.ActivatorID)
-		if err != nil {
-			r.deps.logger.ErrorWithContext(ctx, err)
-			return nil, errs.ToResolverErr(err)
-		}
-
-		return newMaxViewersActivator(activator), nil
+		return newMaxViewersActivator(activator.MaxViewersActivator), nil
 	case entity.ActivatorTypePercentage:
-		activator, err := r.deps.rolloutService.FindPercentageActivatorByID(ctx, r.rollout.ActivatorID)
-		if err != nil {
-			r.deps.logger.ErrorWithContext(ctx, err)
-			return nil, errs.ToResolverErr(err)
-		}
-
-		return newPercentageActivator(activator), nil
+		return newPercentageActivator(activator.PercentageActivator), nil
+	default:
+		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("Unknown activator type: %s", activator.Type)))
 	}
-
-	err = errs.NewError(
-		errs.NotReady, fmt.Sprintf("activator type: %v is not supported", activatorType),
-	)
-	return nil, errs.ToResolverErr(err)
 }
 
 func (m Mutation) CreateAppRollout(
