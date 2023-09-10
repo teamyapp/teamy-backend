@@ -45,7 +45,11 @@ type App struct {
 	stateSyncer                *realtime.StateSyncer
 	appDao                     dao.App
 	appVersionDao              dao.AppVersion
+	appVersionPriceDao         dao.AppVersionPrice
+	appVersionChangeDao        dao.AppVersionChange
+	appSecretDao               dao.AppSecret
 	appPackageUploadSessionDao dao.AppPackageUploadSession
+	teamAppInstallationDao     dao.TeamAppInstallation
 	teamDao                    dao.Team
 }
 
@@ -58,8 +62,129 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
+type CreateAppSecretInput struct {
+	Name string
+}
+
+type UpdateAppSecretInput struct {
+	AppSecretID uint64
+	Name        string
+}
+
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
 	return a.appDao.FindAppByID(ct, appID)
+}
+
+func (a App) FindSecretsByAppID(ct context.Context, appID uint64) ([]entity.AppSecret, *errs.Error) {
+	return a.appSecretDao.FindSecretsByAppID(ct, appID)
+}
+
+func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSecretInput) (entity.AppSecret, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		return entity.AppSecret{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	genAppSecretIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "appSecretID"}
+	genAppSecretIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppSecretIDReq)
+	if rpcErr != nil {
+		return entity.AppSecret{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	appSecret := entity.AppSecret{
+		ID:            genAppSecretIDRes.UniqueNumber,
+		Name:          input.Name,
+		AppID:         appID,
+		AddedAt:       time.Now().UTC(),
+		AddedByUserID: userID,
+	}
+	return a.appSecretDao.CreateAppSecret(ct, appSecret)
+}
+
+func (a App) UpdateAppSecret(ct context.Context, appID uint64, input UpdateAppSecretInput) (entity.AppSecret, *errs.Error) {
+	var appSecret entity.AppSecret
+	txCtx := TransactionsContext{
+		logger:             a.logger,
+		transactionFactory: a.transactionFactory,
+		stateSyncer:        a.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, input.AppSecretID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		appSecret.Name = input.Name
+		return a.appSecretDao.UpdateAppSecretWithTx(ct, tx, input.AppSecretID, appSecret)
+	})
+
+	return appSecret, err
+}
+
+func (a App) DeleteAppSecret(ct context.Context, appSecretID uint64) (entity.AppSecret, *errs.Error) {
+	var appSecret entity.AppSecret
+	txCtx := TransactionsContext{
+		logger:             a.logger,
+		transactionFactory: a.transactionFactory,
+		stateSyncer:        a.stateSyncer,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, appSecretID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		return a.appSecretDao.DeleteAppSecretWithTx(ct, tx, appSecretID)
+	})
+
+	return appSecret, err
+}
+
+func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (entity.TeamAppInstallation, *errs.Error) {
+	genTeamAppInstallationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamAppInstallationID"}
+	genTeamAppInstallationIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamAppInstallationIDReq)
+	if rpcErr != nil {
+		return entity.TeamAppInstallation{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	teamAppInstallation := entity.TeamAppInstallation{
+		ID:              genTeamAppInstallationIDRes.UniqueNumber,
+		AppID:           appID,
+		InstalledTeamID: teamID,
+	}
+	return a.teamAppInstallationDao.CreateTeamAppInstallation(ct, teamAppInstallation)
+}
+
+func (a App) UninstallAppFromTeam(ct context.Context, appInstallationID uint64) (entity.TeamAppInstallation, *errs.Error) {
+	var teamAppInstallation entity.TeamAppInstallation
+	txCtx := TransactionsContext{
+		logger:             a.logger,
+		transactionFactory: a.transactionFactory,
+		ct:                 ct,
+	}
+	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		teamAppInstallation, internalErr = a.teamAppInstallationDao.FindTeamAppInstallationByIDWithTx(ct, tx, appInstallationID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		return a.teamAppInstallationDao.DeleteTeamAppInstallationByIDWithTx(ct, tx, appInstallationID)
+	})
+
+	return teamAppInstallation, err
+}
+
+func (a App) FindTeamAppInstallationsByAppID(ct context.Context, appID uint64) ([]entity.TeamAppInstallation, *errs.Error) {
+	return a.teamAppInstallationDao.FindTeamAppInstallationsByAppID(ct, appID)
+}
+
+func (a App) FindAppVersionByAppIDAndNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
+	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
 func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.App, *errs.Error) {
@@ -429,6 +554,14 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 	return av, nil
 }
 
+func (a App) FindPricesByAppVersionID(ct context.Context, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
+	return a.appVersionPriceDao.FindAppVersionPricesByAppIDAndVersionNumber(ct, appID, versionNumber)
+}
+
+func (a App) FindAppVersionChangesByAppVersionID(ct context.Context, appID uint64, versionNumber int) ([]string, *errs.Error) {
+	return a.appVersionChangeDao.FindAppVersionChangesByAppIDAndVersionNumber(ct, appID, versionNumber)
+}
+
 func (a App) uploadAppPackageFiles(
 	ct context.Context,
 	appID uint64,
@@ -487,20 +620,28 @@ func NewApp(
 	stateSyncer *realtime.StateSyncer,
 	appDao dao.App,
 	appVersionDao dao.AppVersion,
+	appVersionPriceDao dao.AppVersionPrice,
+	appVersionChangeDao dao.AppVersionChange,
+	appSecretDao dao.AppSecret,
 	appPackageUploadSessionDao dao.AppPackageUploadSession,
+	teamAppInstallationDao dao.TeamAppInstallation,
 	teamDao dao.Team,
 ) App {
 	return App{
-		logger,
-		storageMapClient,
-		cloudClientRegistry,
-		authorizer,
-		featureToggles,
-		transactionFactory,
-		stateSyncer,
-		appDao,
-		appVersionDao,
-		appPackageUploadSessionDao,
-		teamDao,
+		logger:                     logger,
+		storageMapClient:           storageMapClient,
+		cloudClientRegistry:        cloudClientRegistry,
+		authorizer:                 authorizer,
+		featureToggles:             featureToggles,
+		transactionFactory:         transactionFactory,
+		stateSyncer:                stateSyncer,
+		appDao:                     appDao,
+		appVersionDao:              appVersionDao,
+		appVersionPriceDao:         appVersionPriceDao,
+		appVersionChangeDao:        appVersionChangeDao,
+		appSecretDao:               appSecretDao,
+		appPackageUploadSessionDao: appPackageUploadSessionDao,
+		teamAppInstallationDao:     teamAppInstallationDao,
+		teamDao:                    teamDao,
 	}
 }

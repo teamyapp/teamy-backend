@@ -100,26 +100,23 @@ type Mutation {
 
 	createStaticUserGroup(appId: ID!, input: CreateStaticUserGroupInput!): StaticUserGroup!
 	updateStaticUserGroup(groupId: ID!,input: UpdateStaticUserGroupInput!): StaticUserGroup!
-	createFilterUserGroup(appId: ID!, input: CreateFilterUserGroupInput!): FilterUserGroup!
-	updateFilterUserGroup(groupId: ID!, input: UpdateFilterUserGroupInput!): FilterUserGroup!
+	createFilterUserGroup(appId: ID!, input: CreateFilterUserGroupInput!): FilterGroup!
 	createStaticTeamGroup(appId: ID!, input: CreateStaticTeamGroupInput!): StaticTeamGroup!
 	updateStaticTeamGroup(groupId: ID!,input: UpdateStaticTeamGroupInput!): StaticTeamGroup!
-	createFilterTeamGroup(appId: ID!, input: CreateFilterTeamGroupInput!): FilterTeamGroup!
-	updateFilterTeamGroup(groupId: ID!,input: UpdateFilterTeamGroupInput!): FilterTeamGroup!
+	createFilterTeamGroup(appId: ID!, input: CreateFilterTeamGroupInput!): FilterGroup!
+	
+	updateFilterGroup(groupId: ID!, input: UpdateFilterGroupInput!): FilterGroup!
 	deleteGroup(groupId: ID!): Group!
 
-	createStaticUserRollout(appId: ID!, input: CreateStaticUserRolloutInput!): StaticUserRollout!
-	updateStaticUserRollout(rolloutId: ID!,input: UpdateStaticUserRolloutInput!): StaticUserRollout!
-	createTimeRangeUserRollout(appId: ID!, input: CreateTimeRangeUserRolloutInput!): TimeRangeUserRollout!
-	updateTimeRangeUserRollout(rolloutId: ID!,input: UpdateTimeRangeRolloutInput!): TimeRangeUserRollout!
-	createExperimentUserRollout(appId: ID!, input: CreateExperimentUserRolloutInput!): ExperimentUserRollout!
-	updateExperimentUserRollout(rolloutId: ID!,input: UpdateExperimentUserRolloutInput!): ExperimentUserRollout!
-	createStaticTeamRollout(appId: ID!, input: CreateStaticTeamRolloutInput!): StaticTeamRollout!
-	updateStaticTeamRollout(rolloutId: ID!,input: UpdateStaticTeamRolloutInput!): StaticTeamRollout!
-	createTimeRangeTeamRollout(appId: ID!, input: CreateTimeRangeTeamRolloutInput!): TimeRangeTeamRollout!
-	updateTimeRangeTeamRollout(rolloutId: ID!,input: UpdateTimeRangeTeamRolloutInput!): TimeRangeTeamRollout!
-	createExperimentTeamRollout(appId: ID!, input: CreateExperimentTeamRolloutInput!): ExperimentTeamRollout!
-	updateExperimentTeamRollout(rolloutId: ID!,input: UpdateExperimentTeamRolloutInput!): ExperimentTeamRollout!
+	createTimeRangeActivator(input: CreateTimeRangeActivatorInput!): TimeRangeActivator!
+	createMaxViewersActivator(input: CreateMaxViewersActivatorInput!): MaxViewersActivator!
+	createPercentageActivator(input: CreatePercentageActivatorInput!): PercentageActivator!
+
+	createStaticVersionSelector(input: CreateStaticVersionSelectorInput!): VersionSelector!
+	createExperimentVersionSelector(input: CreateExperimentVersionSelectorInput!): VersionSelector!
+
+	createAppRollout(appID: ID!, appRolloutType: AppRolloutType!, input: CreateRolloutInput!): Rollout!
+	updateRollout(rolloutId: ID!, input: UpdateRolloutInput!): Rollout!
 	deleteRollout(rolloutId: ID!): Rollout!
 }
 
@@ -261,16 +258,57 @@ type User {
 	teams(filter: TeamFilter): [Team!]!
 }
 
+type Rollout {
+	id: ID!
+	activator: Activator!
+	versionSelector: VersionSelector!
+	isEnabled: Boolean!
+}
+
+interface Activator {
+	id: ID!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type TimeRangeActivator implements Activator {
+	id: ID!
+	startAt: Time
+	endAt: Time
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type VersionSelector {
+	id: ID!
+	type: VersionSelectorType!
+	versionNumbers: [Int!]!
+}
+
+type MaxViewersActivator implements Activator {
+	id: ID!
+	maxViewers: Int!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type PercentageActivator implements Activator {
+	id: ID!
+	percentage: Int!
+	createdAt: Time!
+	updatedAt: Time
+}
+
 type App {
 	id: ID!
 	secrets: [AppSecret!]!
 	totalInstallations: Int!
 	installations: [TeamAppInstallation!]!
 	versions: [AppVersion!]!
-	userGroups: [UserGroup!]!
-	teamGroups: [TeamGroup!]!
-	userRollouts: [UserRollout!]!
-	teamRollouts: [TeamRollout!]!
+	userGroups: [Group!]!
+	teamGroups: [Group!]!
+	userRollouts: [Rollout!]!
+	teamRollouts: [Rollout!]!
 	managedByTeam: Team!
 }
 
@@ -301,176 +339,38 @@ interface Group {
 	name: String!
 	createdAt: Time!
 	updatedAt: Time
+	rollouts: [Rollout!]!
 }
 
-interface UserGroup implements Group{
-	id: ID!
-	type: GroupType!
-	name: String!
-	createdAt: Time!
-	updatedAt: Time
-	rollouts: [UserRollout!]!
-}
-
-interface TeamGroup implements Group{
-	id: ID!
-	type: GroupType!
-	name: String!
-	createdAt: Time!
-	updatedAt: Time
-	rollouts: [TeamRollout!]!
-}
-
-type StaticUserGroup implements UserGroup{
+type StaticUserGroup implements Group { 
 	id: ID!
 	type: GroupType!
 	name: String!
 	users: [User!]!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [UserRollout!]!
+	rollouts: [Rollout!]!
 }
 
-type StaticTeamGroup implements TeamGroup{
+type StaticTeamGroup implements Group {
 	id: ID!
 	type: GroupType!
 	name: String!
 	teams: [Team!]!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [TeamRollout!]!
+	rollouts: [Rollout!]!
 }
 
-interface FilterGroup implements Group{
+type FilterGroup implements Group {
 	id: ID!
 	type: GroupType!
 	name: String!
 	filter: String!
+	memberCount: Int!
 	createdAt: Time!
 	updatedAt: Time
-}
-
-type FilterUserGroup implements FilterGroup, UserGroup{
-	id: ID!
-	type: GroupType!
-	name: String!
-	filter: String!
-	userCount: Int!
-	createdAt: Time!
-	updatedAt: Time
-	rollouts: [UserRollout!]!
-}
-
-type FilterTeamGroup implements FilterGroup, TeamGroup{
-	id: ID!
-	type: GroupType!
-	name: String!
-	filter: String!
-	teamCount: Int!
-	createdAt: Time!
-	updatedAt: Time
-	rollouts: [TeamRollout!]!
-}
-
-interface Rollout {
-	id: ID!
-	type: RolloutType!
-	createdAt: Time!
-}
-
-interface UserRollout implements Rollout {
-	id: ID!
-	type: RolloutType!
-	createdAt: Time!
-	userGroups: [UserGroup!]!
-}
-
-interface TeamRollout implements Rollout{
-	id: ID!
-	type: RolloutType!
-	createdAt: Time!
-	teamGroups: [TeamGroup!]!
-}
-
-interface StaticRollout implements Rollout{
-	id: ID!
-	type: RolloutType!
-	appVersion: AppVersion!
-	createdAt: Time!
-}
-
-type StaticUserRollout implements UserRollout, StaticRollout{
-	id: ID!
-	type: RolloutType!
-	appVersion: AppVersion!
-	createdAt: Time!
-	userGroups: [UserGroup!]!
-}
-
-type StaticTeamRollout implements TeamRollout, StaticRollout{
-	id: ID!
-	type: RolloutType!
-	appVersion: AppVersion!
-	createdAt: Time!
-	teamGroups: [TeamGroup!]!
-}
-
-interface TimeRangeRollout implements Rollout{
-	id: ID!
-	type: RolloutType!
-	appVersion: AppVersion!
-	startAt: Time
-	endAt: Time
-	createdAt: Time!
-}
-
-type TimeRangeUserRollout implements UserRollout, StaticRollout{
-	id: ID!
-	type: RolloutType!
-	appVersion: AppVersion!
-	startAt: Time
-	endAt: Time
-	createdAt: Time!
-	userGroups: [UserGroup!]!
-}
-
-type TimeRangeTeamRollout implements TeamRollout, StaticRollout{
-	id: ID!
-	type: RolloutType!
-	appVersion: AppVersion!
-	startAt: Time
-	endAt: Time
-	createdAt: Time!
-	teamGroups: [TeamGroup!]!
-}
-
-interface ExperimentRollout implements Rollout{
-	id: ID!
-	type: RolloutType!
-	appVersions: [AppVersion!]!
-	startAt: Time
-	endAt: Time
-	createdAt: Time!
-}
-
-type ExperimentUserRollout implements UserRollout, ExperimentRollout{
-	id: ID!
-	type: RolloutType!
-	appVersions: [AppVersion!]!
-	startAt: Time
-	endAt: Time
-	createdAt: Time!
-	userGroups: [UserGroup!]!
-}
-
-type ExperimentTeamRollout implements TeamRollout, ExperimentRollout{
-	id: ID!
-	type: RolloutType!
-	appVersions: [AppVersion!]!
-	startAt: Time
-	endAt: Time
-	createdAt: Time!
-	teamGroups: [TeamGroup!]!
+	rollouts: [Rollout!]!
 }
 
 type TeamAppInstallation {
@@ -611,7 +511,7 @@ input CreateFilterUserGroupInput {
 	filter: String!
 }
 
-input UpdateFilterUserGroupInput {
+input UpdateFilterGroupInput {
 	name: String!
 	filter: String!
 }
@@ -631,91 +531,37 @@ input CreateFilterTeamGroupInput {
 	filter: String!
 }
 
-input UpdateFilterTeamGroupInput {
-	name: String!
-	filter: String!
-}
-
-input CreateStaticUserRolloutInput {
-	versionNumber: Int!
-	userGroupIds: [ID!]!
-}
-
-input UpdateStaticUserRolloutInput {
-	appId: ID!
-	versionNumber: Int!
-	userGroupIds: [ID!]!
-}
-
-input CreateTimeRangeUserRolloutInput {
-	versionNumber: Int!
+input CreateTimeRangeActivatorInput {
 	startAt: Time
 	endAt: Time
-	userGroupIds: [ID!]!
 }
 
-input UpdateTimeRangeRolloutInput {
-	appId: ID!
+input CreateMaxViewersActivatorInput {
+	maxViewers: Int!
+}
+
+input CreatePercentageActivatorInput {
+	percentage: Int!
+}
+
+input CreateRolloutInput {
+	activatorID:  ID!
+	versionSelectorID: ID!
+	isEnabled:     Boolean!
+}
+
+input UpdateRolloutInput {
+	activatorID:  ID!
+	versionSelectorID:  ID!
+	isEnabled:     Boolean!
+}
+
+input CreateStaticVersionSelectorInput {
 	versionNumber: Int!
-	startAt: Time
-	endAt: Time
-	userGroupIds: [ID!]!
 }
 
-input CreateExperimentUserRolloutInput {
+input CreateExperimentVersionSelectorInput {
 	versionNumbers: [Int!]!
-	startAt: Time
-	endAt: Time
-	userGroupIds: [ID!]!
-}
-
-input UpdateExperimentUserRolloutInput {
-	appId: ID!
-	versionNumbers: [Int!]!
-	startAt: Time
-	endAt: Time
-	userGroupIds: [ID!]!
-}
-
-input CreateStaticTeamRolloutInput {
-	versionNumber: Int!
-	teamGroupIds: [ID!]!
-}
-
-input UpdateStaticTeamRolloutInput {
-	appId: ID!
-	versionNumber: Int!
-	teamGroupIds: [ID!]!
-}
-
-input CreateTimeRangeTeamRolloutInput {
-	versionNumber: Int!
-	startAt: Time
-	endAt: Time
-	teamGroupIds: [ID!]!
-}
-
-input UpdateTimeRangeTeamRolloutInput {
-	appId: ID!
-	versionNumber: Int!
-	startAt: Time
-	endAt: Time
-	teamGroupIds: [ID!]!
-}
-
-input CreateExperimentTeamRolloutInput {
-	versionNumbers: [Int!]!
-	startAt: Time
-	endAt: Time
-	teamGroupIds: [ID!]!
-}
-
-input UpdateExperimentTeamRolloutInput {
-	appId: ID!
-	versionNumbers: [Int!]!
-	startAt: Time
-	endAt: Time
-	teamGroupIds: [ID!]!
 }
 
 enum InvitationStatus {
@@ -751,9 +597,19 @@ enum GroupType {
 	FILTER
 }
 
-enum RolloutType {
-	STATIC
+enum AppRolloutType {
+	USER
+	TEAM
+}
+
+enum ActivatorType {
 	TIME_RANGE
+	MAX_VIEWERS
+	PERCENTAGE
+}
+
+enum VersionSelectorType {
+	STATIC
 	EXPERIMENT
 }
 

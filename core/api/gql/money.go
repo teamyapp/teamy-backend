@@ -5,12 +5,21 @@ import (
 )
 
 type Money struct {
+	deps  *Dependencies
+	money entity.Money
 }
 
 func (m Money) Currency() entity.Currency {
-	panic("implement me")
+	return m.money.Currency
 }
 
 func (m Money) Amount() int32 {
-	panic("implement me")
+	return int32(m.money.Amount)
+}
+
+func newMoney(deps *Dependencies, money entity.Money) Money {
+	return Money{
+		deps:  deps,
+		money: money,
+	}
 }

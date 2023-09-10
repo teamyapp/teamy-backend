@@ -18,6 +18,10 @@ type AppVersion struct {
 
 var _ dao.AppVersion = (*AppVersion)(nil)
 
+func (*AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
+	panic("unimplemented")
+}
+
 func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppVersion, *errs.Error) {
 	appVersions := []entity.AppVersion{}
 	rows, err := tx.SQLTx().Query(`
@@ -37,9 +41,9 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
-	
+
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		appVersion := entity.AppVersion{}
 		err := rows.Scan(
@@ -71,7 +75,7 @@ func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer tx.Rollback()
 
 	appVersions, err := a.FindAppVersionsByAppIDWithTx(ct, tx, appID)

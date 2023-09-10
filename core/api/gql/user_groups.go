@@ -4,91 +4,71 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/collect"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
-type UserGroup interface {
-	Group
-	Rollouts(ctx context.Context) []UserRollout
-}
-
 type StaticUserGroup struct {
+	deps  *Dependencies
+	group entity.StaticGroup
 }
 
-var _ UserGroup = (*StaticUserGroup)(nil)
+var _ Group = (*StaticUserGroup)(nil)
 
 func (s StaticUserGroup) ID(ctx context.Context) graphql.ID {
-	panic("not implemented")
+	return toGraphQLID(s.group.ID)
 }
 
 func (s StaticUserGroup) Type(ctx context.Context) entity.GroupType {
-	panic("not implemented")
+	return s.group.Type
 }
 
 func (s StaticUserGroup) Name(ctx context.Context) string {
-	panic("not implemented")
+	return s.group.Name
 }
 
-func (s StaticUserGroup) Users(ctx context.Context) []User {
-	panic("not implemented")
+func (s StaticUserGroup) Users(ctx context.Context) ([]User, error) {
+	users, err := s.deps.groupService.FindUsersByGroupID(ctx, s.group.ID)
+	if err != nil {
+		s.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(users, func(user entity.User, index int) User {
+		return newUser(s.deps, user)
+	}), nil
 }
 
 func (s StaticUserGroup) CreatedAt(ctx context.Context) graphql.Time {
-	panic("not implemented")
+	return toGraphQLTime(s.group.CreatedAt)
 }
 
 func (s StaticUserGroup) UpdatedAt(ctx context.Context) *graphql.Time {
-	panic("not implemented")
+	return toGraphQLTimePtr(s.group.UpdatedAt)
 }
 
-func (s StaticUserGroup) Rollouts(ctx context.Context) []UserRollout {
-	panic("not implemented")
+func (s StaticUserGroup) Rollouts(ctx context.Context) ([]Rollout, error) {
+	rollouts, err := s.deps.rolloutService.FindRolloutsByGroupID(ctx, s.group.ID)
+	if err != nil {
+		s.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(rollouts, func(rollout entity.Rollout, index int) Rollout {
+		return newRollout(s.deps, rollout)
+	}), nil
 }
 
-func (s StaticUserGroup) App(ctx context.Context) App {
-	panic("not implemented")
-}
+func (s StaticUserGroup) App(ctx context.Context) (App, error) {
+	app, err := s.deps.appService.FindAppByID(ctx, s.group.ID)
+	if err != nil {
+		s.deps.logger.ErrorWithContext(ctx, err)
+		return App{}, errs.ToResolverErr(err)
+	}
 
-type FilterUserGroup struct {
-}
-
-var _ UserGroup = (*FilterUserGroup)(nil)
-var _ FilterGroup = (*FilterUserGroup)(nil)
-
-func (f FilterUserGroup) ID(ctx context.Context) graphql.ID {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) Type(ctx context.Context) entity.GroupType {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) Name(ctx context.Context) string {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) Filter(ctx context.Context) string {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) UserCount(ctx context.Context) int32 {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) CreatedAt(ctx context.Context) graphql.Time {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) UpdatedAt(ctx context.Context) *graphql.Time {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) Rollouts(ctx context.Context) []UserRollout {
-	panic("not implemented")
-}
-
-func (f FilterUserGroup) App(ctx context.Context) App {
-	panic("not implemented")
+	return newApp(s.deps, app), nil
 }
 
 func (m Mutation) CreateStaticUserGroup(
@@ -101,21 +81,89 @@ func (m Mutation) CreateStaticUserGroup(
 		}
 	},
 ) StaticUserGroup {
-	panic("not implemented")
+	appID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return StaticUserGroup{}
+	}
+
+	userIDs := make([]uint64, len(args.Input.UserIDs))
+	for _, userID := range args.Input.UserIDs {
+		id, err := fromGraphQLID(userID)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return StaticUserGroup{}
+		}
+		userIDs = append(userIDs, id)
+	}
+
+	createStaticUserGroupInput := service.CreateStaticUserGroupInput{
+		Name:    args.Input.Name,
+		UserIDs: userIDs,
+	}
+	group, err := m.deps.groupService.CreateStaticUserGroup(ctx, appID, createStaticUserGroupInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return StaticUserGroup{}
+	}
+
+	return newStaticUserGroup(m.deps, group)
 }
 
 func (m Mutation) UpdateStaticUserGroup(
 	ctx context.Context,
 	args struct {
-		AppID   graphql.ID
 		GroupID graphql.ID
 		Input   struct {
 			Name    string
 			UserIDs []graphql.ID
 		}
 	},
-) StaticUserGroup {
-	panic("not implemented")
+) (StaticUserGroup, error) {
+	groupID, internalErr := fromGraphQLID(args.GroupID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return StaticUserGroup{}, errs.ToResolverErr(internalErr)
+	}
+
+	userIDs := make([]uint64, len(args.Input.UserIDs))
+	for _, userID := range args.Input.UserIDs {
+		id, err := fromGraphQLID(userID)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return StaticUserGroup{}, errs.ToResolverErr(internalErr)
+		}
+
+		userIDs = append(userIDs, id)
+	}
+
+	updateStatcUserGroupInput := service.UpdateStaticUserGroupInput{
+		Name:    args.Input.Name,
+		UserIDs: userIDs,
+	}
+	group, err := m.deps.groupService.UpdateStaticUserGroup(ctx, groupID, updateStatcUserGroupInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return StaticUserGroup{}, errs.ToResolverErr(err)
+	}
+
+	return newStaticUserGroup(m.deps, group), nil
 }
 
 func (m Mutation) CreateFilterUserGroup(
@@ -127,19 +175,34 @@ func (m Mutation) CreateFilterUserGroup(
 			Filter string
 		}
 	},
-) FilterUserGroup {
-	panic("not implemented")
+) (FilterGroup, error) {
+	appID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return FilterGroup{}, errs.ToResolverErr(internalErr)
+	}
+
+	createFilterUserGroupInput := service.CreateFilterGroupInput{
+		Name:   args.Input.Name,
+		Filter: args.Input.Filter,
+	}
+
+	filterGroup, err := m.deps.groupService.CreateFilterUserGroup(ctx, appID, createFilterUserGroupInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return FilterGroup{}, errs.ToResolverErr(err)
+	}
+
+	return newFilterGroup(m.deps, filterGroup), nil
 }
 
-func (m Mutation) UpdateFilterUserGroup(
-	ctx context.Context,
-	args struct {
-		GroupID graphql.ID
-		Input   struct {
-			Name   string
-			Filter string
-		}
-	},
-) FilterUserGroup {
-	panic("not implemented")
+func newStaticUserGroup(deps *Dependencies, group entity.StaticGroup) StaticUserGroup {
+	return StaticUserGroup{
+		deps:  deps,
+		group: group,
+	}
 }
