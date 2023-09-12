@@ -417,7 +417,7 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 					i.sprintDao,
 					participant,
 				)
-				internalErr = createTeamMemberMutation.Execute(ct, tx)
+				internalErr = createSprintParticipantMutation.Execute(ct, tx)
 				if internalErr != nil {
 					return internalErr
 				}
