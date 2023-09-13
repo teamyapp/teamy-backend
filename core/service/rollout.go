@@ -339,24 +339,21 @@ func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64
 
 func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, activatorID uint64) (rollout.Activator, *errs.Error) {
 	var activator rollout.Activator
-	activatorType, err := r.activatorRepository.FindActivatorTypeByID(ct, activatorID)
+	activatorUnion, err := r.activatorRepository.FindActivatorByID(ct, activatorID)
 	if err != nil {
 		return nil, err
 	}
 
-	switch activatorType {
+	switch activatorUnion.Type {
 	case entity.ActivatorTypeTimeRange:
-		rawActivator, err := r.activatorRepository.FindTimeRangeActivatorByID(ct, activatorID)
+		rawActivator := activatorUnion.TimeRangeActivator
 		activator = rollout.NewTimeRangeActivator(clock.New(), rawActivator.StartAt, rawActivator.EndAt)
 
 		if err != nil {
 			return nil, err
 		}
 	case entity.ActivatorTypeMaxViewers:
-		rawActivator, err := r.activatorRepository.FindMaxViewersActivatorByID(ct, activatorID)
-		if err != nil {
-			return nil, err
-		}
+		rawActivator := activatorUnion.MaxViewersActivator
 
 		activatorStore := store.NewMaxViewersActivator(r.rolloutViewerDao, r.rolloutDao, rolloutID)
 		activator, err = rollout.NewMaxViewersActivator(ct, activatorStore, rawActivator.MaxViewers)
@@ -364,10 +361,7 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 			return nil, err
 		}
 	case entity.ActivatorTypePercentage:
-		rawActivator, err := r.activatorRepository.FindPercentageActivatorByID(ct, activatorID)
-		if err != nil {
-			return nil, err
-		}
+		rawActivator := activatorUnion.PercentageActivator
 
 		store := store.NewPercentageActivator(r.rolloutViewerDao, rolloutID)
 		activator = rollout.NewPercentageActivator(store, randgen.NewBuiltinRanGen(), rawActivator.Percentage)

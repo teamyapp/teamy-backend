@@ -8,7 +8,7 @@ import (
 )
 
 type Activator interface {
-	FindActivatorByID(ct context.Context, ActivatorID uint64) (entity.Activator, *errs.Error)
+	FindActivatorByID(ct context.Context, activatorID uint64) (entity.Activator, *errs.Error)
 	CreateActivator(ct context.Context, activator entity.Activator) (entity.Activator, *errs.Error)
 	UpdateActivator(ct context.Context, activator entity.Activator) *errs.Error
 }

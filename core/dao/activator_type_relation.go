@@ -9,5 +9,5 @@ import (
 
 type ActivatorTypeRelation interface {
 	FindActivatorTypeByID(ct context.Context, activatorID uint64) (entity.ActivatorType, *errs.Error)
-	CreateActivatorTypeRelation(ct context.Context, ActivatorTypeRelation entity.ActivatorTypeRelation) (entity.ActivatorType, *errs.Error)
+	CreateActivatorTypeRelation(ct context.Context, activatorTypeRelation entity.ActivatorTypeRelation) (entity.ActivatorType, *errs.Error)
 }

@@ -12,15 +12,15 @@ type Group struct{}
 
 var _ dao.Group = (*Group)(nil)
 
-func (*Group) CreateGroup(ct context.Context, group entity.Group) (entity.Group, *errs.Error) {
-	panic("unimplemented")
-}
-
 func (*Group) FindGroupsByID(ct context.Context, groupID uint64) (entity.Group, *errs.Error) {
 	panic("unimplemented")
 }
 
 func (*Group) FindGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity.Group, *errs.Error) {
+	panic("unimplemented")
+}
+
+func (*Group) CreateGroup(ct context.Context, group entity.Group) (entity.Group, *errs.Error) {
 	panic("unimplemented")
 }
 
