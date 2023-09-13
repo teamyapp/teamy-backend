@@ -20,6 +20,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -105,9 +106,15 @@ var daoSet = wire.NewSet(
 	sqldb.NewVersionSelector,
 )
 
+var repositorySet = wire.NewSet(
+	repository.NewGroup,
+	repository.NewActivator,
+)
+
 var serviceSet = wire.NewSet(
 	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
 	newHTTPClient,
+	repositorySet,
 	service.NewThread,
 	service.NewTask,
 	service.NewTaskLink,

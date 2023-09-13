@@ -48,7 +48,7 @@ type Rollout struct {
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation
 	versionSelectorDao                dao.VersionSelector
 	appVersionDao                     dao.AppVersion
-	activatorRepository               repository.Activator
+	activatorRepository               *repository.Activator
 }
 
 func (r *Rollout) FindUserRolloutsByAppID(ct context.Context, appID uint64) ([]entity.Rollout, *errs.Error) {
@@ -385,7 +385,7 @@ func NewRollout(
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation,
 	versionSelectorDao dao.VersionSelector,
 	appVersionDao dao.AppVersion,
-	activatorRepository repository.Activator,
+	activatorRepository *repository.Activator,
 ) *Rollout {
 	return &Rollout{
 		logger:                            logger,
