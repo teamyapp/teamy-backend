@@ -20,6 +20,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -60,7 +61,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.PercentageActivator), new(*sqldb.PercentageActivator)),
 	wire.Bind(new(dao.RolloutViewer), new(*sqldb.RolloutViewer)),
 	wire.Bind(new(dao.Rollout), new(*sqldb.Rollout)),
-	wire.Bind(new(dao.StaticGroup), new(*sqldb.StaticGroup)),
+	wire.Bind(new(dao.Group), new(*sqldb.Group)),
 	wire.Bind(new(dao.TeamGroupRelation), new(*sqldb.TeamGroupRelation)),
 	wire.Bind(new(dao.TimeRangeActivator), new(*sqldb.TimeRangeActivator)),
 	wire.Bind(new(dao.UserGroupRelation), new(*sqldb.UserGroupRelation)),
@@ -97,7 +98,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewPercentageActivator,
 	sqldb.NewRolloutViewer,
 	sqldb.NewRollout,
-	sqldb.NewStaticGroup,
+	sqldb.NewGroup,
 	sqldb.NewTeamGroupRelation,
 	sqldb.NewTimeRangeActivator,
 	sqldb.NewUserGroupRelation,
@@ -105,9 +106,15 @@ var daoSet = wire.NewSet(
 	sqldb.NewVersionSelector,
 )
 
+var repositorySet = wire.NewSet(
+	repository.NewGroup,
+	repository.NewActivator,
+)
+
 var serviceSet = wire.NewSet(
 	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
 	newHTTPClient,
+	repositorySet,
 	service.NewThread,
 	service.NewTask,
 	service.NewTaskLink,
