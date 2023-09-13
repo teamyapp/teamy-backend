@@ -40,7 +40,6 @@ type Rollout struct {
 	cloudClientRegistry               *client.Registry
 	transactionFactory                transaction.Factory
 	stateSyncer                       *realtime.StateSyncer
-	activatorRepository               repository.Activator
 	appGroupRelationDao               dao.AppGroupRelation
 	rolloutDao                        dao.Rollout
 	rolloutViewerDao                  dao.RolloutViewer
@@ -49,6 +48,7 @@ type Rollout struct {
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation
 	versionSelectorDao                dao.VersionSelector
 	appVersionDao                     dao.AppVersion
+	activatorRepository               repository.Activator
 }
 
 func (r *Rollout) FindUserRolloutsByAppID(ct context.Context, appID uint64) ([]entity.Rollout, *errs.Error) {
@@ -366,7 +366,7 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 		store := store.NewPercentageActivator(r.rolloutViewerDao, rolloutID)
 		activator = rollout.NewPercentageActivator(store, randgen.NewBuiltinRanGen(), rawActivator.Percentage)
 	default:
-		return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorType))
+		return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorUnion.Type))
 	}
 
 	return activator, nil
@@ -385,6 +385,7 @@ func NewRollout(
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation,
 	versionSelectorDao dao.VersionSelector,
 	appVersionDao dao.AppVersion,
+	activatorRepository repository.Activator,
 ) *Rollout {
 	return &Rollout{
 		logger:                            logger,
@@ -399,5 +400,6 @@ func NewRollout(
 		versionSelectorVersionRelationDao: versionSelectorVersionRelationDao,
 		versionSelectorDao:                versionSelectorDao,
 		appVersionDao:                     appVersionDao,
+		activatorRepository:               activatorRepository,
 	}
 }

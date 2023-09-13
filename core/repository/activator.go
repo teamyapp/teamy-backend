@@ -20,25 +20,24 @@ type Activator struct {
 }
 
 func (a *Activator) FindActivatorByID(ct context.Context, activatorID uint64) (entity.ActivatorUnion, *errs.Error) {
-	activatorType, err := a.activatorTypeRelationDao.FindActivatorTypeByID(ct, ActivatorID)
+	activatorType, err := a.activatorTypeRelationDao.FindActivatorTypeByID(ct, activatorID)
 	if err != nil {
 		return entity.ActivatorUnion{}, err
 	}
 
-    activatorUnion := entity.ActivatorUnion{
-		Type:                activatorType
+	activatorUnion := entity.ActivatorUnion{
+		Type: activatorType,
 	}
 	switch activatorType {
 	case entity.ActivatorTypeTimeRange:
-		activatorUnion.TimeRangeActivator, err = a.timeRangeActivatorDao.FindTimeRangeActivatorByID(ct, ActivatorID)
+		activatorUnion.TimeRangeActivator, err = a.timeRangeActivatorDao.FindTimeRangeActivatorByID(ct, activatorID)
 	case entity.ActivatorTypeMaxViewers:
-		activatorUnion.MaxViewersActivator, err = a.maxViewersActivatorDao.FindMaxViewersActivatorByID(ct, ActivatorID)
+		activatorUnion.MaxViewersActivator, err = a.maxViewersActivatorDao.FindMaxViewersActivatorByID(ct, activatorID)
 	case entity.ActivatorTypePercentage:
-		activatorUnion.PercentageActivator, err = a.percentageActivatorDao.FindPercentageActivatorByID(ct, ActivatorID)
+		activatorUnion.PercentageActivator, err = a.percentageActivatorDao.FindPercentageActivatorByID(ct, activatorID)
 	default:
 		err = errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorType))
 	}
-
 
 	return activatorUnion, err
 }
@@ -48,7 +47,7 @@ func (a *Activator) CreateTimeRangeActivator(ct context.Context, timeRangeActiva
 	if err != nil {
 		return entity.TimeRangeActivator{}, err
 	}
-	
+
 	activatorTypeRelation := entity.ActivatorTypeRelation{
 		ActivatorID:   timeRangeActivator.Activator.ID,
 		ActivatorType: entity.ActivatorTypeTimeRange,
@@ -65,7 +64,7 @@ func (a *Activator) CreateMaxViewersActivator(ct context.Context, maxViewersActi
 	if err != nil {
 		return entity.MaxViewersActivator{}, err
 	}
-	
+
 	activatorTypeRelation := entity.ActivatorTypeRelation{
 		ActivatorID:   maxViewersActivator.Activator.ID,
 		ActivatorType: entity.ActivatorTypeMaxViewers,
@@ -83,7 +82,7 @@ func (a *Activator) CreatePercentageActivator(ct context.Context, percentageActi
 	if err != nil {
 		return entity.PercentageActivator{}, err
 	}
-	
+
 	activatorTypeRelation := entity.ActivatorTypeRelation{
 		ActivatorID:   percentageActivator.Activator.ID,
 		ActivatorType: entity.ActivatorTypePercentage,
