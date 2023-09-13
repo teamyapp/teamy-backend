@@ -56,6 +56,7 @@ func (a *Activator) CreateTimeRangeActivator(ct context.Context, timeRangeActiva
 	if err != nil {
 		return entity.TimeRangeActivator{}, err
 	}
+	
 	return a.timeRangeActivatorDao.CreateTimeRangeActivator(ct, timeRangeActivator)
 }
 
