@@ -45,7 +45,7 @@ func (*AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Tr
 	return appSecret, nil
 }
 
-func (a *AppSecret) FindSecretsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppSecret, *errs.Error) {
+func (a *AppSecret) FindAppSecretsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppSecret, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT
@@ -97,7 +97,7 @@ func (a *AppSecret) FindSecretsByAppID(ct context.Context, appID uint64) ([]enti
 	}
 
 	defer tx.Rollback()
-	return a.FindSecretsByAppIDWithTx(ct, tx, appID)
+	return a.FindAppSecretsByAppIDWithTx(ct, tx, appID)
 }
 
 func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transaction, appSecret entity.AppSecret) *errs.Error {
