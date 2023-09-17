@@ -45,8 +45,8 @@ func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Tr
 			id,
 			created_at,
 			updated_at
-			FROM activator
-			WHERE id = $1`,
+		FROM activator
+		WHERE id = $1`,
 		activatorID,
 	).Scan(
 		&activator.ID,
