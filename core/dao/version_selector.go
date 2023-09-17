@@ -9,6 +9,6 @@ import (
 )
 
 type VersionSelector interface {
-	CreateVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelector entity.VersionSelector) *errs.Error
 	FindVersionSelectorByID(ct context.Context, selectorID uint64) (entity.VersionSelector, *errs.Error)
+	CreateVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelector entity.VersionSelector) *errs.Error
 }

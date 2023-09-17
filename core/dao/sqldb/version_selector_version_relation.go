@@ -77,7 +77,7 @@ func (*VersionSelectorVersionRelation) CreateVersionSelectorVersionRelation(
 		VALUES (
 			$1,
 			$2
-		)
+		);
 		`,
 		versionSelectorVersionRelation.VersionSelectorID,
 		versionSelectorVersionRelation.VersionNumber,
