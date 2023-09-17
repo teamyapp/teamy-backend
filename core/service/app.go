@@ -171,7 +171,6 @@ func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (
 		a.stateSyncer,
 		ct,
 	)
-
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return a.teamAppInstallationDao.CreateTeamAppInstallation(ct, tx, teamAppInstallation)
 	})
