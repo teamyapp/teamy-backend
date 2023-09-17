@@ -65,7 +65,6 @@ func (a *Activator) FindActivatorByID(ct context.Context, activatorID uint64) (e
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := a.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.Activator{}, err
