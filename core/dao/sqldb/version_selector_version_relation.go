@@ -73,7 +73,8 @@ func (*VersionSelectorVersionRelation) CreateVersionSelectorVersionRelation(
 		INSERT INTO version_selector_version_relation (
 			version_selector_id,
 			version_number
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2
 		)
