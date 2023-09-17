@@ -20,12 +20,13 @@ func (*TeamAppInstallation) FindTeamAppInstallationByIDWithTx(ct context.Context
 	teamAppInstallation := entity.TeamAppInstallation{}
 	err := tx.SQLTx().QueryRowContext(
 		ct,
-		`SELECT
+		`
+		SELECT
 			id,
 			installed_team_id,
 			app_id
-			FROM team_app_installation
-			WHERE id = $1`,
+		FROM team_app_installation
+		WHERE id = $1;`,
 		appInstallationID,
 	).Scan(
 		&teamAppInstallation.ID,
@@ -48,12 +49,13 @@ func (a *TeamAppInstallation) FindTeamAppInstallationsByAppIDWithTx(
 	teamAppInstallations := []entity.TeamAppInstallation{}
 	rows, err := tx.SQLTx().QueryContext(
 		ct,
-		`SELECT
+		`
+		SELECT
 			id,
 			installed_team_id,
 			app_id
-			FROM team_app_installation
-			WHERE app_id = $1`,
+		FROM team_app_installation
+		WHERE app_id = $1;`,
 		appID,
 	)
 
@@ -84,7 +86,6 @@ func (t *TeamAppInstallation) FindTeamAppInstallationsByAppID(ct context.Context
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return nil, err
@@ -104,11 +105,12 @@ func (*TeamAppInstallation) CreateTeamAppInstallation(
 			id,
 			installed_team_id,
 			app_id
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2,
 			$3
-		)`,
+		);`,
 		teamAppInstallation.ID,
 		teamAppInstallation.InstalledTeamID,
 		teamAppInstallation.AppID,
@@ -124,8 +126,9 @@ func (*TeamAppInstallation) CreateTeamAppInstallation(
 func (*TeamAppInstallation) DeleteTeamAppInstallationByID(ct context.Context, tx *transaction.Transaction, appInstallationID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(
 		ct,
-		`DELETE FROM team_app_installation
-			WHERE id = $1`,
+		`
+		DELETE FROM team_app_installation
+		WHERE id = $1;`,
 		appInstallationID,
 	)
 

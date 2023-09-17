@@ -19,7 +19,7 @@ var _ dao.MaxViewersActivator = (*MaxViewersActivator)(nil)
 func (*MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
-	ActivatorID uint64,
+	activatorID uint64,
 ) (entity.MaxViewersActivator, *errs.Error) {
 	maxViewersActivator := entity.MaxViewersActivator{}
 	err := tx.SQLTx().QueryRowContext(ct,
@@ -47,7 +47,6 @@ func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, Ac
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := m.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.MaxViewersActivator{}, err
@@ -68,7 +67,8 @@ func (*MaxViewersActivator) CreateMaxViewersActivator(
 			INSERT INTO max_viewers_activator (
 				activator_id,
 				max_viewers
-			) VALUES (
+			)
+			VALUES (
 				$1,
 				$2
 			)

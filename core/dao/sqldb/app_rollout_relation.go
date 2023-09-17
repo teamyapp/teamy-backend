@@ -23,10 +23,11 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationTypeWithTx(
 	rolloutType entity.AppRolloutRelationType,
 ) ([]uint64, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(ct,
-		`SELECT
+		`
+		SELECT
 			rollout_id
-			FROM app_rollout_relations
-			WHERE app_id = $1 AND type = $2`,
+		FROM app_rollout_relations
+		WHERE app_id = $1 AND type = $2`,
 		appID,
 		rolloutType,
 	)
@@ -71,7 +72,8 @@ func (*AppRolloutRelation) CreateAppRolloutRelation(ct context.Context, tx *tran
 			app_id,
 			rollout_id,
 			type
-		) VALUES (
+		)
+		VALUES (
 			$1,
 			$2,
 			$3
@@ -80,7 +82,6 @@ func (*AppRolloutRelation) CreateAppRolloutRelation(ct context.Context, tx *tran
 		appRolloutRelation.RolloutID,
 		appRolloutRelation.Type,
 	)
-
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}

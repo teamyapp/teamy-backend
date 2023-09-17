@@ -29,8 +29,7 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 			created_at, 
 			updated_at
 		FROM groups
-		WHERE id = $1
-		`,
+		WHERE id = $1`,
 		groupID,
 	).Scan(
 		&group.ID,
@@ -51,7 +50,6 @@ func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.Group,
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := g.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.Group{}, err
@@ -76,9 +74,10 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 			name,
 			created_at,
 			updated_at
-			FROM groups
-			WHERE id IN (%s)
-		`, idsString,
+		FROM groups
+		WHERE id IN (%s);
+		`, 
+		idsString,
 	)
 
 	rows, err := tx.SQLTx().QueryContext(ct, query)
@@ -110,7 +109,6 @@ func (g *Group) FindGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := g.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return nil, err
@@ -130,7 +128,8 @@ func (g *Group) CreateGroup(ct context.Context, tx *transaction.Transaction, gro
 			name,
 			created_at,
 			updated_at
-		) VALUES ($1, $2, $3, $4, $5)
+		) 
+		VALUES ($1, $2, $3, $4, $5);
 		`,
 		group.ID,
 		group.Type,
@@ -150,10 +149,11 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		UPDATE group
-			SET type = $1,
-				name = $2,
-				updated_at = $3
-			WHERE id = $4
+		SET 
+		    type = $1,
+		    name = $2,
+		    updated_at = $3
+		WHERE id = $4;
 		`,
 		Group.Type,
 		Group.Name,

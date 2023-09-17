@@ -24,10 +24,10 @@ func (*UserGroupRelation) FindUserIDsByGroupIDWithTx(
 	userIDs := make([]uint64, 0)
 	rows, err := tx.SQLTx().QueryContext(
 		ct,
-		`SELECT
-			user_id
-			FROM user_group_relation
-			WHERE group_id = $1`,
+		`
+		SELECT user_id
+		FROM user_group_relation
+		WHERE group_id = $1;`,
 		groupID,
 	)
 
@@ -54,7 +54,6 @@ func (u *UserGroupRelation) FindUserIDsByGroupID(ct context.Context, groupID uin
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := u.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return nil, err
@@ -73,10 +72,11 @@ func (*UserGroupRelation) CreateUserGroupRelation(
 		`INSERT INTO user_group_relation (
 			user_id,
 			group_id
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2
-		)`,
+		);`,
 		userGroupRelation.UserID,
 		userGroupRelation.GroupID,
 	)
@@ -96,8 +96,9 @@ func (*UserGroupRelation) DeleteUserGroupRelation(
 ) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(
 		ct,
-		`DELETE FROM user_group_relation
-			WHERE group_id = $1 AND user_id = $2`,
+		`
+		DELETE FROM user_group_relation
+		WHERE group_id = $1 AND user_id = $2;`,
 		groupID,
 		userID,
 	)

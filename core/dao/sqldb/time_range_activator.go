@@ -24,12 +24,13 @@ func (*TimeRangeActivator) FindTimeRangeActivatorByIDWithTx(
 	timeRangeActivator := entity.TimeRangeActivator{}
 	err := tx.SQLTx().QueryRowContext(
 		ct,
-		`SELECT
+		`
+		SELECT
 			activator_id,
 			start_time,
 			end_time,
-			FROM time_range_activator
-			WHERE activator_id = $1`,
+		FROM time_range_activator
+		WHERE activator_id = $1;`,
 		activatorID,
 	).Scan(
 		&timeRangeActivator.Activator.ID,
@@ -48,7 +49,6 @@ func (t *TimeRangeActivator) FindTimeRangeActivatorByID(ct context.Context, acti
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.TimeRangeActivator{}, err
@@ -69,11 +69,12 @@ func (*TimeRangeActivator) CreateTimeRangeActivator(
 			activator_id,
 			start_time,
 			end_time
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2,
 			$3
-		)`,
+		);`,
 		activator.Activator.ID,
 		activator.StartAt,
 		activator.EndAt,

@@ -16,7 +16,11 @@ type GroupRolloutRelation struct {
 
 var _ dao.GroupRolloutRelation = (*GroupRolloutRelation)(nil)
 
-func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) ([]entity.GroupRolloutRelation, *errs.Error) {
+func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupIDWithTx(
+    ct context.Context, 
+    tx *transaction.Transaction, 
+    groupID uint64,
+) ([]entity.GroupRolloutRelation, *errs.Error) {
 	groupRolloutRelations := []entity.GroupRolloutRelation{}
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
@@ -24,8 +28,8 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupIDWithTx(ct conte
 			group_id,
 			rollout_id,
 			order_index
-			FROM group_rollout_relations
-			WHERE group_id = $1
+		FROM group_rollout_relations
+		WHERE group_id = $1;
 		`,
 		groupID,
 	)
@@ -56,7 +60,6 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupID(ct context.Con
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := g.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return nil, err
@@ -68,11 +71,13 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupID(ct context.Con
 
 func (g *GroupRolloutRelation) CreateGroupRolloutRelation(ct context.Context, tx *transaction.Transaction, groupRolloutRelation entity.GroupRolloutRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
-		`INSERT INTO group_rollout_relations (
+		`
+		INSERT INTO group_rollout_relations (
 			group_id,
 			rollout_id,
 			order_index
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2,
 			$3

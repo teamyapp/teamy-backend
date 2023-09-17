@@ -18,7 +18,10 @@ var _ dao.AppVersionPrice = (*AppVersionPrice)(nil)
 
 func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(ct,
-		"SELECT currency, amount FROM app_version_prices WHERE app_id = $1 AND version_number = $2",
+		`
+		SELECT currency, amount 
+		FROM app_version_prices 
+		WHERE app_id = $1 AND version_number = $2;",
 		appID,
 		versionNumber,
 	)

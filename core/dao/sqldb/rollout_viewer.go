@@ -20,7 +20,7 @@ func (*RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWith(
 	ct context.Context,
 	tx *transaction.Transaction,
 	viewerID uint64,
-	RolloutID uint64,
+	rolloutID uint64,
 ) (entity.RolloutViewer, *errs.Error) {
 	rolloutViewer := entity.RolloutViewer{}
 	err := tx.SQLTx().QueryRowContext(
@@ -34,7 +34,7 @@ func (*RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWith(
 			created_at,
 			updated_at
 		FROM rollout_viewer
-		WHERE viewer_id = $1 AND rollout_id = $2
+		WHERE viewer_id = $1 AND rollout_id = $2;
 		`,
 		viewerID,
 		RolloutID,
@@ -58,7 +58,6 @@ func (r *RolloutViewer) FindRolloutViewerByViewerIDAndRolloutID(ct context.Conte
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := r.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.RolloutViewer{}, err
@@ -81,14 +80,15 @@ func (*RolloutViewer) CreateRolloutViewer(
 			is_activated,
 			created_at,
 			updated_at
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2,
 			$3,
 			$4,
 			$5,
 			$6
-		)
+		);
 	`,
 		viewer.RolloutID,
 		viewer.ViewerID,
@@ -111,10 +111,11 @@ func (*RolloutViewer) UpdateRolloutViewer(
 	viewer entity.RolloutViewer,
 ) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
-		UPDATE rollout_viewer SET
+		UPDATE rollout_viewer 
+		SET
 			is_activated = $1,
 			updated_at = $2
-		WHERE viewer_id = $3 AND rollout_id = $4
+		WHERE viewer_id = $3 AND rollout_id = $4;
 	`,
 		viewer.IsActivated,
 		viewer.UpdatedAt,

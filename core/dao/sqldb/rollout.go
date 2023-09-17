@@ -34,7 +34,7 @@ func (*Rollout) FindRolloutByIDWithTx(
 			created_at,
 			updated_at
 		FROM rollout
-		WHERE id = $1
+		WHERE id = $1;
 		`,
 		rolloutID,
 	).Scan(
@@ -58,7 +58,6 @@ func (r *Rollout) FindRolloutByID(ct context.Context, rolloutIDs uint64) (entity
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := r.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.Rollout{}, err
@@ -90,7 +89,7 @@ func (*Rollout) FindRolloutsByIDsWithTx(
 			created_at,
 			updated_at
 		FROM rollout
-		WHERE id IN (%s)
+		WHERE id IN (%s);
 		`,
 		idsString,
 	)
@@ -151,7 +150,7 @@ func (*Rollout) CreateRollout(
 			viewers,
 			is_enabled
 		)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES ($1, $2, $3, $4, $5);
 		`,
 		rollout.ID,
 		rollout.ActivatorID,
@@ -182,7 +181,7 @@ func (*Rollout) UpdateRollout(
 			viewers = $3,
 			is_enabled = $4,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $5
+		WHERE id = $5;
 		`,
 		rollout.ActivatorID,
 		rollout.SelectorID,
@@ -206,7 +205,7 @@ func (*Rollout) DeleteRollout(
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM rollout
-		WHERE id = $1
+		WHERE id = $1;
 		`,
 		rolloutID,
 	)

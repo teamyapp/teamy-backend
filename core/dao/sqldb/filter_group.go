@@ -20,12 +20,13 @@ var _ dao.FilterGroup = (*FilterGroup)(nil)
 func (f *FilterGroup) FindFilterGroupByIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.FilterGroup, *errs.Error) {
 	filterGroup := entity.FilterGroup{}
 	err := tx.SQLTx().QueryRowContext(ct,
-		`SELECT
+		`
+		SELECT
 			group_id,
 			filter,
 			count
-			FROM filter_group
-			WHERE group_id = $1`,
+		FROM filter_group
+		WHERE group_id = $1;`,
 		groupID,
 	).Scan(
 		&filterGroup.Group.ID,
@@ -62,12 +63,13 @@ func (f *FilterGroup) FindFilterGroupsByIDsWithTx(ct context.Context, tx *transa
 	idsString := toIDsString(groupIDs)
 	filterGroups := []entity.FilterGroup{}
 	query := fmt.Sprintf(
-		`SELECT
+		`
+		SELECT
 			group_id,
 			filter,
 			count
-			FROM filter_group
-			WHERE group_id IN (%s)`,
+		FROM filter_group
+		WHERE group_id IN (%s);`,
 		idsString,
 	)
 

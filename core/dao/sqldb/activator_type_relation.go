@@ -21,9 +21,10 @@ var _ dao.ActivatorTypeRelation = (*ActivatorTypeRelation)(nil)
 func (a *ActivatorTypeRelation) FindActivatorTypeByIDWithTx(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.ActivatorType, *errs.Error) {
 	activatorTypeRelation := entity.ActivatorTypeRelation{}
 	err := tx.SQLTx().QueryRowContext(ct,
-		`SELECT 
-			activator_id,
-			activator_type 
+		`
+		    SELECT 
+			  activator_id,
+			  activator_type 
 			FROM activator_type_relations 
 			WHERE activator_id = $1`,
 		activatorID,
@@ -63,7 +64,8 @@ func (*ActivatorTypeRelation) CreateActivatorTypeRelation(ct context.Context, tx
 		INSERT INTO activator_type_relations (
 			activator_id,
 			activator_type
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2
 		)`,

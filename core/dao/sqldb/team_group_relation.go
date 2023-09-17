@@ -24,10 +24,10 @@ func (*TeamGroupRelation) FindTeamIDsByGroupIDWithTx(
 	teamIDs := []uint64{}
 	row, err := tx.SQLTx().QueryContext(
 		ct,
-		`SELECT
-			team_id
-			FROM team_group_relation
-			WHERE group_id = $1`,
+		`
+		SELECT team_id
+		FROM team_group_relation
+		WHERE group_id = $1;`,
 		groupID,
 	)
 
@@ -54,7 +54,6 @@ func (t *TeamGroupRelation) FindTeamIDsByGroupID(ct context.Context, groupID uin
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := t.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return nil, err
@@ -71,10 +70,12 @@ func (*TeamGroupRelation) CreateTeamGroupRelation(
 ) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(
 		ct,
-		`INSERT INTO team_group_relation (
+		`
+		INSERT INTO team_group_relation (
 			team_id,
 			group_id
-		) VALUES ($1, $2)`,
+		) 
+		VALUES ($1, $2);`,
 		teamGroupRelation.TeamID,
 		teamGroupRelation.GroupID,
 	)
@@ -89,8 +90,9 @@ func (*TeamGroupRelation) CreateTeamGroupRelation(
 func (*TeamGroupRelation) DeleteTeamGroupRelation(ct context.Context, tx *transaction.Transaction, teamID uint64, groupID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(
 		ct,
-		`DELETE FROM team_group_relation
-			WHERE team_id = $1 AND group_id = $2`,
+		`
+		DELETE FROM team_group_relation
+		WHERE team_id = $1 AND group_id = $2;`,
 		teamID,
 		groupID,
 	)

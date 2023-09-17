@@ -18,7 +18,10 @@ var _ dao.AppVersionChange = (*AppVersionChange)(nil)
 func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) ([]string, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(
 		ct,
-		"SELECT change FROM app_version_changes WHERE app_id = $1 AND version_number = $2",
+		`
+		SELECT change 
+		FROM app_version_changes 
+		WHERE app_id = $1 AND version_number = $2",
 		appID,
 		versionNumber,
 	)
@@ -54,7 +57,6 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct conte
 	}
 
 	defer tx.Rollback()
-
 	return NewAppVersionChange().FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 }
 

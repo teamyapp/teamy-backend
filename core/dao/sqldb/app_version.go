@@ -22,7 +22,6 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, a
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := a.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.AppVersion{}, err

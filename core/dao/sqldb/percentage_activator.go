@@ -41,7 +41,6 @@ func (p *PercentageActivator) FindPercentageActivatorByID(ct context.Context, Ac
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := p.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return entity.PercentageActivator{}, err
@@ -57,7 +56,10 @@ func (*PercentageActivator) CreatePercentageActivator(
 	activator entity.PercentageActivator,
 ) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
-		INSERT INTO percentage_activator (activator_id, percentage)
+		INSERT INTO percentage_activator (
+		    activator_id, 
+		    percentage
+		)
 		VALUES ($1, $2)
 	`, activator.Activator.ID, activator.Percentage)
 	if err != nil {

@@ -20,7 +20,8 @@ func (*AppGroupRelation) CreateAppGroupRelation(ct context.Context, tx *transact
 			app_id,
 			group_id,
 			type
-		) VALUES (
+		) 
+		VALUES (
 			$1,
 			$2,
 			$3
@@ -40,8 +41,9 @@ func (*AppGroupRelation) CreateAppGroupRelation(ct context.Context, tx *transact
 func (a *AppGroupRelation) FindAppIDByGroupIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (uint64, *errs.Error) {
 	var appID uint64
 	err := tx.SQLTx().QueryRowContext(ct,
-		`SELECT 
-			app_id
+		`
+		    SELECT 
+			   app_id
 			FROM app_group_relations 
 			WHERE group_id = $1`,
 		groupID,
@@ -60,7 +62,6 @@ func (a *AppGroupRelation) FindAppIDByGroupID(ct context.Context, groupID uint64
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := a.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return 0, err
@@ -77,10 +78,11 @@ func (a *AppGroupRelation) FindGroupIDsByAppIDAndRelationTypeWithTx(
 	appGroupRelationType entity.AppGroupRelationType,
 ) ([]uint64, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(ct,
-		`SELECT
+		`
+		SELECT
 			group_id
-			FROM app_group_relations
-			WHERE app_id = $1 AND type = $2`,
+		FROM app_group_relations
+		WHERE app_id = $1 AND type = $2`,
 		appID,
 		appGroupRelationType,
 	)
@@ -107,7 +109,6 @@ func (a *AppGroupRelation) FindGroupIDsByAppIDAndRelationType(ct context.Context
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
-
 	tx, err := a.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
 		return nil, err
