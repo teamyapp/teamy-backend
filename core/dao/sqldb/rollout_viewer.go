@@ -16,7 +16,7 @@ type RolloutViewer struct {
 
 var _ dao.RolloutViewer = (*RolloutViewer)(nil)
 
-func (*RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWith(
+func (*RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	viewerID uint64,
@@ -64,7 +64,7 @@ func (r *RolloutViewer) FindRolloutViewerByViewerIDAndRolloutID(ct context.Conte
 	}
 
 	defer tx.Rollback()
-	return r.FindRolloutViewerByViewerIDAndRolloutIDWith(ct, tx, viewerID, RolloutID)
+	return r.FindRolloutViewerByViewerIDAndRolloutIDWithTx(ct, tx, viewerID, RolloutID)
 }
 
 func (*RolloutViewer) CreateRolloutViewer(

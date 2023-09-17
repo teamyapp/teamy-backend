@@ -9,6 +9,7 @@ import (
 )
 
 type TimeRangeActivator interface {
+	FindTimeRangeActivatorByIDWithTx(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.TimeRangeActivator, *errs.Error)
 	FindTimeRangeActivatorByID(ct context.Context, activatorID uint64) (entity.TimeRangeActivator, *errs.Error)
 	CreateTimeRangeActivator(ct context.Context, tx *transaction.Transaction, activator entity.TimeRangeActivator) *errs.Error
 }

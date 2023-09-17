@@ -127,7 +127,7 @@ func (a App) UpdateAppSecret(ct context.Context, appID uint64, input UpdateAppSe
 		}
 
 		appSecret.Name = input.Name
-		return a.appSecretDao.UpdateAppSecretWithTx(ct, tx, input.AppSecretID, appSecret)
+		return a.appSecretDao.UpdateAppSecret(ct, tx, input.AppSecretID, appSecret)
 	})
 	return appSecret, err
 }
@@ -147,7 +147,7 @@ func (a App) DeleteAppSecret(ct context.Context, appSecretID uint64) (entity.App
 			return internalErr
 		}
 
-		return a.appSecretDao.DeleteAppSecretWithTx(ct, tx, appSecretID)
+		return a.appSecretDao.DeleteAppSecret(ct, tx, appSecretID)
 	})
 	return appSecret, err
 }

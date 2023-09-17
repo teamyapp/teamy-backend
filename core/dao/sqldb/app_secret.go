@@ -131,7 +131,7 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func (*AppSecret) UpdateAppSecretWithTx(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error {
+func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		UPDATE app_secrets SET
@@ -156,7 +156,7 @@ func (*AppSecret) UpdateAppSecretWithTx(ct context.Context, tx *transaction.Tran
 	return nil
 }
 
-func (*AppSecret) DeleteAppSecretWithTx(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error {
+func (*AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM app_secrets
