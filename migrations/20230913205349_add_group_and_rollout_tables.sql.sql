@@ -19,7 +19,7 @@ CREATE TABLE activator (
 );
 
 CREATE TABLE activator_type_relation (
-	activator_id BIGINT NOT NULL REFERENCES activator (id) on DELETE CASCADE,
+    activator_id BIGINT NOT NULL REFERENCES activator (id) on DELETE CASCADE,
     activator_type VARCHAR(50) NOT NULL,
     CONSTRAINT pk_activator_type_relation PRIMARY KEY (activator_id, activator_type)
 );
@@ -74,7 +74,6 @@ CREATE TABLE app_version_price (
     CONSTRAINT pk_app_version_price PRIMARY KEY (app_id, version_number)
 );
 
-
 CREATE TABLE "group" (
     id BIGINT PRIMARY KEY,
     "type" VARCHAR(50) NOT NULL,
@@ -90,20 +89,17 @@ CREATE TABLE app_group_relation (
     CONSTRAINT pk_app_group_relation PRIMARY KEY (app_id, group_id)
 );
 
-
 CREATE TABLE user_group_relation (
     user_id BIGINT NOT NULL REFERENCES "user" (id) on DELETE CASCADE,
     group_id BIGINT NOT NULL REFERENCES "group" (id) on DELETE CASCADE,
     CONSTRAINT pk_user_group_relation PRIMARY KEY (user_id, group_id)
 );
 
-
 CREATE TABLE team_group_relation (
     team_id BIGINT NOT NULL REFERENCES team (id) on DELETE CASCADE,
     group_id BIGINT NOT NULL REFERENCES "group" (id) on DELETE CASCADE,
     CONSTRAINT pk_team_group_relation PRIMARY KEY (team_id, group_id)
 );
-
 
 CREATE TABLE filter_group (
     group_id BIGINT NOT NULL REFERENCES "group" (id) on DELETE CASCADE,
@@ -121,7 +117,6 @@ CREATE TABLE rollout (
     updated_at TIMESTAMP
 );
 
-
 CREATE TABLE app_rollout_relation (
     app_id BIGINT NOT NULL REFERENCES app (id) on DELETE CASCADE,
     rollout_id BIGINT NOT NULL REFERENCES rollout (id) on DELETE CASCADE,
@@ -129,14 +124,12 @@ CREATE TABLE app_rollout_relation (
     CONSTRAINT pk_app_rollout_relation PRIMARY KEY (app_id, rollout_id)
 );
 
-
 CREATE TABLE group_rollout_relation (
     group_id BIGINT NOT NULL REFERENCES "group" (id) on DELETE CASCADE,
     rollout_id BIGINT NOT NULL REFERENCES rollout (id) on DELETE CASCADE,
     order_index INT NOT NULL,
     CONSTRAINT pk_group_rollout_relation PRIMARY KEY (group_id, rollout_id)
 );
-
 
 CREATE TABLE rollout_viewer (
     rollout_id BIGINT NOT NULL REFERENCES rollout (id) on DELETE CASCADE,
