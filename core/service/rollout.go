@@ -166,7 +166,6 @@ func (r *Rollout) FindRolloutsByGroupID(ct context.Context, groupID uint64) ([]e
 		rolloutIDs := collect.Map(groupRolloutRelations, func(groupRolloutRelation entity.GroupRolloutRelation, index int) uint64 {
 			return groupRolloutRelation.RolloutID
 		})
-
 		rollouts, err = r.rolloutDao.FindRolloutsByIDs(ct, rolloutIDs)
 		return err
 	})
@@ -342,7 +341,6 @@ func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType 
 		r.stateSyncer,
 		ct,
 	)
-
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		err := r.versionSelectorDao.CreateVersionSelector(ct, tx, versionSelector)
 		if err != nil {
