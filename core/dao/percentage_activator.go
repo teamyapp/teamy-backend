@@ -9,7 +9,7 @@ import (
 )
 
 type PercentageActivator interface {
-	FindPercentageActivatorByIDWithTx(ct context.Context, tx *transaction.Transaction, ActivatorID uint64) (entity.PercentageActivator, *errs.Error)
+	FindPercentageActivatorByIDWithTx(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.PercentageActivator, *errs.Error)
 	FindPercentageActivatorByID(ct context.Context, ActivatorID uint64) (entity.PercentageActivator, *errs.Error)
 	CreatePercentageActivator(ct context.Context, tx *transaction.Transaction, activator entity.PercentageActivator) *errs.Error
 }

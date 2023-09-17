@@ -14,19 +14,14 @@ type Activator struct {
 	transactionFactory transaction.Factory
 }
 
-// CREATE TABLE activator (
-//     id BIGINT PRIMARY KEY,
-//     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//     updated_at  TIMESTAMP
-// );
-
 func (*Activator) CreateActivator(ct context.Context, tx *transaction.Transaction, activator entity.Activator) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO activator (
 			id,
 			created_at,
 			updated_at
-		) VALUES (
+		) 
+		VALUES (
 			$1
 		)`,
 		activator.ID,
