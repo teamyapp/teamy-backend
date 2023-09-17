@@ -13,13 +13,14 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 const timePerWeek = 7 * 24 * time.Hour
@@ -39,7 +40,7 @@ type Sprint struct {
 	stateSyncer           *realtime.StateSyncer
 	authorizer            client.Authorizer
 	featureToggles        feature.Toggles
-	transactionFactory    transaction.Factory
+	transactionFactory    cloudTransaction.Factory
 	taskDao               dao.Task
 	sprintDao             dao.Sprint
 	teamDao               dao.Team
@@ -171,14 +172,14 @@ func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Spri
 		}
 	}
 
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
 	var sprint *entity.Sprint
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		team, err := s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if err != nil {
@@ -242,14 +243,14 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 		}
 	}
 
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
 	var team entity.Team
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		team, err = s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if err != nil {
@@ -304,13 +305,13 @@ func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) (
 	}
 
 	var sprints []entity.Sprint
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		sprints, err = s.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, teamID)
 		if err != nil {
@@ -369,13 +370,13 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 	}
 
 	var sprint entity.Sprint
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		sprint, err = s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
 		return err
@@ -414,13 +415,13 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 	}
 
 	var sprint entity.Sprint
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		sprint = entity.Sprint{
 			ID:           genSprintIDRes.UniqueNumber,
 			StartAt:      input.StartAt.UTC(),
@@ -515,13 +516,13 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 	}
 
 	var sprint entity.Sprint
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		taskIds, err := s.sprintTaskRelationDao.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
 		if err != nil {
 			return err
@@ -600,13 +601,13 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		task, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
@@ -742,13 +743,13 @@ func (s Sprint) CopyTasksToSprint(
 	}
 
 	var err *errs.Error
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		for idx, taskID := range taskIDs {
 			var task entity.Task
 			task, err = s.copyTaskToSprint(ct, tx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx])
@@ -800,13 +801,13 @@ func (s Sprint) MoveTasksToSprint(
 	}
 
 	var tasks []entity.Task
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		for _, taskID := range taskIDs {
 			task, err := s.moveTaskToSprint(ct, tx, rtTx, fromSprintID, toSprintID, taskID)
 
@@ -847,13 +848,13 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             s.logger,
-		transactionFactory: s.transactionFactory,
-		stateSyncer:        s.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID, true)
 		return err
@@ -869,7 +870,7 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 
 func (s Sprint) copyTaskToSprint(
 	ct context.Context,
-	tx *transaction.Transaction,
+	tx *cloudTransaction.Transaction,
 	rtTx *realtime.Transaction,
 	toSprintID uint64,
 	taskID uint64,
@@ -966,7 +967,7 @@ func (s Sprint) copyTaskToSprint(
 
 func (s Sprint) moveTaskToSprint(
 	ct context.Context,
-	tx *transaction.Transaction,
+	tx *cloudTransaction.Transaction,
 	rtTx *realtime.Transaction,
 	fromSprintID uint64,
 	toSprintID uint64,
@@ -1022,7 +1023,7 @@ func (s Sprint) moveTaskToSprint(
 
 func (s Sprint) removeTaskFromSprint(
 	ct context.Context,
-	tx *transaction.Transaction,
+	tx *cloudTransaction.Transaction,
 	rtTx *realtime.Transaction,
 	sprintID uint64,
 	taskID uint64,
@@ -1087,7 +1088,7 @@ func (s Sprint) removeTaskFromSprint(
 
 func (s Sprint) tryReduceBandwidth(
 	ct context.Context,
-	tx *transaction.Transaction,
+	tx *cloudTransaction.Transaction,
 	rtTx *realtime.Transaction,
 	sprintID uint64,
 	task entity.Task,
@@ -1122,7 +1123,7 @@ func (s Sprint) tryReduceBandwidth(
 
 func (s Sprint) tryIncreaseBandwidth(
 	ct context.Context,
-	tx *transaction.Transaction,
+	tx *cloudTransaction.Transaction,
 	rtTx *realtime.Transaction,
 	sprintID uint64,
 	task entity.Task,
@@ -1162,7 +1163,7 @@ func NewSprint(
 	stateSyncer *realtime.StateSyncer,
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,

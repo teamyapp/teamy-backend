@@ -5,13 +5,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Activator struct {
-	logger                   telemetry.Logger
 	activatorDao             dao.Activator
 	timeRangeActivatorDao    dao.TimeRangeActivator
 	maxViewersActivatorDao   dao.MaxViewersActivator
@@ -42,69 +41,67 @@ func (a *Activator) FindActivatorByID(ct context.Context, activatorID uint64) (e
 	return activatorUnion, err
 }
 
-func (a *Activator) CreateTimeRangeActivator(ct context.Context, timeRangeActivator entity.TimeRangeActivator) (entity.TimeRangeActivator, *errs.Error) {
-	_, err := a.activatorDao.CreateActivator(ct, timeRangeActivator.Activator)
+func (a *Activator) CreateTimeRangeActivator(ct context.Context, tx *transaction.Transaction, timeRangeActivator entity.TimeRangeActivator) *errs.Error {
+	err := a.activatorDao.CreateActivator(ct, tx, timeRangeActivator.Activator)
 	if err != nil {
-		return entity.TimeRangeActivator{}, err
+		return err
 	}
 
 	activatorTypeRelation := entity.ActivatorTypeRelation{
 		ActivatorID:   timeRangeActivator.Activator.ID,
 		ActivatorType: entity.ActivatorTypeTimeRange,
 	}
-	_, err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, activatorTypeRelation)
+	err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, tx, activatorTypeRelation)
 	if err != nil {
-		return entity.TimeRangeActivator{}, err
+		return err
 	}
-	
-	return a.timeRangeActivatorDao.CreateTimeRangeActivator(ct, timeRangeActivator)
+
+	return a.timeRangeActivatorDao.CreateTimeRangeActivator(ct, tx, timeRangeActivator)
 }
 
-func (a *Activator) CreateMaxViewersActivator(ct context.Context, maxViewersActivator entity.MaxViewersActivator) (entity.MaxViewersActivator, *errs.Error) {
-	_, err := a.activatorDao.CreateActivator(ct, maxViewersActivator.Activator)
+func (a *Activator) CreateMaxViewersActivator(ct context.Context, tx *transaction.Transaction, maxViewersActivator entity.MaxViewersActivator) *errs.Error {
+	err := a.activatorDao.CreateActivator(ct, tx, maxViewersActivator.Activator)
 	if err != nil {
-		return entity.MaxViewersActivator{}, err
+		return err
 	}
 
 	activatorTypeRelation := entity.ActivatorTypeRelation{
 		ActivatorID:   maxViewersActivator.Activator.ID,
 		ActivatorType: entity.ActivatorTypeMaxViewers,
 	}
-	_, err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, activatorTypeRelation)
+	err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, tx, activatorTypeRelation)
 	if err != nil {
-		return entity.MaxViewersActivator{}, err
+		return err
 	}
 
-	return a.maxViewersActivatorDao.CreateMaxViewersActivator(ct, maxViewersActivator)
+	return a.maxViewersActivatorDao.CreateMaxViewersActivator(ct, tx, maxViewersActivator)
 }
 
-func (a *Activator) CreatePercentageActivator(ct context.Context, percentageActivator entity.PercentageActivator) (entity.PercentageActivator, *errs.Error) {
-	_, err := a.activatorDao.CreateActivator(ct, percentageActivator.Activator)
+func (a *Activator) CreatePercentageActivator(ct context.Context, tx *transaction.Transaction, percentageActivator entity.PercentageActivator) *errs.Error {
+	err := a.activatorDao.CreateActivator(ct, tx, percentageActivator.Activator)
 	if err != nil {
-		return entity.PercentageActivator{}, err
+		return err
 	}
 
 	activatorTypeRelation := entity.ActivatorTypeRelation{
 		ActivatorID:   percentageActivator.Activator.ID,
 		ActivatorType: entity.ActivatorTypePercentage,
 	}
-	_, err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, activatorTypeRelation)
+	err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, tx, activatorTypeRelation)
 	if err != nil {
-		return entity.PercentageActivator{}, err
+		return err
 	}
 
-	return a.percentageActivatorDao.CreatePercentageActivator(ct, percentageActivator)
+	return a.percentageActivatorDao.CreatePercentageActivator(ct, tx, percentageActivator)
 }
 
 func NewActivator(
-	logger telemetry.Logger,
 	timeRangeActivatorDao dao.TimeRangeActivator,
 	maxViewersActivatorDao dao.MaxViewersActivator,
 	percentageActivatorDao dao.PercentageActivator,
 	activatorTypeRelationDao dao.ActivatorTypeRelation,
 ) *Activator {
 	return &Activator{
-		logger:                   logger,
 		timeRangeActivatorDao:    timeRangeActivatorDao,
 		maxViewersActivatorDao:   maxViewersActivatorDao,
 		percentageActivatorDao:   percentageActivatorDao,

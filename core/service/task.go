@@ -12,7 +12,7 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -20,6 +20,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
@@ -63,7 +64,7 @@ type Task struct {
 	authorizer              client.Authorizer
 	featureToggles          feature.Toggles
 	stateSyncer             *realtime.StateSyncer
-	transactionFactory      transaction.Factory
+	transactionFactory      cloudTransaction.Factory
 	activityCache           cache.Activity
 	taskDao                 dao.Task
 	sprintDao               dao.Sprint
@@ -168,13 +169,13 @@ func (t Task) FindTasksInSprint(
 	filter *TaskFilter,
 ) ([]entity.Task, *errs.Error) {
 	var tasks []entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		taskIDs, internalErr := t.sprintTaskRelationDao.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
 		if internalErr != nil {
 			return internalErr
@@ -217,13 +218,13 @@ func (t Task) FindTasksInSprint(
 
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, *errs.Error) {
 	var tasks []entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		taskIDs, internalErr := t.taskAwaitForRelationDao.FindAwaitForTaskIDsWithTx(ct, tx, awaitingTaskID)
 		if internalErr != nil {
 			return internalErr
@@ -307,13 +308,13 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	internalErr := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		threadID := genThreadIDRes.UniqueNumber
 		internalErr := t.threadDao.CreateThread(ct, tx, threadID)
 		if internalErr != nil {
@@ -420,13 +421,13 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		task, internalErr = t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
@@ -468,7 +469,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 
 func (t Task) updateUnusedBandWidth(
 	ct context.Context,
-	tx *transaction.Transaction,
+	tx *cloudTransaction.Transaction,
 	rtTx *realtime.Transaction,
 	taskID uint64,
 	oldEffort *time.Duration,
@@ -510,7 +511,7 @@ func (t Task) updateUnusedBandWidth(
 
 func (t Task) tryIncreaseBandwidth(
 	ct context.Context,
-	tx *transaction.Transaction,
+	tx *cloudTransaction.Transaction,
 	rtTx *realtime.Transaction,
 	taskID uint64,
 	oldOwnerID *uint64,
@@ -541,7 +542,7 @@ func (t Task) tryIncreaseBandwidth(
 	return nil
 }
 
-func (t Task) findTaskOwnerInSprints(ct context.Context, tx *transaction.Transaction, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, *errs.Error) {
+func (t Task) findTaskOwnerInSprints(ct context.Context, tx *cloudTransaction.Transaction, taskID uint64, taskOwnerUserID uint64) ([]entity.SprintParticipant, *errs.Error) {
 	sprintIDs, err := t.sprintTaskRelationDao.FindSprintIDsByTaskIDWithTx(ct, tx, taskID)
 	if err != nil {
 		return nil, err
@@ -583,13 +584,13 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		task, internalErr = t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if internalErr != nil {
@@ -691,7 +692,7 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 	return task, err
 }
 
-func (t Task) moveTaskToUpcoming(ct context.Context, tx *transaction.Transaction, rtTx *realtime.Transaction, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
+func (t Task) moveTaskToUpcoming(ct context.Context, tx *cloudTransaction.Transaction, rtTx *realtime.Transaction, taskID uint64, autoPauseTask bool) (entity.Task, *errs.Error) {
 	task, err := t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
 		return entity.Task{}, err
@@ -742,13 +743,13 @@ func (t Task) MoveTaskToUpcoming(ct context.Context, taskID uint64, autoPauseTas
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		task, err = t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
@@ -803,13 +804,13 @@ func (t Task) MoveTaskToInProgress(ct context.Context, taskID uint64) (entity.Ta
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		task, err = t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
@@ -895,13 +896,13 @@ func (t Task) MoveTaskToDelivered(ct context.Context, taskID uint64) (entity.Tas
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		task, err = t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
@@ -999,13 +1000,13 @@ func (t Task) AddAwaitForTask(ct context.Context, awaitingTaskID uint64, awaitFo
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		task, err = t.taskDao.FindTaskByIDWithTx(ct, tx, awaitingTaskID)
 		if err != nil {
@@ -1080,13 +1081,13 @@ func (t Task) RemoveAwaitForTask(ct context.Context, awaitingTaskID uint64, awai
 	}
 
 	var task entity.Task
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		task, err = t.taskDao.FindTaskByIDWithTx(ct, tx, awaitingTaskID)
 		if err != nil {
@@ -1152,13 +1153,13 @@ func (t Task) StartDraggingTask(ct context.Context, taskID uint64, clientID uint
 		}
 	}
 
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		task, err := t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			return err
@@ -1211,13 +1212,13 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 		}
 	}
 
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		task, err := t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			return err
@@ -1255,7 +1256,7 @@ func NewTask(
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	activityCache cache.Activity,
 	taskDao dao.Task,
 	threadDao dao.Thread,

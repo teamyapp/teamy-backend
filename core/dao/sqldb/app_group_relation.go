@@ -2,29 +2,126 @@ package sqldb
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type AppGroupRelation struct {
+	transactionFactory transaction.Factory
 }
 
-func (*AppGroupRelation) CreateAppGroupRelation(ct context.Context, appGroupRelation entity.AppGroupRelation) (entity.AppGroupRelation, *errs.Error) {
-	panic("unimplemented")
+func (*AppGroupRelation) CreateAppGroupRelation(ct context.Context, tx *transaction.Transaction, appGroupRelation entity.AppGroupRelation) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`INSERT INTO app_group_relations (
+			app_id,
+			group_id,
+			type
+		) 
+		VALUES (
+			$1,
+			$2,
+			$3
+		)`,
+		appGroupRelation.AppID,
+		appGroupRelation.GroupID,
+		appGroupRelation.Type,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
 }
 
-func (*AppGroupRelation) FindAppIDByGroupID(ct context.Context, groupID uint64) (uint64, *errs.Error) {
-	panic("unimplemented")
+func (a *AppGroupRelation) FindAppIDByGroupIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (uint64, *errs.Error) {
+	var appID uint64
+	err := tx.SQLTx().QueryRowContext(ct,
+		`
+		    SELECT 
+			   app_id
+			FROM app_group_relations 
+			WHERE group_id = $1`,
+		groupID,
+	).Scan(
+		&appID,
+	)
+
+	if err != nil {
+		return 0, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return appID, nil
 }
 
-func (*AppGroupRelation) FindGroupIDsByAppIDAndRelationType(ct context.Context, appID uint64, appGroupRelationType entity.AppGroupRelationType) ([]uint64, *errs.Error) {
-	panic("unimplemented")
+func (a *AppGroupRelation) FindAppIDByGroupID(ct context.Context, groupID uint64) (uint64, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := a.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return 0, err
+	}
+
+	defer tx.Rollback()
+	return a.FindAppIDByGroupIDWithTx(ct, tx, groupID)
+}
+
+func (a *AppGroupRelation) FindGroupIDsByAppIDAndRelationTypeWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	appID uint64,
+	appGroupRelationType entity.AppGroupRelationType,
+) ([]uint64, *errs.Error) {
+	rows, err := tx.SQLTx().QueryContext(ct,
+		`
+		SELECT
+			group_id
+		FROM app_group_relations
+		WHERE app_id = $1 AND type = $2`,
+		appID,
+		appGroupRelationType,
+	)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	var groupIDs []uint64
+	for rows.Next() {
+		var groupID uint64
+		err := rows.Scan(&groupID)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		groupIDs = append(groupIDs, groupID)
+	}
+
+	return groupIDs, nil
+}
+
+func (a *AppGroupRelation) FindGroupIDsByAppIDAndRelationType(ct context.Context, appID uint64, appGroupRelationType entity.AppGroupRelationType) ([]uint64, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := a.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return a.FindGroupIDsByAppIDAndRelationTypeWithTx(ct, tx, appID, appGroupRelationType)
 }
 
 var _ dao.AppGroupRelation = (*AppGroupRelation)(nil)
 
-func NewAppGroupRelation() *AppGroupRelation {
-	return &AppGroupRelation{}
+func NewAppGroupRelation(transactionFactory transaction.Factory) *AppGroupRelation {
+	return &AppGroupRelation{
+		transactionFactory: transactionFactory,
+	}
 }

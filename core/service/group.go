@@ -9,11 +9,12 @@ import (
 	"github.com/teamyapp/cloud/libs/delta"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/repository"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type CreateFilterGroupInput struct {
@@ -48,7 +49,7 @@ type UpdateStaticUserGroupInput struct {
 type Group struct {
 	logger               telemetry.Logger
 	cloudClientRegistry  *client.Registry
-	transactionFactory   transaction.Factory
+	transactionFactory   cloudTransaction.Factory
 	stateSyncer          *realtime.StateSyncer
 	groupRepository      repository.Group
 	userGroupRelationDao dao.UserGroupRelation
@@ -80,34 +81,41 @@ func (g *Group) CreateStaticUserGroup(
 			CreatedAt: now,
 		},
 	}
-
-	//TODO: add transaction
-	group, err := g.groupRepository.CreateStaticGroup(ct, group)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	appGroupRelation := entity.AppGroupRelation{
-		AppID:   appID,
-		GroupID: group.ID,
-		Type:    entity.AppGroupRelationTypeUser,
-	}
-	_, err = g.appGroupRelationDao.CreateAppGroupRelation(ct, appGroupRelation)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	for _, userID := range input.UserIDs {
-		_, err := g.userGroupRelationDao.CreateUserGroupRelation(ct, entity.UserGroupRelation{
-			UserID:  userID,
-			GroupID: group.ID,
-		})
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := g.groupRepository.CreateStaticGroup(ct, tx, group)
 		if err != nil {
-			return entity.StaticGroup{}, err
+			return err
 		}
-	}
 
-	return group, nil
+		appGroupRelation := entity.AppGroupRelation{
+			AppID:   appID,
+			GroupID: group.ID,
+			Type:    entity.AppGroupRelationTypeUser,
+		}
+		err = g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
+		if err != nil {
+			return err
+		}
+
+		for _, userID := range input.UserIDs {
+			err := g.userGroupRelationDao.CreateUserGroupRelation(ct, tx, entity.UserGroupRelation{
+				UserID:  userID,
+				GroupID: group.ID,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	return group, err
 }
 
 func (g *Group) UpdateStaticUserGroup(
@@ -124,53 +132,60 @@ func (g *Group) UpdateStaticUserGroup(
 			CreatedAt: now,
 		},
 	}
-
-	//TODO: add transaction
-	err := g.groupRepository.UpdateStaticGroup(ct, group)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	currentUserIDs, err := g.userGroupRelationDao.FindUserIDsByGroupID(ct, group.ID)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	currentUserIDsSet := map[uint64]bool{}
-	for _, userID := range currentUserIDs {
-		currentUserIDsSet[userID] = true
-	}
-
-	userIDsSet := map[uint64]bool{}
-	for _, userID := range input.UserIDs {
-		userIDsSet[userID] = true
-	}
-
-	detected := delta.DetectMapDelta(
-		currentUserIDsSet,
-		userIDsSet,
-		delta.DetectValueDelta[bool],
-		delta.ToValueDelta[bool],
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
 	)
-	for userID, detectedValue := range detected.Value {
-		switch detectedValue.KeyStatus {
-		case delta.AddedStatus:
-			_, err := g.userGroupRelationDao.CreateUserGroupRelation(ct, entity.UserGroupRelation{
-				UserID:  userID,
-				GroupID: group.ID,
-			})
-			if err != nil {
-				return entity.StaticGroup{}, err
-			}
-		case delta.RemovedStatus:
-			err := g.userGroupRelationDao.DeleteUserGroupRelation(ct, group.ID, userID)
-			if err != nil {
-				return entity.StaticGroup{}, err
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := g.groupRepository.UpdateStaticGroup(ct, tx, group)
+		if err != nil {
+			return err
+		}
+
+		currentUserIDs, err := g.userGroupRelationDao.FindUserIDsByGroupID(ct, group.ID)
+		if err != nil {
+			return err
+		}
+
+		currentUserIDsSet := map[uint64]bool{}
+		for _, userID := range currentUserIDs {
+			currentUserIDsSet[userID] = true
+		}
+
+		userIDsSet := map[uint64]bool{}
+		for _, userID := range input.UserIDs {
+			userIDsSet[userID] = true
+		}
+
+		detected := delta.DetectMapDelta(
+			currentUserIDsSet,
+			userIDsSet,
+			delta.DetectValueDelta[bool],
+			delta.ToValueDelta[bool],
+		)
+		for userID, detectedValue := range detected.Value {
+			switch detectedValue.KeyStatus {
+			case delta.AddedStatus:
+				err := g.userGroupRelationDao.CreateUserGroupRelation(ct, tx, entity.UserGroupRelation{
+					UserID:  userID,
+					GroupID: group.ID,
+				})
+				if err != nil {
+					return err
+				}
+			case delta.RemovedStatus:
+				err := g.userGroupRelationDao.DeleteUserGroupRelation(ct, tx, group.ID, userID)
+				if err != nil {
+					return err
+				}
 			}
 		}
-	}
 
-	return group, nil
+		return nil
+	})
+	return group, err
 }
 
 func (g *Group) CreateFilterUserGroup(
@@ -195,19 +210,25 @@ func (g *Group) CreateFilterUserGroup(
 		Filter: input.Filter,
 		Count:  0,
 	}
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
+		if err != nil {
+			return err
+		}
 
-	//TODO: add transaction
-	filterGroup, err := g.groupRepository.CreateFilterGroup(ct, filterGroup)
-	if err != nil {
-		return entity.FilterGroup{}, err
-	}
-
-	appGroupRelation := entity.AppGroupRelation{
-		AppID:   appID,
-		GroupID: filterGroup.ID,
-		Type:    entity.AppGroupRelationTypeUser,
-	}
-	_, err = g.appGroupRelationDao.CreateAppGroupRelation(ct, appGroupRelation)
+		appGroupRelation := entity.AppGroupRelation{
+			AppID:   appID,
+			GroupID: filterGroup.ID,
+			Type:    entity.AppGroupRelationTypeUser,
+		}
+		return g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
+	})
 	return filterGroup, err
 }
 
@@ -223,7 +244,19 @@ func (g *Group) UpdateFilterGroup(ct context.Context, groupID uint64, input Upda
 		Filter: input.Filter,
 		Count:  0,
 	}
-	err := g.groupRepository.UpdateFilterGroup(ct, filterGroup)
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return g.groupRepository.UpdateFilterGroup(ct, tx, filterGroup)
+	})
+	if err != nil {
+		return entity.FilterGroup{}, err
+	}
+
 	return filterGroup, err
 }
 
@@ -247,34 +280,41 @@ func (g *Group) CreateStaticTeamGroup(
 			CreatedAt: now,
 		},
 	}
-
-	//TODO: add transaction
-	group, err := g.groupRepository.CreateStaticGroup(ct, group)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	appGroupRelation := entity.AppGroupRelation{
-		AppID:   appID,
-		GroupID: group.ID,
-		Type:    entity.AppGroupRelationTypeTeam,
-	}
-	_, err = g.appGroupRelationDao.CreateAppGroupRelation(ct, appGroupRelation)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	for _, teamID := range input.TeamIDs {
-		_, err := g.teamGroupRelationDao.CreateTeamGroupRelation(ct, entity.TeamGroupRelation{
-			TeamID:  teamID,
-			GroupID: group.ID,
-		})
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := g.groupRepository.CreateStaticGroup(ct, tx, group)
 		if err != nil {
-			return entity.StaticGroup{}, err
+			return err
 		}
-	}
 
-	return group, nil
+		appGroupRelation := entity.AppGroupRelation{
+			AppID:   appID,
+			GroupID: group.ID,
+			Type:    entity.AppGroupRelationTypeTeam,
+		}
+		err = g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
+		if err != nil {
+			return err
+		}
+
+		for _, teamID := range input.TeamIDs {
+			err := g.teamGroupRelationDao.CreateTeamGroupRelation(ct, tx, entity.TeamGroupRelation{
+				TeamID:  teamID,
+				GroupID: group.ID,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		
+		return nil
+	})
+	return group, err
 }
 
 func (g *Group) UpdateStaticTeamGroup(
@@ -291,53 +331,60 @@ func (g *Group) UpdateStaticTeamGroup(
 			CreatedAt: now,
 		},
 	}
-
-	//TODO: add transaction
-	err := g.groupRepository.UpdateStaticGroup(ct, group)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	currentTeamIDs, err := g.teamGroupRelationDao.FindTeamIDsByGroupID(ct, group.ID)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	currentTeamIDsSet := map[uint64]bool{}
-	for _, teamID := range currentTeamIDs {
-		currentTeamIDsSet[teamID] = true
-	}
-
-	teamIDsSet := map[uint64]bool{}
-	for _, teamID := range input.TeamIDs {
-		teamIDsSet[teamID] = true
-	}
-
-	detected := delta.DetectMapDelta(
-		currentTeamIDsSet,
-		teamIDsSet,
-		delta.DetectValueDelta[bool],
-		delta.ToValueDelta[bool],
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
 	)
-	for teamID, detectedValue := range detected.Value {
-		switch detectedValue.KeyStatus {
-		case delta.AddedStatus:
-			_, err := g.teamGroupRelationDao.CreateTeamGroupRelation(ct, entity.TeamGroupRelation{
-				TeamID:  teamID,
-				GroupID: group.ID,
-			})
-			if err != nil {
-				return entity.StaticGroup{}, err
-			}
-		case delta.RemovedStatus:
-			err := g.teamGroupRelationDao.DeleteTeamGroupRelation(ct, group.ID, teamID)
-			if err != nil {
-				return entity.StaticGroup{}, err
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := g.groupRepository.UpdateStaticGroup(ct, tx, group)
+		if err != nil {
+			return err
+		}
+
+		currentTeamIDs, err := g.teamGroupRelationDao.FindTeamIDsByGroupID(ct, group.ID)
+		if err != nil {
+			return err
+		}
+
+		currentTeamIDsSet := map[uint64]bool{}
+		for _, teamID := range currentTeamIDs {
+			currentTeamIDsSet[teamID] = true
+		}
+
+		teamIDsSet := map[uint64]bool{}
+		for _, teamID := range input.TeamIDs {
+			teamIDsSet[teamID] = true
+		}
+
+		detected := delta.DetectMapDelta(
+			currentTeamIDsSet,
+			teamIDsSet,
+			delta.DetectValueDelta[bool],
+			delta.ToValueDelta[bool],
+		)
+		for teamID, detectedValue := range detected.Value {
+			switch detectedValue.KeyStatus {
+			case delta.AddedStatus:
+				err := g.teamGroupRelationDao.CreateTeamGroupRelation(ct, tx, entity.TeamGroupRelation{
+					TeamID:  teamID,
+					GroupID: group.ID,
+				})
+				if err != nil {
+					return err
+				}
+			case delta.RemovedStatus:
+				err := g.teamGroupRelationDao.DeleteTeamGroupRelation(ct, tx, group.ID, teamID)
+				if err != nil {
+					return err
+				}
 			}
 		}
-	}
 
-	return group, nil
+		return nil
+	})
+	return group, err
 }
 
 func (g *Group) CreateFilterTeamGroup(
@@ -363,32 +410,37 @@ func (g *Group) CreateFilterTeamGroup(
 		Filter: input.Filter,
 		Count:  0,
 	}
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
+		if err != nil {
+			return err
+		}
 
-	//TODO: add transaction
-	filterGroup, err := g.groupRepository.CreateFilterGroup(ct, filterGroup)
-	if err != nil {
-		return entity.FilterGroup{}, err
-	}
-
-	appGroupRelation := entity.AppGroupRelation{
-		AppID:   appID,
-		GroupID: filterGroup.ID,
-		Type:    entity.AppGroupRelationTypeTeam,
-	}
-	_, err = g.appGroupRelationDao.CreateAppGroupRelation(ct, appGroupRelation)
+		appGroupRelation := entity.AppGroupRelation{
+			AppID:   appID,
+			GroupID: filterGroup.ID,
+			Type:    entity.AppGroupRelationTypeTeam,
+		}
+		return g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
+	})
 	return filterGroup, err
 }
 
 func (g *Group) FindUsersByGroupID(ct context.Context, groupID uint64) ([]entity.User, *errs.Error) {
 	var users []entity.User
-	txCtx := TransactionsContext{
-		logger:             g.logger,
-		transactionFactory: g.transactionFactory,
-		stateSyncer:        g.stateSyncer,
-		ct:                 ct,
-	}
-
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		userIDs, err := g.userGroupRelationDao.FindUserIDsByGroupID(ct, groupID)
 		if err != nil {
 			return err
@@ -406,14 +458,13 @@ func (g *Group) FindUsersByGroupID(ct context.Context, groupID uint64) ([]entity
 
 func (g *Group) FindTeamsByGroupID(ct context.Context, groupID uint64) ([]entity.Team, *errs.Error) {
 	var teams []entity.Team
-	txCtx := TransactionsContext{
-		logger:             g.logger,
-		transactionFactory: g.transactionFactory,
-		stateSyncer:        g.stateSyncer,
-		ct:                 ct,
-	}
-
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		teamIDs, err := g.teamGroupRelationDao.FindTeamIDsByGroupID(ct, groupID)
 		if err != nil {
 			return err
@@ -458,7 +509,7 @@ func (g *Group) findGroupsByAppID(ct context.Context, appID uint64, appGroupRela
 func NewGroup(
 	logger telemetry.Logger,
 	cloudClientRegistry *client.Registry,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	userGroupRelationDao dao.UserGroupRelation,
 	appGroupRelationDao dao.AppGroupRelation,

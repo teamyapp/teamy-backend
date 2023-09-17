@@ -15,12 +15,13 @@ import (
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/cloud/libs/rollout"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/store"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type CreateRolloutInput struct {
@@ -38,7 +39,7 @@ type UpdateRolloutInput struct {
 type Rollout struct {
 	logger                            telemetry.Logger
 	cloudClientRegistry               *client.Registry
-	transactionFactory                transaction.Factory
+	transactionFactory                cloudTransaction.Factory
 	stateSyncer                       *realtime.StateSyncer
 	appGroupRelationDao               dao.AppGroupRelation
 	rolloutDao                        dao.Rollout
@@ -81,37 +82,43 @@ func (r *Rollout) CreateAppRollout(
 		IsEnabled:   input.IsEnabled,
 		Viewers:     0,
 	}
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := r.rolloutDao.CreateRollout(ct, tx, rollout)
+		if err != nil {
+			return err
+		}
 
-	rollout, err := r.rolloutDao.CreateRollout(ct, rollout)
-	if err != nil {
-		return entity.Rollout{}, err
-	}
-
-	_, err = r.appRolloutRelationDao.CreateAppRolloutRelation(ct, entity.AppRolloutRelation{
-		AppID:     appID,
-		RolloutID: rollout.ID,
-		Type:      appRolloutRelationType,
+		return r.appRolloutRelationDao.CreateAppRolloutRelation(ct, tx, entity.AppRolloutRelation{
+			AppID:     appID,
+			RolloutID: rollout.ID,
+			Type:      appRolloutRelationType,
+		})
 	})
 	return rollout, err
 }
 
 func (r *Rollout) DeleteRollout(ct context.Context, rolloutID uint64) (entity.Rollout, *errs.Error) {
 	var rollout entity.Rollout
-	txCtx := TransactionsContext{
-		logger:             r.logger,
-		transactionFactory: r.transactionFactory,
-		stateSyncer:        r.stateSyncer,
-		ct:                 ct,
-	}
-
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		rollout, err = r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
 		if err != nil {
 			return err
 		}
 
-		return r.rolloutDao.DeleteRolloutWithTx(ct, tx, rolloutID)
+		return r.rolloutDao.DeleteRollout(ct, tx, rolloutID)
 	})
 
 	return rollout, err
@@ -119,14 +126,13 @@ func (r *Rollout) DeleteRollout(ct context.Context, rolloutID uint64) (entity.Ro
 
 func (r *Rollout) UpdateRollout(ct context.Context, rolloutID uint64, input UpdateRolloutInput) (entity.Rollout, *errs.Error) {
 	var rollout entity.Rollout
-	txCtx := TransactionsContext{
-		logger:             r.logger,
-		transactionFactory: r.transactionFactory,
-		stateSyncer:        r.stateSyncer,
-		ct:                 ct,
-	}
-
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		rollout, err = r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
 		if err != nil {
@@ -136,19 +142,35 @@ func (r *Rollout) UpdateRollout(ct context.Context, rolloutID uint64, input Upda
 		rollout.SelectorID = input.VersionSelectorID
 		rollout.ActivatorID = input.ActivatorID
 		rollout.IsEnabled = input.IsEnabled
-		return r.rolloutDao.UpdateRolloutWithTx(ct, tx, rollout)
+		return r.rolloutDao.UpdateRollout(ct, tx, rollout)
 	})
 
 	return rollout, err
 }
 
 func (r *Rollout) FindRolloutsByGroupID(ct context.Context, groupID uint64) ([]entity.Rollout, *errs.Error) {
-	rolloutIDs, err := r.groupRolloutRelationDao.FindRolloutIDsByGroupID(ct, groupID)
-	if err != nil {
-		return nil, err
-	}
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
 
-	return r.rolloutDao.FindRolloutsByIDs(ct, rolloutIDs)
+	var rollouts []entity.Rollout
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		groupRolloutRelations, err := r.groupRolloutRelationDao.FindGroupRolloutRelationsByGroupID(ct, groupID)
+		if err != nil {
+			return err
+		}
+
+		rolloutIDs := collect.Map(groupRolloutRelations, func(groupRolloutRelation entity.GroupRolloutRelation, index int) uint64 {
+			return groupRolloutRelation.RolloutID
+		})
+		rollouts, err = r.rolloutDao.FindRolloutsByIDs(ct, rolloutIDs)
+		return err
+	})
+
+	return rollouts, err
 }
 
 func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appTeamInstallation entity.TeamAppInstallation) (*int, *errs.Error) {
@@ -190,7 +212,7 @@ func (r *Rollout) newRollout(ct context.Context, rawRollout entity.Rollout) (rol
 		return rollout.Rollout{}, err
 	}
 
-	rolloutStore := store.NewRollout(r.rolloutDao, rawRollout.ID)
+	rolloutStore := store.NewRollout(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutDao, rawRollout.ID)
 	return rollout.NewRollout(ct, rolloutStore, activator, versionSelector)
 }
 
@@ -206,8 +228,16 @@ func (r *Rollout) CreateTimeRangeActivator(ct context.Context, startAt *time.Tim
 			CreatedAt: time.Now().UTC(),
 		},
 	}
-
-	return r.activatorRepository.CreateTimeRangeActivator(ct, timeRangeActivator)
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return r.activatorRepository.CreateTimeRangeActivator(ct, tx, timeRangeActivator)
+	})
+	return timeRangeActivator, err
 }
 
 func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) (entity.MaxViewersActivator, *errs.Error) {
@@ -217,7 +247,16 @@ func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) 
 			CreatedAt: time.Now().UTC(),
 		},
 	}
-	return r.activatorRepository.CreateMaxViewersActivator(ct, maxViewersActivator)
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return r.activatorRepository.CreateMaxViewersActivator(ct, tx, maxViewersActivator)
+	})
+	return maxViewersActivator, err
 }
 
 func (r *Rollout) CreatePercentageActivator(ct context.Context, percentage int) (entity.PercentageActivator, *errs.Error) {
@@ -227,7 +266,16 @@ func (r *Rollout) CreatePercentageActivator(ct context.Context, percentage int) 
 			CreatedAt: time.Now().UTC(),
 		},
 	}
-	return r.activatorRepository.CreatePercentageActivator(ct, percentageActivator)
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return r.activatorRepository.CreatePercentageActivator(ct, tx, percentageActivator)
+	})
+	return percentageActivator, err
 }
 
 func (r *Rollout) FindVersionSelectorByID(ct context.Context, selectorID uint64) (entity.VersionSelector, *errs.Error) {
@@ -286,22 +334,32 @@ func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType 
 		ID:   genSelectorIDRes.UniqueNumber,
 		Type: versionSelectorType,
 	}
-	versionSelector, err := r.versionSelectorDao.CreateVersionSelector(ct, versionSelector)
-	if err != nil {
-		return entity.VersionSelector{}, err
-	}
 
-	for _, versionNumber := range versionNumbers {
-		_, err := r.versionSelectorVersionRelationDao.CreateVersionSelectorVersionRelation(ct, entity.VersionSelectorVersionRelation{
-			VersionSelectorID: versionSelector.ID,
-			VersionNumber:     versionNumber,
-		})
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := r.versionSelectorDao.CreateVersionSelector(ct, tx, versionSelector)
 		if err != nil {
-			return entity.VersionSelector{}, err
+			return err
 		}
-	}
 
-	return versionSelector, nil
+		for _, versionNumber := range versionNumbers {
+			err := r.versionSelectorVersionRelationDao.CreateVersionSelectorVersionRelation(ct, tx, entity.VersionSelectorVersionRelation{
+				VersionSelectorID: versionSelector.ID,
+				VersionNumber:     versionNumber,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	return versionSelector, err
 }
 
 func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64, selectorID uint64) (rollout.VersionSelector, *errs.Error) {
@@ -328,7 +386,7 @@ func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64
 
 		versionSelector = rollout.NewStaticVersionSelector(versionNumbers[0])
 	case entity.VersionSelectorTypeExperiment:
-		store := store.NewExperimentVersionSelector(r.rolloutViewerDao, rolloutID)
+		store := store.NewExperimentVersionSelector(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutViewerDao, rolloutID)
 		versionSelector = rollout.NewExperimentVersionSelector(store, randgen.NewBuiltinRanGen(), versionNumbers)
 	default:
 		return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown version selector type %s", rawVersionSelector.Type))
@@ -355,7 +413,7 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 	case entity.ActivatorTypeMaxViewers:
 		rawActivator := activatorUnion.MaxViewersActivator
 
-		activatorStore := store.NewMaxViewersActivator(r.rolloutViewerDao, r.rolloutDao, rolloutID)
+		activatorStore := store.NewMaxViewersActivator(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutViewerDao, r.rolloutDao, rolloutID)
 		activator, err = rollout.NewMaxViewersActivator(ct, activatorStore, rawActivator.MaxViewers)
 		if err != nil {
 			return nil, err
@@ -363,7 +421,7 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 	case entity.ActivatorTypePercentage:
 		rawActivator := activatorUnion.PercentageActivator
 
-		store := store.NewPercentageActivator(r.rolloutViewerDao, rolloutID)
+		store := store.NewPercentageActivator(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutViewerDao, rolloutID)
 		activator = rollout.NewPercentageActivator(store, randgen.NewBuiltinRanGen(), rawActivator.Percentage)
 	default:
 		return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorUnion.Type))
@@ -375,7 +433,7 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 func NewRollout(
 	logger telemetry.Logger,
 	cloudClientRegistry *client.Registry,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	appGroupRelationDao dao.AppGroupRelation,
 	rolloutDao dao.Rollout,

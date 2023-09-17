@@ -5,13 +5,20 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/rollout"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type MaxViewersActivator struct {
-	rolloutID        uint64
-	rolloutViewerDao dao.RolloutViewer
-	rolloutDao       dao.Rollout
+	logger             telemetry.Logger
+	transactionFactory cloudTransaction.Factory
+	stateSyncer        *realtime.StateSyncer
+	rolloutID          uint64
+	rolloutViewerDao   dao.RolloutViewer
+	rolloutDao         dao.Rollout
 }
 
 var _ rollout.MaxViewersActivatorStore = (*MaxViewersActivator)(nil)
@@ -36,7 +43,15 @@ func (m *MaxViewersActivator) SetIsActivated(ct context.Context, viewerID uint64
 	}
 
 	rolloutViewer.IsActivated = isActivated
-	return m.rolloutViewerDao.UpdateRolloutViewer(ct, rolloutViewer)
+	txCtx := transaction.NewTransactionsContext(
+		m.logger,
+		m.transactionFactory,
+		m.stateSyncer,
+		ct,
+	)
+	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return m.rolloutViewerDao.UpdateRolloutViewer(ct, tx, rolloutViewer)
+	})
 }
 
 func (m *MaxViewersActivator) GetTotalViewers(ct context.Context, defaultViewers int) (int, *errs.Error) {
@@ -51,16 +66,41 @@ func (m *MaxViewersActivator) SetTotalViewers(ct context.Context, totalViewers i
 	}
 
 	rollout.Viewers = totalViewers
-	return m.rolloutDao.UpdateRollout(ct, rollout)
+	txCtx := transaction.NewTransactionsContext(
+		m.logger,
+		m.transactionFactory,
+		m.stateSyncer,
+		ct,
+	)
+	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return m.rolloutDao.UpdateRollout(ct, tx, rollout)
+	})
 }
 
-func NewMaxViewersActivator(rolloutViewerDao dao.RolloutViewer, rolloutDao dao.Rollout, rolloutID uint64) *MaxViewersActivator {
-	return &MaxViewersActivator{rolloutID: rolloutID, rolloutViewerDao: rolloutViewerDao, rolloutDao: rolloutDao}
+func NewMaxViewersActivator(
+	logger telemetry.Logger,
+	transactionFactory cloudTransaction.Factory,
+	stateSyncer *realtime.StateSyncer,
+	rolloutViewerDao dao.RolloutViewer,
+	rolloutDao dao.Rollout,
+	rolloutID uint64,
+) *MaxViewersActivator {
+	return &MaxViewersActivator{
+		logger:             logger,
+		transactionFactory: transactionFactory,
+		stateSyncer:        stateSyncer,
+		rolloutID:          rolloutID,
+		rolloutViewerDao:   rolloutViewerDao,
+		rolloutDao:         rolloutDao,
+	}
 }
 
 type PercentageActivator struct {
-	rolloutViewerDao dao.RolloutViewer
-	rolloutID        uint64
+	logger             telemetry.Logger
+	transactionFactory cloudTransaction.Factory
+	stateSyncer        *realtime.StateSyncer
+	rolloutViewerDao   dao.RolloutViewer
+	rolloutID          uint64
 }
 
 var _ rollout.PercentageActivatorStore = (*PercentageActivator)(nil)
@@ -85,9 +125,29 @@ func (p *PercentageActivator) SetIsActivated(ct context.Context, viewerID uint64
 	}
 
 	viewer.IsActivated = isActivated
-	return p.rolloutViewerDao.UpdateRolloutViewer(ct, viewer)
+	txCtx := transaction.NewTransactionsContext(
+		p.logger,
+		p.transactionFactory,
+		p.stateSyncer,
+		ct,
+	)
+	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return p.rolloutViewerDao.UpdateRolloutViewer(ct, tx, viewer)
+	})
 }
 
-func NewPercentageActivator(rolloutViewerDao dao.RolloutViewer, rolloutID uint64) *PercentageActivator {
-	return &PercentageActivator{rolloutViewerDao: rolloutViewerDao, rolloutID: rolloutID}
+func NewPercentageActivator(
+	logger telemetry.Logger,
+	transactionFactory cloudTransaction.Factory,
+	stateSyncer *realtime.StateSyncer,
+	rolloutViewerDao dao.RolloutViewer,
+	rolloutID uint64,
+) *PercentageActivator {
+	return &PercentageActivator{
+		logger:             logger,
+		transactionFactory: transactionFactory,
+		stateSyncer:        stateSyncer,
+		rolloutViewerDao:   rolloutViewerDao,
+		rolloutID:          rolloutID,
+	}
 }
