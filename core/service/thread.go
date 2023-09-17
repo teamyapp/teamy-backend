@@ -9,12 +9,13 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type CreateMessageInput struct {
@@ -30,7 +31,7 @@ type Thread struct {
 	toggles             feature.Toggles
 	cloudClientRegistry *client.Registry
 	stateSyncer         *realtime.StateSyncer
-	transactionFactory  transaction.Factory
+	transactionFactory  cloudTransaction.Factory
 	taskDao             dao.Task
 	threadDao           dao.Thread
 	messageDao          dao.Message
@@ -46,13 +47,13 @@ func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return t.threadDao.CreateThread(ct, tx, threadID)
 	})
 	return threadID, err
@@ -84,13 +85,13 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 		AuthorUserID: userID,
 		CreatedAt:    time.Now(),
 	}
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		createMessageMutation := mutation.NewCreateMessage(
 			t.stateSyncer,
 			t.messageDao,
@@ -123,13 +124,13 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 	message.Body = input.Body
 	now := time.Now().UTC()
 	message.UpdatedAt = &now
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		updateMessageMutation := mutation.NewUpdateMessage(
 			t.logger,
 			t.stateSyncer,
@@ -159,13 +160,13 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		return entity.Message{}, err
 	}
 
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		deleteMessageMutation := mutation.NewDeleteMessage(
 			t.logger,
 			t.stateSyncer,
@@ -194,7 +195,7 @@ func NewThread(
 	toggles feature.Toggles,
 	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	taskDao dao.Task,
 	threadDao dao.Thread,
 	messageDao dao.Message,

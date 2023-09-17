@@ -13,13 +13,14 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 const invitationCodeLen = 20
@@ -30,7 +31,7 @@ type Invitation struct {
 	authorizer           client.Authorizer
 	featureToggles       feature.Toggles
 	stateSyncer          *realtime.StateSyncer
-	transactionFactory   transaction.Factory
+	transactionFactory   cloudTransaction.Factory
 	invitationDao        dao.Invitation
 	teamMemberDao        dao.TeamMember
 	sprintParticipantDao dao.SprintParticipant
@@ -170,13 +171,13 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		CreatedAt:         time.Now().UTC(),
 	}
 
-	txCtx := TransactionsContext{
-		logger:             i.logger,
-		transactionFactory: i.transactionFactory,
-		stateSyncer:        i.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		i.logger,
+		i.transactionFactory,
+		i.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		createInvitationMutation := mutation.NewCreateInvitation(
 			i.logger,
 			i.stateSyncer,
@@ -233,13 +234,13 @@ func (i Invitation) UpdateInvitation(ct context.Context, invitationID uint64, in
 	}
 
 	var invitation entity.Invitation
-	txCtx := TransactionsContext{
-		logger:             i.logger,
-		transactionFactory: i.transactionFactory,
-		stateSyncer:        i.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		i.logger,
+		i.transactionFactory,
+		i.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		invitation, internalErr = i.invitationDao.FindInvitationByIDWithTx(ct, tx, invitationID)
 		if internalErr != nil {
@@ -295,13 +296,13 @@ func (i Invitation) DeleteInvitation(ct context.Context, invitationID uint64) (e
 	}
 
 	var invitation entity.Invitation
-	txCtx := TransactionsContext{
-		logger:             i.logger,
-		transactionFactory: i.transactionFactory,
-		stateSyncer:        i.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		i.logger,
+		i.transactionFactory,
+		i.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		invitation, internalErr = i.invitationDao.FindInvitationByID(ct, invitationID)
 		if internalErr != nil {
@@ -346,13 +347,13 @@ func (i Invitation) AcceptInvitation(ct context.Context, invitationID uint64, in
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now().UTC()
 	invitation.UpdatedAt = &now
-	txCtx := TransactionsContext{
-		logger:             i.logger,
-		transactionFactory: i.transactionFactory,
-		stateSyncer:        i.stateSyncer,
-		ct:                 ct,
-	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		i.logger,
+		i.transactionFactory,
+		i.stateSyncer,
+		ct,
+	)
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
@@ -451,13 +452,13 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 	invitation.ReceiverUserID = &receiverUserID
 	now := time.Now().UTC()
 	invitation.UpdatedAt = &now
-	txCtx := TransactionsContext{
-		logger:             i.logger,
-		transactionFactory: i.transactionFactory,
-		stateSyncer:        i.stateSyncer,
-		ct:                 ct,
-	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		i.logger,
+		i.transactionFactory,
+		i.stateSyncer,
+		ct,
+	)
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		updateInvitationMutation := mutation.NewUpdateInvitation(
 			i.logger,
 			i.stateSyncer,
@@ -533,7 +534,7 @@ func NewInvitation(
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	invitationDao dao.Invitation,
 	teamMemberDao dao.TeamMember,
 	sprintParticipantDao dao.SprintParticipant,

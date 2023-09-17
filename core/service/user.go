@@ -11,13 +11,14 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -39,7 +40,7 @@ type User struct {
 	cloudClientRegistry        *client.Registry
 	authorizer                 client.Authorizer
 	stateSyncer                *realtime.StateSyncer
-	transactionFactory         transaction.Factory
+	transactionFactory         cloudTransaction.Factory
 	userDao                    dao.User
 	teamMemberDao              dao.TeamMember
 	userFileUploadSessionDao   dao.UserFileUploadSession
@@ -104,13 +105,13 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 		LastName:   input.LastName,
 		ProfileURL: input.ProfileURL,
 	}
-	txCtx := TransactionsContext{
-		logger:             u.logger,
-		transactionFactory: u.transactionFactory,
-		stateSyncer:        u.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		u.logger,
+		u.transactionFactory,
+		u.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return u.userDao.CreateUser(ct, tx, user)
 	})
 	return user, err
@@ -137,13 +138,13 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 	}
 
 	var user entity.User
-	txCtx := TransactionsContext{
-		logger:             u.logger,
-		transactionFactory: u.transactionFactory,
-		stateSyncer:        u.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		u.logger,
+		u.transactionFactory,
+		u.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
 		if err != nil {
@@ -201,13 +202,13 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 		CreatedAt:           time.Now(),
 	}
 
-	txCtx := TransactionsContext{
-		logger:             u.logger,
-		transactionFactory: u.transactionFactory,
-		stateSyncer:        u.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		u.logger,
+		u.transactionFactory,
+		u.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, tx, fileUploadSession)
 	})
 
@@ -244,13 +245,13 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	}
 
 	var user entity.User
-	txCtx := TransactionsContext{
-		logger:             u.logger,
-		transactionFactory: u.transactionFactory,
-		stateSyncer:        u.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		u.logger,
+		u.transactionFactory,
+		u.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(
 			ct,
 			tx,
@@ -297,7 +298,7 @@ func NewUser(
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	userDao dao.User,
 	teamMemberDao dao.TeamMember,
 	userFileUploadSessionDao dao.UserFileUploadSession,

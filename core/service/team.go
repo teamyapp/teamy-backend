@@ -13,13 +13,14 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -44,7 +45,7 @@ type Team struct {
 	authorizer                 client.Authorizer
 	featureToggles             feature.Toggles
 	stateSyncer                *realtime.StateSyncer
-	transactionFactory         transaction.Factory
+	transactionFactory         cloudTransaction.Factory
 	taskDao                    dao.Task
 	sprintDao                  dao.Sprint
 	sprintParticipantDao       dao.SprintParticipant
@@ -115,13 +116,13 @@ func (t Team) FindTeamsForUser(ct context.Context, userID uint64, filter *TeamFi
 	}
 
 	var teams []entity.Team
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(true, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		ids, internalErr := t.teamMemberDao.FindTeamIDsByUserIDWithTx(ct, tx, userID)
 		if internalErr != nil {
 			return internalErr
@@ -260,13 +261,13 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		OwnerUserID:   userID,
 		CreatedAt:     time.Now(),
 	}
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err = txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		// All users are authorized to create team
 		createTeamMutation := mutation.NewCreateTeam(
 			t.logger,
@@ -362,13 +363,13 @@ func (t Team) UpdateTeam(ct context.Context, teamID uint64, input UpdateTeamInpu
 	}
 
 	var team entity.Team
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		team, internalErr = t.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
@@ -421,13 +422,13 @@ func (t Team) DeleteTeam(ct context.Context, teamID uint64) (entity.Team, *errs.
 	}
 
 	var team entity.Team
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		team, internalErr = t.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if internalErr != nil {
@@ -487,13 +488,13 @@ func (t Team) CreateTeamIconUploadSession(ct context.Context, teamID uint64) (ui
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return t.teamFileUploadSessionDao.CreateTeamFileUploadSession(ct, tx, fileUploadSession)
 	})
 
@@ -533,13 +534,13 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 
 	var iconUploadSession entity.TeamFileUploadSession
 	var team entity.Team
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		iconUploadSession, internalErr = t.teamFileUploadSessionDao.FindTeamFileUploadSessionByTeamIDWithTx(
 			ct,
@@ -627,13 +628,13 @@ func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID ui
 		UserID:    memberUserID,
 		CreatedAt: time.Now(),
 	}
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		createTeamMemberMutation := mutation.NewCreateTeamMember(
 			t.logger,
@@ -712,13 +713,13 @@ func (t Team) RemoveMemberFromTeam(ct context.Context, teamID uint64, memberUser
 	}
 
 	var teamMember entity.TeamMember
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		teamMember, internalErr = t.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, memberUserID)
 		if internalErr != nil {
@@ -801,13 +802,13 @@ func (t Team) UpdateTeamMember(
 	}
 
 	var teamMember entity.TeamMember
-	txCtx := TransactionsContext{
-		logger:             t.logger,
-		transactionFactory: t.transactionFactory,
-		stateSyncer:        t.stateSyncer,
-		ct:                 ct,
-	}
-	err := txCtx.withTransactions(false, func(tx *transaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		teamMember, internalErr = t.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, input.UserID)
 		if internalErr != nil {
@@ -889,7 +890,7 @@ func NewTeam(
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudTransaction.Factory,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintParticipantDao dao.SprintParticipant,

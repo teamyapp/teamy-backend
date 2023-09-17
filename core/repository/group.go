@@ -6,6 +6,7 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
@@ -16,28 +17,26 @@ type Group struct {
 	filterGroupDao dao.FilterGroup
 }
 
-func (g *Group) CreateStaticGroup(ct context.Context, staticGroup entity.StaticGroup) (entity.StaticGroup, *errs.Error) {
-	group, err := g.groupDao.CreateGroup(ct, staticGroup.Group)
+func (g *Group) CreateStaticGroup(ct context.Context, tx *transaction.Transaction, staticGroup entity.StaticGroup) (entity.StaticGroup, *errs.Error) {
+	err := g.groupDao.CreateGroup(ct, tx, staticGroup.Group)
 	if err != nil {
 		return entity.StaticGroup{}, err
 	}
 
-	return entity.StaticGroup{
-		Group: group,
-	}, nil
+	return staticGroup, nil
 }
 
-func (g *Group) UpdateStaticGroup(ct context.Context, staticGroup entity.StaticGroup) *errs.Error {
-	return g.groupDao.UpdateGroup(ct, staticGroup.Group)
+func (g *Group) UpdateStaticGroup(ct context.Context, tx *transaction.Transaction, staticGroup entity.StaticGroup) *errs.Error {
+	return g.groupDao.UpdateGroup(ct, tx, staticGroup.Group)
 }
 
-func (g *Group) CreateFilterGroup(ct context.Context, filterGroup entity.FilterGroup) (entity.FilterGroup, *errs.Error) {
-	_, err := g.groupDao.CreateGroup(ct, filterGroup.Group)
+func (g *Group) CreateFilterGroup(ct context.Context, tx *transaction.Transaction, filterGroup entity.FilterGroup) (entity.FilterGroup, *errs.Error) {
+	err := g.groupDao.CreateGroup(ct, tx, filterGroup.Group)
 	if err != nil {
 		return entity.FilterGroup{}, err
 	}
 
-	filterGroup, err = g.filterGroupDao.CreateFilterGroup(ct, filterGroup)
+	err = g.filterGroupDao.CreateFilterGroup(ct, tx, filterGroup)
 	if err != nil {
 		return entity.FilterGroup{}, err
 	}
@@ -45,13 +44,13 @@ func (g *Group) CreateFilterGroup(ct context.Context, filterGroup entity.FilterG
 	return filterGroup, nil
 }
 
-func (g *Group) UpdateFilterGroup(ct context.Context, filterGroup entity.FilterGroup) *errs.Error {
-	err := g.groupDao.UpdateGroup(ct, filterGroup.Group)
+func (g *Group) UpdateFilterGroup(ct context.Context, tx *transaction.Transaction, filterGroup entity.FilterGroup) *errs.Error {
+	err := g.groupDao.UpdateGroup(ct, tx, filterGroup.Group)
 	if err != nil {
 		return err
 	}
 
-	return g.filterGroupDao.UpdateFilterGroup(ct, filterGroup)
+	return g.filterGroupDao.UpdateFilterGroup(ct, tx, filterGroup)
 }
 
 func (g *Group) FindGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity.GroupUnion, *errs.Error) {

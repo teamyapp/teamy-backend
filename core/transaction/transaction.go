@@ -1,4 +1,4 @@
-package service
+package transaction
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type TransactionsContext struct {
 
 // all unnecessary operations should be executed either before db txn begins or after db txn commits to avoid
 // long-running txn
-func (t TransactionsContext) withTransactions(
+func (t TransactionsContext) WithTransactions(
 	readonly bool,
 	execute func(tx *transaction.Transaction, rtTx *realtime.Transaction,
 	) *errs.Error) *errs.Error {
@@ -60,4 +60,18 @@ func (t TransactionsContext) withTransactions(
 	}
 
 	return nil
+}
+
+func NewTransactionsContext(
+	logger telemetry.Logger,
+	transactionFactory transaction.Factory,
+	stateSyncer *realtime.StateSyncer,
+	ct context.Context,
+) TransactionsContext {
+	return TransactionsContext{
+		logger:             logger,
+		transactionFactory: transactionFactory,
+		stateSyncer:        stateSyncer,
+		ct:                 ct,
+	}
 }
