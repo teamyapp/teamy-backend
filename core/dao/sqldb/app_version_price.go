@@ -21,7 +21,8 @@ func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct c
 		`
 		SELECT currency, amount 
 		FROM app_version_prices 
-		WHERE app_id = $1 AND version_number = $2;",
+		WHERE app_id = $1 AND version_number = $2
+		`,
 		appID,
 		versionNumber,
 	)

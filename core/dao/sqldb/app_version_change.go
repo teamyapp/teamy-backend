@@ -23,6 +23,7 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 		FROM app_version_changes 
 		WHERE app_id = $1 AND version_number = $2",
 		appID,
+		`,
 		versionNumber,
 	)
 

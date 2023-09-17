@@ -37,7 +37,7 @@ func (*RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWithTx(
 		WHERE viewer_id = $1 AND rollout_id = $2;
 		`,
 		viewerID,
-		RolloutID,
+		rolloutID,
 	).Scan(
 		&rolloutViewer.RolloutID,
 		&rolloutViewer.ViewerID,

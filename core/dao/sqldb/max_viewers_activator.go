@@ -30,7 +30,7 @@ func (*MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
 			FROM max_viewers_activator
 			WHERE activator_id = $1
 		`,
-		ActivatorID,
+		activatorID,
 	).Scan(
 		&maxViewersActivator.Activator.ID,
 		&maxViewersActivator.MaxViewers,
