@@ -88,7 +88,7 @@ func (g *Group) CreateStaticUserGroup(
 		ct,
 	)
 	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		group, err := g.groupRepository.CreateStaticGroup(ct, tx, group)
+		err := g.groupRepository.CreateStaticGroup(ct, tx, group)
 		if err != nil {
 			return err
 		}
@@ -217,7 +217,7 @@ func (g *Group) CreateFilterUserGroup(
 		ct,
 	)
 	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		filterGroup, err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
+		err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
 		if err != nil {
 			return err
 		}
@@ -287,7 +287,7 @@ func (g *Group) CreateStaticTeamGroup(
 		ct,
 	)
 	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		group, err := g.groupRepository.CreateStaticGroup(ct, tx, group)
+		err := g.groupRepository.CreateStaticGroup(ct, tx, group)
 		if err != nil {
 			return err
 		}
@@ -416,7 +416,7 @@ func (g *Group) CreateFilterTeamGroup(
 		ct,
 	)
 	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		filterGroup, err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
+		err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
 		if err != nil {
 			return err
 		}

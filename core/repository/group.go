@@ -17,31 +17,21 @@ type Group struct {
 	filterGroupDao dao.FilterGroup
 }
 
-func (g *Group) CreateStaticGroup(ct context.Context, tx *transaction.Transaction, staticGroup entity.StaticGroup) (entity.StaticGroup, *errs.Error) {
-	err := g.groupDao.CreateGroup(ct, tx, staticGroup.Group)
-	if err != nil {
-		return entity.StaticGroup{}, err
-	}
-
-	return staticGroup, nil
+func (g *Group) CreateStaticGroup(ct context.Context, tx *transaction.Transaction, staticGroup entity.StaticGroup) *errs.Error {
+	return g.groupDao.CreateGroup(ct, tx, staticGroup.Group)
 }
 
 func (g *Group) UpdateStaticGroup(ct context.Context, tx *transaction.Transaction, staticGroup entity.StaticGroup) *errs.Error {
 	return g.groupDao.UpdateGroup(ct, tx, staticGroup.Group)
 }
 
-func (g *Group) CreateFilterGroup(ct context.Context, tx *transaction.Transaction, filterGroup entity.FilterGroup) (entity.FilterGroup, *errs.Error) {
+func (g *Group) CreateFilterGroup(ct context.Context, tx *transaction.Transaction, filterGroup entity.FilterGroup) *errs.Error {
 	err := g.groupDao.CreateGroup(ct, tx, filterGroup.Group)
 	if err != nil {
-		return entity.FilterGroup{}, err
+		return err
 	}
 
-	err = g.filterGroupDao.CreateFilterGroup(ct, tx, filterGroup)
-	if err != nil {
-		return entity.FilterGroup{}, err
-	}
-
-	return filterGroup, nil
+	return g.filterGroupDao.CreateFilterGroup(ct, tx, filterGroup)
 }
 
 func (g *Group) UpdateFilterGroup(ct context.Context, tx *transaction.Transaction, filterGroup entity.FilterGroup) *errs.Error {

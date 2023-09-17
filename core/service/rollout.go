@@ -236,8 +236,7 @@ func (r *Rollout) CreateTimeRangeActivator(ct context.Context, startAt *time.Tim
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		_, err := r.activatorRepository.CreateTimeRangeActivator(ct, tx, timeRangeActivator)
-		return err
+		return r.activatorRepository.CreateTimeRangeActivator(ct, tx, timeRangeActivator)
 	})
 	return timeRangeActivator, err
 }
@@ -256,8 +255,7 @@ func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) 
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		_, err := r.activatorRepository.CreateMaxViewersActivator(ct, tx, maxViewersActivator)
-		return err
+		return r.activatorRepository.CreateMaxViewersActivator(ct, tx, maxViewersActivator)
 	})
 	return maxViewersActivator, err
 }
@@ -276,8 +274,7 @@ func (r *Rollout) CreatePercentageActivator(ct context.Context, percentage int) 
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		_, err := r.activatorRepository.CreatePercentageActivator(ct, tx, percentageActivator)
-		return err
+		return r.activatorRepository.CreatePercentageActivator(ct, tx, percentageActivator)
 	})
 	return percentageActivator, err
 }

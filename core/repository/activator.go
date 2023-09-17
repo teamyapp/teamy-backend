@@ -43,10 +43,10 @@ func (a *Activator) FindActivatorByID(ct context.Context, activatorID uint64) (e
 	return activatorUnion, err
 }
 
-func (a *Activator) CreateTimeRangeActivator(ct context.Context, tx *transaction.Transaction, timeRangeActivator entity.TimeRangeActivator) (entity.TimeRangeActivator, *errs.Error) {
+func (a *Activator) CreateTimeRangeActivator(ct context.Context, tx *transaction.Transaction, timeRangeActivator entity.TimeRangeActivator) *errs.Error {
 	_, err := a.activatorDao.CreateActivator(ct, timeRangeActivator.Activator)
 	if err != nil {
-		return entity.TimeRangeActivator{}, err
+		return err
 	}
 
 	activatorTypeRelation := entity.ActivatorTypeRelation{
@@ -55,21 +55,16 @@ func (a *Activator) CreateTimeRangeActivator(ct context.Context, tx *transaction
 	}
 	err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, tx, activatorTypeRelation)
 	if err != nil {
-		return entity.TimeRangeActivator{}, err
+		return err
 	}
 
-	err = a.timeRangeActivatorDao.CreateTimeRangeActivator(ct, tx, timeRangeActivator)
-	if err != nil {
-		return entity.TimeRangeActivator{}, err
-	}
-
-	return timeRangeActivator, nil
+	return a.timeRangeActivatorDao.CreateTimeRangeActivator(ct, tx, timeRangeActivator)
 }
 
-func (a *Activator) CreateMaxViewersActivator(ct context.Context, tx *transaction.Transaction, maxViewersActivator entity.MaxViewersActivator) (entity.MaxViewersActivator, *errs.Error) {
+func (a *Activator) CreateMaxViewersActivator(ct context.Context, tx *transaction.Transaction, maxViewersActivator entity.MaxViewersActivator) *errs.Error {
 	_, err := a.activatorDao.CreateActivator(ct, maxViewersActivator.Activator)
 	if err != nil {
-		return entity.MaxViewersActivator{}, err
+		return err
 	}
 
 	activatorTypeRelation := entity.ActivatorTypeRelation{
@@ -78,21 +73,16 @@ func (a *Activator) CreateMaxViewersActivator(ct context.Context, tx *transactio
 	}
 	err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, tx, activatorTypeRelation)
 	if err != nil {
-		return entity.MaxViewersActivator{}, err
+		return err
 	}
 
-	err = a.maxViewersActivatorDao.CreateMaxViewersActivator(ct, tx, maxViewersActivator)
-	if err != nil {
-		return entity.MaxViewersActivator{}, err
-	}
-
-	return maxViewersActivator, nil
+	return a.maxViewersActivatorDao.CreateMaxViewersActivator(ct, tx, maxViewersActivator)
 }
 
-func (a *Activator) CreatePercentageActivator(ct context.Context, tx *transaction.Transaction, percentageActivator entity.PercentageActivator) (entity.PercentageActivator, *errs.Error) {
+func (a *Activator) CreatePercentageActivator(ct context.Context, tx *transaction.Transaction, percentageActivator entity.PercentageActivator) *errs.Error {
 	_, err := a.activatorDao.CreateActivator(ct, percentageActivator.Activator)
 	if err != nil {
-		return entity.PercentageActivator{}, err
+		return err
 	}
 
 	activatorTypeRelation := entity.ActivatorTypeRelation{
@@ -101,15 +91,10 @@ func (a *Activator) CreatePercentageActivator(ct context.Context, tx *transactio
 	}
 	err = a.activatorTypeRelationDao.CreateActivatorTypeRelation(ct, tx, activatorTypeRelation)
 	if err != nil {
-		return entity.PercentageActivator{}, err
+		return err
 	}
 
-	err = a.percentageActivatorDao.CreatePercentageActivator(ct, tx, percentageActivator)
-	if err != nil {
-		return entity.PercentageActivator{}, err
-	}
-
-	return percentageActivator, nil
+	return a.percentageActivatorDao.CreatePercentageActivator(ct, tx, percentageActivator)
 }
 
 func NewActivator(
