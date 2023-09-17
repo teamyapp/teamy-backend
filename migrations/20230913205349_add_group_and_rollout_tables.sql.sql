@@ -141,9 +141,7 @@ CREATE TABLE rollout_viewer (
     CONSTRAINT pk_rollout_viewer PRIMARY KEY (rollout_id, viewer_id, version_number)
 );
 
-
 -- +migrate Down
-
 DROP TABLE IF EXISTS rollout_viewer;
 DROP TABLE IF EXISTS group_rollout_relation;
 DROP TABLE IF EXISTS app_rollout_relation;
@@ -167,7 +165,3 @@ DROP TABLE IF EXISTS activator_type_relation;
 DROP TABLE IF EXISTS activator;
 DROP TABLE IF EXISTS version_selector_version_relation;
 DROP TABLE IF EXISTS version_selector;
-
-
-
-
