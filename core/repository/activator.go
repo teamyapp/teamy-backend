@@ -5,14 +5,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Activator struct {
-	logger                   telemetry.Logger
 	activatorDao             dao.Activator
 	timeRangeActivatorDao    dao.TimeRangeActivator
 	maxViewersActivatorDao   dao.MaxViewersActivator
@@ -44,7 +42,7 @@ func (a *Activator) FindActivatorByID(ct context.Context, activatorID uint64) (e
 }
 
 func (a *Activator) CreateTimeRangeActivator(ct context.Context, tx *transaction.Transaction, timeRangeActivator entity.TimeRangeActivator) *errs.Error {
-	_, err := a.activatorDao.CreateActivator(ct, timeRangeActivator.Activator)
+	err := a.activatorDao.CreateActivator(ct, tx, timeRangeActivator.Activator)
 	if err != nil {
 		return err
 	}
@@ -62,7 +60,7 @@ func (a *Activator) CreateTimeRangeActivator(ct context.Context, tx *transaction
 }
 
 func (a *Activator) CreateMaxViewersActivator(ct context.Context, tx *transaction.Transaction, maxViewersActivator entity.MaxViewersActivator) *errs.Error {
-	_, err := a.activatorDao.CreateActivator(ct, maxViewersActivator.Activator)
+	err := a.activatorDao.CreateActivator(ct, tx, maxViewersActivator.Activator)
 	if err != nil {
 		return err
 	}
@@ -80,7 +78,7 @@ func (a *Activator) CreateMaxViewersActivator(ct context.Context, tx *transactio
 }
 
 func (a *Activator) CreatePercentageActivator(ct context.Context, tx *transaction.Transaction, percentageActivator entity.PercentageActivator) *errs.Error {
-	_, err := a.activatorDao.CreateActivator(ct, percentageActivator.Activator)
+	err := a.activatorDao.CreateActivator(ct, tx, percentageActivator.Activator)
 	if err != nil {
 		return err
 	}
@@ -98,14 +96,12 @@ func (a *Activator) CreatePercentageActivator(ct context.Context, tx *transactio
 }
 
 func NewActivator(
-	logger telemetry.Logger,
 	timeRangeActivatorDao dao.TimeRangeActivator,
 	maxViewersActivatorDao dao.MaxViewersActivator,
 	percentageActivatorDao dao.PercentageActivator,
 	activatorTypeRelationDao dao.ActivatorTypeRelation,
 ) *Activator {
 	return &Activator{
-		logger:                   logger,
 		timeRangeActivatorDao:    timeRangeActivatorDao,
 		maxViewersActivatorDao:   maxViewersActivatorDao,
 		percentageActivatorDao:   percentageActivatorDao,

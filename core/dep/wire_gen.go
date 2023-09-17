@@ -86,7 +86,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	maxViewersActivator := sqldb.NewMaxViewersActivator(factory)
 	percentageActivator := sqldb.NewPercentageActivator(factory)
 	activatorTypeRelation := sqldb.NewActivatorTypeRelation(factory)
-	activator := repository.NewActivator(logger, timeRangeActivator, maxViewersActivator, percentageActivator, activatorTypeRelation)
+	activator := repository.NewActivator(timeRangeActivator, maxViewersActivator, percentageActivator, activatorTypeRelation)
 	serviceRollout := service.NewRollout(logger, cloudAPIClientRegistry, factory, realTimeStateSyncer, appGroupRelation, rollout, rolloutViewer, groupRolloutRelation, appRolloutRelation, versionSelectorVersionRelation, versionSelector, appVersion, activator)
 	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceApp, serviceInvitation, serviceThread, group, serviceRollout)
 	resolver := gql2.NewResolver(dependencies)
