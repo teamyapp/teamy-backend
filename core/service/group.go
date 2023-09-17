@@ -311,6 +311,7 @@ func (g *Group) CreateStaticTeamGroup(
 				return err
 			}
 		}
+		
 		return nil
 	})
 	return group, err
