@@ -9,21 +9,28 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
-type VersionSelector struct {
+type VersionSelector interface {
+	ID(ct context.Context) graphql.ID
+	Type(ct context.Context) entity.VersionSelectorType
+}
+
+type ExperimentVersionSelector struct {
 	versionSelector entity.VersionSelector
 	deps            *Dependencies
 }
 
-func (v VersionSelector) ID(ct context.Context) graphql.ID {
+var _ VersionSelector = (*ExperimentVersionSelector)(nil)
+
+func (v ExperimentVersionSelector) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(v.versionSelector.ID)
 }
 
-func (v VersionSelector) Type(ct context.Context) entity.VersionSelectorType {
+func (v ExperimentVersionSelector) Type(ct context.Context) entity.VersionSelectorType {
 	return v.versionSelector.Type
 }
 
-func (v VersionSelector) VersionNumbers(ct context.Context) ([]int32, error) {
-	versionNumbers, err := v.deps.rolloutService.FindVersionNumbersByVersionSelectorID(ct, v.versionSelector.ID)
+func (v ExperimentVersionSelector) VersionNumbers(ct context.Context) ([]int32, error) {
+	versionNumbers, err := v.deps.rolloutService.FindVersionNumbersByExperimentVersionSelectorID(ct, v.versionSelector.ID)
 	if err != nil {
 		return nil, errs.ToResolverErr(err)
 	}
@@ -33,8 +40,36 @@ func (v VersionSelector) VersionNumbers(ct context.Context) ([]int32, error) {
 	}), nil
 }
 
-func newVersionSelector(versionSelector entity.VersionSelector, deps *Dependencies) VersionSelector {
-	return VersionSelector{versionSelector: versionSelector, deps: deps}
+func newExperimentVersionSelector(versionSelector entity.VersionSelector, deps *Dependencies) ExperimentVersionSelector {
+	return ExperimentVersionSelector{versionSelector: versionSelector, deps: deps}
+}
+
+type StaticVersionSelector struct {
+	versionSelector entity.VersionSelector
+	deps            *Dependencies
+}
+
+var _ VersionSelector = (*StaticVersionSelector)(nil)
+
+func (v StaticVersionSelector) ID(ct context.Context) graphql.ID {
+	return toGraphQLID(v.versionSelector.ID)
+}
+
+func (v StaticVersionSelector) Type(ct context.Context) entity.VersionSelectorType {
+	return v.versionSelector.Type
+}
+
+func (v StaticVersionSelector) VersionNumber(ct context.Context) (int32, error) {
+	versionNumber, err := v.deps.rolloutService.FindVersionNumberByStaticVersionSelectorID(ct, v.versionSelector.ID)
+	if err != nil {
+		return 0, errs.ToResolverErr(err)
+	}
+
+	return int32(versionNumber), nil
+}
+
+func newStaticVersionSelector(versionSelector entity.VersionSelector, deps *Dependencies) StaticVersionSelector {
+	return StaticVersionSelector{versionSelector: versionSelector, deps: deps}
 }
 
 func (m Mutation) CreateStaticVersionSelector(
@@ -44,15 +79,15 @@ func (m Mutation) CreateStaticVersionSelector(
 			VersionNumber int32
 		}
 	},
-) (VersionSelector, error) {
+) (StaticVersionSelector, error) {
 	versionNumber := int(args.Input.VersionNumber)
 	versionSelector, err := m.deps.rolloutService.CreateStaticVersionSelector(ct, versionNumber)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
-		return VersionSelector{}, errs.ToResolverErr(err)
+		return StaticVersionSelector{}, errs.ToResolverErr(err)
 	}
 
-	return newVersionSelector(versionSelector, m.deps), nil
+	return newStaticVersionSelector(versionSelector, m.deps), nil
 }
 
 func (m Mutation) CreateExperimentVersionSelector(
@@ -62,15 +97,15 @@ func (m Mutation) CreateExperimentVersionSelector(
 			VersionNumbers []int32
 		}
 	},
-) (VersionSelector, error) {
+) (ExperimentVersionSelector, error) {
 	versionNumbers := collect.Map(args.Input.VersionNumbers, func(versionNumber int32, index int) int {
 		return int(versionNumber)
 	})
 	versionSelector, err := m.deps.rolloutService.CreateExperimentVersionSelector(ct, versionNumbers)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
-		return VersionSelector{}, errs.ToResolverErr(err)
+		return ExperimentVersionSelector{}, errs.ToResolverErr(err)
 	}
 
-	return newVersionSelector(versionSelector, m.deps), nil
+	return newExperimentVersionSelector(versionSelector, m.deps), nil
 }

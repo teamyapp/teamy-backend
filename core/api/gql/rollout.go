@@ -27,10 +27,17 @@ func (r Rollout) VersionSelector(ctx context.Context) (VersionSelector, error) {
 	versionSelector, err := r.deps.rolloutService.FindVersionSelectorByID(ctx, r.rollout.SelectorID)
 	if err != nil {
 		r.deps.logger.ErrorWithContext(ctx, err)
-		return VersionSelector{}, errs.ToResolverErr(err)
+		return nil, errs.ToResolverErr(err)
 	}
 
-	return newVersionSelector(versionSelector, r.deps), nil
+	switch versionSelector.Type {
+	case entity.VersionSelectorTypeExperiment:
+		return newExperimentVersionSelector(versionSelector, r.deps), nil
+	case entity.VersionSelectorTypeStatic:
+		return newStaticVersionSelector(versionSelector, r.deps), nil
+	default:
+		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("Unknown version selector type: %s", versionSelector.Type)))
+	}
 }
 
 func (r Rollout) CreatedAt() graphql.Time {

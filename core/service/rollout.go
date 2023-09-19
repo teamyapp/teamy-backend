@@ -196,8 +196,52 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appTeamIn
 	return &maxActiveVersionNumber, nil
 }
 
-func (r *Rollout) FindVersionNumbersByVersionSelectorID(ct context.Context, rolloutID uint64) ([]int, *errs.Error) {
-	return r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, rolloutID)
+func (r *Rollout) FindVersionNumbersByExperimentVersionSelectorID(ct context.Context, versionSelectorID uint64) ([]int, *errs.Error) {
+	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(versionNumbers) == 0 {
+		return nil, errs.NewError(errs.NotFound, "app version not found")
+	}
+
+	versionSelector, err := r.versionSelectorDao.FindVersionSelectorByID(ct, versionSelectorID)
+	if err != nil {
+		return nil, err
+	}
+
+	if versionSelector.Type != entity.VersionSelectorTypeExperiment {
+		return nil, errs.NewError(errs.InvalidArgument, "version selector is not an experiment")
+	}
+
+	return versionNumbers, nil
+}
+
+func (r *Rollout) FindVersionNumberByStaticVersionSelectorID(ct context.Context, versionSelectorID uint64) (int, *errs.Error) {
+	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(versionNumbers) == 0 {
+		return 0, errs.NewError(errs.NotFound, "app version not found")
+	}
+
+	versionSelector, err := r.versionSelectorDao.FindVersionSelectorByID(ct, versionSelectorID)
+	if err != nil {
+		return 0, err
+	}
+
+	if versionSelector.Type != entity.VersionSelectorTypeStatic {
+		return 0, errs.NewError(errs.InvalidArgument, "version selector is not a static")
+	}
+
+	if len(versionNumbers) != 1 {
+		return 0, errs.NewError(errs.InvalidArgument, "static version selector has more than one version number")
+	}
+
+	return versionNumbers[0], nil
 }
 
 func (r *Rollout) newRollout(ct context.Context, rawRollout entity.Rollout) (rollout.Rollout, *errs.Error) {
@@ -363,15 +407,8 @@ func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType 
 }
 
 func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64, selectorID uint64) (rollout.VersionSelector, *errs.Error) {
-	versionNumbers, err := r.FindVersionNumbersByVersionSelectorID(ct, selectorID)
-	if err != nil {
-		return nil, err
-	}
 
 	var versionSelector rollout.VersionSelector
-	if len(versionNumbers) == 0 {
-		return nil, errs.NewError(errs.NotFound, "app version not found")
-	}
 
 	rawVersionSelector, err := r.FindVersionSelectorByID(ct, selectorID)
 	if err != nil {
@@ -380,12 +417,18 @@ func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64
 
 	switch rawVersionSelector.Type {
 	case entity.VersionSelectorTypeStatic:
-		if len(versionNumbers) > 1 {
-			r.logger.WarningWithContext(ct, "multiple app versions found for a static selector, use the first one")
+		versionNumber, err := r.FindVersionNumberByStaticVersionSelectorID(ct, selectorID)
+		if err != nil {
+			return nil, err
 		}
 
-		versionSelector = rollout.NewStaticVersionSelector(versionNumbers[0])
+		versionSelector = rollout.NewStaticVersionSelector(versionNumber)
 	case entity.VersionSelectorTypeExperiment:
+		versionNumbers, err := r.FindVersionNumbersByExperimentVersionSelectorID(ct, selectorID)
+		if err != nil {
+			return nil, err
+		}
+
 		store := store.NewExperimentVersionSelector(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutViewerDao, rolloutID)
 		versionSelector = rollout.NewExperimentVersionSelector(store, randgen.NewBuiltinRanGen(), versionNumbers)
 	default:
