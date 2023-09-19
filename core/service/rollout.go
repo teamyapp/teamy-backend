@@ -197,15 +197,6 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appTeamIn
 }
 
 func (r *Rollout) FindVersionNumbersByExperimentVersionSelectorID(ct context.Context, versionSelectorID uint64) ([]int, *errs.Error) {
-	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(versionNumbers) == 0 {
-		return nil, errs.NewError(errs.NotFound, "app version not found")
-	}
-
 	versionSelector, err := r.versionSelectorDao.FindVersionSelectorByID(ct, versionSelectorID)
 	if err != nil {
 		return nil, err
@@ -215,19 +206,19 @@ func (r *Rollout) FindVersionNumbersByExperimentVersionSelectorID(ct context.Con
 		return nil, errs.NewError(errs.InvalidArgument, "version selector is not an experiment")
 	}
 
+	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(versionNumbers) == 0 {
+		return nil, errs.NewError(errs.NotFound, "app version not found")
+	}
+
 	return versionNumbers, nil
 }
 
 func (r *Rollout) FindVersionNumberByStaticVersionSelectorID(ct context.Context, versionSelectorID uint64) (int, *errs.Error) {
-	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
-	if err != nil {
-		return 0, err
-	}
-
-	if len(versionNumbers) == 0 {
-		return 0, errs.NewError(errs.NotFound, "app version not found")
-	}
-
 	versionSelector, err := r.versionSelectorDao.FindVersionSelectorByID(ct, versionSelectorID)
 	if err != nil {
 		return 0, err
@@ -235,6 +226,15 @@ func (r *Rollout) FindVersionNumberByStaticVersionSelectorID(ct context.Context,
 
 	if versionSelector.Type != entity.VersionSelectorTypeStatic {
 		return 0, errs.NewError(errs.InvalidArgument, "version selector is not a static")
+	}
+
+	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(versionNumbers) == 0 {
+		return 0, errs.NewError(errs.NotFound, "app version not found")
 	}
 
 	if len(versionNumbers) != 1 {
