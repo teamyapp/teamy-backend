@@ -112,8 +112,8 @@ type Mutation {
 	createMaxViewersActivator(input: CreateMaxViewersActivatorInput!): MaxViewersActivator!
 	createPercentageActivator(input: CreatePercentageActivatorInput!): PercentageActivator!
 
-	createStaticVersionSelector(input: CreateStaticVersionSelectorInput!): VersionSelector!
-	createExperimentVersionSelector(input: CreateExperimentVersionSelectorInput!): VersionSelector!
+	createStaticVersionSelector(input: CreateStaticVersionSelectorInput!): StaticVersionSelector!
+	createExperimentVersionSelector(input: CreateExperimentVersionSelectorInput!): ExperimentVersionSelector!
 
 	createAppRollout(appID: ID!, appRolloutType: AppRolloutType!, input: CreateRolloutInput!): Rollout!
 	updateRollout(rolloutId: ID!, input: UpdateRolloutInput!): Rollout!
@@ -279,7 +279,18 @@ type TimeRangeActivator implements Activator {
 	updatedAt: Time
 }
 
-type VersionSelector {
+interface VersionSelector {
+	id: ID!
+	type: VersionSelectorType!
+}
+
+type StaticVersionSelector implements VersionSelector {
+	id: ID!
+	type: VersionSelectorType!
+	versionNumber: Int!
+}
+
+type ExperimentVersionSelector implements VersionSelector {
 	id: ID!
 	type: VersionSelectorType!
 	versionNumbers: [Int!]!

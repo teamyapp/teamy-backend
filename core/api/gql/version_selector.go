@@ -9,32 +9,57 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
-type VersionSelector struct {
-	versionSelector entity.VersionSelector
+type VersionSelector interface {
+	ID(ct context.Context) graphql.ID
+	Type(ct context.Context) entity.VersionSelectorType
+}
+
+type StaticVersionSelector struct {
+	versionSelector entity.StaticVersionSelector
 	deps            *Dependencies
 }
 
-func (v VersionSelector) ID(ct context.Context) graphql.ID {
+var _ VersionSelector = (*StaticVersionSelector)(nil)
+
+func (v StaticVersionSelector) ID(ct context.Context) graphql.ID {
 	return toGraphQLID(v.versionSelector.ID)
 }
 
-func (v VersionSelector) Type(ct context.Context) entity.VersionSelectorType {
+func (v StaticVersionSelector) Type(ct context.Context) entity.VersionSelectorType {
 	return v.versionSelector.Type
 }
 
-func (v VersionSelector) VersionNumbers(ct context.Context) ([]int32, error) {
-	versionNumbers, err := v.deps.rolloutService.FindVersionNumbersByVersionSelectorID(ct, v.versionSelector.ID)
-	if err != nil {
-		return nil, errs.ToResolverErr(err)
-	}
-
-	return collect.Map(versionNumbers, func(versionNumber int, index int) int32 {
-		return int32(versionNumber)
-	}), nil
+func (v StaticVersionSelector) VersionNumber(ct context.Context) (int32, error) {
+	return int32(v.versionSelector.VersionNumber), nil
 }
 
-func newVersionSelector(versionSelector entity.VersionSelector, deps *Dependencies) VersionSelector {
-	return VersionSelector{versionSelector: versionSelector, deps: deps}
+func newStaticVersionSelector(versionSelector entity.StaticVersionSelector, deps *Dependencies) StaticVersionSelector {
+	return StaticVersionSelector{versionSelector: versionSelector, deps: deps}
+}
+
+type ExperimentVersionSelector struct {
+	versionSelector entity.ExperimentVersionSelector
+	deps            *Dependencies
+}
+
+var _ VersionSelector = (*ExperimentVersionSelector)(nil)
+
+func (v ExperimentVersionSelector) ID(ct context.Context) graphql.ID {
+	return toGraphQLID(v.versionSelector.ID)
+}
+
+func (v ExperimentVersionSelector) Type(ct context.Context) entity.VersionSelectorType {
+	return v.versionSelector.Type
+}
+
+func (v ExperimentVersionSelector) VersionNumbers(ct context.Context) []int32 {
+	return collect.Map(v.versionSelector.VersionNumbers, func(versionNumber int, index int) int32 {
+		return int32(versionNumber)
+	})
+}
+
+func newExperimentVersionSelector(versionSelector entity.ExperimentVersionSelector, deps *Dependencies) ExperimentVersionSelector {
+	return ExperimentVersionSelector{versionSelector: versionSelector, deps: deps}
 }
 
 func (m Mutation) CreateStaticVersionSelector(
@@ -44,15 +69,15 @@ func (m Mutation) CreateStaticVersionSelector(
 			VersionNumber int32
 		}
 	},
-) (VersionSelector, error) {
+) (StaticVersionSelector, error) {
 	versionNumber := int(args.Input.VersionNumber)
 	versionSelector, err := m.deps.rolloutService.CreateStaticVersionSelector(ct, versionNumber)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
-		return VersionSelector{}, errs.ToResolverErr(err)
+		return StaticVersionSelector{}, errs.ToResolverErr(err)
 	}
 
-	return newVersionSelector(versionSelector, m.deps), nil
+	return newStaticVersionSelector(versionSelector, m.deps), nil
 }
 
 func (m Mutation) CreateExperimentVersionSelector(
@@ -62,15 +87,15 @@ func (m Mutation) CreateExperimentVersionSelector(
 			VersionNumbers []int32
 		}
 	},
-) (VersionSelector, error) {
+) (ExperimentVersionSelector, error) {
 	versionNumbers := collect.Map(args.Input.VersionNumbers, func(versionNumber int32, index int) int {
 		return int(versionNumber)
 	})
 	versionSelector, err := m.deps.rolloutService.CreateExperimentVersionSelector(ct, versionNumbers)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
-		return VersionSelector{}, errs.ToResolverErr(err)
+		return ExperimentVersionSelector{}, errs.ToResolverErr(err)
 	}
 
-	return newVersionSelector(versionSelector, m.deps), nil
+	return newExperimentVersionSelector(versionSelector, m.deps), nil
 }
