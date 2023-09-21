@@ -281,7 +281,6 @@ func (r *Rollout) FindVersionSelectorByID(ct context.Context, selectorID uint64)
 		r.stateSyncer,
 		ct,
 	)
-
 	txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		versionSelectorUnion, err = r.versionSelectorRepository.FindVersionSelectorByID(ct, tx, selectorID)
@@ -304,11 +303,11 @@ func (r *Rollout) CreateStaticVersionSelector(ct context.Context, versionNumber 
 	}
 
 	staticVersionSelector := entity.StaticVersionSelector{
-		VersionNumber: versionNumber,
 		VersionSelector: entity.VersionSelector{
 			ID:   genSelectorIDRes.UniqueNumber,
 			Type: entity.VersionSelectorTypeStatic,
 		},
+		VersionNumber: versionNumber,
 	}
 	txCtx := transaction.NewTransactionsContext(
 		r.logger,
@@ -331,11 +330,11 @@ func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, versionNum
 	}
 
 	experimentVersionSelector := entity.ExperimentVersionSelector{
-		VersionNumbers: versionNumbers,
 		VersionSelector: entity.VersionSelector{
 			ID:   genSelectorIDRes.UniqueNumber,
 			Type: entity.VersionSelectorTypeExperiment,
 		},
+		VersionNumbers: versionNumbers,
 	}
 	txCtx := transaction.NewTransactionsContext(
 		r.logger,
