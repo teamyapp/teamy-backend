@@ -109,6 +109,7 @@ var daoSet = wire.NewSet(
 var repositorySet = wire.NewSet(
 	repository.NewGroup,
 	repository.NewActivator,
+	repository.NewVersionSelector,
 )
 
 var serviceSet = wire.NewSet(

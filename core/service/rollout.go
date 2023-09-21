@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
-	"github.com/teamyapp/cloud/app/api/proto"
-	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/randgen"
@@ -37,19 +35,17 @@ type UpdateRolloutInput struct {
 }
 
 type Rollout struct {
-	logger                            telemetry.Logger
-	cloudClientRegistry               *client.Registry
-	transactionFactory                cloudTransaction.Factory
-	stateSyncer                       *realtime.StateSyncer
-	appGroupRelationDao               dao.AppGroupRelation
-	rolloutDao                        dao.Rollout
-	rolloutViewerDao                  dao.RolloutViewer
-	groupRolloutRelationDao           dao.GroupRolloutRelation
-	appRolloutRelationDao             dao.AppRolloutRelation
-	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation
-	versionSelectorDao                dao.VersionSelector
-	appVersionDao                     dao.AppVersion
-	activatorRepository               *repository.Activator
+	logger                    telemetry.Logger
+	transactionFactory        cloudTransaction.Factory
+	stateSyncer               *realtime.StateSyncer
+	appGroupRelationDao       dao.AppGroupRelation
+	rolloutDao                dao.Rollout
+	rolloutViewerDao          dao.RolloutViewer
+	groupRolloutRelationDao   dao.GroupRolloutRelation
+	appRolloutRelationDao     dao.AppRolloutRelation
+	appVersionDao             dao.AppVersion
+	versionSelectorRepository *repository.VersionSelector
+	activatorRepository       *repository.Activator
 }
 
 func (r *Rollout) FindUserRolloutsByAppID(ct context.Context, appID uint64) ([]entity.Rollout, *errs.Error) {
@@ -196,54 +192,6 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appTeamIn
 	return &maxActiveVersionNumber, nil
 }
 
-func (r *Rollout) FindVersionNumbersByExperimentVersionSelectorID(ct context.Context, versionSelectorID uint64) ([]int, *errs.Error) {
-	versionSelector, err := r.versionSelectorDao.FindVersionSelectorByID(ct, versionSelectorID)
-	if err != nil {
-		return nil, err
-	}
-
-	if versionSelector.Type != entity.VersionSelectorTypeExperiment {
-		return nil, errs.NewError(errs.InvalidArgument, "version selector is not an experiment")
-	}
-
-	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(versionNumbers) == 0 {
-		return nil, errs.NewError(errs.NotFound, "app version not found")
-	}
-
-	return versionNumbers, nil
-}
-
-func (r *Rollout) FindVersionNumberByStaticVersionSelectorID(ct context.Context, versionSelectorID uint64) (int, *errs.Error) {
-	versionSelector, err := r.versionSelectorDao.FindVersionSelectorByID(ct, versionSelectorID)
-	if err != nil {
-		return 0, err
-	}
-
-	if versionSelector.Type != entity.VersionSelectorTypeStatic {
-		return 0, errs.NewError(errs.InvalidArgument, "version selector is not a static")
-	}
-
-	versionNumbers, err := r.versionSelectorVersionRelationDao.FindVersionNumbersBySelectorID(ct, versionSelectorID)
-	if err != nil {
-		return 0, err
-	}
-
-	if len(versionNumbers) == 0 {
-		return 0, errs.NewError(errs.NotFound, "app version not found")
-	}
-
-	if len(versionNumbers) != 1 {
-		return 0, errs.NewError(errs.InvalidArgument, "static version selector has more than one version number")
-	}
-
-	return versionNumbers[0], nil
-}
-
 func (r *Rollout) newRollout(ct context.Context, rawRollout entity.Rollout) (rollout.Rollout, *errs.Error) {
 	activatorID := rawRollout.ActivatorID
 	versionSelector, err := r.getRolloutVersionSelector(ct, rawRollout.ID, rawRollout.SelectorID)
@@ -322,16 +270,44 @@ func (r *Rollout) CreatePercentageActivator(ct context.Context, percentage int) 
 	return percentageActivator, err
 }
 
-func (r *Rollout) FindVersionSelectorByID(ct context.Context, selectorID uint64) (entity.VersionSelector, *errs.Error) {
-	return r.versionSelectorDao.FindVersionSelectorByID(ct, selectorID)
+func (r *Rollout) FindVersionSelectorByID(ct context.Context, selectorID uint64) (entity.VersionSelectorUnion, *errs.Error) {
+	versionSelectorUnion := entity.VersionSelectorUnion{}
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+
+	txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		versionSelectorUnion, err = r.versionSelectorRepository.FindVersionSelectorByID(ct, tx, selectorID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return versionSelectorUnion, nil
 }
 
-func (r *Rollout) CreateStaticVersionSelector(ct context.Context, versionNumber int) (entity.VersionSelector, *errs.Error) {
-	return r.createVersionSelector(ct, entity.VersionSelectorTypeStatic, []int{versionNumber})
+func (r *Rollout) CreateStaticVersionSelector(ct context.Context, versionNumber int) (entity.StaticVersionSelector, *errs.Error) {
+	versionSelectorUnion, err := r.createVersionSelector(ct, entity.VersionSelectorTypeStatic, []int{versionNumber})
+	if err != nil {
+		return entity.StaticVersionSelector{}, err
+	}
+
+	return versionSelectorUnion.StaticVersionSelector, nil
 }
 
-func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, versionNumbers []int) (entity.VersionSelector, *errs.Error) {
-	return r.createVersionSelector(ct, entity.VersionSelectorTypeExperiment, versionNumbers)
+func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, versionNumbers []int) (entity.ExperimentVersionSelector, *errs.Error) {
+	versionSelectorUnion, err := r.createVersionSelector(ct, entity.VersionSelectorTypeExperiment, versionNumbers)
+	if err != nil {
+		return entity.ExperimentVersionSelector{}, err
+	}
+
+	return versionSelectorUnion.ExperimentVersionSelector, nil
 }
 
 func (r *Rollout) getTeamGroupActiveVersion(ct context.Context, teamID uint64, groupID uint64) (*int, *errs.Error) {
@@ -366,17 +342,25 @@ func (r *Rollout) getTeamGroupActiveVersion(ct context.Context, teamID uint64, g
 	return versionNumber, err
 }
 
-func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType entity.VersionSelectorType, versionNumbers []int) (entity.VersionSelector, *errs.Error) {
-	genSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
-	genSelectorIDRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSelectorIDReq)
-	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		return entity.VersionSelector{}, internalErr
-	}
+func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType entity.VersionSelectorType, versionNumbers []int) (entity.VersionSelectorUnion, *errs.Error) {
+	versionSelectorUnion := entity.VersionSelectorUnion{}
+	txCtx := transaction.NewTransactionsContext(
+		r.logger,
+		r.transactionFactory,
+		r.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return r.versionSelectorRepository.CreateVersionSelector(ct, tx, versionSelectorType, versionNumbers)
+	})
+	return versionSelectorUnion, err
+}
 
-	versionSelector := entity.VersionSelector{
-		ID:   genSelectorIDRes.UniqueNumber,
-		Type: versionSelectorType,
+func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64, selectorID uint64) (rollout.VersionSelector, *errs.Error) {
+	var versionSelector rollout.VersionSelector
+	rawVersionSelector, err := r.FindVersionSelectorByID(ct, selectorID)
+	if err != nil {
+		return nil, err
 	}
 
 	txCtx := transaction.NewTransactionsContext(
@@ -385,57 +369,32 @@ func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType 
 		r.stateSyncer,
 		ct,
 	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := r.versionSelectorDao.CreateVersionSelector(ct, tx, versionSelector)
-		if err != nil {
-			return err
-		}
 
-		for _, versionNumber := range versionNumbers {
-			err := r.versionSelectorVersionRelationDao.CreateVersionSelectorVersionRelation(ct, tx, entity.VersionSelectorVersionRelation{
-				VersionSelectorID: versionSelector.ID,
-				VersionNumber:     versionNumber,
-			})
+	err = txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		switch rawVersionSelector.Type {
+		case entity.VersionSelectorTypeStatic:
+			versionNumber, err := r.versionSelectorRepository.FindVersionNumberByStaticVersionSelectorID(ct, tx, selectorID)
 			if err != nil {
 				return err
 			}
+
+			versionSelector = rollout.NewStaticVersionSelector(versionNumber)
+		case entity.VersionSelectorTypeExperiment:
+			versionNumbers, err := r.versionSelectorRepository.FindVersionNumbersByExperimentVersionSelectorID(ct, tx, selectorID)
+			if err != nil {
+				return err
+			}
+
+			store := store.NewExperimentVersionSelector(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutViewerDao, rolloutID)
+			versionSelector = rollout.NewExperimentVersionSelector(store, randgen.NewBuiltinRanGen(), versionNumbers)
+		default:
+			return errs.NewError(errs.Unknown, fmt.Sprintf("unknown version selector type %s", rawVersionSelector.Type))
 		}
 
 		return nil
 	})
+
 	return versionSelector, err
-}
-
-func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64, selectorID uint64) (rollout.VersionSelector, *errs.Error) {
-
-	var versionSelector rollout.VersionSelector
-
-	rawVersionSelector, err := r.FindVersionSelectorByID(ct, selectorID)
-	if err != nil {
-		return nil, err
-	}
-
-	switch rawVersionSelector.Type {
-	case entity.VersionSelectorTypeStatic:
-		versionNumber, err := r.FindVersionNumberByStaticVersionSelectorID(ct, selectorID)
-		if err != nil {
-			return nil, err
-		}
-
-		versionSelector = rollout.NewStaticVersionSelector(versionNumber)
-	case entity.VersionSelectorTypeExperiment:
-		versionNumbers, err := r.FindVersionNumbersByExperimentVersionSelectorID(ct, selectorID)
-		if err != nil {
-			return nil, err
-		}
-
-		store := store.NewExperimentVersionSelector(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutViewerDao, rolloutID)
-		versionSelector = rollout.NewExperimentVersionSelector(store, randgen.NewBuiltinRanGen(), versionNumbers)
-	default:
-		return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown version selector type %s", rawVersionSelector.Type))
-	}
-
-	return versionSelector, nil
 }
 
 func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, activatorID uint64) (rollout.Activator, *errs.Error) {
@@ -475,7 +434,6 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 
 func NewRollout(
 	logger telemetry.Logger,
-	cloudClientRegistry *client.Registry,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	appGroupRelationDao dao.AppGroupRelation,
@@ -483,24 +441,21 @@ func NewRollout(
 	rolloutViewerDao dao.RolloutViewer,
 	groupRolloutRelationDao dao.GroupRolloutRelation,
 	appRolloutRelationDao dao.AppRolloutRelation,
-	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation,
-	versionSelectorDao dao.VersionSelector,
 	appVersionDao dao.AppVersion,
+	versionSelectorRepository *repository.VersionSelector,
 	activatorRepository *repository.Activator,
 ) *Rollout {
 	return &Rollout{
-		logger:                            logger,
-		cloudClientRegistry:               cloudClientRegistry,
-		transactionFactory:                transactionFactory,
-		stateSyncer:                       stateSyncer,
-		appGroupRelationDao:               appGroupRelationDao,
-		rolloutDao:                        rolloutDao,
-		rolloutViewerDao:                  rolloutViewerDao,
-		groupRolloutRelationDao:           groupRolloutRelationDao,
-		appRolloutRelationDao:             appRolloutRelationDao,
-		versionSelectorVersionRelationDao: versionSelectorVersionRelationDao,
-		versionSelectorDao:                versionSelectorDao,
-		appVersionDao:                     appVersionDao,
-		activatorRepository:               activatorRepository,
+		logger:                    logger,
+		transactionFactory:        transactionFactory,
+		stateSyncer:               stateSyncer,
+		appGroupRelationDao:       appGroupRelationDao,
+		rolloutDao:                rolloutDao,
+		rolloutViewerDao:          rolloutViewerDao,
+		groupRolloutRelationDao:   groupRolloutRelationDao,
+		appRolloutRelationDao:     appRolloutRelationDao,
+		appVersionDao:             appVersionDao,
+		versionSelectorRepository: versionSelectorRepository,
+		activatorRepository:       activatorRepository,
 	}
 }

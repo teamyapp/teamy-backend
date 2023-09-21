@@ -15,7 +15,7 @@ type VersionSelector interface {
 }
 
 type ExperimentVersionSelector struct {
-	versionSelector entity.VersionSelector
+	versionSelector entity.ExperimentVersionSelector
 	deps            *Dependencies
 }
 
@@ -29,23 +29,18 @@ func (v ExperimentVersionSelector) Type(ct context.Context) entity.VersionSelect
 	return v.versionSelector.Type
 }
 
-func (v ExperimentVersionSelector) VersionNumbers(ct context.Context) ([]int32, error) {
-	versionNumbers, err := v.deps.rolloutService.FindVersionNumbersByExperimentVersionSelectorID(ct, v.versionSelector.ID)
-	if err != nil {
-		return nil, errs.ToResolverErr(err)
-	}
-
-	return collect.Map(versionNumbers, func(versionNumber int, index int) int32 {
+func (v ExperimentVersionSelector) VersionNumbers(ct context.Context) []int32 {
+	return collect.Map(v.versionSelector.VersionNumbers, func(versionNumber int, index int) int32 {
 		return int32(versionNumber)
-	}), nil
+	})
 }
 
-func newExperimentVersionSelector(versionSelector entity.VersionSelector, deps *Dependencies) ExperimentVersionSelector {
+func newExperimentVersionSelector(versionSelector entity.ExperimentVersionSelector, deps *Dependencies) ExperimentVersionSelector {
 	return ExperimentVersionSelector{versionSelector: versionSelector, deps: deps}
 }
 
 type StaticVersionSelector struct {
-	versionSelector entity.VersionSelector
+	versionSelector entity.StaticVersionSelector
 	deps            *Dependencies
 }
 
@@ -60,15 +55,10 @@ func (v StaticVersionSelector) Type(ct context.Context) entity.VersionSelectorTy
 }
 
 func (v StaticVersionSelector) VersionNumber(ct context.Context) (int32, error) {
-	versionNumber, err := v.deps.rolloutService.FindVersionNumberByStaticVersionSelectorID(ct, v.versionSelector.ID)
-	if err != nil {
-		return 0, errs.ToResolverErr(err)
-	}
-
-	return int32(versionNumber), nil
+	return int32(v.versionSelector.VersionNumber), nil
 }
 
-func newStaticVersionSelector(versionSelector entity.VersionSelector, deps *Dependencies) StaticVersionSelector {
+func newStaticVersionSelector(versionSelector entity.StaticVersionSelector, deps *Dependencies) StaticVersionSelector {
 	return StaticVersionSelector{versionSelector: versionSelector, deps: deps}
 }
 

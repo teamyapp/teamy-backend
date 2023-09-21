@@ -32,9 +32,9 @@ func (r Rollout) VersionSelector(ctx context.Context) (VersionSelector, error) {
 
 	switch versionSelector.Type {
 	case entity.VersionSelectorTypeExperiment:
-		return newExperimentVersionSelector(versionSelector, r.deps), nil
+		return newExperimentVersionSelector(versionSelector.ExperimentVersionSelector, r.deps), nil
 	case entity.VersionSelectorTypeStatic:
-		return newStaticVersionSelector(versionSelector, r.deps), nil
+		return newStaticVersionSelector(versionSelector.StaticVersionSelector, r.deps), nil
 	default:
 		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("Unknown version selector type: %s", versionSelector.Type)))
 	}
