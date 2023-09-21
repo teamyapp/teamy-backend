@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
+	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/randgen"
@@ -36,6 +38,7 @@ type UpdateRolloutInput struct {
 
 type Rollout struct {
 	logger                    telemetry.Logger
+	cloudClientRegistry       *client.Registry
 	transactionFactory        cloudTransaction.Factory
 	stateSyncer               *realtime.StateSyncer
 	appGroupRelationDao       dao.AppGroupRelation
@@ -293,7 +296,20 @@ func (r *Rollout) FindVersionSelectorByID(ct context.Context, selectorID uint64)
 }
 
 func (r *Rollout) CreateStaticVersionSelector(ct context.Context, versionNumber int) (entity.StaticVersionSelector, *errs.Error) {
-	staticVersionSelector := entity.StaticVersionSelector{}
+	genSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
+	genSelectorIDRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSelectorIDReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.StaticVersionSelector{}, internalErr
+	}
+
+	staticVersionSelector := entity.StaticVersionSelector{
+		VersionNumber: versionNumber,
+		VersionSelector: entity.VersionSelector{
+			ID:   genSelectorIDRes.UniqueNumber,
+			Type: entity.VersionSelectorTypeStatic,
+		},
+	}
 	txCtx := transaction.NewTransactionsContext(
 		r.logger,
 		r.transactionFactory,
@@ -301,19 +317,26 @@ func (r *Rollout) CreateStaticVersionSelector(ct context.Context, versionNumber 
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		staticVersionSelector, err = r.versionSelectorRepository.CreateStaticVersionSelector(ct, tx, versionNumber)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return r.versionSelectorRepository.CreateStaticVersionSelector(ct, tx, staticVersionSelector)
 	})
 	return staticVersionSelector, err
 }
 
 func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, versionNumbers []int) (entity.ExperimentVersionSelector, *errs.Error) {
-	experimentVersionSelector := entity.ExperimentVersionSelector{}
+	genSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
+	genSelectorIDRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSelectorIDReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.ExperimentVersionSelector{}, internalErr
+	}
+
+	experimentVersionSelector := entity.ExperimentVersionSelector{
+		VersionNumbers: versionNumbers,
+		VersionSelector: entity.VersionSelector{
+			ID:   genSelectorIDRes.UniqueNumber,
+			Type: entity.VersionSelectorTypeExperiment,
+		},
+	}
 	txCtx := transaction.NewTransactionsContext(
 		r.logger,
 		r.transactionFactory,
@@ -321,13 +344,7 @@ func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, versionNum
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		experimentVersionSelector, err = r.versionSelectorRepository.CreateExperimentVersionSelector(ct, tx, versionNumbers)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return r.versionSelectorRepository.CreateExperimentVersionSelector(ct, tx, experimentVersionSelector)
 	})
 	return experimentVersionSelector, err
 }
@@ -437,6 +454,7 @@ func (r *Rollout) getRolloutActivator(ct context.Context, rolloutID uint64, acti
 
 func NewRollout(
 	logger telemetry.Logger,
+	cloudClientRegistry *client.Registry,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	appGroupRelationDao dao.AppGroupRelation,
@@ -450,6 +468,7 @@ func NewRollout(
 ) *Rollout {
 	return &Rollout{
 		logger:                    logger,
+		cloudClientRegistry:       cloudClientRegistry,
 		transactionFactory:        transactionFactory,
 		stateSyncer:               stateSyncer,
 		appGroupRelationDao:       appGroupRelationDao,

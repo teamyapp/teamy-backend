@@ -3,8 +3,6 @@ package repository
 import (
 	"context"
 
-	"github.com/teamyapp/cloud/app/api/proto"
-	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
@@ -14,7 +12,6 @@ import (
 
 type VersionSelector struct {
 	logger                            telemetry.Logger
-	cloudClientRegistry               *client.Registry
 	versionSelectorDao                dao.VersionSelector
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation
 }
@@ -22,72 +19,40 @@ type VersionSelector struct {
 func (v *VersionSelector) CreateStaticVersionSelector(
 	ct context.Context,
 	tx *transaction.Transaction,
-	versionNumber int,
-) (entity.StaticVersionSelector, *errs.Error) {
-	genSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
-	genSelectorIDRes, rpcErr := v.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSelectorIDReq)
-	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		return entity.StaticVersionSelector{}, internalErr
-	}
-	versionSelector := entity.VersionSelector{
-		ID:   genSelectorIDRes.UniqueNumber,
-		Type: entity.VersionSelectorTypeStatic,
-	}
-
-	err := v.versionSelectorDao.CreateVersionSelector(ct, tx, versionSelector)
+	staticVersionSelector entity.StaticVersionSelector,
+) *errs.Error {
+	err := v.versionSelectorDao.CreateVersionSelector(ct, tx, staticVersionSelector.VersionSelector)
 	if err != nil {
-		return entity.StaticVersionSelector{}, err
+		return err
 	}
 
-	err = v.versionSelectorVersionRelationDao.CreateVersionSelectorVersionRelation(ct, tx, entity.VersionSelectorVersionRelation{
-		VersionSelectorID: versionSelector.ID,
-		VersionNumber:     versionNumber,
+	return v.versionSelectorVersionRelationDao.CreateVersionSelectorVersionRelation(ct, tx, entity.VersionSelectorVersionRelation{
+		VersionSelectorID: staticVersionSelector.VersionSelector.ID,
+		VersionNumber:     staticVersionSelector.VersionNumber,
 	})
-	if err != nil {
-		return entity.StaticVersionSelector{}, err
-	}
-
-	return entity.StaticVersionSelector{
-		VersionSelector: versionSelector,
-		VersionNumber:   versionNumber,
-	}, nil
 }
 
 func (v *VersionSelector) CreateExperimentVersionSelector(
 	ct context.Context,
 	tx *transaction.Transaction,
-	versionNumbers []int,
-) (entity.ExperimentVersionSelector, *errs.Error) {
-	genSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
-	genSelectorIDRes, rpcErr := v.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSelectorIDReq)
-	if rpcErr != nil {
-		internalErr := errs.FromGRPCErr(rpcErr)
-		return entity.ExperimentVersionSelector{}, internalErr
-	}
-	versionSelector := entity.VersionSelector{
-		ID:   genSelectorIDRes.UniqueNumber,
-		Type: entity.VersionSelectorTypeExperiment,
-	}
-	err := v.versionSelectorDao.CreateVersionSelector(ct, tx, versionSelector)
+	experimentVersionSelector entity.ExperimentVersionSelector,
+) *errs.Error {
+	err := v.versionSelectorDao.CreateVersionSelector(ct, tx, experimentVersionSelector.VersionSelector)
 	if err != nil {
-		return entity.ExperimentVersionSelector{}, err
+		return err
 	}
 
-	for _, versionNumber := range versionNumbers {
+	for _, versionNumber := range experimentVersionSelector.VersionNumbers {
 		err = v.versionSelectorVersionRelationDao.CreateVersionSelectorVersionRelation(ct, tx, entity.VersionSelectorVersionRelation{
-			VersionSelectorID: versionSelector.ID,
+			VersionSelectorID: experimentVersionSelector.VersionSelector.ID,
 			VersionNumber:     versionNumber,
 		})
 		if err != nil {
-			return entity.ExperimentVersionSelector{}, err
+			return err
 		}
 	}
 
-	return entity.ExperimentVersionSelector{
-		VersionSelector: versionSelector,
-		VersionNumbers:  versionNumbers,
-	}, nil
+	return nil
 }
 
 func (v *VersionSelector) FindVersionSelectorByID(
@@ -180,9 +145,14 @@ func (v *VersionSelector) findVersionNumbersByExperimentVersionSelectorID(ct con
 	return versionNumbers, nil
 }
 
-func NewVersionSelector(logger telemetry.Logger, versionSelectorDao dao.VersionSelector) *VersionSelector {
+func NewVersionSelector(
+	logger telemetry.Logger,
+	versionSelectorDao dao.VersionSelector,
+	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation,
+) *VersionSelector {
 	return &VersionSelector{
-		logger:             logger,
-		versionSelectorDao: versionSelectorDao,
+		logger:                            logger,
+		versionSelectorDao:                versionSelectorDao,
+		versionSelectorVersionRelationDao: versionSelectorVersionRelationDao,
 	}
 }
