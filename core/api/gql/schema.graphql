@@ -104,7 +104,7 @@ type Mutation {
 	createStaticTeamGroup(appId: ID!, input: CreateStaticTeamGroupInput!): StaticTeamGroup!
 	updateStaticTeamGroup(groupId: ID!,input: UpdateStaticTeamGroupInput!): StaticTeamGroup!
 	createFilterTeamGroup(appId: ID!, input: CreateFilterTeamGroupInput!): FilterGroup!
-	
+
 	updateFilterGroup(groupId: ID!, input: UpdateFilterGroupInput!): FilterGroup!
 	deleteGroup(groupId: ID!): Group!
 
@@ -135,6 +135,7 @@ type Task {
 	deliveredAt: Time
 	dueAt: Time
 	effort: Duration
+	priority: Priority
 	availableActions: [TaskAction!]!
 	awaitForTasks: [Task!]!
 	links: [TaskLink!]!
@@ -342,7 +343,7 @@ interface Group {
 	rollouts: [Rollout!]!
 }
 
-type StaticUserGroup implements Group { 
+type StaticUserGroup implements Group {
 	id: ID!
 	type: GroupType!
 	name: String!
@@ -431,6 +432,7 @@ input UpdateTaskInput {
 	owningTeamId: ID!
 	effort: Duration
 	dueAt: Time
+	priority: Priority
 }
 
 input CreateMessageInput {
@@ -586,6 +588,13 @@ enum TaskStatus {
 	AWAITING
 	BLOCK
 	DELIVERED
+}
+
+enum Priority{
+	URGENT
+	HIGH
+	MEDIUM
+	LOW
 }
 
 enum Currency {

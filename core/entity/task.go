@@ -19,4 +19,5 @@ type Task struct {
 	CreatedAt        time.Time
 	UpdatedAt        *time.Time
 	DeliveredAt      *time.Time
+	Priority         *Priority
 }

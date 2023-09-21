@@ -122,6 +122,10 @@ func (t Task) Effort(ct context.Context) *scalar.Duration {
 	return toGraphQLDurationPtr(t.task.Effort)
 }
 
+func (t Task) Priority(ct context.Context) *entity.Priority {
+	return t.task.Priority
+}
+
 func (t Task) AvailableActions(ct context.Context) []entity.TaskAction {
 	return availableActions[t.task.Status]
 }
