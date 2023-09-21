@@ -14,6 +14,29 @@ type VersionSelector interface {
 	Type(ct context.Context) entity.VersionSelectorType
 }
 
+type StaticVersionSelector struct {
+	versionSelector entity.StaticVersionSelector
+	deps            *Dependencies
+}
+
+var _ VersionSelector = (*StaticVersionSelector)(nil)
+
+func (v StaticVersionSelector) ID(ct context.Context) graphql.ID {
+	return toGraphQLID(v.versionSelector.ID)
+}
+
+func (v StaticVersionSelector) Type(ct context.Context) entity.VersionSelectorType {
+	return v.versionSelector.Type
+}
+
+func (v StaticVersionSelector) VersionNumber(ct context.Context) (int32, error) {
+	return int32(v.versionSelector.VersionNumber), nil
+}
+
+func newStaticVersionSelector(versionSelector entity.StaticVersionSelector, deps *Dependencies) StaticVersionSelector {
+	return StaticVersionSelector{versionSelector: versionSelector, deps: deps}
+}
+
 type ExperimentVersionSelector struct {
 	versionSelector entity.ExperimentVersionSelector
 	deps            *Dependencies
@@ -37,29 +60,6 @@ func (v ExperimentVersionSelector) VersionNumbers(ct context.Context) []int32 {
 
 func newExperimentVersionSelector(versionSelector entity.ExperimentVersionSelector, deps *Dependencies) ExperimentVersionSelector {
 	return ExperimentVersionSelector{versionSelector: versionSelector, deps: deps}
-}
-
-type StaticVersionSelector struct {
-	versionSelector entity.StaticVersionSelector
-	deps            *Dependencies
-}
-
-var _ VersionSelector = (*StaticVersionSelector)(nil)
-
-func (v StaticVersionSelector) ID(ct context.Context) graphql.ID {
-	return toGraphQLID(v.versionSelector.ID)
-}
-
-func (v StaticVersionSelector) Type(ct context.Context) entity.VersionSelectorType {
-	return v.versionSelector.Type
-}
-
-func (v StaticVersionSelector) VersionNumber(ct context.Context) (int32, error) {
-	return int32(v.versionSelector.VersionNumber), nil
-}
-
-func newStaticVersionSelector(versionSelector entity.StaticVersionSelector, deps *Dependencies) StaticVersionSelector {
-	return StaticVersionSelector{versionSelector: versionSelector, deps: deps}
 }
 
 func (m Mutation) CreateStaticVersionSelector(
