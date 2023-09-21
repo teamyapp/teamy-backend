@@ -69,7 +69,6 @@ func (v *VersionSelector) CreateExperimentVersionSelector(
 		ID:   genSelectorIDRes.UniqueNumber,
 		Type: entity.VersionSelectorTypeExperiment,
 	}
-
 	err := v.versionSelectorDao.CreateVersionSelector(ct, tx, versionSelector)
 	if err != nil {
 		return entity.ExperimentVersionSelector{}, err

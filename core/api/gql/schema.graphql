@@ -296,7 +296,6 @@ type ExperimentVersionSelector implements VersionSelector {
 	versionNumbers: [Int!]!
 }
 
-
 type MaxViewersActivator implements Activator {
 	id: ID!
 	maxViewers: Int!
