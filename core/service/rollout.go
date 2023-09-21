@@ -364,20 +364,6 @@ func (r *Rollout) getTeamGroupActiveVersion(ct context.Context, teamID uint64, g
 	return versionNumber, err
 }
 
-// func (r *Rollout) createVersionSelector(ct context.Context, versionSelectorType entity.VersionSelectorType, versionNumbers []int) (entity.VersionSelectorUnion, *errs.Error) {
-// 	versionSelectorUnion := entity.VersionSelectorUnion{}
-// 	txCtx := transaction.NewTransactionsContext(
-// 		r.logger,
-// 		r.transactionFactory,
-// 		r.stateSyncer,
-// 		ct,
-// 	)
-// 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-// 		return r.versionSelectorRepository.CreateVersionSelector(ct, tx, versionSelectorType, versionNumbers)
-// 	})
-// 	return versionSelectorUnion, err
-// }
-
 func (r *Rollout) getRolloutVersionSelector(ct context.Context, rolloutID uint64, selectorID uint64) (rollout.VersionSelector, *errs.Error) {
 	var versionSelector rollout.VersionSelector
 	rawVersionSelector, err := r.FindVersionSelectorByID(ct, selectorID)
