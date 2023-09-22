@@ -532,12 +532,7 @@ func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64)
 			return err
 		}
 
-		err = g.groupRolloutRelationDao.DeleteGroupRolloutRelationsByGroupID(ct, tx, groupID)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return g.groupRolloutRelationDao.DeleteGroupRolloutRelationsByGroupID(ct, tx, groupID)
 	})
 
 	return group, err
