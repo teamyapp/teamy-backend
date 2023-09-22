@@ -50,7 +50,6 @@ message TaskMsg {
 	uint64 owningTeamId = 11;
 	uint64 creatorUserId = 12;
 	uint64 commentThreadId = 13;
-
 }
 
 message GetTaskRequest {
