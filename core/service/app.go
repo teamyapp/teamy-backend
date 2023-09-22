@@ -26,6 +26,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"gopkg.in/yaml.v3"
 )
 
 var appPackageRoot = path.Join("app", "packages")
@@ -626,6 +627,35 @@ func (a App) uploadAppPackageFiles(
 	}
 
 	return nil
+}
+
+type manifest struct {
+	Number      int      `yaml:"number"`
+	AppName     string   `yaml:"app_name"`
+	Description string   `yaml:"description"`
+	Changes     []string `yaml:"changes"`
+	Prices      []struct {
+		Currency string `yaml:"currency"`
+		Amount   int    `yaml:"amount"`
+	}
+}
+
+func Sum[T Slice[Int]](slice T) int {
+    sum := 0
+    for _, v := range slice {
+        sum += v
+    }
+    return sum
+}
+
+func (a App) extractFromFile[T](ct context.Context, reader io.Reader) (T, *errs.Error) {
+	manifestData := manifest{}
+	err := yaml.NewDecoder(reader).Decode(&manifestData)
+	if err != nil {
+		return errs.NewError(errs.IO, err.Error())
+	}
+
+	return manifestData
 }
 
 func NewApp(
