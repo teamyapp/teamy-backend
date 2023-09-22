@@ -15,4 +15,5 @@ type Group interface {
 	FindGroupByIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.Group, *errs.Error)
 	CreateGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) *errs.Error
 	UpdateGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) *errs.Error
+	DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error
 }

@@ -146,6 +146,21 @@ func (f *FilterGroup) UpdateFilterGroup(ct context.Context, tx *transaction.Tran
 	return nil
 }
 
+func (f *FilterGroup) DeleteFilterGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM filter_group
+		WHERE group_id = $1`,
+		groupID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewFilterGroup(transactionFactory transaction.Factory) *FilterGroup {
 	return &FilterGroup{
 		transactionFactory: transactionFactory,

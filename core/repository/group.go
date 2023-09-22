@@ -81,6 +81,49 @@ func (g *Group) FindGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity
 	return groupUnions, nil
 }
 
+func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.GroupUnion, *errs.Error) {
+	group, err := g.groupDao.FindGroupByIDWithTx(ct, tx, groupID)
+	if err != nil {
+		return entity.GroupUnion{}, err
+	}
+
+	err = g.groupDao.DeleteGroup(ct, tx, groupID)
+	if err != nil {
+		return entity.GroupUnion{}, err
+	}
+
+	switch group.Type {
+	case entity.GroupTypeStatic:
+		return entity.GroupUnion{
+			Type: entity.GroupTypeStatic,
+			StaticGroup: entity.StaticGroup{
+				Group: group,
+			},
+		}, nil
+	case entity.GroupTypeFilter:
+		filterGroup, err := g.filterGroupDao.FindFilterGroupByID(ct, groupID)
+		if err != nil {
+			return entity.GroupUnion{}, err
+		}
+
+		err = g.filterGroupDao.DeleteFilterGroup(ct, tx, groupID)
+		if err != nil {
+			return entity.GroupUnion{}, err
+		}
+
+		return entity.GroupUnion{
+			Type: entity.GroupTypeFilter,
+			FilterGroup: entity.FilterGroup{
+				Group:  group,
+				Filter: filterGroup.Filter,
+				Count:  filterGroup.Count,
+			},
+		}, nil
+	default:
+		return entity.GroupUnion{}, errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type))
+	}
+}
+
 func NewGroup(logger telemetry.Logger, groupDao dao.Group, filterGroupDao dao.FilterGroup) *Group {
 	return &Group{
 		logger:         logger,

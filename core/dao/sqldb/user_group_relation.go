@@ -110,6 +110,22 @@ func (*UserGroupRelation) DeleteUserGroupRelation(
 	return nil
 }
 
+func (*UserGroupRelation) DeleteUserGroupRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(
+		ct,
+		`
+		DELETE FROM user_group_relation
+		WHERE group_id = $1;`,
+		groupID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewUserGroupRelation(
 	transactionFactory transaction.Factory,
 ) *UserGroupRelation {

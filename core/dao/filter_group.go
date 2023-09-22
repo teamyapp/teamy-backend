@@ -15,4 +15,5 @@ type FilterGroup interface {
 	FindFilterGroupByID(ct context.Context, groupID uint64) (entity.FilterGroup, *errs.Error)
 	CreateFilterGroup(ct context.Context, tx *transaction.Transaction, group entity.FilterGroup) *errs.Error
 	UpdateFilterGroup(ct context.Context, tx *transaction.Transaction, group entity.FilterGroup) *errs.Error
+	DeleteFilterGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error
 }

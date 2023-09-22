@@ -17,9 +17,9 @@ type GroupRolloutRelation struct {
 var _ dao.GroupRolloutRelation = (*GroupRolloutRelation)(nil)
 
 func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupIDWithTx(
-    ct context.Context, 
-    tx *transaction.Transaction, 
-    groupID uint64,
+	ct context.Context,
+	tx *transaction.Transaction,
+	groupID uint64,
 ) ([]entity.GroupRolloutRelation, *errs.Error) {
 	groupRolloutRelations := []entity.GroupRolloutRelation{}
 	rows, err := tx.SQLTx().QueryContext(ct,
@@ -28,7 +28,7 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupIDWithTx(
 			group_id,
 			rollout_id,
 			order_index
-		FROM group_rollout_relations
+		FROM group_rollout_relation
 		WHERE group_id = $1;
 		`,
 		groupID,
@@ -72,7 +72,7 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupID(ct context.Con
 func (g *GroupRolloutRelation) CreateGroupRolloutRelation(ct context.Context, tx *transaction.Transaction, groupRolloutRelation entity.GroupRolloutRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		INSERT INTO group_rollout_relations (
+		INSERT INTO group_rollout_relation (
 			group_id,
 			rollout_id,
 			order_index
@@ -85,6 +85,21 @@ func (g *GroupRolloutRelation) CreateGroupRolloutRelation(ct context.Context, tx
 		groupRolloutRelation.GroupID,
 		groupRolloutRelation.RolloutID,
 		groupRolloutRelation.OrderIndex,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (*GroupRolloutRelation) DeleteGroupRolloutRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM group_rollout_relation
+		WHERE group_id = $1;`,
+		groupID,
 	)
 
 	if err != nil {
