@@ -509,7 +509,6 @@ func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64)
 		g.stateSyncer,
 		ct,
 	)
-
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		group, err = g.groupRepository.DeleteGroup(ct, tx, groupID)
