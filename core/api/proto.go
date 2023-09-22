@@ -18,6 +18,20 @@ var protoTaskStatuses = map[entity.TaskStatus]proto.TaskStatus{
 	entity.TaskStatusDelivered:  proto.TaskStatus_Delivered,
 }
 
+var protoPriorities = map[entity.Priority]proto.Priority{
+	entity.UrgentPriority: proto.Priority_Urgent,
+	entity.HighPriority:   proto.Priority_High,
+	entity.MediumPriority: proto.Priority_Medium,
+	entity.LowPriority:    proto.Priority_Low,
+}
+
+var priorities = map[proto.Priority]entity.Priority{
+	proto.Priority_Urgent: entity.UrgentPriority,
+	proto.Priority_High:   entity.HighPriority,
+	proto.Priority_Medium: entity.MediumPriority,
+	proto.Priority_Low:    entity.LowPriority,
+}
+
 func fromProtoTimePtr(ts *timestamppb.Timestamp) *time.Time {
 	if ts == nil {
 		return nil
@@ -68,4 +82,22 @@ func toProtoDurationPtr(duration *time.Duration) *durationpb.Duration {
 	}
 
 	return durationpb.New(*duration)
+}
+
+func toProtoPriorityPtr(priority *entity.Priority) *proto.Priority {
+	if priority == nil {
+		return nil
+	}
+
+	protoPriority := protoPriorities[*priority]
+	return &protoPriority
+}
+
+func fromProtoPriorityPtr(protoPriority *proto.Priority) *entity.Priority {
+	if protoPriority == nil {
+		return nil
+	}
+
+	priority := priorities[*protoPriority]
+	return &priority
 }

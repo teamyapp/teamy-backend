@@ -55,6 +55,7 @@ type UpdateTaskInput struct {
 	OwnerUserID  *uint64
 	OwningTeamID uint64
 	Effort       *time.Duration
+	Priority     *entity.Priority
 	DueAt        *time.Time
 }
 
@@ -441,6 +442,7 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 		task.OwnerUserID = input.OwnerUserID
 		task.OwningTeamID = input.OwningTeamID
 		task.Effort = input.Effort
+		task.Priority = input.Priority
 		task.DueAt = input.DueAt
 		updatedAt := time.Now().UTC()
 		task.UpdatedAt = &updatedAt

@@ -44,6 +44,7 @@ func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.
 		Goal:            task.Goal,
 		Context:         task.Context,
 		Effort:          toProtoDurationPtr(task.Effort),
+		Priority:        toProtoPriorityPtr(task.Priority),
 		DueAt:           toProtoTimePtr(task.DueAt),
 		Status:          protoTaskStatuses[task.Status],
 		CreatedAt:       timestamppb.New(task.CreatedAt),
@@ -68,6 +69,7 @@ func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *proto.GetAwaitForTask
 			Goal:            task.Goal,
 			Context:         task.Context,
 			Effort:          toProtoDurationPtr(task.Effort),
+			Priority:        toProtoPriorityPtr(task.Priority),
 			DueAt:           toProtoTimePtr(task.DueAt),
 			Status:          protoTaskStatuses[task.Status],
 			CreatedAt:       timestamppb.New(task.CreatedAt),
@@ -105,6 +107,7 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 		OwnerUserID:  req.OwnerUserId,
 		OwningTeamID: req.OwningTeamId,
 		Effort:       fromProtoDurationPtr(req.Effort),
+		Priority:     fromProtoPriorityPtr(req.Priority),
 		DueAt:        fromProtoTimePtr(req.DueAt),
 	}
 	_, err := t.taskService.UpdateTask(ct, req.TaskId, input)
