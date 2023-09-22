@@ -154,7 +154,9 @@ func (*AppGroupRelation) CreateAppGroupRelation(ct context.Context, tx *transact
 
 func (*AppGroupRelation) DeleteAppGroupRelation(ct context.Context, tx *transaction.Transaction, appID uint64, groupID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
-		`DELETE FROM app_group_relation WHERE app_id = $1 AND group_id = $2`,
+		`
+		DELETE FROM app_group_relation 
+		WHERE app_id = $1 AND group_id = $2`,
 		appID,
 		groupID,
 	)
