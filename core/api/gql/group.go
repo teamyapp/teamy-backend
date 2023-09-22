@@ -117,11 +117,55 @@ func (m Mutation) UpdateFilterGroup(
 	return newFilterGroup(m.deps, filterGroup), nil
 }
 
-func (m Mutation) DeleteGroup(
+func (m Mutation) DeleteAppGroup(
 	ctx context.Context,
 	args struct {
+		AppID   graphql.ID
 		GroupID graphql.ID
 	},
-) Group {
-	panic("implement me")
+) (Group, error) {
+	appID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	groupID, internalErr := fromGraphQLID(args.GroupID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	appGroupRelationType, err := m.deps.groupService.FindAppGroupRelationType(ctx, appID, groupID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	group, err := m.deps.groupService.DeleteAppGroup(ctx, appID, groupID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	switch group.Type {
+	case entity.GroupTypeStatic:
+		if appGroupRelationType == entity.AppGroupRelationTypeUser {
+			return newStaticUserGroup(m.deps, group.StaticGroup), nil
+		} else {
+			return newStaticTeamGroup(m.deps, group.StaticGroup), nil
+		}
+	case entity.GroupTypeFilter:
+		return newFilterGroup(m.deps, group.FilterGroup), nil
+	default:
+		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group type"))
+	}
 }

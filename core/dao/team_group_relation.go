@@ -13,4 +13,5 @@ type TeamGroupRelation interface {
 	FindTeamIDsByGroupID(ct context.Context, groupID uint64) ([]uint64, *errs.Error)
 	CreateTeamGroupRelation(ct context.Context, tx *transaction.Transaction, teamGroupRelation entity.TeamGroupRelation) *errs.Error
 	DeleteTeamGroupRelation(ct context.Context, tx *transaction.Transaction, teamID uint64, groupID uint64) *errs.Error
+	DeleteTeamGroupRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error
 }

@@ -76,7 +76,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 			updated_at
 		FROM groups
 		WHERE id IN (%s);
-		`, 
+		`,
 		idsString,
 	)
 
@@ -159,6 +159,22 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 		Group.Name,
 		Group.UpdatedAt,
 		Group.ID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM group
+		WHERE id = $1;
+		`,
+		groupID,
 	)
 
 	if err != nil {

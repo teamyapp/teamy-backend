@@ -106,7 +106,7 @@ type Mutation {
 	createFilterTeamGroup(appId: ID!, input: CreateFilterTeamGroupInput!): FilterGroup!
 	
 	updateFilterGroup(groupId: ID!, input: UpdateFilterGroupInput!): FilterGroup!
-	deleteGroup(groupId: ID!): Group!
+	deleteAppGroup(appId: ID!, groupId: ID!): Group!
 
 	createTimeRangeActivator(input: CreateTimeRangeActivatorInput!): TimeRangeActivator!
 	createMaxViewersActivator(input: CreateMaxViewersActivatorInput!): MaxViewersActivator!

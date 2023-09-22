@@ -47,17 +47,18 @@ type UpdateStaticUserGroupInput struct {
 }
 
 type Group struct {
-	logger               telemetry.Logger
-	cloudClientRegistry  *client.Registry
-	transactionFactory   cloudTransaction.Factory
-	stateSyncer          *realtime.StateSyncer
-	groupRepository      repository.Group
-	userGroupRelationDao dao.UserGroupRelation
-	appGroupRelationDao  dao.AppGroupRelation
-	teamGroupRelationDao dao.TeamGroupRelation
-	userDao              dao.User
-	teamDao              dao.Team
-	appDao               dao.App
+	logger                  telemetry.Logger
+	cloudClientRegistry     *client.Registry
+	transactionFactory      cloudTransaction.Factory
+	stateSyncer             *realtime.StateSyncer
+	groupRepository         *repository.Group
+	userGroupRelationDao    dao.UserGroupRelation
+	appGroupRelationDao     dao.AppGroupRelation
+	teamGroupRelationDao    dao.TeamGroupRelation
+	groupRolloutRelationDao dao.GroupRolloutRelation
+	userDao                 dao.User
+	teamDao                 dao.Team
+	appDao                  dao.App
 }
 
 func (g *Group) CreateStaticUserGroup(
@@ -311,7 +312,6 @@ func (g *Group) CreateStaticTeamGroup(
 				return err
 			}
 		}
-		
 		return nil
 	})
 	return group, err
@@ -497,6 +497,52 @@ func (g *Group) FindTeamGroupsByAppID(ct context.Context, appID uint64) ([]entit
 	return g.findGroupsByAppID(ct, appID, entity.AppGroupRelationTypeTeam)
 }
 
+func (g *Group) FindAppGroupRelationType(ct context.Context, appID uint64, groupID uint64) (entity.AppGroupRelationType, *errs.Error) {
+	return g.appGroupRelationDao.FindAppGroupRelationType(ct, appID, groupID)
+}
+
+func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64) (entity.GroupUnion, *errs.Error) {
+	var group entity.GroupUnion
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		group, err = g.groupRepository.DeleteGroup(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		err = g.appGroupRelationDao.DeleteAppGroupRelation(ct, tx, appID, groupID)
+		if err != nil {
+			return err
+		}
+
+		err = g.userGroupRelationDao.DeleteUserGroupRelationsByGroupID(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		err = g.teamGroupRelationDao.DeleteTeamGroupRelationsByGroupID(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		err = g.groupRolloutRelationDao.DeleteGroupRolloutRelationsByGroupID(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return group, err
+}
+
 func (g *Group) findGroupsByAppID(ct context.Context, appID uint64, appGroupRelationType entity.AppGroupRelationType) ([]entity.GroupUnion, *errs.Error) {
 	groupIDs, err := g.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, appGroupRelationType)
 	if err != nil {
@@ -511,23 +557,27 @@ func NewGroup(
 	cloudClientRegistry *client.Registry,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
+	groupRepository *repository.Group,
 	userGroupRelationDao dao.UserGroupRelation,
 	appGroupRelationDao dao.AppGroupRelation,
 	teamGroupRelationDao dao.TeamGroupRelation,
+	groupRolloutRelationDao dao.GroupRolloutRelation,
 	userDao dao.User,
 	teamDao dao.Team,
 	appDao dao.App,
 ) *Group {
 	return &Group{
-		logger:               logger,
-		cloudClientRegistry:  cloudClientRegistry,
-		transactionFactory:   transactionFactory,
-		stateSyncer:          stateSyncer,
-		userGroupRelationDao: userGroupRelationDao,
-		appGroupRelationDao:  appGroupRelationDao,
-		teamGroupRelationDao: teamGroupRelationDao,
-		userDao:              userDao,
-		teamDao:              teamDao,
-		appDao:               appDao,
+		logger:                  logger,
+		cloudClientRegistry:     cloudClientRegistry,
+		transactionFactory:      transactionFactory,
+		stateSyncer:             stateSyncer,
+		groupRepository:         groupRepository,
+		userGroupRelationDao:    userGroupRelationDao,
+		appGroupRelationDao:     appGroupRelationDao,
+		teamGroupRelationDao:    teamGroupRelationDao,
+		groupRolloutRelationDao: groupRolloutRelationDao,
+		userDao:                 userDao,
+		teamDao:                 teamDao,
+		appDao:                  appDao,
 	}
 }
