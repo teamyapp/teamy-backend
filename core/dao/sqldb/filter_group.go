@@ -148,8 +148,9 @@ func (f *FilterGroup) UpdateFilterGroup(ct context.Context, tx *transaction.Tran
 
 func (f *FilterGroup) DeleteFilterGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
-		`DELETE FROM filter_group
-			WHERE group_id = $1`,
+		`
+		DELETE FROM filter_group
+		WHERE group_id = $1`,
 		groupID,
 	)
 
