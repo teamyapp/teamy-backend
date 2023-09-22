@@ -29,19 +29,28 @@ enum TaskStatus {
 	Delivered = 5;
 }
 
+enum Priority{
+	Urgent = 0;
+	High = 1;
+	Medium = 2;
+	Low = 3;
+}
+
 message TaskMsg {
 	uint64 taskId = 1;
 	string goal = 2;
 	optional string context = 3;
 	optional google.protobuf.Duration effort = 4;
 	optional google.protobuf.Timestamp dueAt = 5;
-	TaskStatus status = 6;
-	google.protobuf.Timestamp createdAt = 7;
-	optional google.protobuf.Timestamp updatedAt = 8;
-	optional uint64 ownerUserId = 9;
-	uint64 owningTeamId = 10;
-	uint64 creatorUserId = 11;
-	uint64 commentThreadId = 12;
+	optional Priority priority = 6;
+	TaskStatus status = 7;
+	google.protobuf.Timestamp createdAt = 8;
+	optional google.protobuf.Timestamp updatedAt = 9;
+	optional uint64 ownerUserId = 10;
+	uint64 owningTeamId = 11;
+	uint64 creatorUserId = 12;
+	uint64 commentThreadId = 13;
+
 }
 
 message GetTaskRequest {
@@ -76,6 +85,7 @@ message UpdateTaskRequest {
 	uint64 owningTeamId = 5;
 	optional google.protobuf.Duration effort = 6;
 	optional google.protobuf.Timestamp dueAt = 7;
+	optional Priority priority = 8;
 }
 
 message DeleteTaskRequest {

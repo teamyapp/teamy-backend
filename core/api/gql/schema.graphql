@@ -431,8 +431,8 @@ input UpdateTaskInput {
 	ownerUserId: ID
 	owningTeamId: ID!
 	effort: Duration
-	dueAt: Time
 	priority: Priority
+	dueAt: Time
 }
 
 input CreateMessageInput {
