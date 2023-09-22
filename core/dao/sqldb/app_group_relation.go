@@ -19,8 +19,7 @@ var _ dao.AppGroupRelation = (*AppGroupRelation)(nil)
 func (*AppGroupRelation) FindAppGroupRelationTypeWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, groupID uint64) (entity.AppGroupRelationType, *errs.Error) {
 	var appGroupRelationType entity.AppGroupRelationType
 	err := tx.SQLTx().QueryRowContext(ct, `
-		SELECT
-			type
+		SELECT type
 		FROM app_group_relation
 		WHERE app_id = $1 AND group_id = $2`,
 		appID,
