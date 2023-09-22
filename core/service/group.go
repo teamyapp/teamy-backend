@@ -511,11 +511,6 @@ func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64)
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		group, err = g.groupRepository.DeleteGroup(ct, tx, groupID)
-		if err != nil {
-			return err
-		}
-
 		err = g.appGroupRelationDao.DeleteAppGroupRelation(ct, tx, appID, groupID)
 		if err != nil {
 			return err
@@ -531,7 +526,17 @@ func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64)
 			return err
 		}
 
-		return g.groupRolloutRelationDao.DeleteGroupRolloutRelationsByGroupID(ct, tx, groupID)
+		err = g.groupRolloutRelationDao.DeleteGroupRolloutRelationsByGroupID(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		group, err = g.groupRepository.DeleteGroup(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 
 	return group, err

@@ -144,12 +144,6 @@ func (m Mutation) DeleteAppGroup(
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	appGroupRelationType, err := m.deps.groupService.FindAppGroupRelationType(ctx, appID, groupID)
-	if err != nil {
-		m.deps.logger.ErrorWithContext(ctx, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
 	group, err := m.deps.groupService.DeleteAppGroup(ctx, appID, groupID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
@@ -158,10 +152,19 @@ func (m Mutation) DeleteAppGroup(
 
 	switch group.Type {
 	case entity.GroupTypeStatic:
-		if appGroupRelationType == entity.AppGroupRelationTypeUser {
+		appGroupRelationType, err := m.deps.groupService.FindAppGroupRelationType(ctx, appID, groupID)
+		if err != nil {
+			m.deps.logger.ErrorWithContext(ctx, err)
+			return nil, errs.ToResolverErr(err)
+		}
+
+		switch appGroupRelationType {
+		case entity.AppGroupRelationTypeUser:
 			return newStaticUserGroup(m.deps, group.StaticGroup), nil
-		} else {
+		case entity.AppGroupRelationTypeTeam:
 			return newStaticTeamGroup(m.deps, group.StaticGroup), nil
+		default:
+			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown app group relation type"))
 		}
 	case entity.GroupTypeFilter:
 		return newFilterGroup(m.deps, group.FilterGroup), nil
