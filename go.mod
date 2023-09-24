@@ -3,12 +3,13 @@ module github.com/teamyapp/teamy-backend
 go 1.21
 
 require (
+	github.com/benbjohnson/clock v1.3.5
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/wire v0.5.0
 	github.com/graph-gophers/graphql-go v1.5.0
 	github.com/stretchr/testify v1.8.4
-	github.com/teamyapp/cloud v0.0.0-20230824014334-597ed84e5212
+	github.com/teamyapp/cloud v0.0.0-20230904025115-afec4c60dfcb
 	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
 )

@@ -19,6 +19,16 @@ type Group struct {
 	UpdatedAt *time.Time
 }
 
+type GroupUnion struct {
+	Type        GroupType
+	StaticGroup StaticGroup
+	FilterGroup FilterGroup
+}
+
+type StaticGroup struct {
+	Group
+}
+
 type FilterGroup struct {
 	Group
 	Filter string

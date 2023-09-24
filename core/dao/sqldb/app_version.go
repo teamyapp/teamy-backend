@@ -18,9 +18,22 @@ type AppVersion struct {
 
 var _ dao.AppVersion = (*AppVersion)(nil)
 
+func (a *AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := a.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return entity.AppVersion{}, err
+	}
+
+	defer tx.Rollback()
+	return a.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+}
+
 func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppVersion, *errs.Error) {
 	appVersions := []entity.AppVersion{}
-	rows, err := tx.SQLTx().Query(`
+	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			app_id,
 			number,
@@ -37,9 +50,9 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
-	
+
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		appVersion := entity.AppVersion{}
 		err := rows.Scan(
@@ -71,7 +84,7 @@ func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer tx.Rollback()
 
 	appVersions, err := a.FindAppVersionsByAppIDWithTx(ct, tx, appID)
@@ -89,7 +102,7 @@ func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([
 
 func (a *AppVersion) FindMaxVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (int, *errs.Error) {
 	var versionNumber int
-	err := tx.SQLTx().QueryRow(`
+	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
 			MAX(number)
 		FROM app_version
@@ -106,7 +119,7 @@ func (a *AppVersion) FindMaxVersionNumberWithTx(ct context.Context, tx *transact
 }
 
 func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
-	_, err := tx.SQLTx().Exec(`
+	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO app_version (
 			app_id,
 			number,
@@ -143,7 +156,7 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 }
 
 func (a *AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) *errs.Error {
-	_, err := tx.SQLTx().Exec(`
+	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM app_version
 		WHERE app_id = $1 AND number = $2;`,
 		appID,
@@ -158,7 +171,7 @@ func (a *AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transa
 
 func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
 	appVersion := entity.AppVersion{}
-	err := tx.SQLTx().QueryRow(`
+	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
 			app_id,
 			number,

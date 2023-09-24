@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"github.com/teamyapp/teamy-backend/core/entity"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -62,6 +63,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		OwnerUserID  *graphql.ID
 		OwningTeamID graphql.ID
 		Effort       *scalar.Duration
+		Priority     *entity.Priority
 		DueAt        *graphql.Time
 	}
 }) (Task, error) {
@@ -101,6 +103,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		OwnerUserID:  ownerUserID,
 		OwningTeamID: owningTeamID,
 		Effort:       fromGraphQLDurationPtr(args.Input.Effort),
+		Priority:     args.Input.Priority,
 		DueAt:        fromGraphQLTimePtr(args.Input.DueAt),
 	})
 	if err != nil {

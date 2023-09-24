@@ -20,6 +20,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -47,6 +48,25 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)),
 	wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)),
 	wire.Bind(new(dao.App), new(*sqldb.App)),
+	wire.Bind(new(dao.AppSecret), new(*sqldb.AppSecret)),
+	wire.Bind(new(dao.TeamAppInstallation), new(*sqldb.TeamAppInstallation)),
+	wire.Bind(new(dao.ActivatorTypeRelation), new(*sqldb.ActivatorTypeRelation)),
+	wire.Bind(new(dao.AppGroupRelation), new(*sqldb.AppGroupRelation)),
+	wire.Bind(new(dao.AppRolloutRelation), new(*sqldb.AppRolloutRelation)),
+	wire.Bind(new(dao.AppVersionChange), new(*sqldb.AppVersionChange)),
+	wire.Bind(new(dao.AppVersionPrice), new(*sqldb.AppVersionPrice)),
+	wire.Bind(new(dao.FilterGroup), new(*sqldb.FilterGroup)),
+	wire.Bind(new(dao.GroupRolloutRelation), new(*sqldb.GroupRolloutRelation)),
+	wire.Bind(new(dao.MaxViewersActivator), new(*sqldb.MaxViewersActivator)),
+	wire.Bind(new(dao.PercentageActivator), new(*sqldb.PercentageActivator)),
+	wire.Bind(new(dao.RolloutViewer), new(*sqldb.RolloutViewer)),
+	wire.Bind(new(dao.Rollout), new(*sqldb.Rollout)),
+	wire.Bind(new(dao.Group), new(*sqldb.Group)),
+	wire.Bind(new(dao.TeamGroupRelation), new(*sqldb.TeamGroupRelation)),
+	wire.Bind(new(dao.TimeRangeActivator), new(*sqldb.TimeRangeActivator)),
+	wire.Bind(new(dao.UserGroupRelation), new(*sqldb.UserGroupRelation)),
+	wire.Bind(new(dao.VersionSelectorVersionRelation), new(*sqldb.VersionSelectorVersionRelation)),
+	wire.Bind(new(dao.VersionSelector), new(*sqldb.VersionSelector)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -65,11 +85,37 @@ var daoSet = wire.NewSet(
 	sqldb.NewAppPackageUploadSession,
 	sqldb.NewAppVersion,
 	sqldb.NewApp,
+	sqldb.NewAppSecret,
+	sqldb.NewTeamAppInstallation,
+	sqldb.NewActivatorTypeRelation,
+	sqldb.NewAppGroupRelation,
+	sqldb.NewAppRolloutRelation,
+	sqldb.NewAppVersionChange,
+	sqldb.NewAppVersionPrice,
+	sqldb.NewFilterGroup,
+	sqldb.NewGroupRolloutRelation,
+	sqldb.NewMaxViewersActivator,
+	sqldb.NewPercentageActivator,
+	sqldb.NewRolloutViewer,
+	sqldb.NewRollout,
+	sqldb.NewGroup,
+	sqldb.NewTeamGroupRelation,
+	sqldb.NewTimeRangeActivator,
+	sqldb.NewUserGroupRelation,
+	sqldb.NewVersionSelectorVersionRelation,
+	sqldb.NewVersionSelector,
+)
+
+var repositorySet = wire.NewSet(
+	repository.NewGroup,
+	repository.NewActivator,
+	repository.NewVersionSelector,
 )
 
 var serviceSet = wire.NewSet(
 	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
 	newHTTPClient,
+	repositorySet,
 	service.NewThread,
 	service.NewTask,
 	service.NewTaskLink,
@@ -78,6 +124,8 @@ var serviceSet = wire.NewSet(
 	service.NewSprint,
 	newUserService,
 	service.NewApp,
+	service.NewGroup,
+	service.NewRollout,
 )
 
 func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {
