@@ -907,6 +907,7 @@ func (s Sprint) copyTaskToSprint(
 		CreatorUserID:    task.CreatorUserID,
 		OwningTeamID:     task.OwningTeamID,
 		Effort:           task.Effort,
+		Priority:         task.Priority,
 		OwnerUserID:      task.OwnerUserID,
 		CommentsThreadID: newThreadID,
 		CreatedAt:        time.Now().UTC(),
