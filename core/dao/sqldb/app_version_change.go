@@ -7,6 +7,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type AppVersionChange struct {
@@ -20,7 +21,7 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 		ct,
 		`
 		SELECT change 
-		FROM app_version_changes 
+		FROM app_version_change 
 		WHERE app_id = $1 AND version_number = $2",
 		appID,
 		`,
@@ -59,6 +60,25 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct conte
 
 	defer tx.Rollback()
 	return NewAppVersionChange().FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+}
+
+func (*AppVersionChange) CreateAppVersionChange(ct context.Context, tx *transaction.Transaction, appVersionChange entity.AppVersionChange) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(
+		ct,
+		`
+		INSERT INTO app_version_change (app_id, version_number, change) 
+		VALUES ($1, $2, $3)
+		`,
+		appVersionChange.AppID,
+		appVersionChange.VersionNumber,
+		appVersionChange.Change,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
 }
 
 func NewAppVersionChange() *AppVersionChange {

@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/teamyapp/cloud/app/api/proto"
@@ -16,6 +18,7 @@ import (
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
+	tmio "github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
@@ -30,6 +33,7 @@ import (
 )
 
 var appPackageRoot = path.Join("app", "packages")
+var tarNameSanitizer = regexp.MustCompile(`^[^/]+/`)
 
 const (
 	readAheadBytes = 28
@@ -520,7 +524,8 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 	})
 
 	go func() {
-		err := a.uploadAppPackageFiles(ct, appID, versionNumber, uploadSession)
+		ct := context.Background()
+		err := a.uploadAppPackageFiles(ct, userID, appID, versionNumber, uploadSession)
 		if err != nil {
 			a.logger.ErrorWithContext(ct, err)
 			return
@@ -583,6 +588,7 @@ func (a App) FindAppVersionChangesByAppVersionID(ct context.Context, appID uint6
 
 func (a App) uploadAppPackageFiles(
 	ct context.Context,
+	userID uint64,
 	appID uint64,
 	versionNumber int,
 	uploadSession *proto.UploadSession,
@@ -616,8 +622,12 @@ func (a App) uploadAppPackageFiles(
 			continue
 		case tar.TypeReg:
 			// TODO: use separate storage map client for reading gzip file and for uploading extracted files
-			fullPath := path.Join(appPackageRoot, appIDStr, versionNumberStr, header.Name)
-			err := a.storageMapClient.Put(fullPath, tarReader)
+			headerName := a.sanitizeTarHeaderName(header.Name)
+			err := a.processFile(ct, userID, appID, tarReader, headerName, func(reader io.Reader) *errs.Error {
+				storageMapKey := path.Join(appPackageRoot, appIDStr, versionNumberStr, headerName)
+				return a.storageMapClient.Put(storageMapKey, reader)
+			})
+
 			if err != nil {
 				return err
 			}
@@ -630,32 +640,130 @@ func (a App) uploadAppPackageFiles(
 }
 
 type manifest struct {
-	Number      int      `yaml:"number"`
-	AppName     string   `yaml:"app_name"`
-	Description string   `yaml:"description"`
-	Changes     []string `yaml:"changes"`
-	Prices      []struct {
-		Currency string `yaml:"currency"`
-		Amount   int    `yaml:"amount"`
+	Number         int      `yaml:"number"`
+	AppName        string   `yaml:"app_name"`
+	Description    string   `yaml:"description"`
+	HasUiExtension bool     `yaml:"has_ui_extension"`
+	Changes        []string `yaml:"changes"`
+	Prices         []struct {
+		Currency entity.Currency `yaml:"currency"`
+		Amount   int             `yaml:"amount"`
 	}
 }
 
-func Sum[T Slice[Int]](slice T) int {
-    sum := 0
-    for _, v := range slice {
-        sum += v
-    }
-    return sum
+type Uploader func(io.Reader) *errs.Error
+
+/*
+sanitizeTarHeaderName removes the first directory name from the header name.
+The file extracted from tar will have the name of tar as prefix of the file name.
+The prefix is defined by the user
+Eg:
+tar name: app.tar
+before tar: manifest.yaml
+after tar: app/manifest.yaml
+*/
+func (a App) sanitizeTarHeaderName(headerName string) string {
+	headerName = tarNameSanitizer.ReplaceAllString(headerName, "")
+
+	return headerName
 }
 
-func (a App) extractFromFile[T](ct context.Context, reader io.Reader) (T, *errs.Error) {
+func (a App) processFile(ct context.Context, userID uint64, appID uint64, reader *tar.Reader, fileName string, uploader Uploader) *errs.Error {
+	switch fileName {
+	case "manifest.yaml":
+		return a.processManifestFile(ct, userID, appID, reader, uploader)
+	default:
+		return uploader(reader)
+	}
+}
+
+func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64, reader *tar.Reader, uploader Uploader) *errs.Error {
 	manifestData := manifest{}
-	err := yaml.NewDecoder(reader).Decode(&manifestData)
-	if err != nil {
-		return errs.NewError(errs.IO, err.Error())
+	multiReader := tmio.NewMultiReaders()
+	readers := multiReader.GenerateMultiReaders(reader, 2)
+	extractReader, uploadReader := readers[0], readers[1]
+
+	wg := sync.WaitGroup{}
+	var wgErr *errs.Error
+	once := sync.Once{}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		err := yaml.NewDecoder(extractReader).Decode(&manifestData)
+		if err != nil {
+			once.Do(func() {
+				wgErr = errs.NewError(errs.InvalidArgument, err.Error())
+			})
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		err := uploader(uploadReader)
+		if err != nil {
+			once.Do(func() {
+				wgErr = err
+			})
+		}
+	}()
+
+	wg.Wait()
+	if wgErr != nil {
+		return wgErr
 	}
 
-	return manifestData
+	appVersion := entity.AppVersion{
+		AppID:           appID,
+		CreatedByUserID: userID,
+		Number:          manifestData.Number,
+		AppName:         manifestData.AppName,
+		Description:     manifestData.Description,
+		HasUiExtension:  manifestData.HasUiExtension,
+		IsReady:         true,
+		CreatedAt:       time.Now().UTC(),
+	}
+
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		err := a.appVersionDao.CreateAppVersion(ct, tx, appVersion)
+		if err != nil {
+			return err
+		}
+
+		for _, price := range manifestData.Prices {
+			appVersionPrice := entity.AppVersionPrice{
+				Money: entity.Money{
+					Currency: price.Currency,
+					Amount:   price.Amount,
+				},
+				AppID:         appVersion.AppID,
+				VersionNumber: appVersion.Number,
+			}
+			err := a.appVersionPriceDao.CreateAppVersionPrice(ct, tx, appVersionPrice)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, change := range manifestData.Changes {
+			change := entity.AppVersionChange{
+				AppID:         appVersion.AppID,
+				VersionNumber: appVersion.Number,
+				Change:        change,
+			}
+			err := a.appVersionChangeDao.CreateAppVersionChange(ct, tx, change)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func NewApp(
