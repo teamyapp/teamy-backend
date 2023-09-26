@@ -33,7 +33,6 @@ import (
 )
 
 var appPackageRoot = path.Join("app", "packages")
-var tarNameSanitizer = regexp.MustCompile(`^[^/]+/`)
 
 const (
 	readAheadBytes = 28
@@ -651,29 +650,28 @@ type manifest struct {
 	}
 }
 
-type Uploader func(io.Reader) *errs.Error
+type uploadFunc func(io.Reader) *errs.Error
 
 /*
-sanitizeTarHeaderName removes the first directory name from the header name.
-The file extracted from tar will have the name of tar as prefix of the file name.
-The prefix is defined by the user
-Eg:
-tar name: app.tar
-before tar: manifest.yaml
-after tar: app/manifest.yaml
+    removeTarFilePrefix removes the first directory name from file header name.
+    The file extracted from the tar will have the name of tar as prefix in the file name.
+    The prefix is defined by the user
+    Eg:
+        tar name: app.tar
+        before tar: manifest.yaml
+        after extract from tar: app/manifest.yaml
 */
-func (a App) sanitizeTarHeaderName(headerName string) string {
+func (a App) removeTarFilePrefix(fileHeaderName string) string {
 	headerName = tarNameSanitizer.ReplaceAllString(headerName, "")
-
 	return headerName
 }
 
-func (a App) processFile(ct context.Context, userID uint64, appID uint64, reader *tar.Reader, fileName string, uploader Uploader) *errs.Error {
+func (a App) processFile(ct context.Context, userID uint64, appID uint64, reader *tar.Reader, fileName string, uploader uploadFunc) *errs.Error {
 	switch fileName {
 	case "manifest.yaml":
-		return a.processManifestFile(ct, userID, appID, reader, uploader)
+		return a.processManifestFile(ct, userID, appID, reader, uploadFunc)
 	default:
-		return uploader(reader)
+		return uploadFunc(reader)
 	}
 }
 
@@ -699,7 +697,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 
 	go func() {
 		defer wg.Done()
-		err := uploader(uploadReader)
+		err := uploadFunc(uploadReader)
 		if err != nil {
 			once.Do(func() {
 				wgErr = err
@@ -722,7 +720,6 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		IsReady:         true,
 		CreatedAt:       time.Now().UTC(),
 	}
-
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,
 		a.transactionFactory,
@@ -734,7 +731,6 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		if err != nil {
 			return err
 		}
-
 		for _, price := range manifestData.Prices {
 			appVersionPrice := entity.AppVersionPrice{
 				Money: entity.Money{

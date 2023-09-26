@@ -64,7 +64,12 @@ func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumber(ct context
 func (*AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transaction.Transaction, appVersionPrice entity.AppVersionPrice) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		INSERT INTO app_version_price (app_id, version_number, currency, amount)
+		INSERT INTO app_version_price (
+		  app_id, 
+		  version_number, 
+		  currency, 
+		  amount
+		)
 		VALUES ($1, $2, $3, $4)
 		`,
 		appVersionPrice.AppID,

@@ -23,5 +23,3 @@ ALTER TABLE app_version_price
 
 ALTER TABLE app_version_price
     ADD CONSTRAINT pk_app_version_price PRIMARY KEY (app_id, version_number);
-
-
