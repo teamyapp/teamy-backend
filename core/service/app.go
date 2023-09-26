@@ -7,9 +7,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
-	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,6 +34,8 @@ import (
 )
 
 var appPackageRoot = path.Join("app", "packages")
+
+type UploadFunc func(io.Reader) *errs.Error
 
 const (
 	readAheadBytes = 28
@@ -621,8 +624,8 @@ func (a App) uploadAppPackageFiles(
 			continue
 		case tar.TypeReg:
 			// TODO: use separate storage map client for reading gzip file and for uploading extracted files
-			headerName := a.sanitizeTarHeaderName(header.Name)
-			err := a.processFile(ct, userID, appID, tarReader, headerName, func(reader io.Reader) *errs.Error {
+			headerName := a.removeTarFilePrefix(header.Name)
+			err := a.processFile(ct, userID, appID, versionNumber, tarReader, headerName, func(reader io.Reader) *errs.Error {
 				storageMapKey := path.Join(appPackageRoot, appIDStr, versionNumberStr, headerName)
 				return a.storageMapClient.Put(storageMapKey, reader)
 			})
@@ -638,8 +641,31 @@ func (a App) uploadAppPackageFiles(
 	return nil
 }
 
+/*
+removeTarFilePrefix removes the first directory name from file header name.
+The file extracted from the tar will have the name of tar as prefix in the file name.
+The prefix is defined by the user
+Eg:
+
+	tar name: app.tar
+	before tar: manifest.yaml
+	after extract from tar: app/manifest.yaml
+*/
+func (a App) removeTarFilePrefix(fileHeaderName string) string {
+	parts := strings.Split(fileHeaderName, string(os.PathSeparator))
+	return path.Join(parts[1:]...)
+}
+
+func (a App) processFile(ct context.Context, userID uint64, appID uint64, versionNumber int, reader *tar.Reader, fileName string, uploaderFunc UploadFunc) *errs.Error {
+	switch fileName {
+	case "manifest.yaml":
+		return a.processManifestFile(ct, userID, appID, versionNumber, reader, uploaderFunc)
+	default:
+		return uploaderFunc(reader)
+	}
+}
+
 type manifest struct {
-	Number         int      `yaml:"number"`
 	AppName        string   `yaml:"app_name"`
 	Description    string   `yaml:"description"`
 	HasUiExtension bool     `yaml:"has_ui_extension"`
@@ -647,38 +673,13 @@ type manifest struct {
 	Prices         []struct {
 		Currency entity.Currency `yaml:"currency"`
 		Amount   int             `yaml:"amount"`
+		Tag      string          `yaml:"tag"`
 	}
 }
 
-type uploadFunc func(io.Reader) *errs.Error
-
-/*
-    removeTarFilePrefix removes the first directory name from file header name.
-    The file extracted from the tar will have the name of tar as prefix in the file name.
-    The prefix is defined by the user
-    Eg:
-        tar name: app.tar
-        before tar: manifest.yaml
-        after extract from tar: app/manifest.yaml
-*/
-func (a App) removeTarFilePrefix(fileHeaderName string) string {
-	headerName = tarNameSanitizer.ReplaceAllString(headerName, "")
-	return headerName
-}
-
-func (a App) processFile(ct context.Context, userID uint64, appID uint64, reader *tar.Reader, fileName string, uploader uploadFunc) *errs.Error {
-	switch fileName {
-	case "manifest.yaml":
-		return a.processManifestFile(ct, userID, appID, reader, uploadFunc)
-	default:
-		return uploadFunc(reader)
-	}
-}
-
-func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64, reader *tar.Reader, uploader Uploader) *errs.Error {
+func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64, versionNumber int, reader *tar.Reader, uploaderFunc UploadFunc) *errs.Error {
 	manifestData := manifest{}
-	multiReader := tmio.NewMultiReaders()
-	readers := multiReader.GenerateMultiReaders(reader, 2)
+	readers := tmio.NewMultiReaders(reader, 2)
 	extractReader, uploadReader := readers[0], readers[1]
 
 	wg := sync.WaitGroup{}
@@ -697,7 +698,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 
 	go func() {
 		defer wg.Done()
-		err := uploadFunc(uploadReader)
+		err := uploaderFunc(uploadReader)
 		if err != nil {
 			once.Do(func() {
 				wgErr = err
@@ -712,8 +713,8 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 
 	appVersion := entity.AppVersion{
 		AppID:           appID,
+		Number:          versionNumber,
 		CreatedByUserID: userID,
-		Number:          manifestData.Number,
 		AppName:         manifestData.AppName,
 		Description:     manifestData.Description,
 		HasUiExtension:  manifestData.HasUiExtension,
@@ -727,15 +728,22 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		ct,
 	)
 	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := a.appVersionDao.CreateAppVersion(ct, tx, appVersion)
+		_, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if err != nil {
 			return err
 		}
+
+		err = a.appVersionDao.UpdateAppVersion(ct, tx, appVersion)
+		if err != nil {
+			return err
+		}
+
 		for _, price := range manifestData.Prices {
 			appVersionPrice := entity.AppVersionPrice{
 				Money: entity.Money{
 					Currency: price.Currency,
 					Amount:   price.Amount,
+					Tag:      price.Tag,
 				},
 				AppID:         appVersion.AppID,
 				VersionNumber: appVersion.Number,
@@ -747,8 +755,15 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		}
 
 		for _, change := range manifestData.Changes {
+			genAppSecretIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "appVersionChangeID"}
+			genAppSecretIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppSecretIDReq)
+			if rpcErr != nil {
+				return errs.FromGRPCErr(rpcErr)
+			}
+
 			change := entity.AppVersionChange{
 				AppID:         appVersion.AppID,
+				ChangeID:      genAppSecretIDRes.UniqueNumber,
 				VersionNumber: appVersion.Number,
 				Change:        change,
 			}

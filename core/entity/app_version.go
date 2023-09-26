@@ -17,6 +17,7 @@ type AppVersion struct {
 
 type AppVersionChange struct {
 	AppID         uint64
+	ChangeID      uint64
 	VersionNumber int
 	Change        string
 }

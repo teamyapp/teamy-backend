@@ -68,13 +68,15 @@ func (*AppVersionChange) CreateAppVersionChange(ct context.Context, tx *transact
 		`
 		INSERT INTO app_version_change (
 		  app_id, 
-		  version_number, 
+		  version_number,
+		  change_id, 
 		  change
 		) 
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2, $3, $4)
 		`,
 		appVersionChange.AppID,
 		appVersionChange.VersionNumber,
+		appVersionChange.ChangeID,
 		appVersionChange.Change,
 	)
 
