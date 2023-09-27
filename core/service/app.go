@@ -665,19 +665,14 @@ func (a App) processFile(ct context.Context, userID uint64, appID uint64, versio
 	}
 }
 
-type manifest struct {
-	AppName        string   `yaml:"app_name"`
-	Description    string   `yaml:"description"`
-	HasUiExtension bool     `yaml:"has_ui_extension"`
-	Changes        []string `yaml:"changes"`
-	Prices         []struct {
-		Currency entity.Currency `yaml:"currency"`
-		Amount   int             `yaml:"amount"`
-	} `yaml:"prices"`
-}
-
 func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64, versionNumber int, reader *tar.Reader, uploaderFunc UploadFunc) *errs.Error {
-	manifestData := manifest{}
+	manifestData := struct {
+		AppName        string         `yaml:"app_name"`
+		Description    string         `yaml:"description"`
+		HasUiExtension bool           `yaml:"has_ui_extension"`
+		Changes        []string       `yaml:"changes"`
+		Prices         map[string]int `yaml:"prices"`
+	}{}
 	readers := tmio.NewMultiReaders(reader, 2)
 	extractReader, uploadReader := readers[0], readers[1]
 
@@ -737,12 +732,11 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 			return err
 		}
 
-		for _, price := range manifestData.Prices {
+		for currency, price := range manifestData.Prices {
 			appVersionPrice := entity.AppVersionPrice{
 				Money: entity.Money{
-					Currency: price.Currency,
-					Amount:   price.Amount,
-					Tag:      price.Tag,
+					Currency: entity.Currency(currency),
+					Amount:   price,
 				},
 				AppID:         appVersion.AppID,
 				VersionNumber: appVersion.Number,

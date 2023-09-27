@@ -68,16 +68,14 @@ func (*AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transactio
 		  app_id, 
 		  version_number, 
 		  currency, 
-		  amount,
-		  tag
+		  amount
 		)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES ($1, $2, $3, $4)
 		`,
 		appVersionPrice.AppID,
 		appVersionPrice.VersionNumber,
 		appVersionPrice.Money.Currency,
 		appVersionPrice.Money.Amount,
-		appVersionPrice.Money.Tag,
 	)
 
 	if err != nil {

@@ -17,10 +17,6 @@ func (m Money) Amount() int32 {
 	return int32(m.money.Amount)
 }
 
-func (m Money) Tag() string {
-	return m.money.Tag
-}
-
 func newMoney(deps *Dependencies, money entity.Money) Money {
 	return Money{
 		deps:  deps,
