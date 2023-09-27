@@ -673,8 +673,7 @@ type manifest struct {
 	Prices         []struct {
 		Currency entity.Currency `yaml:"currency"`
 		Amount   int             `yaml:"amount"`
-		Tag      string          `yaml:"tag"`
-	}
+	} `yaml:"prices"`
 }
 
 func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64, versionNumber int, reader *tar.Reader, uploaderFunc UploadFunc) *errs.Error {
