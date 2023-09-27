@@ -17,12 +17,13 @@ type AppVersion struct {
 
 type AppVersionChange struct {
 	AppID         uint64
+	ChangeID      uint64
 	VersionNumber int
 	Change        string
 }
 
 type AppVersionPrice struct {
 	Money
-	appID         uint64
+	AppID         uint64
 	VersionNumber int
 }

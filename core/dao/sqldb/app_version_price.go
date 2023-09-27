@@ -20,7 +20,7 @@ func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct c
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT currency, amount 
-		FROM app_version_prices 
+		FROM app_version_price 
 		WHERE app_id = $1 AND version_number = $2
 		`,
 		appID,
@@ -59,6 +59,30 @@ func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumber(ct context
 
 	defer tx.Rollback()
 	return a.FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+}
+
+func (*AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transaction.Transaction, appVersionPrice entity.AppVersionPrice) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		INSERT INTO app_version_price (
+		  app_id, 
+		  version_number, 
+		  currency, 
+		  amount
+		)
+		VALUES ($1, $2, $3, $4)
+		`,
+		appVersionPrice.AppID,
+		appVersionPrice.VersionNumber,
+		appVersionPrice.Money.Currency,
+		appVersionPrice.Money.Amount,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
 }
 
 func NewAppVersionPrice(transactionFactory transaction.Factory) *AppVersionPrice {
