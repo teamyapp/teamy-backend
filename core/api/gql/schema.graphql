@@ -13,6 +13,11 @@ type Query {
 }
 
 type Mutation {
+	# Story
+	createStory(teamId: ID!, story: CreateStoryInput!): Story!
+	updateStory(storyId: ID!, input: UpdateStoryInput!): Story!
+	deleteStory(storyId: ID!): Story!
+
 	# Task
 	createTask(teamId: ID!, task: CreateTaskInput!): Task!
 	updateTask(taskId: ID!, input: UpdateTaskInput!): Task!
@@ -118,6 +123,27 @@ type Mutation {
 	createAppRollout(appID: ID!, appRolloutType: AppRolloutType!, input: CreateRolloutInput!): Rollout!
 	updateRollout(rolloutId: ID!, input: UpdateRolloutInput!): Rollout!
 	deleteRollout(rolloutId: ID!): Rollout!
+}
+
+type Story {
+	id: ID!
+	goal: String!
+	context: String
+	creator: User!
+	owner: User
+	owningTeam: Team!
+	status: StoryStatus!
+	isPlanned: Boolean!
+	comments: Thread!
+	createdAt: Time!
+	updatedAt: Time
+	deliveredAt: Time
+	dueAt: Time
+	effort: Duration
+	priority: Priority
+	availableActions: [TaskAction!]!
+	awaitForTasks: [Task!]!
+	tasks: [Task!]!
 }
 
 type Task {
@@ -428,6 +454,26 @@ input AppFilter {
 }
 
 # Inputs
+input CreateStoryInput {
+	goal: String!
+	context: String
+	ownerUserId: ID
+	owningTeamId: ID!
+	effort: Duration
+	priority: Priority
+	dueAt: Time
+}
+
+input UpdateStoryInput {
+	goal: String!
+	context: String
+	ownerUserId: ID
+	owningTeamId: ID!
+	effort: Duration
+	priority: Priority
+	dueAt: Time
+}
+
 input CreateTaskInput {
 	goal: String!
 	context: String
@@ -590,6 +636,15 @@ enum TaskAction {
 	ASSIGN_OWNER
 	REPORT_BLOCKED
 	MARK_COMPLETE
+}
+
+enum StoryStatus {
+	TODO
+	IN_PROGRESS
+	PAUSED
+	AWAITING
+	BLOCK
+	DELIVERED
 }
 
 enum TaskStatus {

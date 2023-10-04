@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/teamy-backend/core/api/proto";
+
+service Story {
+	rpc GetStory(GetStoryRequest) returns (StoryMsg);
+	rpc GetAwaitForStories(GetAwaitForStoriesRequest) returns (GetAwaitForStoriesResponse);
+	rpc CreateStory(CreateStoryRequest) returns (CreateStoryResponse);
+	rpc UpdateStory(UpdateStoryRequest) returns (google.protobuf.Empty);
+	rpc DeleteStory(DeleteStoryRequest) returns (google.protobuf.Empty);
+	rpc MoveStoryToUpcoming(MoveStoryToUpcomingRequest) returns (google.protobuf.Empty);
+	rpc MoveStoryToInProgress(MoveStoryToInProgressRequest) returns (google.protobuf.Empty);
+	rpc MoveStoryToDelivered(MoveStoryToDeliveredRequest) returns (google.protobuf.Empty);
+	rpc MoveStoryToBlocked(MoveStoryToBlockedRequest) returns (google.protobuf.Empty);
+	rpc AddAwaitForStory(AddAwaitForStoryRequest) returns (google.protobuf.Empty);
+	rpc RemoveAwaitForStory(RemoveAwaitForStoryRequest) returns (google.protobuf.Empty);
+}
+
+enum StoryStatus {
+	Todo = 0;
+	InProgress = 1;
+	Paused = 2;
+	Awaiting = 3;
+	Blocked = 4;
+	Delivered = 5;
+}
+
+enum Priority{
+	Urgent = 0;
+	High = 1;
+	Medium = 2;
+	Low = 3;
+}
+
+message StoryMsg {
+	uint64 storyId = 1;
+	string goal = 2;
+	optional string context = 3;
+	uint64 creatorUserId = 4;
+	optional uint64 ownerUserId = 5;
+	uint64 owningTeamId = 6;
+	StoryStatus status = 7;
+	uint64 commentThreadId = 8;
+	optional google.protobuf.Timestamp dueAt = 9;
+	google.protobuf.Timestamp createdAt = 10;
+	optional google.protobuf.Timestamp updatedAt = 11;
+	optional google.protobuf.Duration effort = 12;
+	optional Priority priority = 13;
+}
+
+message GetStoryRequest {
+	uint64 storyId = 1;
+}
+
+message GetAwaitForStoriesRequest {
+	uint64 awaitingStoryId = 1;
+}
+
+message GetAwaitForStoriesResponse {
+	repeated StoryMsg stories = 1;
+}
+
+message CreateStoryRequest {
+	uint64 teamId = 1;
+	string goal = 2;
+	optional string context = 3;
+	optional uint64 ownerUserId = 4;
+	optional google.protobuf.Timestamp dueAt = 5;
+}
+
+message CreateStoryResponse {
+	uint64 storyId = 1;
+}
+
+message UpdateStoryRequest {
+	uint64 storyId = 1;
+	string goal = 2;
+	optional string context = 3;
+	optional uint64 ownerUserId = 4;
+	uint64 owningTeamId = 5;
+	optional google.protobuf.Duration effort = 6;
+	optional google.protobuf.Timestamp dueAt = 7;
+	optional Priority priority = 8;
+}
+
+message DeleteStoryRequest {
+	uint64 storyId = 1;
+}
+
+message MoveStoryToUpcomingRequest {
+	uint64 storyId = 1;
+}
+
+message MoveStoryToInProgressRequest {
+	uint64 storyId = 1;
+}
+
+message MoveStoryToDeliveredRequest {
+	uint64 storyId = 1;
+}
+
+message MoveStoryToBlockedRequest {
+	uint64 storyId = 1;
+	string reason = 2;
+}
+
+message AddAwaitForStoryRequest {
+	uint64 awaitingStoryId = 1;
+	uint64 awaitForStoryId = 2;
+}
+
+message RemoveAwaitForStoryRequest {
+	uint64 awaitingStoryId = 1;
+	uint64 awaitForStoryId = 2;
+}
