@@ -141,8 +141,8 @@ type Story {
 	dueAt: Time
 	effort: Duration
 	priority: Priority
-	availableActions: [TaskAction!]!
-	awaitForTasks: [Task!]!
+	availableActions: [StoryAction!]!
+	awaitForStories: [Story!]!
 	tasks: [Task!]!
 }
 
@@ -186,7 +186,6 @@ type Message {
 	createdAt: Time!
 	updatedAt: Time
 }
-
 
 type Thread {
 	id: ID!
@@ -628,6 +627,14 @@ enum InvitationStatus {
 	ACCEPTED
 	DECLINED
 	EXPIRED
+}
+
+enum StoryAction {
+	START
+	DELETE
+	ASSIGN_OWNER
+	REPORT_BLOCKED
+	MARK_COMPLETE
 }
 
 enum TaskAction {

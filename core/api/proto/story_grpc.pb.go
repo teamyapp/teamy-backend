@@ -34,6 +34,8 @@ type StoryClient interface {
 	MoveStoryToBlocked(ctx context.Context, in *MoveStoryToBlockedRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AddAwaitForStory(ctx context.Context, in *AddAwaitForStoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	RemoveAwaitForStory(ctx context.Context, in *RemoveAwaitForStoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	AddTaskToStory(ctx context.Context, in *AddTaskToStoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RemoveTaskFromStory(ctx context.Context, in *RemoveTaskFromStoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type storyClient struct {
@@ -143,6 +145,24 @@ func (c *storyClient) RemoveAwaitForStory(ctx context.Context, in *RemoveAwaitFo
 	return out, nil
 }
 
+func (c *storyClient) AddTaskToStory(ctx context.Context, in *AddTaskToStoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/Story/AddTaskToStory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyClient) RemoveTaskFromStory(ctx context.Context, in *RemoveTaskFromStoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/Story/RemoveTaskFromStory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StoryServer is the server API for Story service.
 // All implementations must embed UnimplementedStoryServer
 // for forward compatibility
@@ -158,6 +178,8 @@ type StoryServer interface {
 	MoveStoryToBlocked(context.Context, *MoveStoryToBlockedRequest) (*emptypb.Empty, error)
 	AddAwaitForStory(context.Context, *AddAwaitForStoryRequest) (*emptypb.Empty, error)
 	RemoveAwaitForStory(context.Context, *RemoveAwaitForStoryRequest) (*emptypb.Empty, error)
+	AddTaskToStory(context.Context, *AddTaskToStoryRequest) (*emptypb.Empty, error)
+	RemoveTaskFromStory(context.Context, *RemoveTaskFromStoryRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedStoryServer()
 }
 
@@ -197,6 +219,12 @@ func (UnimplementedStoryServer) AddAwaitForStory(context.Context, *AddAwaitForSt
 }
 func (UnimplementedStoryServer) RemoveAwaitForStory(context.Context, *RemoveAwaitForStoryRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveAwaitForStory not implemented")
+}
+func (UnimplementedStoryServer) AddTaskToStory(context.Context, *AddTaskToStoryRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddTaskToStory not implemented")
+}
+func (UnimplementedStoryServer) RemoveTaskFromStory(context.Context, *RemoveTaskFromStoryRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveTaskFromStory not implemented")
 }
 func (UnimplementedStoryServer) mustEmbedUnimplementedStoryServer() {}
 
@@ -409,6 +437,42 @@ func _Story_RemoveAwaitForStory_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Story_AddTaskToStory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddTaskToStoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryServer).AddTaskToStory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Story/AddTaskToStory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryServer).AddTaskToStory(ctx, req.(*AddTaskToStoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Story_RemoveTaskFromStory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveTaskFromStoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryServer).RemoveTaskFromStory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Story/RemoveTaskFromStory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryServer).RemoveTaskFromStory(ctx, req.(*RemoveTaskFromStoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Story_ServiceDesc is the grpc.ServiceDesc for Story service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -459,6 +523,14 @@ var Story_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveAwaitForStory",
 			Handler:    _Story_RemoveAwaitForStory_Handler,
+		},
+		{
+			MethodName: "AddTaskToStory",
+			Handler:    _Story_AddTaskToStory_Handler,
+		},
+		{
+			MethodName: "RemoveTaskFromStory",
+			Handler:    _Story_RemoveTaskFromStory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

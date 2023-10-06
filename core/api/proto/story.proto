@@ -18,6 +18,8 @@ service Story {
 	rpc MoveStoryToBlocked(MoveStoryToBlockedRequest) returns (google.protobuf.Empty);
 	rpc AddAwaitForStory(AddAwaitForStoryRequest) returns (google.protobuf.Empty);
 	rpc RemoveAwaitForStory(RemoveAwaitForStoryRequest) returns (google.protobuf.Empty);
+	rpc AddTaskToStory(AddTaskToStoryRequest) returns (google.protobuf.Empty);
+	rpc RemoveTaskFromStory(RemoveTaskFromStoryRequest) returns (google.protobuf.Empty);
 }
 
 enum StoryStatus {
@@ -50,6 +52,7 @@ message StoryMsg {
 	optional google.protobuf.Timestamp updatedAt = 11;
 	optional google.protobuf.Duration effort = 12;
 	optional Priority priority = 13;
+	uint64 taskIds = 14;
 }
 
 message GetStoryRequest {
@@ -116,4 +119,14 @@ message AddAwaitForStoryRequest {
 message RemoveAwaitForStoryRequest {
 	uint64 awaitingStoryId = 1;
 	uint64 awaitForStoryId = 2;
+}
+
+message AddTaskToStoryRequest {
+	uint64 storyId = 1;
+	string content = 2;
+}
+
+message RemoveTaskFromStoryRequest {
+	uint64 storyId = 1;
+	uint64 taskId = 2;
 }
