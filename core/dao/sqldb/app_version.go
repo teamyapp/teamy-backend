@@ -155,6 +155,29 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 	return nil
 }
 
+func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		UPDATE app_version
+		SET
+			app_name = $1,
+			has_ui_extension = $2,
+			description = $3,
+			is_ready = $4
+		WHERE app_id = $5 AND number = $6;`,
+		appVersion.AppName,
+		appVersion.HasUiExtension,
+		appVersion.Description,
+		appVersion.IsReady,
+		appVersion.AppID,
+		appVersion.Number,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func (a *AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM app_version
