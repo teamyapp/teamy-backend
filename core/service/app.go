@@ -208,6 +208,14 @@ func (a App) FindTeamAppInstallationsByAppID(ct context.Context, appID uint64) (
 	return a.teamAppInstallationDao.FindTeamAppInstallationsByAppID(ct, appID)
 }
 
+func (a App) FindTeamAppInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.TeamAppInstallation, *errs.Error) {
+	return a.teamAppInstallationDao.FindTeamAppInstallationsByTeamID(ct, teamID)
+}
+
+func (a App) FindAppsByManagedByTeamID(ct context.Context, teamID uint64) ([]entity.App, *errs.Error) {
+	return a.appDao.FindAppsByManagedByTeamID(ct, teamID)
+}
+
 func (a App) FindAppVersionByAppIDAndNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
 	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
@@ -230,6 +238,7 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 		ManagedByTeamID:    teamID,
 		CreatedAt:          time.Now().UTC(),
 	}
+
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,
 		a.transactionFactory,
@@ -237,7 +246,20 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return a.appDao.CreateApp(ct, tx, app)
+		err := a.appDao.CreateApp(ct, tx, app)
+		if err != nil {
+			return err
+		}
+
+		return a.appVersionDao.CreateAppVersion(ct, tx, entity.AppVersion{
+			AppID:           app.ID,
+			Number:          0,
+			AppName:         name,
+			Description:     "",
+			CreatedByUserID: userID,
+			IsReady:         true,
+			CreatedAt:       time.Now().UTC(),
+		})
 	})
 
 	if err != nil {

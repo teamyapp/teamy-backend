@@ -57,6 +57,55 @@ func (a *App) FindAppByIDWithTx(ct context.Context, tx *transaction.Transaction,
 	return app, nil
 }
 
+func (a *App) FindAppsByManagedByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, managedByTeamID uint64) ([]entity.App, *errs.Error) {
+	apps := []entity.App{}
+	rows, err := tx.SQLTx().Query(`
+		SELECT
+			id,
+			total_installations,
+			created_at,
+			updated_at,
+			managed_by_team_id
+		FROM app
+		WHERE managed_by_team_id = $1;`,
+		managedByTeamID,
+	)
+	if err != nil {
+		return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	for rows.Next() {
+		app := entity.App{}
+		err := rows.Scan(
+			&app.ID,
+			&app.TotalInstallations,
+			&app.CreatedAt,
+			&app.UpdatedAt,
+			&app.ManagedByTeamID,
+		)
+		if err != nil {
+			return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps, nil
+}
+
+func (a *App) FindAppsByManagedByTeamID(ct context.Context, managedByTeamID uint64) ([]entity.App, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := a.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return []entity.App{}, err
+	}
+
+	defer tx.Rollback()
+	return a.FindAppsByManagedByTeamIDWithTx(ct, tx, managedByTeamID)
+}
+
 func (a *App) CreateApp(ct context.Context, tx *transaction.Transaction, app entity.App) *errs.Error {
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO app (

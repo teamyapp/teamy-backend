@@ -25,10 +25,11 @@ func (a *ActivatorTypeRelation) FindActivatorTypeByIDWithTx(ct context.Context, 
 		    SELECT 
 			  activator_id,
 			  activator_type 
-			FROM activator_type_relations 
+			FROM activator_type_relation 
 			WHERE activator_id = $1`,
 		activatorID,
 	).Scan(
+		&activatorTypeRelation.ActivatorID,
 		&activatorTypeRelation.ActivatorType,
 	)
 
@@ -61,7 +62,7 @@ func (a *ActivatorTypeRelation) FindActivatorTypeByID(ct context.Context, activa
 
 func (*ActivatorTypeRelation) CreateActivatorTypeRelation(ct context.Context, tx *transaction.Transaction, activatorTypeRelation entity.ActivatorTypeRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
-		INSERT INTO activator_type_relations (
+		INSERT INTO activator_type_relation (
 			activator_id,
 			activator_type
 		) 

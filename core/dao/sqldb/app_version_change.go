@@ -20,11 +20,11 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 	rows, err := tx.SQLTx().QueryContext(
 		ct,
 		`
-		SELECT change 
+		SELECT 
+			change 
 		FROM app_version_change 
-		WHERE app_id = $1 AND version_number = $2",
+		WHERE app_id = $1 AND version_number = $2`,
 		appID,
-		`,
 		versionNumber,
 	)
 
@@ -59,7 +59,7 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct conte
 	}
 
 	defer tx.Rollback()
-	return NewAppVersionChange().FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+	return a.FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 }
 
 func (*AppVersionChange) CreateAppVersionChange(ct context.Context, tx *transaction.Transaction, appVersionChange entity.AppVersionChange) *errs.Error {
@@ -87,6 +87,8 @@ func (*AppVersionChange) CreateAppVersionChange(ct context.Context, tx *transact
 	return nil
 }
 
-func NewAppVersionChange() *AppVersionChange {
-	return &AppVersionChange{}
+func NewAppVersionChange(transactionFactory transaction.Factory) *AppVersionChange {
+	return &AppVersionChange{
+		transactionFactory: transactionFactory,
+	}
 }

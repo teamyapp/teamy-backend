@@ -322,6 +322,7 @@ type App {
 	userRollouts: [Rollout!]!
 	teamRollouts: [Rollout!]!
 	managedByTeam: Team!
+	latestVersionForTeam(teamId: ID!): AppVersion
 }
 
 type AppSecret {
@@ -343,6 +344,7 @@ type AppVersion {
 	prices: [Money!]!
 	isReady: Boolean!
 	app: App!
+	iconUrl: String
 }
 
 interface Group {

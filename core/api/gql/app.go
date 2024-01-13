@@ -138,6 +138,35 @@ func (a App) ManagedByTeam(ctx context.Context) (Team, error) {
 	return newTeam(a.deps, team), nil
 }
 
+func (a App) LatestVersionForTeam(ctx context.Context, args struct{ TeamID graphql.ID }) (*AppVersion, error) {
+	teamID, internalErr := fromGraphQLID(args.TeamID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		a.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	appVersionNumber, err := a.deps.rolloutService.GetActiveAppVersionNumberForTeam(ctx, a.app.ID, teamID)
+	if err != nil {
+		return nil, errs.ToResolverErr(err)
+	}
+
+	if appVersionNumber == nil {
+		return nil, nil
+	}
+
+	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndNumber(ctx, a.app.ID, *appVersionNumber)
+	if err != nil {
+		return nil, errs.ToResolverErr(err)
+	}
+
+	gqlAppVersion := newAppVersion(a.deps, appVersion)
+	return &gqlAppVersion, nil
+}
+
 func (m Mutation) CreateApp(
 	ctx context.Context,
 	args struct {

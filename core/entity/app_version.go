@@ -13,6 +13,7 @@ type AppVersion struct {
 	CreatedAt       time.Time
 	CreatedByUserID uint64
 	IsReady         bool
+	IconURL         *string
 }
 
 type AppVersionChange struct {

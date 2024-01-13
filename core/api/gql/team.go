@@ -157,11 +157,27 @@ func (t Team) Sprints(ct context.Context, args struct {
 }
 
 func (t Team) AppInstallations(ct context.Context) ([]TeamAppInstallation, error) {
-	panic("not implemented")
+	teamAppInstallations, err := t.deps.appService.FindTeamAppInstallationsByTeamID(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(teamAppInstallations, func(teamAppInstallation entity.TeamAppInstallation, index int) TeamAppInstallation {
+		return newTeamAppInstallation(t.deps, teamAppInstallation)
+	}), nil
 }
 
 func (t Team) ManagedApps(ct context.Context) ([]App, error) {
-	panic("not implemented")
+	apps, err := t.deps.appService.FindAppsByManagedByTeamID(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(apps, func(app entity.App, index int) App {
+		return newApp(t.deps, app)
+	}), nil
 }
 
 func newTeam(deps *Dependencies, team entity.Team) Team {

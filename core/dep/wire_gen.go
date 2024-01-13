@@ -63,7 +63,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	app := sqldb.NewApp(logger, factory)
 	appVersion := sqldb.NewAppVersion(logger, factory)
 	appVersionPrice := sqldb.NewAppVersionPrice(factory)
-	appVersionChange := sqldb.NewAppVersionChange()
+	appVersionChange := sqldb.NewAppVersionChange(factory)
 	appSecret := sqldb.NewAppSecret(factory)
 	appPackageUploadSession := sqldb.NewAppPackageUploadSession(logger, factory)
 	teamAppInstallation := sqldb.NewTeamAppInstallation(factory)
