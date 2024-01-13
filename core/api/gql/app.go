@@ -138,7 +138,11 @@ func (a App) ManagedByTeam(ctx context.Context) (Team, error) {
 	return newTeam(a.deps, team), nil
 }
 
-func (a App) LatestVersionForTeam(ctx context.Context, args struct{ TeamID graphql.ID }) (*AppVersion, error) {
+func (a App) LatestVersionForTeam(
+    ctx context.Context, 
+    args struct{ 
+        TeamID graphql.ID 
+    }) (*AppVersion, error) {
 	teamID, internalErr := fromGraphQLID(args.TeamID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
