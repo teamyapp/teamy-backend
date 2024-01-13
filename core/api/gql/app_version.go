@@ -66,6 +66,10 @@ func (a AppVersion) IsReady(ctx context.Context) bool {
 	return a.appVersion.IsReady
 }
 
+func (a AppVersion) IconURL(ctx context.Context) *string {
+	return a.appVersion.IconURL
+}
+
 func (a AppVersion) App(ctx context.Context) (App, error) {
 	app, err := a.deps.appService.FindAppByID(ctx, a.appVersion.AppID)
 	if err != nil {

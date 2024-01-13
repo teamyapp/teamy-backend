@@ -26,7 +26,7 @@ func (*AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Tr
 			added_at,
 			added_by_user_id,
 			last_used_at
-		FROM app_secrets
+		FROM app_secret
 		WHERE id = $1`,
 		appSecretID,
 	).Scan(
@@ -55,7 +55,7 @@ func (a *AppSecret) FindAppSecretsByAppIDWithTx(ct context.Context, tx *transact
 			added_at,
 			added_by_user_id,
 			last_used_at
-		FROM app_secrets
+		FROM app_secret
 		WHERE app_id = $1`,
 		appID,
 	)
@@ -103,7 +103,7 @@ func (a *AppSecret) FindSecretsByAppID(ct context.Context, appID uint64) ([]enti
 func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transaction, appSecret entity.AppSecret) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		INSERT INTO app_secrets (
+		INSERT INTO app_secret (
 			app_id,
 			name,
 			added_at,
@@ -134,7 +134,7 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		UPDATE app_secrets SET
+		UPDATE app_secret SET
 			name = $1,
 			added_at = $2,
 			added_by_user_id = $3,
@@ -159,7 +159,7 @@ func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transactio
 func (*AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		DELETE FROM app_secrets
+		DELETE FROM app_secret
 		WHERE id = $1`,
 		appSecretID,
 	)

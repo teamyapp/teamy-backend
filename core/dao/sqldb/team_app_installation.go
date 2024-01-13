@@ -123,6 +123,56 @@ func (*TeamAppInstallation) CreateTeamAppInstallation(
 	return nil
 }
 
+func (t *TeamAppInstallation) FindTeamAppInstallationsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamAppInstallation, *errs.Error) {
+	teamAppInstallations := []entity.TeamAppInstallation{}
+	rows, err := tx.SQLTx().QueryContext(
+		ct,
+		`
+		SELECT
+			id,
+			installed_team_id,
+			app_id
+		FROM team_app_installation
+		WHERE installed_team_id = $1;`,
+		teamID,
+	)
+
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var teamAppInstallation entity.TeamAppInstallation
+		err := rows.Scan(
+			&teamAppInstallation.ID,
+			&teamAppInstallation.InstalledTeamID,
+			&teamAppInstallation.AppID,
+		)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		teamAppInstallations = append(teamAppInstallations, teamAppInstallation)
+	}
+
+	return teamAppInstallations, nil
+}
+
+func (t *TeamAppInstallation) FindTeamAppInstallationsByTeamID(ct context.Context, teamID uint64) ([]entity.TeamAppInstallation, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := t.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return t.FindTeamAppInstallationsByTeamIDWithTx(ct, tx, teamID)
+}
+
 func (*TeamAppInstallation) DeleteTeamAppInstallationByID(ct context.Context, tx *transaction.Transaction, appInstallationID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(
 		ct,

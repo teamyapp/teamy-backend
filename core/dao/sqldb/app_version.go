@@ -42,7 +42,8 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 			description,
 			created_at,
 			created_by_user_id,
-			is_ready
+			is_ready,
+			icon_url
 		FROM app_version
 		WHERE app_id = $1;`,
 		appID,
@@ -64,6 +65,7 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 			&appVersion.CreatedAt,
 			&appVersion.CreatedByUserID,
 			&appVersion.IsReady,
+			&appVersion.IconURL,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -163,11 +165,13 @@ func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transact
 			has_ui_extension = $2,
 			description = $3,
 			is_ready = $4
-		WHERE app_id = $5 AND number = $6;`,
+			icon_url = $5
+		WHERE app_id = $6 AND number = $7;`,
 		appVersion.AppName,
 		appVersion.HasUiExtension,
 		appVersion.Description,
 		appVersion.IsReady,
+		appVersion.IconURL,
 		appVersion.AppID,
 		appVersion.Number,
 	)
@@ -203,7 +207,8 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 			description,
 			created_at,
 			created_by_user_id,
-			is_ready
+			is_ready,
+			icon_url
 		FROM app_version
 		WHERE app_id = $1 AND number = $2;`,
 		appID,
@@ -217,6 +222,7 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 		&appVersion.CreatedAt,
 		&appVersion.CreatedByUserID,
 		&appVersion.IsReady,
+		&appVersion.IconURL,
 	)
 	if err != nil {
 		return entity.AppVersion{}, errs.NewError(errs.Unknown, err.Error())

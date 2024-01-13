@@ -172,12 +172,14 @@ func (r *Rollout) FindRolloutsByGroupID(ct context.Context, groupID uint64) ([]e
 	return rollouts, err
 }
 
-func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appTeamInstallation entity.TeamAppInstallation) (*int, *errs.Error) {
-	teamID := appTeamInstallation.InstalledTeamID
-	appID := appTeamInstallation.AppID
+func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uint64, teamID uint64) (*int, *errs.Error) {
 	teamGroupsIDs, err := r.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, entity.AppGroupRelationTypeTeam)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(teamGroupsIDs) == 0 {
+		return nil, nil
 	}
 
 	var maxActiveVersionNumber int = math.MinInt
