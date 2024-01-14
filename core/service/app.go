@@ -70,6 +70,11 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
+type CreateAppVersionInput struct {
+	AppName     string
+	Description string
+}
+
 type CreateAppSecretInput struct {
 	Name string
 }
@@ -380,7 +385,7 @@ func (a App) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]entity.
 	return a.appVersionDao.FindAppVersionsByAppID(ct, appID)
 }
 
-func (a App) CreateAppVersion(ct context.Context, appID uint64, appName string, description string) (entity.AppVersion, *errs.Error) {
+func (a App) CreateAppVersion(ct context.Context, appID uint64, createAppVersionInput CreateAppVersionInput) (entity.AppVersion, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -402,8 +407,8 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64, appName string, 
 
 	av := entity.AppVersion{
 		AppID:           appID,
-		AppName:         appName,
-		Description:     description,
+		AppName:         createAppVersionInput.AppName,
+		Description:     createAppVersionInput.Description,
 		CreatedByUserID: userID,
 		IsReady:         false,
 		CreatedAt:       time.Now().UTC(),

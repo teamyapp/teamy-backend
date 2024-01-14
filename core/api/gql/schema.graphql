@@ -89,7 +89,7 @@ type Mutation {
 	updateAppSecret(secretId: ID!, input: UpdateAppSecretInput!): AppSecret!
 	deleteAppSecret(secretId: ID!): AppSecret!
 
-	createAppVersion(appId: ID!): AppVersion!
+	createAppVersion(appId: ID!, input: CreateAppVersionInput!): AppVersion!
 	createAppPackageUploadSession(appId: ID!, versionNumber: Int!): ID!
 	finishAppPackageUploadSession(
 		appId: ID!
@@ -501,6 +501,11 @@ input CreateSprintInput {
 
 input FileMetadataInput {
 	name: String!
+}
+
+input CreateAppVersionInput {
+	appName: String!
+	description: String!
 }
 
 input CreateAppSecretInput {
