@@ -109,7 +109,6 @@ func (m Mutation) CreateAppVersion(
 		AppName:     args.Input.AppName,
 		Description: args.Input.Description,
 	}
-
 	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID, createAppVersionInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
