@@ -104,6 +104,7 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		INSERT INTO app_secret (
+			id,
 			app_id,
 			name,
 			added_at,
@@ -115,8 +116,10 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 			$2,
 			$3,
 			$4,
-			$5
+			$5,
+			$6
 		)`,
+		appSecret.ID,
 		appSecret.AppID,
 		appSecret.Name,
 		appSecret.AddedAt,

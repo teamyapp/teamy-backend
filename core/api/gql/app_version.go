@@ -7,6 +7,7 @@ import (
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type AppVersion struct {
@@ -87,9 +88,11 @@ func newAppVersion(deps *Dependencies, appVersion entity.AppVersion) AppVersion 
 func (m Mutation) CreateAppVersion(
 	ctx context.Context,
 	args struct {
-		AppID       graphql.ID
-		AppName     string
-		Description string
+		AppID graphql.ID
+		Input struct {
+			AppName     string
+			Description string
+		}
 	},
 ) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
@@ -102,7 +105,11 @@ func (m Mutation) CreateAppVersion(
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
-	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID, args.AppName, args.Description)
+	createAppVersionInput := service.CreateAppVersionInput{
+		AppName:     args.Input.AppName,
+		Description: args.Input.Description,
+	}
+	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID, createAppVersionInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppVersion{}, errs.ToResolverErr(err)
