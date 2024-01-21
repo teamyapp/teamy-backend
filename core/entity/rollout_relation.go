@@ -3,8 +3,8 @@ package entity
 type AppRolloutRelationType string
 
 const (
-	AppRolloutRelationTypeUser AppRolloutRelationType = "user"
-	AppRolloutRelationTypeTeam AppRolloutRelationType = "team"
+	AppRolloutRelationTypeUser AppRolloutRelationType = "USER"
+	AppRolloutRelationTypeTeam AppRolloutRelationType = "TEAM"
 )
 
 type AppRolloutRelation struct {
