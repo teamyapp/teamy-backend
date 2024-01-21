@@ -71,6 +71,18 @@ func (s StaticUserGroup) App(ctx context.Context) (App, error) {
 	return newApp(s.deps, app), nil
 }
 
+func (s StaticUserGroup) ToStaticUserGroup() (*StaticUserGroup, bool) {
+	return &s, true
+}
+
+func (s StaticUserGroup) ToStaticTeamGroup() (*StaticTeamGroup, bool) {
+	return nil, false
+}
+
+func (s StaticUserGroup) ToFilterGroup() (*FilterGroup, bool) {
+	return nil, false
+}
+
 func (m Mutation) CreateStaticUserGroup(
 	ctx context.Context,
 	args struct {

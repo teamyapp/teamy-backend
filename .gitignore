@@ -10,3 +10,5 @@
 
 # Secrets and certificates
 .secrets
+
+.DS_Store

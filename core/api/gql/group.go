@@ -18,6 +18,9 @@ type Group interface {
 	UpdatedAt(ctx context.Context) *graphql.Time
 	Rollouts(ctx context.Context) ([]Rollout, error)
 	App(ctx context.Context) (App, error)
+	ToStaticUserGroup() (*StaticUserGroup, bool)
+	ToStaticTeamGroup() (*StaticTeamGroup, bool)
+	ToFilterGroup() (*FilterGroup, bool)
 }
 
 type FilterGroup struct {
@@ -75,6 +78,18 @@ func (f FilterGroup) App(ctx context.Context) (App, error) {
 	}
 
 	return newApp(f.deps, app), nil
+}
+
+func (f FilterGroup) ToStaticUserGroup() (*StaticUserGroup, bool) {
+	return nil, false
+}
+
+func (f FilterGroup) ToStaticTeamGroup() (*StaticTeamGroup, bool) {
+	return nil, false
+}
+
+func (f FilterGroup) ToFilterGroup() (*FilterGroup, bool) {
+	return &f, true
 }
 
 func newFilterGroup(deps *Dependencies, filterGroup entity.FilterGroup) FilterGroup {

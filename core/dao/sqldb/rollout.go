@@ -73,7 +73,7 @@ func (*Rollout) FindRolloutsByIDsWithTx(
 	rolloutIDs []uint64,
 ) ([]entity.Rollout, *errs.Error) {
 	if len(rolloutIDs) == 0 {
-		return nil, errs.NewError(errs.InvalidArgument, "rolloutIDs is empty")
+		return nil, nil
 	}
 
 	rollouts := make([]entity.Rollout, 0)

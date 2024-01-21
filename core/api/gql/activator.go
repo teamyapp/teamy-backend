@@ -13,6 +13,9 @@ type Activator interface {
 	Type() entity.ActivatorType
 	CreatedAt() graphql.Time
 	UpdatedAt() *graphql.Time
+	ToTimeRangeActivator() (*TimeRangeActivator, bool)
+	ToMaxViewersActivator() (*MaxViewersActivator, bool)
+	ToPercentageActivator() (*PercentageActivator, bool)
 }
 
 type TimeRangeActivator struct {
@@ -43,6 +46,18 @@ func (t TimeRangeActivator) CreatedAt() graphql.Time {
 
 func (t TimeRangeActivator) UpdatedAt() *graphql.Time {
 	return toGraphQLTimePtr(t.timeRangeActivator.UpdatedAt)
+}
+
+func (t TimeRangeActivator) ToTimeRangeActivator() (*TimeRangeActivator, bool) {
+	return &t, true
+}
+
+func (t TimeRangeActivator) ToMaxViewersActivator() (*MaxViewersActivator, bool) {
+	return nil, false
+}
+
+func (t TimeRangeActivator) ToPercentageActivator() (*PercentageActivator, bool) {
+	return nil, false
 }
 
 func newTimeRangeActivator(
@@ -77,6 +92,18 @@ func (m MaxViewersActivator) UpdatedAt() *graphql.Time {
 	return toGraphQLTimePtr(m.maxViewersActivator.UpdatedAt)
 }
 
+func (m MaxViewersActivator) ToTimeRangeActivator() (*TimeRangeActivator, bool) {
+	return nil, false
+}
+
+func (m MaxViewersActivator) ToMaxViewersActivator() (*MaxViewersActivator, bool) {
+	return &m, true
+}
+
+func (m MaxViewersActivator) ToPercentageActivator() (*PercentageActivator, bool) {
+	return nil, false
+}
+
 func newMaxViewersActivator(
 	maxViewersActivator entity.MaxViewersActivator,
 ) MaxViewersActivator {
@@ -107,6 +134,18 @@ func (p PercentageActivator) CreatedAt() graphql.Time {
 
 func (p PercentageActivator) UpdatedAt() *graphql.Time {
 	return toGraphQLTimePtr(p.percentageActivator.UpdatedAt)
+}
+
+func (p PercentageActivator) ToTimeRangeActivator() (*TimeRangeActivator, bool) {
+	return nil, false
+}
+
+func (p PercentageActivator) ToMaxViewersActivator() (*MaxViewersActivator, bool) {
+	return nil, false
+}
+
+func (p PercentageActivator) ToPercentageActivator() (*PercentageActivator, bool) {
+	return &p, true
 }
 
 func newPercentageActivator(
