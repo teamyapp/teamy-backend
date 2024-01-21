@@ -22,13 +22,13 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 	err := tx.SQLTx().QueryRowContext(
 		ct,
 		`
-		SELECT 
-			id, 
-			type, 
-			name, 
-			created_at, 
+		SELECT
+			id,
+			type,
+			name,
+			created_at,
 			updated_at
-		FROM groups
+		FROM "group"
 		WHERE id = $1`,
 		groupID,
 	).Scan(
@@ -74,7 +74,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 			name,
 			created_at,
 			updated_at
-		FROM groups
+		FROM "group"
 		WHERE id IN (%s);
 		`,
 		idsString,
@@ -122,13 +122,13 @@ func (g *Group) CreateGroup(ct context.Context, tx *transaction.Transaction, gro
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
-		INSERT INTO group (
+		INSERT INTO "group" (
 			id,
 			type,
 			name,
 			created_at,
 			updated_at
-		) 
+		)
 		VALUES ($1, $2, $3, $4, $5);
 		`,
 		group.ID,
@@ -148,8 +148,8 @@ func (g *Group) CreateGroup(ct context.Context, tx *transaction.Transaction, gro
 func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group entity.Group) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		UPDATE group
-		SET 
+		UPDATE "group"
+		SET
 		    type = $1,
 		    name = $2,
 		    updated_at = $3
@@ -171,7 +171,7 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		DELETE FROM group
+		DELETE FROM "group"
 		WHERE id = $1;
 		`,
 		groupID,

@@ -264,16 +264,20 @@ type Rollout {
 	activator: Activator!
 	versionSelector: VersionSelector!
 	isEnabled: Boolean!
+	createdAt: Time!
+	updatedAt: Time
 }
 
 interface Activator {
 	id: ID!
+	type: ActivatorType!
 	createdAt: Time!
 	updatedAt: Time
 }
 
 type TimeRangeActivator implements Activator {
 	id: ID!
+	type: ActivatorType!
 	startAt: Time
 	endAt: Time
 	createdAt: Time!
@@ -299,6 +303,7 @@ type ExperimentVersionSelector implements VersionSelector {
 
 type MaxViewersActivator implements Activator {
 	id: ID!
+	type: ActivatorType!
 	maxViewers: Int!
 	createdAt: Time!
 	updatedAt: Time
@@ -306,6 +311,7 @@ type MaxViewersActivator implements Activator {
 
 type PercentageActivator implements Activator {
 	id: ID!
+	type: ActivatorType!
 	percentage: Int!
 	createdAt: Time!
 	updatedAt: Time
@@ -354,6 +360,7 @@ interface Group {
 	createdAt: Time!
 	updatedAt: Time
 	rollouts: [Rollout!]!
+	app: App!
 }
 
 type StaticUserGroup implements Group {
@@ -364,6 +371,7 @@ type StaticUserGroup implements Group {
 	createdAt: Time!
 	updatedAt: Time
 	rollouts: [Rollout!]!
+	app: App!
 }
 
 type StaticTeamGroup implements Group {
@@ -374,6 +382,7 @@ type StaticTeamGroup implements Group {
 	createdAt: Time!
 	updatedAt: Time
 	rollouts: [Rollout!]!
+	app: App!
 }
 
 type FilterGroup implements Group {
@@ -385,6 +394,7 @@ type FilterGroup implements Group {
 	createdAt: Time!
 	updatedAt: Time
 	rollouts: [Rollout!]!
+	app: App!
 }
 
 type TeamAppInstallation {

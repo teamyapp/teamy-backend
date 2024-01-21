@@ -3,8 +3,8 @@ package entity
 type AppGroupRelationType string
 
 const (
-	AppGroupRelationTypeUser AppGroupRelationType = "user"
-	AppGroupRelationTypeTeam AppGroupRelationType = "team"
+	AppGroupRelationTypeUser AppGroupRelationType = "USER"
+	AppGroupRelationTypeTeam AppGroupRelationType = "TEAM"
 )
 
 type AppGroupRelation struct {

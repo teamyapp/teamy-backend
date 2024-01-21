@@ -12,6 +12,8 @@ import (
 type VersionSelector interface {
 	ID(ct context.Context) graphql.ID
 	Type(ct context.Context) entity.VersionSelectorType
+	ToStaticVersionSelector() (*StaticVersionSelector, bool)
+	ToExperimentVersionSelector() (*ExperimentVersionSelector, bool)
 }
 
 type StaticVersionSelector struct {
@@ -31,6 +33,14 @@ func (v StaticVersionSelector) Type(ct context.Context) entity.VersionSelectorTy
 
 func (v StaticVersionSelector) VersionNumber(ct context.Context) (int32, error) {
 	return int32(v.versionSelector.VersionNumber), nil
+}
+
+func (v StaticVersionSelector) ToStaticVersionSelector() (*StaticVersionSelector, bool) {
+	return &v, true
+}
+
+func (v StaticVersionSelector) ToExperimentVersionSelector() (*ExperimentVersionSelector, bool) {
+	return nil, false
 }
 
 func newStaticVersionSelector(versionSelector entity.StaticVersionSelector, deps *Dependencies) StaticVersionSelector {
@@ -56,6 +66,14 @@ func (v ExperimentVersionSelector) VersionNumbers(ct context.Context) []int32 {
 	return collect.Map(v.versionSelector.VersionNumbers, func(versionNumber int, index int) int32 {
 		return int32(versionNumber)
 	})
+}
+
+func (v ExperimentVersionSelector) ToStaticVersionSelector() (*StaticVersionSelector, bool) {
+	return nil, false
+}
+
+func (v ExperimentVersionSelector) ToExperimentVersionSelector() (*ExperimentVersionSelector, bool) {
+	return &v, true
 }
 
 func newExperimentVersionSelector(versionSelector entity.ExperimentVersionSelector, deps *Dependencies) ExperimentVersionSelector {
