@@ -10,6 +10,7 @@ import (
 
 type Activator interface {
 	ID() graphql.ID
+	Type() entity.ActivatorType
 	CreatedAt() graphql.Time
 	UpdatedAt() *graphql.Time
 }
@@ -22,6 +23,10 @@ var _ Activator = (*TimeRangeActivator)(nil)
 
 func (t TimeRangeActivator) ID() graphql.ID {
 	return toGraphQLID(t.timeRangeActivator.ID)
+}
+
+func (t TimeRangeActivator) Type() entity.ActivatorType {
+	return entity.ActivatorTypeTimeRange
 }
 
 func (t TimeRangeActivator) StartAt() *graphql.Time {
@@ -56,6 +61,10 @@ func (m MaxViewersActivator) ID() graphql.ID {
 	return toGraphQLID(m.maxViewersActivator.ID)
 }
 
+func (m MaxViewersActivator) Type() entity.ActivatorType {
+	return entity.ActivatorTypeMaxViewers
+}
+
 func (m MaxViewersActivator) MaxViewers() int32 {
 	return int32(m.maxViewersActivator.MaxViewers)
 }
@@ -82,6 +91,10 @@ var _ Activator = (*PercentageActivator)(nil)
 
 func (p PercentageActivator) ID() graphql.ID {
 	return toGraphQLID(p.percentageActivator.ID)
+}
+
+func (p PercentageActivator) Type() entity.ActivatorType {
+	return entity.ActivatorTypePercentage
 }
 
 func (p PercentageActivator) Percentage() int32 {

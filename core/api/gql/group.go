@@ -17,6 +17,7 @@ type Group interface {
 	CreatedAt(ctx context.Context) graphql.Time
 	UpdatedAt(ctx context.Context) *graphql.Time
 	Rollouts(ctx context.Context) ([]Rollout, error)
+	App(ctx context.Context) (App, error)
 }
 
 type FilterGroup struct {
