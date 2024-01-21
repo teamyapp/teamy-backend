@@ -28,7 +28,7 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 			name,
 			created_at,
 			updated_at
-		FROM group
+		FROM "group"
 		WHERE id = $1`,
 		groupID,
 	).Scan(
