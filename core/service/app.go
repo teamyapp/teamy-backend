@@ -384,12 +384,13 @@ func (a App) AddAppTag(ct context.Context, appID uint64, tagName string) (entity
 			}
 
 			appTagRelation, internalErr := a.appTagRelationDao.FindAppTagByAppIDAndTagIDRelationWithTx(ct, tx, appID, tag.ID)
-			if internalErr != nil {
-				if internalErr.Code != errs.NotFound {
-					return internalErr
-				}
 
+			if internalErr == nil {
 				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("tag %v already exists in app %v", tagName, appID))
+			}
+
+			if internalErr.Code != errs.NotFound {
+				return internalErr
 			}
 
 			appTagRelation = entity.AppTagRelation{
