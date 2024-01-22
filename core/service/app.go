@@ -59,6 +59,8 @@ type App struct {
 	appPackageUploadSessionDao dao.AppPackageUploadSession
 	teamAppInstallationDao     dao.TeamAppInstallation
 	teamDao                    dao.Team
+	tagDao                     dao.Tag
+	appTagRelationDao          dao.AppTagRelation
 }
 
 type AppFilter struct {
@@ -80,8 +82,11 @@ type CreateAppSecretInput struct {
 }
 
 type UpdateAppSecretInput struct {
-	AppSecretID uint64
-	Name        string
+	Name string
+}
+
+type UpdateAppInput struct {
+	Tags []string
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
@@ -123,7 +128,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 	return appSecret, err
 }
 
-func (a App) UpdateAppSecret(ct context.Context, appID uint64, input UpdateAppSecretInput) (entity.AppSecret, *errs.Error) {
+func (a App) UpdateAppSecret(ct context.Context, appSecretID uint64, input UpdateAppSecretInput) (entity.AppSecret, *errs.Error) {
 	var appSecret entity.AppSecret
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,
@@ -133,13 +138,13 @@ func (a App) UpdateAppSecret(ct context.Context, appID uint64, input UpdateAppSe
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, input.AppSecretID)
+		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, appSecretID)
 		if internalErr != nil {
 			return internalErr
 		}
 
 		appSecret.Name = input.Name
-		return a.appSecretDao.UpdateAppSecret(ct, tx, input.AppSecretID, appSecret)
+		return a.appSecretDao.UpdateAppSecret(ct, tx, appSecretID, appSecret)
 	})
 	return appSecret, err
 }
@@ -330,6 +335,123 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 	}
 
 	return app, nil
+}
+
+func (a App) FindTagsByAppID(ct context.Context, appID uint64) ([]entity.Tag, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+
+	var tags []entity.Tag
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		tagIDs, err := a.appTagRelationDao.FindTagIDsByAppIDWithTx(ct, tx, appID)
+		if err != nil {
+			return err
+		}
+
+		if len(tagIDs) == 0 {
+			return nil
+		}
+
+		tags, err = a.tagDao.FindTagsByTagIDsWithTx(ct, tx, tagIDs)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return tags, err
+}
+
+func (a App) AddAppTag(ct context.Context, appID uint64, tagName string) (entity.Tag, *errs.Error) {
+	var tag entity.Tag
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		tag, internalErr = a.tagDao.FindTagByNameWithTx(ct, tx, tagName)
+		if internalErr != nil {
+			if internalErr.Code != errs.NotFound {
+				return internalErr
+			}
+
+			appTagRelation, internalErr := a.appTagRelationDao.FindAppTagByAppIDAndTagIDRelationWithTx(ct, tx, appID, tag.ID)
+			if internalErr != nil {
+				if internalErr.Code != errs.NotFound {
+					return internalErr
+				}
+
+				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("tag %v already exists in app %v", tagName, appID))
+			}
+
+			appTagRelation = entity.AppTagRelation{
+				AppID: appID,
+				TagID: tag.ID,
+			}
+
+			internalErr = a.appTagRelationDao.CreateAppTagRelation(ct, tx, appTagRelation)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			return nil
+		}
+
+		genTagIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "tagID"}
+		genTagIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTagIDReq)
+		if rpcErr != nil {
+			return errs.FromGRPCErr(rpcErr)
+		}
+
+		tag := entity.Tag{
+			ID:   genTagIDRes.UniqueNumber,
+			Name: tagName,
+		}
+
+		internalErr = a.tagDao.CreateTag(ct, tx, tag)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		appTagRelation := entity.AppTagRelation{
+			AppID: appID,
+			TagID: tag.ID,
+		}
+
+		return a.appTagRelationDao.CreateAppTagRelation(ct, tx, appTagRelation)
+	})
+
+	return tag, err
+}
+
+func (a App) RemoveAppTag(ct context.Context, appID uint64, tagID uint64) (entity.Tag, *errs.Error) {
+	var tag entity.Tag
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		tag, internalErr = a.tagDao.FindTagByIDWithTx(ct, tx, tagID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		_, internalErr = a.appTagRelationDao.DeleteAppTagRelationByAppIDAndTagID(ct, tx, appID, tagID)
+		return internalErr
+	})
+
+	return tag, err
 }
 
 func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Error) {
@@ -813,6 +935,8 @@ func NewApp(
 	appPackageUploadSessionDao dao.AppPackageUploadSession,
 	teamAppInstallationDao dao.TeamAppInstallation,
 	teamDao dao.Team,
+	tagDao dao.Tag,
+	appTagRelationDao dao.AppTagRelation,
 ) App {
 	return App{
 		logger:                     logger,
@@ -830,5 +954,7 @@ func NewApp(
 		appPackageUploadSessionDao: appPackageUploadSessionDao,
 		teamAppInstallationDao:     teamAppInstallationDao,
 		teamDao:                    teamDao,
+		tagDao:                     tagDao,
+		appTagRelationDao:          appTagRelationDao,
 	}
 }

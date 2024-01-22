@@ -82,6 +82,11 @@ type Mutation {
 	# App
 	createApp(teamId: ID!, name: String!): App!
 	deleteApp(appId: ID!): App!
+	
+	# App Tag
+	addAppTag(appId: ID!, tagName: String!): Tag!
+	removeAppTag(appId: ID!, tagId: ID!): Tag!
+
 	installAppToTeam(appId: ID!, teamId: ID!): TeamAppInstallation!
 	uninstallAppFromTeam(installationId: ID!): TeamAppInstallation!
 
@@ -329,6 +334,12 @@ type App {
 	teamRollouts: [Rollout!]!
 	managedByTeam: Team!
 	latestVersionForTeam(teamId: ID!): AppVersion
+	tags: [Tag!]!
+}
+
+type Tag {
+	id: ID!
+	name: String!
 }
 
 type AppSecret {

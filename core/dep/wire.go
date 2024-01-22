@@ -48,6 +48,8 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)),
 	wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)),
 	wire.Bind(new(dao.App), new(*sqldb.App)),
+	wire.Bind(new(dao.Tag), new(*sqldb.Tag)),
+	wire.Bind(new(dao.AppTagRelation), new(*sqldb.AppTagRelation)),
 	wire.Bind(new(dao.AppSecret), new(*sqldb.AppSecret)),
 	wire.Bind(new(dao.TeamAppInstallation), new(*sqldb.TeamAppInstallation)),
 	wire.Bind(new(dao.ActivatorTypeRelation), new(*sqldb.ActivatorTypeRelation)),
@@ -104,6 +106,8 @@ var daoSet = wire.NewSet(
 	sqldb.NewUserGroupRelation,
 	sqldb.NewVersionSelectorVersionRelation,
 	sqldb.NewVersionSelector,
+	sqldb.NewTag,
+	sqldb.NewAppTagRelation,
 )
 
 var repositorySet = wire.NewSet(
