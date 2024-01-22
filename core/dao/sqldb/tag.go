@@ -19,14 +19,15 @@ type Tag struct {
 var _ dao.Tag = (*Tag)(nil)
 
 func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transaction, tagIDs []uint64) ([]entity.Tag, *errs.Error) {
-	rows, err := tx.SQLTx().Query(`
+	idsString := toIDsString(tagIDs)
+	query := fmt.Sprintf(`
 	SELECT
 		id,
 		name
 	FROM tag
-	WHERE id = ANY($1);`,
-		tagIDs,
-	)
+	WHERE id IN (%s);`,
+		idsString)
+	rows, err := tx.SQLTx().QueryContext(ct, query)
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
@@ -51,7 +52,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 
 func (*Tag) FindTagByNameWithTx(ct context.Context, tx *transaction.Transaction, name string) (entity.Tag, *errs.Error) {
 	tag := entity.Tag{}
-	err := tx.SQLTx().QueryRow(`
+	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
 		id,
 		name
@@ -75,7 +76,7 @@ func (*Tag) FindTagByNameWithTx(ct context.Context, tx *transaction.Transaction,
 
 func (*Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, tagID uint64) (entity.Tag, *errs.Error) {
 	tag := entity.Tag{}
-	err := tx.SQLTx().QueryRow(`
+	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
 		id,
 		name
@@ -94,7 +95,7 @@ func (*Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, t
 }
 
 func (*Tag) CreateTag(ct context.Context, tx *transaction.Transaction, tag entity.Tag) *errs.Error {
-	_, err := tx.SQLTx().Exec(`
+	_, err := tx.SQLTx().ExecContext(ct, `
 	INSERT INTO tag (
 		id,
 		name
