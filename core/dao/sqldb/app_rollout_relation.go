@@ -26,7 +26,7 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationTypeWithTx(
 		`
 		SELECT
 			rollout_id
-		FROM app_rollout_relations
+		FROM app_rollout_relation
 		WHERE app_id = $1 AND type = $2`,
 		appID,
 		rolloutType,
@@ -68,7 +68,7 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationType(ct context.Con
 
 func (*AppRolloutRelation) CreateAppRolloutRelation(ct context.Context, tx *transaction.Transaction, appRolloutRelation entity.AppRolloutRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
-		`INSERT INTO app_rollout_relations (
+		`INSERT INTO app_rollout_relation (
 			app_id,
 			rollout_id,
 			type
