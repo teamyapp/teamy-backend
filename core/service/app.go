@@ -442,8 +442,7 @@ func (a App) RemoveTagFromApp(ct context.Context, appID uint64, tagID uint64) (e
 			return internalErr
 		}
 
-		_, internalErr = a.appTagRelationDao.DeleteAppTagRelationByAppIDAndTagID(ct, tx, appID, tagID)
-		return internalErr
+		return a.appTagRelationDao.DeleteAppTagRelationByAppIDAndTagID(ct, tx, appID, tagID)
 	})
 
 	return tag, err

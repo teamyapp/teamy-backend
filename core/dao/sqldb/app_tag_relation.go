@@ -97,24 +97,19 @@ func (*AppTagRelation) DeleteAppTagRelationByAppIDAndTagID(
 	tx *transaction.Transaction,
 	appID uint64,
 	tagID uint64,
-) (entity.AppTagRelation, *errs.Error) {
-	appTagRelation := entity.AppTagRelation{}
-	err := tx.SQLTx().QueryRowContext(ct, `
+) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM app_tag_relation
-		WHERE app_id = $1 AND tag_id = $2
-;`,
+		WHERE app_id = $1 AND tag_id = $2;`,
 		appID,
 		tagID,
-	).
-		Scan(
-			&appTagRelation.AppID,
-			&appTagRelation.TagID,
-		)
+	)
+
 	if err != nil {
-		return entity.AppTagRelation{}, errs.NewError(errs.Unknown, err.Error())
+		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return appTagRelation, nil
+	return nil
 }
 
 func NewAppTagRelation(transactionFactory transaction.Factory) *AppTagRelation {

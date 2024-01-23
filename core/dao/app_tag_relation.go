@@ -10,24 +10,24 @@ import (
 
 type AppTagRelation interface {
 	FindAppTagByAppIDAndTagIDRelationWithTx(
-	    ct context.Context, 
-	    tx *transaction.Transaction, 
-	    appID uint64, 
-	    tagID uint64,
-    ) (entity.AppTagRelation, *errs.Error)
+		ct context.Context,
+		tx *transaction.Transaction,
+		appID uint64,
+		tagID uint64,
+	) (entity.AppTagRelation, *errs.Error)
 	FindTagIDsByAppIDWithTx(
-	    ct context.Context, 
-	    tx *transaction.Transaction, 
-	    appID uint64,
+		ct context.Context,
+		tx *transaction.Transaction,
+		appID uint64,
 	) ([]uint64, *errs.Error)
 	CreateAppTagRelation(
-	    ct context.Context, 
-	    tx *transaction.Transaction, 
-	    appTagRelation entity.AppTagRelation) *errs.Error
+		ct context.Context,
+		tx *transaction.Transaction,
+		appTagRelation entity.AppTagRelation) *errs.Error
 	DeleteAppTagRelationByAppIDAndTagID(
-	    ct context.Context, 
-	    tx *transaction.Transaction, 
-	    appID uint64, 
-	    tagID uint64,
-	) (entity.AppTagRelation, *errs.Error)
+		ct context.Context,
+		tx *transaction.Transaction,
+		appID uint64,
+		tagID uint64,
+	) *errs.Error
 }
