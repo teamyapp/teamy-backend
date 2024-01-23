@@ -21,7 +21,7 @@ func (t Tag) Name(ctx context.Context) string {
 	return t.tag.Name
 }
 
-func (m Mutation) AddAppTag(
+func (m Mutation) AddTagToApp(
 	ctx context.Context,
 	args struct {
 		AppID   graphql.ID
