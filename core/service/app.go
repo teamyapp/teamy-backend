@@ -404,10 +404,7 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (enti
 				TagID: tag.ID,
 			}
 
-			internalErr = a.appTagRelationDao.CreateAppTagRelation(ct, tx, appTagRelation)
-			if internalErr != nil {
-				return internalErr
-			}
+			return a.appTagRelationDao.CreateAppTagRelation(ct, tx, appTagRelation)
 		}
 
 		appTagRelation, internalErr := a.appTagRelationDao.FindAppTagByAppIDAndTagIDRelationWithTx(ct, tx, appID, tag.ID)
