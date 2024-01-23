@@ -383,17 +383,23 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (enti
 				return internalErr
 			}
 
-			appTagRelation, internalErr := a.appTagRelationDao.FindAppTagByAppIDAndTagIDRelationWithTx(ct, tx, appID, tag.ID)
-
-			if internalErr == nil {
-				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("tag %v already exists in app %v", tagName, appID))
+			genTagIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "tagID"}
+			genTagIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTagIDReq)
+			if rpcErr != nil {
+				return errs.FromGRPCErr(rpcErr)
 			}
 
-			if internalErr.Code != errs.NotFound {
+			tag = entity.Tag{
+				ID:   genTagIDRes.UniqueNumber,
+				Name: tagName,
+			}
+
+			internalErr = a.tagDao.CreateTag(ct, tx, tag)
+			if internalErr != nil {
 				return internalErr
 			}
 
-			appTagRelation = entity.AppTagRelation{
+			appTagRelation := entity.AppTagRelation{
 				AppID: appID,
 				TagID: tag.ID,
 			}
@@ -402,27 +408,18 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (enti
 			if internalErr != nil {
 				return internalErr
 			}
-
-			return nil
 		}
 
-		genTagIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "tagID"}
-		genTagIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTagIDReq)
-		if rpcErr != nil {
-			return errs.FromGRPCErr(rpcErr)
+		appTagRelation, internalErr := a.appTagRelationDao.FindAppTagByAppIDAndTagIDRelationWithTx(ct, tx, appID, tag.ID)
+		if internalErr == nil {
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("tag %v already exists in app %v", tagName, appID))
 		}
 
-		tag := entity.Tag{
-			ID:   genTagIDRes.UniqueNumber,
-			Name: tagName,
-		}
-
-		internalErr = a.tagDao.CreateTag(ct, tx, tag)
-		if internalErr != nil {
+		if internalErr.Code != errs.NotFound {
 			return internalErr
 		}
 
-		appTagRelation := entity.AppTagRelation{
+		appTagRelation = entity.AppTagRelation{
 			AppID: appID,
 			TagID: tag.ID,
 		}

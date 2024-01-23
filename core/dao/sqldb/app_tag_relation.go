@@ -19,7 +19,7 @@ type AppTagRelation struct {
 var _ dao.AppTagRelation = (*AppTagRelation)(nil)
 
 func (*AppTagRelation) FindTagIDsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]uint64, *errs.Error) {
-	rows, err := tx.SQLTx().Query(
+	rows, err := tx.SQLTx().QueryContext(ct,
 		`SELECT
 			tag_id
 		FROM app_tag_relation
@@ -54,7 +54,7 @@ func (*AppTagRelation) FindAppTagByAppIDAndTagIDRelationWithTx(
 	tagID uint64,
 ) (entity.AppTagRelation, *errs.Error) {
 	appTagRelation := entity.AppTagRelation{}
-	err := tx.SQLTx().QueryRow(`
+	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
 			app_id,
 			tag_id
@@ -62,11 +62,10 @@ func (*AppTagRelation) FindAppTagByAppIDAndTagIDRelationWithTx(
 		WHERE app_id = $1 AND tag_id = $2;`,
 		appID,
 		tagID,
-	).
-		Scan(
-			&appTagRelation.AppID,
-			&appTagRelation.TagID,
-		)
+	).Scan(
+		&appTagRelation.AppID,
+		&appTagRelation.TagID,
+	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.AppTagRelation{},
@@ -80,7 +79,7 @@ func (*AppTagRelation) FindAppTagByAppIDAndTagIDRelationWithTx(
 }
 
 func (*AppTagRelation) CreateAppTagRelation(ct context.Context, tx *transaction.Transaction, appTagRelation entity.AppTagRelation) *errs.Error {
-	_, err := tx.SQLTx().Exec(`
+	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO app_tag_relation (app_id, tag_id)
 		VALUES ($1, $2);`,
 		appTagRelation.AppID,
@@ -100,7 +99,7 @@ func (*AppTagRelation) DeleteAppTagRelationByAppIDAndTagID(
 	tagID uint64,
 ) (entity.AppTagRelation, *errs.Error) {
 	appTagRelation := entity.AppTagRelation{}
-	err := tx.SQLTx().QueryRow(`
+	err := tx.SQLTx().QueryRowContext(ct, `
 		DELETE FROM app_tag_relation
 		WHERE app_id = $1 AND tag_id = $2
 ;`,
