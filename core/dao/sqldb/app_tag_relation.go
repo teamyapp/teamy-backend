@@ -103,7 +103,7 @@ func (*AppTagRelation) DeleteAppTagRelationByAppIDAndTagID(
 	err := tx.SQLTx().QueryRow(`
 		DELETE FROM app_tag_relation
 		WHERE app_id = $1 AND tag_id = $2
-		RETURNING app_id, tag_id;`,
+;`,
 		appID,
 		tagID,
 	).

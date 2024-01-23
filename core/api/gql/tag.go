@@ -38,7 +38,7 @@ func (m Mutation) AddAppTag(
 		return Tag{}, errs.ToResolverErr(internalErr)
 	}
 
-	tag, err := m.deps.appService.AddAppTag(ctx, appID, args.TagName)
+	tag, err := m.deps.appService.AddTagToApp(ctx, appID, args.TagName)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return Tag{}, errs.ToResolverErr(err)
@@ -47,7 +47,7 @@ func (m Mutation) AddAppTag(
 	return newTag(m.deps, tag), nil
 }
 
-func (m Mutation) RemoveAppTag(
+func (m Mutation) RemoveTagFromApp(
 	ctx context.Context,
 	args struct {
 		AppID graphql.ID
@@ -74,7 +74,7 @@ func (m Mutation) RemoveAppTag(
 		return Tag{}, errs.ToResolverErr(internalErr)
 	}
 
-	tag, err := m.deps.appService.RemoveAppTag(ctx, appID, tagID)
+	tag, err := m.deps.appService.RemoveTagFromApp(ctx, appID, tagID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return Tag{}, errs.ToResolverErr(err)

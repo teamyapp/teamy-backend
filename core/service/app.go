@@ -367,7 +367,7 @@ func (a App) FindTagsByAppID(ct context.Context, appID uint64) ([]entity.Tag, *e
 	return tags, err
 }
 
-func (a App) AddAppTag(ct context.Context, appID uint64, tagName string) (entity.Tag, *errs.Error) {
+func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (entity.Tag, *errs.Error) {
 	var tag entity.Tag
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,
@@ -433,7 +433,7 @@ func (a App) AddAppTag(ct context.Context, appID uint64, tagName string) (entity
 	return tag, err
 }
 
-func (a App) RemoveAppTag(ct context.Context, appID uint64, tagID uint64) (entity.Tag, *errs.Error) {
+func (a App) RemoveTagFromApp(ct context.Context, appID uint64, tagID uint64) (entity.Tag, *errs.Error) {
 	var tag entity.Tag
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,

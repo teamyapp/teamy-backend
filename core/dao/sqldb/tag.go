@@ -31,6 +31,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
+	
 	defer rows.Close()
 
 	tags := []entity.Tag{}

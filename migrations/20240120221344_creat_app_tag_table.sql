@@ -13,4 +13,3 @@ CREATE TABLE app_tag_relation (
 -- +migrate Down
 DROP TABLE app_tag_relation;
 DROP TABLE tag;
-
