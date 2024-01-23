@@ -1,7 +1,7 @@
 -- +migrate Up
 CREATE TABLE tag (
     id BIGINT PRIMARY KEY,
-    "name" VARCHAR(50) NOT NULL UNIQUE
+    tag VARCHAR(50) NOT NULL UNIQUE
 );
 
 CREATE TABLE app_tag_relation (

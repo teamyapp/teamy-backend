@@ -23,7 +23,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 	query := fmt.Sprintf(`
 	SELECT
 		id,
-		name
+		tag
 	FROM tag
 	WHERE id IN (%s);`,
 		idsString)
@@ -31,7 +31,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
-	
+
 	defer rows.Close()
 
 	tags := []entity.Tag{}
@@ -39,7 +39,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 		tag := entity.Tag{}
 		err := rows.Scan(
 			&tag.ID,
-			&tag.Name,
+			&tag.Tag,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -56,13 +56,13 @@ func (*Tag) FindTagByNameWithTx(ct context.Context, tx *transaction.Transaction,
 	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
 		id,
-		name
+		tag
 	FROM tag
-	WHERE name = $1;`,
+	WHERE tag = $1;`,
 		name).
 		Scan(
 			&tag.ID,
-			&tag.Name,
+			&tag.Tag,
 		)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -72,7 +72,7 @@ func (*Tag) FindTagByNameWithTx(ct context.Context, tx *transaction.Transaction,
 		return entity.Tag{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
-	return entity.Tag{}, nil
+	return tag, nil
 }
 
 func (*Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, tagID uint64) (entity.Tag, *errs.Error) {
@@ -80,13 +80,13 @@ func (*Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, t
 	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
 		id,
-		name
+		tag
 	FROM tag
 	WHERE id = $1;`,
 		tagID).
 		Scan(
 			&tag.ID,
-			&tag.Name,
+			&tag.Tag,
 		)
 	if err != nil {
 		return entity.Tag{}, errs.NewError(errs.Unknown, err.Error())
@@ -99,13 +99,13 @@ func (*Tag) CreateTag(ct context.Context, tx *transaction.Transaction, tag entit
 	_, err := tx.SQLTx().ExecContext(ct, `
 	INSERT INTO tag (
 		id,
-		name
+		tag
 	) VALUES (
 		$1,
 		$2
 	);`,
 		tag.ID,
-		tag.Name,
+		tag.Tag,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())

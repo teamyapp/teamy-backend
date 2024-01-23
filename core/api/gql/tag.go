@@ -17,15 +17,15 @@ func (t Tag) ID(ctx context.Context) graphql.ID {
 	return toGraphQLID(t.tag.ID)
 }
 
-func (t Tag) Name(ctx context.Context) string {
-	return t.tag.Name
+func (t Tag) Tag(ctx context.Context) string {
+	return t.tag.Tag
 }
 
 func (m Mutation) AddTagToApp(
 	ctx context.Context,
 	args struct {
-		AppID   graphql.ID
-		TagName string
+		AppID graphql.ID
+		Tag   string
 	},
 ) (Tag, error) {
 	appID, internalErr := fromGraphQLID(args.AppID)
@@ -38,7 +38,7 @@ func (m Mutation) AddTagToApp(
 		return Tag{}, errs.ToResolverErr(internalErr)
 	}
 
-	tag, err := m.deps.appService.AddTagToApp(ctx, appID, args.TagName)
+	tag, err := m.deps.appService.AddTagToApp(ctx, appID, args.Tag)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return Tag{}, errs.ToResolverErr(err)

@@ -390,8 +390,8 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (enti
 			}
 
 			tag = entity.Tag{
-				ID:   genTagIDRes.UniqueNumber,
-				Name: tagName,
+				ID:  genTagIDRes.UniqueNumber,
+				Tag: tagName,
 			}
 
 			internalErr = a.tagDao.CreateTag(ct, tx, tag)
