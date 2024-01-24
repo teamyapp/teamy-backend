@@ -84,7 +84,7 @@ type Mutation {
 	deleteApp(appId: ID!): App!
 	
 	# App Tag
-	addTagToApp(appId: ID!, tag: String!): Tag!
+	addTagToApp(appId: ID!, value: String!): Tag!
 	removeTagFromApp(appId: ID!, tagId: ID!): Tag!
 
 	installAppToTeam(appId: ID!, teamId: ID!): TeamAppInstallation!
@@ -339,7 +339,7 @@ type App {
 
 type Tag {
 	id: ID!
-	tag: String!
+	value: String!
 }
 
 type AppSecret {

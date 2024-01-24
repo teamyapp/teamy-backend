@@ -367,7 +367,7 @@ func (a App) FindTagsByAppID(ct context.Context, appID uint64) ([]entity.Tag, *e
 	return tags, err
 }
 
-func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (entity.Tag, *errs.Error) {
+func (a App) AddTagToApp(ct context.Context, appID uint64, value string) (entity.Tag, *errs.Error) {
 	var tag entity.Tag
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,
@@ -377,7 +377,7 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (enti
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
-		tag, internalErr = a.tagDao.FindTagByNameWithTx(ct, tx, tagName)
+		tag, internalErr = a.tagDao.FindTagByValueWithTx(ct, tx, value)
 		if internalErr != nil {
 			if internalErr.Code != errs.NotFound {
 				return internalErr
@@ -390,8 +390,8 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (enti
 			}
 
 			tag = entity.Tag{
-				ID:  genTagIDRes.UniqueNumber,
-				Tag: tagName,
+				ID:    genTagIDRes.UniqueNumber,
+				Value: value,
 			}
 
 			internalErr = a.tagDao.CreateTag(ct, tx, tag)
@@ -409,7 +409,7 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, tagName string) (enti
 
 		appTagRelation, internalErr := a.appTagRelationDao.FindAppTagByAppIDAndTagIDRelationWithTx(ct, tx, appID, tag.ID)
 		if internalErr == nil {
-			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("tag %v already exists in app %v", tagName, appID))
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("tag %v already exists in app %v", value, appID))
 		}
 
 		if internalErr.Code != errs.NotFound {

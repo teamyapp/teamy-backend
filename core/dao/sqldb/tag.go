@@ -23,7 +23,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 	query := fmt.Sprintf(`
 	SELECT
 		id,
-		tag
+		value
 	FROM tag
 	WHERE id IN (%s);`,
 		idsString)
@@ -39,7 +39,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 		tag := entity.Tag{}
 		err := rows.Scan(
 			&tag.ID,
-			&tag.Tag,
+			&tag.Value,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -51,22 +51,22 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 	return tags, nil
 }
 
-func (*Tag) FindTagByNameWithTx(ct context.Context, tx *transaction.Transaction, name string) (entity.Tag, *errs.Error) {
+func (*Tag) FindTagByValueWithTx(ct context.Context, tx *transaction.Transaction, value string) (entity.Tag, *errs.Error) {
 	tag := entity.Tag{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
 		id,
-		tag
+		value
 	FROM tag
-	WHERE tag = $1;`,
-		name).
+	WHERE value = $1;`,
+		value).
 		Scan(
 			&tag.ID,
-			&tag.Tag,
+			&tag.Value,
 		)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return entity.Tag{}, errs.NewError(errs.NotFound, fmt.Sprintf("tag not found: tagName=%v", name))
+			return entity.Tag{}, errs.NewError(errs.NotFound, fmt.Sprintf("tag not found: value=%v", value))
 		}
 
 		return entity.Tag{}, errs.NewError(errs.Unknown, err.Error())
@@ -80,13 +80,13 @@ func (*Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, t
 	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
 		id,
-		tag
+		value
 	FROM tag
 	WHERE id = $1;`,
 		tagID).
 		Scan(
 			&tag.ID,
-			&tag.Tag,
+			&tag.Value,
 		)
 	if err != nil {
 		return entity.Tag{}, errs.NewError(errs.Unknown, err.Error())
@@ -99,13 +99,13 @@ func (*Tag) CreateTag(ct context.Context, tx *transaction.Transaction, tag entit
 	_, err := tx.SQLTx().ExecContext(ct, `
 	INSERT INTO tag (
 		id,
-		tag
+		value
 	) VALUES (
 		$1,
 		$2
 	);`,
 		tag.ID,
-		tag.Tag,
+		tag.Value,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
