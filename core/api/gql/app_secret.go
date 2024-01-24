@@ -90,16 +90,6 @@ func (m Mutation) UpdateAppSecret(
 		}
 	},
 ) (AppSecret, error) {
-	appID, internalErr := fromGraphQLID(args.SecretID)
-	if internalErr != nil {
-		internalErr := errs.NewError(
-			errs.InvalidArgument,
-			internalErr.Error(),
-		)
-		m.deps.logger.ErrorWithContext(ctx, internalErr)
-		return AppSecret{}, errs.ToResolverErr(internalErr)
-	}
-
 	secretID, internalErr := fromGraphQLID(args.SecretID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
@@ -111,10 +101,9 @@ func (m Mutation) UpdateAppSecret(
 	}
 
 	updateAppSecretInput := service.UpdateAppSecretInput{
-		AppSecretID: secretID,
-		Name:        args.Input.Name,
+		Name: args.Input.Name,
 	}
-	appSecret, err := m.deps.appService.UpdateAppSecret(ctx, appID, updateAppSecretInput)
+	appSecret, err := m.deps.appService.UpdateAppSecret(ctx, secretID, updateAppSecretInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppSecret{}, errs.ToResolverErr(err)

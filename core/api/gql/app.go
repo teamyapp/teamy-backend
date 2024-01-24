@@ -139,10 +139,10 @@ func (a App) ManagedByTeam(ctx context.Context) (Team, error) {
 }
 
 func (a App) LatestVersionForTeam(
-    ctx context.Context, 
-    args struct{ 
-        TeamID graphql.ID 
-    }) (*AppVersion, error) {
+	ctx context.Context,
+	args struct {
+		TeamID graphql.ID
+	}) (*AppVersion, error) {
 	teamID, internalErr := fromGraphQLID(args.TeamID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
@@ -169,6 +169,18 @@ func (a App) LatestVersionForTeam(
 
 	gqlAppVersion := newAppVersion(a.deps, appVersion)
 	return &gqlAppVersion, nil
+}
+
+func (a App) Tags(ctx context.Context) ([]Tag, error) {
+	tags, err := a.deps.appService.FindTagsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(tags, func(tag entity.Tag, index int) Tag {
+		return newTag(a.deps, tag)
+	}), nil
 }
 
 func (m Mutation) CreateApp(
