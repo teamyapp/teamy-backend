@@ -73,6 +73,7 @@ func (m Mutation) CreateAppRollout(
 		AppID          graphql.ID
 		AppRolloutType entity.AppRolloutRelationType
 		Input          struct {
+			Name              string
 			VersionSelectorID graphql.ID
 			ActivatorID       graphql.ID
 			IsEnabled         bool
@@ -110,6 +111,7 @@ func (m Mutation) CreateAppRollout(
 	}
 
 	createAppRolloutInput := service.CreateRolloutInput{
+		Name:              args.Input.Name,
 		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,
@@ -134,6 +136,7 @@ func (m Mutation) UpdateRollout(
 	args struct {
 		RolloutID graphql.ID
 		Input     struct {
+			Name              string
 			ActivatorID       graphql.ID
 			VersionSelectorID graphql.ID
 			IsEnabled         bool
@@ -171,6 +174,7 @@ func (m Mutation) UpdateRollout(
 	}
 
 	updateRolloutInput := service.UpdateRolloutInput{
+		Name:              args.Input.Name,
 		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,

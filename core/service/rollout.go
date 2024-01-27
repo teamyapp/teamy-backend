@@ -25,12 +25,14 @@ import (
 )
 
 type CreateRolloutInput struct {
+	Name              string
 	VersionSelectorID uint64
 	ActivatorID       uint64
 	IsEnabled         bool
 }
 
 type UpdateRolloutInput struct {
+	Name              string
 	VersionSelectorID uint64
 	ActivatorID       uint64
 	IsEnabled         bool
@@ -306,8 +308,9 @@ func (r *Rollout) CreateStaticVersionSelector(ct context.Context, versionNumber 
 
 	staticVersionSelector := entity.StaticVersionSelector{
 		VersionSelector: entity.VersionSelector{
-			ID:   genSelectorIDRes.UniqueNumber,
-			Type: entity.VersionSelectorTypeStatic,
+			ID:        genSelectorIDRes.UniqueNumber,
+			Type:      entity.VersionSelectorTypeStatic,
+			CreatedAt: time.Now().UTC(),
 		},
 		VersionNumber: versionNumber,
 	}
@@ -333,8 +336,9 @@ func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, versionNum
 
 	experimentVersionSelector := entity.ExperimentVersionSelector{
 		VersionSelector: entity.VersionSelector{
-			ID:   genSelectorIDRes.UniqueNumber,
-			Type: entity.VersionSelectorTypeExperiment,
+			CreatedAt: time.Now().UTC(),
+			ID:        genSelectorIDRes.UniqueNumber,
+			Type:      entity.VersionSelectorTypeExperiment,
 		},
 		VersionNumbers: versionNumbers,
 	}

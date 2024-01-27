@@ -12,6 +12,8 @@ import (
 type VersionSelector interface {
 	ID(ct context.Context) graphql.ID
 	Type(ct context.Context) entity.VersionSelectorType
+	CreatedAt(ct context.Context) graphql.Time
+	UpdatedAt(ct context.Context) *graphql.Time
 	ToStaticVersionSelector() (*StaticVersionSelector, bool)
 	ToExperimentVersionSelector() (*ExperimentVersionSelector, bool)
 }
@@ -33,6 +35,14 @@ func (v StaticVersionSelector) Type(ct context.Context) entity.VersionSelectorTy
 
 func (v StaticVersionSelector) VersionNumber(ct context.Context) (int32, error) {
 	return int32(v.versionSelector.VersionNumber), nil
+}
+
+func (v StaticVersionSelector) CreatedAt(ct context.Context) graphql.Time {
+	return toGraphQLTime(v.versionSelector.CreatedAt)
+}
+
+func (v StaticVersionSelector) UpdatedAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(v.versionSelector.UpdatedAt)
 }
 
 func (v StaticVersionSelector) ToStaticVersionSelector() (*StaticVersionSelector, bool) {
@@ -60,6 +70,14 @@ func (v ExperimentVersionSelector) ID(ct context.Context) graphql.ID {
 
 func (v ExperimentVersionSelector) Type(ct context.Context) entity.VersionSelectorType {
 	return v.versionSelector.Type
+}
+
+func (v ExperimentVersionSelector) CreatedAt(ct context.Context) graphql.Time {
+	return toGraphQLTime(v.versionSelector.CreatedAt)
+}
+
+func (v ExperimentVersionSelector) UpdatedAt(ct context.Context) *graphql.Time {
+	return toGraphQLTimePtr(v.versionSelector.UpdatedAt)
 }
 
 func (v ExperimentVersionSelector) VersionNumbers(ct context.Context) []int32 {

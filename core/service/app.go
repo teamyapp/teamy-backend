@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"os"
@@ -109,8 +110,14 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 		return entity.AppSecret{}, errs.FromGRPCErr(rpcErr)
 	}
 
+	token, err := generateToken()
+	if err != nil {
+		return entity.AppSecret{}, err
+	}
+
 	appSecret := entity.AppSecret{
 		ID:            genAppSecretIDRes.UniqueNumber,
+		Token:         token,
 		Name:          input.Name,
 		AppID:         appID,
 		AddedAt:       time.Now().UTC(),
@@ -122,7 +129,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 		a.stateSyncer,
 		ct,
 	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return a.appSecretDao.CreateAppSecret(ct, tx, appSecret)
 	})
 	return appSecret, err
@@ -144,6 +151,7 @@ func (a App) UpdateAppSecret(ct context.Context, appSecretID uint64, input Updat
 		}
 
 		appSecret.Name = input.Name
+
 		return a.appSecretDao.UpdateAppSecret(ct, tx, appSecretID, appSecret)
 	})
 	return appSecret, err
@@ -911,6 +919,16 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 
 		return nil
 	})
+}
+
+func generateToken() (string, *errs.Error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", errs.NewError(errs.IO, err.Error())
+	}
+
+	return fmt.Sprintf("%x", b), nil
 }
 
 func NewApp(
