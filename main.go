@@ -206,6 +206,7 @@ func startServiceRunner(
 		mapServerURL,
 		cloudClientRegistry,
 		realTimeStateSyncer,
+		dep.JWTSigningKey(cfg.JWTSigningKey),
 		sqlDB)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())

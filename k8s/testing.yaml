@@ -114,6 +114,11 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: internal-service-account-api-token
+            - name: JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
+                  key: jwt-signing-key
             - name: TEAMY_WEB_UI_BASE_URL
               value: "https://testing.teamyapp.com"
           volumeMounts:

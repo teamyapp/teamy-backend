@@ -10,6 +10,7 @@ import (
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/env"
 	cloudGQL "github.com/teamyapp/cloud/libs/gql"
+	"github.com/teamyapp/cloud/libs/security"
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
@@ -25,6 +26,7 @@ import (
 )
 
 type AppMame string
+type JWTSigningKey string
 type ServiceName string
 type CloudWebAPIExternalBaseURL string
 type MapServerURL string
@@ -132,6 +134,10 @@ var serviceSet = wire.NewSet(
 	service.NewRollout,
 )
 
+func newJWTAuthority(logger telemetry.Logger, signingKey JWTSigningKey) security.JWTAuthority {
+	return security.NewJWTAuthority(logger, string(signingKey))
+}
+
 func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {
 	wire.Build(
 		daoSet,
@@ -150,6 +156,7 @@ func InitGraphQLAPI(
 	mapServerURL MapServerURL,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
+	jwtSigningKey JWTSigningKey,
 	sqlDB *sql.DB,
 ) (cloudGQL.Service[gql.Resolver], error) {
 	wire.Build(
@@ -164,6 +171,7 @@ func InitGraphQLAPI(
 		gql.NewDependencies,
 		gql.NewResolver,
 		api.NewGraphQL,
+		newJWTAuthority,
 	)
 	return cloudGQL.Service[gql.Resolver]{}, nil
 }
