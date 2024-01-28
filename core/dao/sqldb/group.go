@@ -25,6 +25,7 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 		SELECT
 			id,
 			type,
+			member_type,
 			name,
 			created_at,
 			updated_at
@@ -34,6 +35,7 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 	).Scan(
 		&group.ID,
 		&group.Type,
+		&group.MemberType,
 		&group.Name,
 		&group.CreatedAt,
 		&group.UpdatedAt,
@@ -71,6 +73,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 		SELECT
 			id,
 			type,
+			member_type,
 			name,
 			created_at,
 			updated_at
@@ -91,6 +94,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 		err := rows.Scan(
 			&group.ID,
 			&group.Type,
+			&group.MemberType,
 			&group.Name,
 			&group.CreatedAt,
 			&group.UpdatedAt,
@@ -125,14 +129,16 @@ func (g *Group) CreateGroup(ct context.Context, tx *transaction.Transaction, gro
 		INSERT INTO "group" (
 			id,
 			type,
+			member_type,
 			name,
 			created_at,
 			updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5);
+		VALUES ($1, $2, $3, $4, $5, $6);
 		`,
 		group.ID,
 		group.Type,
+		group.MemberType,
 		group.Name,
 		group.CreatedAt,
 		group.UpdatedAt,
@@ -151,12 +157,16 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 		UPDATE "group"
 		SET
 		    type = $1,
-		    name = $2,
-		    updated_at = $3
-		WHERE id = $4;
+			member_type = $2,
+		    name = $3,
+			create_at = $4,
+		    updated_at = $5
+		WHERE id = $6;
 		`,
 		Group.Type,
+		Group.MemberType,
 		Group.Name,
+		Group.CreatedAt,
 		Group.UpdatedAt,
 		Group.ID,
 	)

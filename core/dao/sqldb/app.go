@@ -31,6 +31,42 @@ func (a *App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.E
 	return a.FindAppByIDWithTx(ct, tx, appID)
 }
 
+func (a *App) FindAppsByAppIDsWithTx(ct context.Context, tx *transaction.Transaction, appIDs []uint64) ([]entity.App, *errs.Error) {
+	apps := []entity.App{}
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			id,
+			total_installations,
+			created_at,
+			updated_at,
+			managed_by_team_id
+		FROM app
+		WHERE id = ANY($1);`,
+		appIDs,
+	)
+	if err != nil {
+		return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	for rows.Next() {
+		app := entity.App{}
+		err := rows.Scan(
+			&app.ID,
+			&app.TotalInstallations,
+			&app.CreatedAt,
+			&app.UpdatedAt,
+			&app.ManagedByTeamID,
+		)
+		if err != nil {
+			return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps, nil
+}
+
 func (a *App) FindAppByIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (entity.App, *errs.Error) {
 	app := entity.App{}
 	err := tx.SQLTx().QueryRow(`

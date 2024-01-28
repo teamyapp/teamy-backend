@@ -66,11 +66,10 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.RolloutViewer), new(*sqldb.RolloutViewer)),
 	wire.Bind(new(dao.Rollout), new(*sqldb.Rollout)),
 	wire.Bind(new(dao.Group), new(*sqldb.Group)),
-	wire.Bind(new(dao.TeamGroupRelation), new(*sqldb.TeamGroupRelation)),
 	wire.Bind(new(dao.TimeRangeActivator), new(*sqldb.TimeRangeActivator)),
-	wire.Bind(new(dao.UserGroupRelation), new(*sqldb.UserGroupRelation)),
 	wire.Bind(new(dao.VersionSelectorVersionRelation), new(*sqldb.VersionSelectorVersionRelation)),
 	wire.Bind(new(dao.VersionSelector), new(*sqldb.VersionSelector)),
+	wire.Bind(new(dao.GroupMemberRelation), new(*sqldb.GroupMemberRelation)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -103,13 +102,12 @@ var daoSet = wire.NewSet(
 	sqldb.NewRolloutViewer,
 	sqldb.NewRollout,
 	sqldb.NewGroup,
-	sqldb.NewTeamGroupRelation,
 	sqldb.NewTimeRangeActivator,
-	sqldb.NewUserGroupRelation,
 	sqldb.NewVersionSelectorVersionRelation,
 	sqldb.NewVersionSelector,
 	sqldb.NewTag,
 	sqldb.NewAppTagRelation,
+	sqldb.NewGroupMemberRelation,
 )
 
 var repositorySet = wire.NewSet(

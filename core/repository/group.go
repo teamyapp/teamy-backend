@@ -43,39 +43,38 @@ func (g *Group) UpdateFilterGroup(ct context.Context, tx *transaction.Transactio
 	return g.filterGroupDao.UpdateFilterGroup(ct, tx, filterGroup)
 }
 
-func (g *Group) FindGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity.GroupUnion, *errs.Error) {
-	groups, err := g.groupDao.FindGroupsByIDs(ct, groupIDs)
+func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.GroupUnion, *errs.Error) {
+	group, err := g.groupDao.FindGroupByID(ct, groupID)
+	if err != nil {
+		return entity.GroupUnion{}, err
+	}
+
+	return g.getGroupUnionFromRawGroup(ct, group)
+}
+
+func (g *Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.GroupUnion, *errs.Error) {
+	group, err := g.groupDao.FindGroupByIDWithTx(ct, tx, groupID)
+	if err != nil {
+		return entity.GroupUnion{}, err
+	}
+
+	return g.getGroupUnionFromRawGroup(ct, group)
+}
+
+func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64) ([]entity.GroupUnion, *errs.Error) {
+	groups, err := g.groupDao.FindGroupsByIDsWithTx(ct, tx, groupIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	groupUnions := make([]entity.GroupUnion, 0)
 	for _, group := range groups {
-		switch group.Type {
-		case entity.GroupTypeStatic:
-			groupUnions = append(groupUnions, entity.GroupUnion{
-				Type: entity.GroupTypeStatic,
-				StaticGroup: entity.StaticGroup{
-					Group: group,
-				},
-			})
-		case entity.GroupTypeFilter:
-			filterGroup, err := g.filterGroupDao.FindFilterGroupByID(ct, group.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			groupUnions = append(groupUnions, entity.GroupUnion{
-				Type: entity.GroupTypeFilter,
-				FilterGroup: entity.FilterGroup{
-					Group:  group,
-					Filter: filterGroup.Filter,
-					Count:  filterGroup.Count,
-				},
-			})
-		default:
-			return nil, errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type))
+		groupUnion, err := g.getGroupUnionFromRawGroup(ct, group)
+		if err != nil {
+			return nil, err
 		}
+
+		groupUnions = append(groupUnions, groupUnion)
 	}
 
 	return groupUnions, nil
@@ -92,6 +91,10 @@ func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, gro
 		return entity.GroupUnion{}, err
 	}
 
+	return g.getGroupUnionFromRawGroup(ct, group)
+}
+
+func (g *Group) getGroupUnionFromRawGroup(ct context.Context, group entity.Group) (entity.GroupUnion, *errs.Error) {
 	switch group.Type {
 	case entity.GroupTypeStatic:
 		return entity.GroupUnion{
@@ -101,12 +104,7 @@ func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, gro
 			},
 		}, nil
 	case entity.GroupTypeFilter:
-		filterGroup, err := g.filterGroupDao.FindFilterGroupByID(ct, groupID)
-		if err != nil {
-			return entity.GroupUnion{}, err
-		}
-
-		err = g.filterGroupDao.DeleteFilterGroup(ct, tx, groupID)
+		filterGroup, err := g.filterGroupDao.FindFilterGroupByID(ct, group.ID)
 		if err != nil {
 			return entity.GroupUnion{}, err
 		}
