@@ -125,7 +125,6 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 		SecretID: secretID,
 		Secret:   secret,
 	}
-
 	token, err := a.GetAppSecretToken(ct, generateTokenInput)
 	if err != nil {
 		return entity.AppSecret{}, err
