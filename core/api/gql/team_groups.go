@@ -210,7 +210,7 @@ func (m Mutation) CreateFilterTeamGroup(
 		Filter: args.Input.Filter,
 	}
 
-	group, err := m.deps.groupService.CreateTeamFilterGroup(ctx, appID, createFilterGroupInput)
+	group, err := m.deps.groupService.CreateFilterTeamGroup(ctx, appID, createFilterGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return FilterGroup{}, errs.ToResolverErr(err)

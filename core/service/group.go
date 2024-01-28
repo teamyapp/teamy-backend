@@ -207,7 +207,7 @@ func (g *Group) UpdateStaticUserGroup(
 	return group.StaticGroup, err
 }
 
-func (g *Group) CreateUserFilterGroup(
+func (g *Group) CreateFilterUserGroup(
 	ct context.Context,
 	appID uint64,
 	input CreateFilterGroupInput,
@@ -215,7 +215,7 @@ func (g *Group) CreateUserFilterGroup(
 	return g.createFilterGroup(ct, appID, entity.GroupMemberTypeUser, input)
 }
 
-func (g *Group) CreateTeamFilterGroup(
+func (g *Group) CreateFilterTeamGroup(
 	ct context.Context,
 	appID uint64,
 	input CreateFilterGroupInput,

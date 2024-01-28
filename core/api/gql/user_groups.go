@@ -209,7 +209,7 @@ func (m Mutation) CreateFilterUserGroup(
 		Filter: args.Input.Filter,
 	}
 
-	filterGroup, err := m.deps.groupService.CreateUserFilterGroup(ctx, appID, createFilterUserGroupInput)
+	filterGroup, err := m.deps.groupService.CreateFilterUserGroup(ctx, appID, createFilterUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return FilterGroup{}, errs.ToResolverErr(err)
