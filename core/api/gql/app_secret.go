@@ -26,6 +26,21 @@ func (a AppSecret) AddedAt(ctx context.Context) graphql.Time {
 	return toGraphQLTime(a.appSecret.AddedAt)
 }
 
+func (a AppSecret) Token(ctx context.Context) (string, error) {
+	generateTokenInput := service.GenerateTokenInput{
+		SecretID: a.appSecret.ID,
+		Secret:   a.appSecret.Secret,
+	}
+
+	token, err := a.deps.appService.GetAppSecretToken(ctx, generateTokenInput)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return "", errs.ToResolverErr(err)
+	}
+
+	return token, nil
+}
+
 func (a AppSecret) AddedBy(ctx context.Context) (User, error) {
 	user, err := a.deps.userService.FindUserByID(ctx, a.appSecret.AddedByUserID)
 	if err != nil {

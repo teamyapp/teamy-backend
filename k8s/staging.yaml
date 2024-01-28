@@ -116,6 +116,11 @@ spec:
                   key: internal-service-account-api-token
             - name: TEAMY_WEB_UI_BASE_URL
               value: "https://staging.teamyapp.com"
+            - name: JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: teamy
+                  key: jwt-signing-key
           volumeMounts:
             - mountPath: /var/lib/vault
               name: vault

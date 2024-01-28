@@ -20,7 +20,11 @@ func (*VersionSelector) FindVersionSelectorByIDWithTx(ct context.Context, tx *tr
 	versionSelector := entity.VersionSelector{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
-		SELECT id, type
+		SELECT 
+			id, 
+			type, 
+			created_at, 
+			updated_at
 		FROM version_selector
 		WHERE id = $1
 		`,
@@ -28,6 +32,8 @@ func (*VersionSelector) FindVersionSelectorByIDWithTx(ct context.Context, tx *tr
 	).Scan(
 		&versionSelector.ID,
 		&versionSelector.Type,
+		&versionSelector.CreatedAt,
+		&versionSelector.UpdatedAt,
 	)
 
 	if err != nil {
@@ -60,14 +66,17 @@ func (*VersionSelector) CreateVersionSelector(
 		`
 		INSERT INTO version_selector (
 			id,
-			type
+			type,
+			created_at,
 		) VALUES (
 			$1,
-			$2
+			$2,
+			$3
 		)
 		`,
 		versionSelector.ID,
 		versionSelector.Type,
+		versionSelector.CreatedAt,
 	)
 
 	if err != nil {

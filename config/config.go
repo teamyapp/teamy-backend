@@ -25,6 +25,7 @@ type App struct {
 	RequestTimeout              time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10s"`
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
 	TeamyWebUIBaseURL           string        `envconfig:"TEAMY_WEB_UI_BASE_URL" default:"http://localhost:3000"`
+	JWTSigningKey               string        `envconfig:"JWT_SIGNING_KEY" default:""`
 }
 
 func AppFromEnv() (App, *errs.Error) {

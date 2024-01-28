@@ -12,6 +12,7 @@ import (
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/gql"
+	"github.com/teamyapp/cloud/libs/security"
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
@@ -35,7 +36,7 @@ func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.S
 	return stateSyncer
 }
 
-func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, mapServerURL MapServerURL, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
+func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, mapServerURL MapServerURL, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, jwtSigningKey JWTSigningKey, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
 	prometheusTracer := newPrometheusTracer(appName, serviceName, environment)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
@@ -69,7 +70,8 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	teamAppInstallation := sqldb.NewTeamAppInstallation(factory)
 	tag := sqldb.NewTag(factory)
 	appTagRelation := sqldb.NewAppTagRelation(factory)
-	serviceApp := service.NewApp(logger, httpClient, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, app, appVersion, appVersionPrice, appVersionChange, appSecret, appPackageUploadSession, teamAppInstallation, team, tag, appTagRelation)
+	jwtAuthority := newJWTAuthority(logger, jwtSigningKey)
+	serviceApp := service.NewApp(logger, httpClient, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, app, appVersion, appVersionPrice, appVersionChange, appSecret, appPackageUploadSession, teamAppInstallation, team, tag, appTagRelation, jwtAuthority)
 	invitation := sqldb.NewInvitation(logger, factory)
 	serviceInvitation := service.NewInvitation(logger, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, invitation, teamMember, sprintParticipant, sprint)
 	message := sqldb.NewMessage(logger, factory)
@@ -152,6 +154,8 @@ func InitTaskLinkRPCAPI(logger telemetry.Logger, cloudAPIClientRegistry *client.
 
 type AppMame string
 
+type JWTSigningKey string
+
 type ServiceName string
 
 type CloudWebAPIExternalBaseURL string
@@ -165,6 +169,10 @@ var repositorySet = wire.NewSet(repository.NewGroup, repository.NewActivator, re
 var serviceSet = wire.NewSet(wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)), newHTTPClient,
 	repositorySet, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp, service.NewGroup, service.NewRollout,
 )
+
+func newJWTAuthority(logger telemetry.Logger, signingKey JWTSigningKey) security.JWTAuthority {
+	return security.NewJWTAuthority(logger, string(signingKey))
+}
 
 func newHTTPClient(
 	mapServerURL MapServerURL,

@@ -289,23 +289,6 @@ type TimeRangeActivator implements Activator {
 	updatedAt: Time
 }
 
-interface VersionSelector {
-	id: ID!
-	type: VersionSelectorType!
-}
-
-type StaticVersionSelector implements VersionSelector {
-	id: ID!
-	type: VersionSelectorType!
-	versionNumber: Int!
-}
-
-type ExperimentVersionSelector implements VersionSelector {
-	id: ID!
-	type: VersionSelectorType!
-	versionNumbers: [Int!]!
-}
-
 type MaxViewersActivator implements Activator {
 	id: ID!
 	type: ActivatorType!
@@ -318,6 +301,29 @@ type PercentageActivator implements Activator {
 	id: ID!
 	type: ActivatorType!
 	percentage: Int!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+interface VersionSelector {
+	id: ID!
+	type: VersionSelectorType!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type StaticVersionSelector implements VersionSelector {
+	id: ID!
+	type: VersionSelectorType!
+	versionNumber: Int!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type ExperimentVersionSelector implements VersionSelector {
+	id: ID!
+	type: VersionSelectorType!
+	versionNumbers: [Int!]!
 	createdAt: Time!
 	updatedAt: Time
 }
@@ -345,6 +351,7 @@ type Tag {
 type AppSecret {
 	id: ID!
 	name: String!
+	token: String!
 	addedAt: Time!
 	addedBy: User!
 	lastUsedAt: Time
@@ -586,12 +593,14 @@ input CreatePercentageActivatorInput {
 }
 
 input CreateRolloutInput {
+	name: String!
 	activatorID:  ID!
 	versionSelectorID: ID!
 	isEnabled:     Boolean!
 }
 
 input UpdateRolloutInput {
+	name: String!
 	activatorID:  ID!
 	versionSelectorID:  ID!
 	isEnabled:     Boolean!

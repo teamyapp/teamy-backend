@@ -27,6 +27,7 @@ func (*Rollout) FindRolloutByIDWithTx(
 		`
 		SELECT
 			id,
+			name,
 			activator_id,
 			version_selector_id,
 			viewers,
@@ -39,6 +40,7 @@ func (*Rollout) FindRolloutByIDWithTx(
 		rolloutID,
 	).Scan(
 		&rollout.ID,
+		&rollout.Name,
 		&rollout.ActivatorID,
 		&rollout.SelectorID,
 		&rollout.Viewers,
@@ -82,6 +84,7 @@ func (*Rollout) FindRolloutsByIDsWithTx(
 		`
 		SELECT
 			id,
+			name,
 			activator_id,
 			version_selector_id,
 			viewers,
@@ -105,6 +108,7 @@ func (*Rollout) FindRolloutsByIDsWithTx(
 		var rollout entity.Rollout
 		err := rows.Scan(
 			&rollout.ID,
+			&rollout.Name,
 			&rollout.ActivatorID,
 			&rollout.SelectorID,
 			&rollout.Viewers,
@@ -145,14 +149,16 @@ func (*Rollout) CreateRollout(
 		`
 		INSERT INTO rollout (
 			id,
+			name,
 			activator_id,
 			version_selector_id,
 			viewers,
 			is_enabled
 		)
-		VALUES ($1, $2, $3, $4, $5);
+		VALUES ($1, $2, $3, $4, $5, $6);
 		`,
 		rollout.ID,
+		rollout.Name,
 		rollout.ActivatorID,
 		rollout.SelectorID,
 		rollout.Viewers,
@@ -177,13 +183,15 @@ func (*Rollout) UpdateRollout(
 		UPDATE rollout
 		SET
 			activator_id = $1,
-			version_selector_id = $2,
-			viewers = $3,
-			is_enabled = $4,
+			name = $2,
+			version_selector_id = $3,
+			viewers = $4,
+			is_enabled = $5,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $5;
+		WHERE id = $6;
 		`,
 		rollout.ActivatorID,
+		rollout.Name,
 		rollout.SelectorID,
 		rollout.Viewers,
 		rollout.IsEnabled,

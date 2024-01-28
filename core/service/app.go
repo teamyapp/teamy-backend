@@ -20,6 +20,8 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	tmio "github.com/teamyapp/cloud/libs/io"
+	"github.com/teamyapp/cloud/libs/randgen"
+	"github.com/teamyapp/cloud/libs/security"
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
@@ -34,6 +36,8 @@ import (
 )
 
 var appPackageRoot = path.Join("app", "packages")
+var secretAlphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?@#_-")
+var secretLength = 32
 
 type UploadFunc func(io.Reader) *errs.Error
 
@@ -61,6 +65,7 @@ type App struct {
 	teamDao                    dao.Team
 	tagDao                     dao.Tag
 	appTagRelationDao          dao.AppTagRelation
+	jwtAuthority               security.JWTAuthority
 }
 
 type AppFilter struct {
@@ -89,6 +94,11 @@ type UpdateAppInput struct {
 	Tags []string
 }
 
+type GenerateTokenInput struct {
+	SecretID uint64
+	Secret   string
+}
+
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
 	return a.appDao.FindAppByID(ct, appID)
 }
@@ -109,8 +119,20 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 		return entity.AppSecret{}, errs.FromGRPCErr(rpcErr)
 	}
 
+	secretID := genAppSecretIDRes.UniqueNumber
+	secret := randgen.String(secretAlphabet, secretLength)
+	generateTokenInput := GenerateTokenInput{
+		SecretID: secretID,
+		Secret:   secret,
+	}
+	token, err := a.GetAppSecretToken(ct, generateTokenInput)
+	if err != nil {
+		return entity.AppSecret{}, err
+	}
+
 	appSecret := entity.AppSecret{
-		ID:            genAppSecretIDRes.UniqueNumber,
+		ID:            secretID,
+		Token:         token,
 		Name:          input.Name,
 		AppID:         appID,
 		AddedAt:       time.Now().UTC(),
@@ -122,7 +144,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 		a.stateSyncer,
 		ct,
 	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return a.appSecretDao.CreateAppSecret(ct, tx, appSecret)
 	})
 	return appSecret, err
@@ -731,6 +753,10 @@ func (a App) FindAppVersionChangesByAppVersionID(ct context.Context, appID uint6
 	return a.appVersionChangeDao.FindAppVersionChangesByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
+func (a App) GetAppSecretToken(ct context.Context, generateTokenInput GenerateTokenInput) (string, *errs.Error) {
+	return a.jwtAuthority.GenerateToken(ct, generateTokenInput)
+}
+
 func (a App) uploadAppPackageFiles(
 	ct context.Context,
 	userID uint64,
@@ -931,6 +957,7 @@ func NewApp(
 	teamDao dao.Team,
 	tagDao dao.Tag,
 	appTagRelationDao dao.AppTagRelation,
+	jwtAuthority security.JWTAuthority,
 ) App {
 	return App{
 		logger:                     logger,
@@ -950,5 +977,6 @@ func NewApp(
 		teamDao:                    teamDao,
 		tagDao:                     tagDao,
 		appTagRelationDao:          appTagRelationDao,
+		jwtAuthority:               jwtAuthority,
 	}
 }
