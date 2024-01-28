@@ -107,7 +107,7 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 			id,
 			app_id,
 			name,
-			token,
+			secret,
 			added_at,
 			added_by_user_id,
 			last_used_at
@@ -124,7 +124,7 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 		appSecret.ID,
 		appSecret.AppID,
 		appSecret.Name,
-		appSecret.Token,
+		appSecret.Secret,
 		appSecret.AddedAt,
 		appSecret.AddedByUserID,
 		appSecret.LastUsedAt,
@@ -142,14 +142,14 @@ func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transactio
 		`
 		UPDATE app_secret SET
 			name = $1,
-			token = $2,
+			secret = $2,
 			added_at = $3,
 			added_by_user_id = $4,
 			last_used_at = $5,
 			app_id = $6
 		WHERE id = $7`,
 		appSecret.Name,
-		appSecret.Token,
+		appSecret.Secret,
 		appSecret.AddedAt,
 		appSecret.AddedByUserID,
 		appSecret.LastUsedAt,
