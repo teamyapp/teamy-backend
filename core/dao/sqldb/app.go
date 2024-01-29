@@ -3,6 +3,7 @@ package sqldb
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -33,15 +34,21 @@ func (a *App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.E
 
 func (a *App) FindAppsByAppIDsWithTx(ct context.Context, tx *transaction.Transaction, appIDs []uint64) ([]entity.App, *errs.Error) {
 	apps := []entity.App{}
-	rows, err := tx.SQLTx().QueryContext(ct, `
-		SELECT
+	appIdsStr := toIDsString(appIDs)
+	query := fmt.Sprintf(
+		`SELECT
 			id,
 			total_installations,
 			created_at,
 			updated_at,
 			managed_by_team_id
 		FROM app
-		WHERE id = ANY($1);`,
+		WHERE id IN (%s);`,
+		appIdsStr,
+	)
+
+	rows, err := tx.SQLTx().QueryContext(ct,
+		query,
 		appIDs,
 	)
 	if err != nil {

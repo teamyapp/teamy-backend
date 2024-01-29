@@ -123,11 +123,12 @@ func (m Mutation) CreateStaticUserGroup(
 		userIDs = append(userIDs, id)
 	}
 
-	createStaticUserGroupInput := service.CreateStaticUserGroupInput{
-		Name:    args.Input.Name,
-		UserIDs: userIDs,
+	createStaticUserGroupInput := service.CreateStaticGroupInput{
+		Name:            args.Input.Name,
+		MemberIDs:       userIDs,
+		GroupMemberType: entity.GroupMemberTypeUser,
 	}
-	group, err := m.deps.groupService.CreateAppStaticUserGroup(ctx, appID, createStaticUserGroupInput)
+	group, err := m.deps.groupService.CreateAppStaticGroup(ctx, appID, createStaticUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticUserGroup{}
@@ -171,11 +172,12 @@ func (m Mutation) UpdateStaticUserGroup(
 		userIDs = append(userIDs, id)
 	}
 
-	updateStatcUserGroupInput := service.UpdateStaticUserGroupInput{
-		Name:    args.Input.Name,
-		UserIDs: userIDs,
+	updateStatcUserGroupInput := service.UpdateStaticGroupInput{
+		Name:            args.Input.Name,
+		MemberIDs:       userIDs,
+		GroupMemberType: entity.GroupMemberTypeUser,
 	}
-	group, err := m.deps.groupService.UpdateStaticUserGroup(ctx, groupID, updateStatcUserGroupInput)
+	group, err := m.deps.groupService.UpdateStaticGroup(ctx, groupID, updateStatcUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticUserGroup{}, errs.ToResolverErr(err)
@@ -205,11 +207,12 @@ func (m Mutation) CreateFilterUserGroup(
 	}
 
 	createFilterUserGroupInput := service.CreateFilterGroupInput{
-		Name:   args.Input.Name,
-		Filter: args.Input.Filter,
+		Name:            args.Input.Name,
+		Filter:          args.Input.Filter,
+		GroupMemberType: entity.GroupMemberTypeUser,
 	}
 
-	filterGroup, err := m.deps.groupService.CreateFilterUserGroup(ctx, appID, createFilterUserGroupInput)
+	filterGroup, err := m.deps.groupService.CreateFilterGroup(ctx, appID, createFilterUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return FilterGroup{}, errs.ToResolverErr(err)

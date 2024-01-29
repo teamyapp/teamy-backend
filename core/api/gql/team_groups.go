@@ -124,11 +124,12 @@ func (m Mutation) CreateStaticTeamGroup(
 		teamIDs = append(teamIDs, teamID)
 	}
 
-	createStaticTeamGroupInput := service.CreateStaticTeamGroupInput{
-		Name:    args.Input.Name,
-		TeamIDs: teamIDs,
+	createStaticTeamGroupInput := service.CreateStaticGroupInput{
+		Name:            args.Input.Name,
+		MemberIDs:       teamIDs,
+		GroupMemberType: entity.GroupMemberTypeTeam,
 	}
-	group, err := m.deps.groupService.CreateAppStaticTeamGroup(ctx, appID, createStaticTeamGroupInput)
+	group, err := m.deps.groupService.CreateAppStaticGroup(ctx, appID, createStaticTeamGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticTeamGroup{}, errs.ToResolverErr(err)
@@ -172,11 +173,12 @@ func (m Mutation) UpdateStaticTeamGroup(
 		teamIDs = append(teamIDs, teamID)
 	}
 
-	updateStaticTeamGroupInput := service.UpdateStaticTeamGroupInput{
-		Name:    args.Input.Name,
-		TeamIDs: teamIDs,
+	updateStaticTeamGroupInput := service.UpdateStaticGroupInput{
+		Name:            args.Input.Name,
+		MemberIDs:       teamIDs,
+		GroupMemberType: entity.GroupMemberTypeTeam,
 	}
-	group, err := m.deps.groupService.UpdateStaticTeamGroup(ctx, groupID, updateStaticTeamGroupInput)
+	group, err := m.deps.groupService.UpdateStaticGroup(ctx, groupID, updateStaticTeamGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticTeamGroup{}, errs.ToResolverErr(err)
@@ -206,11 +208,12 @@ func (m Mutation) CreateFilterTeamGroup(
 	}
 
 	createFilterGroupInput := service.CreateFilterGroupInput{
-		Name:   args.Input.Name,
-		Filter: args.Input.Filter,
+		Name:            args.Input.Name,
+		Filter:          args.Input.Filter,
+		GroupMemberType: entity.GroupMemberTypeTeam,
 	}
 
-	group, err := m.deps.groupService.CreateFilterTeamGroup(ctx, appID, createFilterGroupInput)
+	group, err := m.deps.groupService.CreateFilterGroup(ctx, appID, createFilterGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return FilterGroup{}, errs.ToResolverErr(err)

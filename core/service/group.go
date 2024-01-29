@@ -18,32 +18,26 @@ import (
 )
 
 type CreateFilterGroupInput struct {
-	Name   string
-	Filter string
+	Name            string
+	Filter          string
+	GroupMemberType entity.GroupMemberType
 }
 type UpdateFilterGroupInput struct {
-	Name   string
-	Filter string
+	Name            string
+	Filter          string
+	GroupMemberType entity.GroupMemberType
 }
 
-type CreateStaticTeamGroupInput struct {
-	Name    string
-	TeamIDs []uint64
+type CreateStaticGroupInput struct {
+	Name            string
+	MemberIDs       []uint64
+	GroupMemberType entity.GroupMemberType
 }
 
-type UpdateStaticTeamGroupInput struct {
-	Name    string
-	TeamIDs []uint64
-}
-
-type CreateStaticUserGroupInput struct {
-	Name    string
-	UserIDs []uint64
-}
-
-type UpdateStaticUserGroupInput struct {
-	Name    string
-	UserIDs []uint64
+type UpdateStaticGroupInput struct {
+	Name            string
+	MemberIDs       []uint64
+	GroupMemberType entity.GroupMemberType
 }
 
 type Group struct {
@@ -60,10 +54,10 @@ type Group struct {
 	appDao                  dao.App
 }
 
-func (g *Group) CreateAppStaticUserGroup(
+func (g *Group) CreateAppStaticGroup(
 	ct context.Context,
 	appID uint64,
-	input CreateStaticUserGroupInput,
+	input CreateStaticGroupInput,
 ) (entity.StaticGroup, *errs.Error) {
 	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
 	genGroupIDRes, rpcErr := g.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
@@ -103,14 +97,26 @@ func (g *Group) CreateAppStaticUserGroup(
 			return err
 		}
 
-		for _, userID := range input.UserIDs {
-			_, err := g.userDao.FindUserByIDWithTx(ct, tx, userID)
-			if err != nil {
-				return err
+		for _, memberID := range input.MemberIDs {
+			switch input.GroupMemberType {
+			case entity.GroupMemberTypeUser:
+				_, err := g.userDao.FindUserByIDWithTx(ct, tx, memberID)
+				if err != nil {
+					return err
+				}
+
+			case entity.GroupMemberTypeTeam:
+				_, err := g.teamDao.FindTeamByIDWithTx(ct, tx, memberID)
+				if err != nil {
+					return err
+				}
+
+			default:
+				return errs.NewError(errs.InvalidArgument, "invalid group member type")
 			}
 
 			err = g.groupMemberRelation.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
-				MemberID: userID,
+				MemberID: memberID,
 				GroupID:  group.ID,
 			})
 			if err != nil {
@@ -123,10 +129,10 @@ func (g *Group) CreateAppStaticUserGroup(
 	return group, err
 }
 
-func (g *Group) UpdateStaticUserGroup(
+func (g *Group) UpdateStaticGroup(
 	ct context.Context,
 	groupID uint64,
-	input UpdateStaticUserGroupInput,
+	input UpdateStaticGroupInput,
 ) (entity.StaticGroup, *errs.Error) {
 	var group entity.GroupUnion
 	txCtx := transaction.NewTransactionsContext(
@@ -142,8 +148,17 @@ func (g *Group) UpdateStaticUserGroup(
 			return err
 		}
 
-		if group.MemberType != entity.GroupMemberTypeUser {
-			return errs.NewError(errs.InvalidArgument, "group is not user group")
+		switch input.GroupMemberType {
+		case entity.GroupMemberTypeUser:
+			if group.MemberType != entity.GroupMemberTypeUser {
+				return errs.NewError(errs.InvalidArgument, "group is not user group")
+			}
+		case entity.GroupMemberTypeTeam:
+			if group.MemberType != entity.GroupMemberTypeTeam {
+				return errs.NewError(errs.InvalidArgument, "group is not team group")
+			}
+		default:
+			return errs.NewError(errs.InvalidArgument, "invalid group member type")
 		}
 
 		if group.Type != entity.GroupTypeStatic {
@@ -158,14 +173,24 @@ func (g *Group) UpdateStaticUserGroup(
 			return err
 		}
 
-		userIDsSet := map[uint64]bool{}
-		for _, userID := range input.UserIDs {
-			_, err := g.userDao.FindUserByIDWithTx(ct, tx, userID)
-			if err != nil {
-				return err
+		memberIDsSet := map[uint64]bool{}
+		for _, memberID := range input.MemberIDs {
+			switch input.GroupMemberType {
+			case entity.GroupMemberTypeUser:
+				_, err := g.userDao.FindUserByIDWithTx(ct, tx, memberID)
+				if err != nil {
+					return err
+				}
+			case entity.GroupMemberTypeTeam:
+				_, err := g.teamDao.FindTeamByIDWithTx(ct, tx, memberID)
+				if err != nil {
+					return err
+				}
+			default:
+				return errs.NewError(errs.InvalidArgument, "invalid group member type")
 			}
 
-			userIDsSet[userID] = true
+			memberIDsSet[memberID] = true
 		}
 
 		currentUserIDs, err := g.groupMemberRelation.FindMemberIDsByGroupIDWithTx(ct, tx, group.StaticGroup.ID)
@@ -180,22 +205,22 @@ func (g *Group) UpdateStaticUserGroup(
 
 		detected := delta.DetectMapDelta(
 			currentUserIDsSet,
-			userIDsSet,
+			memberIDsSet,
 			delta.DetectValueDelta[bool],
 			delta.ToValueDelta[bool],
 		)
-		for userID, detectedValue := range detected.Value {
+		for memberID, detectedValue := range detected.Value {
 			switch detectedValue.KeyStatus {
 			case delta.AddedStatus:
 				err := g.groupMemberRelation.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
-					MemberID: userID,
+					MemberID: memberID,
 					GroupID:  group.StaticGroup.ID,
 				})
 				if err != nil {
 					return err
 				}
 			case delta.RemovedStatus:
-				err := g.groupMemberRelation.DeleteGroupMemberRelation(ct, tx, group.StaticGroup.ID, userID)
+				err := g.groupMemberRelation.DeleteGroupMemberRelation(ct, tx, group.StaticGroup.ID, memberID)
 				if err != nil {
 					return err
 				}
@@ -205,22 +230,6 @@ func (g *Group) UpdateStaticUserGroup(
 		return nil
 	})
 	return group.StaticGroup, err
-}
-
-func (g *Group) CreateFilterUserGroup(
-	ct context.Context,
-	appID uint64,
-	input CreateFilterGroupInput,
-) (entity.FilterGroup, *errs.Error) {
-	return g.createFilterGroup(ct, appID, entity.GroupMemberTypeUser, input)
-}
-
-func (g *Group) CreateFilterTeamGroup(
-	ct context.Context,
-	appID uint64,
-	input CreateFilterGroupInput,
-) (entity.FilterGroup, *errs.Error) {
-	return g.createFilterGroup(ct, appID, entity.GroupMemberTypeTeam, input)
 }
 
 func (g *Group) UpdateFilterGroup(ct context.Context, groupID uint64, input UpdateFilterGroupInput) (entity.FilterGroup, *errs.Error) {
@@ -254,151 +263,6 @@ func (g *Group) UpdateFilterGroup(ct context.Context, groupID uint64, input Upda
 	}
 
 	return group.FilterGroup, nil
-}
-
-func (g *Group) CreateAppStaticTeamGroup(
-	ct context.Context,
-	appID uint64,
-	input CreateStaticTeamGroupInput,
-) (entity.StaticGroup, *errs.Error) {
-	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
-	genGroupIDRes, rpcErr := g.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
-	if rpcErr != nil {
-		return entity.StaticGroup{}, errs.FromGRPCErr(rpcErr)
-	}
-
-	now := time.Now().UTC()
-	group := entity.StaticGroup{
-		Group: entity.Group{
-			ID:         genGroupIDRes.UniqueNumber,
-			Name:       input.Name,
-			Type:       entity.GroupTypeStatic,
-			MemberType: entity.GroupMemberTypeTeam,
-			CreatedAt:  now,
-		},
-	}
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := g.groupRepository.CreateStaticGroup(ct, tx, group)
-		if err != nil {
-			return err
-		}
-
-		appGroupRelation := entity.AppGroupRelation{
-			AppID:   appID,
-			GroupID: group.ID,
-		}
-		err = g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
-		if err != nil {
-			return err
-		}
-
-		for _, teamID := range input.TeamIDs {
-			_, err := g.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
-			if err != nil {
-				return err
-			}
-
-			err = g.groupMemberRelation.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
-				MemberID: teamID,
-				GroupID:  group.ID,
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return group, err
-}
-
-func (g *Group) UpdateStaticTeamGroup(
-	ct context.Context,
-	groupID uint64,
-	input UpdateStaticTeamGroupInput,
-) (entity.StaticGroup, *errs.Error) {
-	var group entity.GroupUnion
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		group, err = g.groupRepository.FindGroupByIDWithTx(ct, tx, groupID)
-		if err != nil {
-			return err
-		}
-
-		if group.MemberType != entity.GroupMemberTypeTeam {
-			return errs.NewError(errs.InvalidArgument, "group is not team group")
-		}
-
-		if group.Type != entity.GroupTypeStatic {
-			return errs.NewError(errs.InvalidArgument, "group is not static group")
-		}
-
-		group.StaticGroup.Name = input.Name
-		now := time.Now().UTC()
-		group.StaticGroup.UpdatedAt = &now
-		err = g.groupRepository.UpdateStaticGroup(ct, tx, group.StaticGroup)
-		if err != nil {
-			return err
-		}
-
-		teamIDsSet := map[uint64]bool{}
-		for _, teamID := range input.TeamIDs {
-			_, err := g.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
-			if err != nil {
-				return err
-			}
-
-			teamIDsSet[teamID] = true
-		}
-
-		currentTeamIDs, err := g.groupMemberRelation.FindMemberIDsByGroupIDWithTx(ct, tx, group.StaticGroup.ID)
-		if err != nil {
-			return err
-		}
-
-		currentTeamIDsSet := map[uint64]bool{}
-		for _, teamID := range currentTeamIDs {
-			currentTeamIDsSet[teamID] = true
-		}
-
-		detected := delta.DetectMapDelta(
-			currentTeamIDsSet,
-			teamIDsSet,
-			delta.DetectValueDelta[bool],
-			delta.ToValueDelta[bool],
-		)
-		for teamID, detectedValue := range detected.Value {
-			switch detectedValue.KeyStatus {
-			case delta.AddedStatus:
-				err := g.groupMemberRelation.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
-					MemberID: teamID,
-					GroupID:  group.StaticGroup.ID,
-				})
-				if err != nil {
-					return err
-				}
-			case delta.RemovedStatus:
-				err := g.groupMemberRelation.DeleteGroupMemberRelation(ct, tx, group.StaticGroup.ID, teamID)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
-	return group.StaticGroup, err
 }
 
 func (g *Group) FindUsersByGroupID(ct context.Context, groupID uint64) ([]entity.User, *errs.Error) {
@@ -521,10 +385,9 @@ func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64)
 	return group, err
 }
 
-func (g *Group) createFilterGroup(
+func (g *Group) CreateFilterGroup(
 	ct context.Context,
 	appID uint64,
-	groupMemberType entity.GroupMemberType,
 	input CreateFilterGroupInput,
 ) (entity.FilterGroup, *errs.Error) {
 	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
@@ -539,7 +402,7 @@ func (g *Group) createFilterGroup(
 			ID:         genGroupIDRes.UniqueNumber,
 			Name:       input.Name,
 			Type:       entity.GroupTypeFilter,
-			MemberType: groupMemberType,
+			MemberType: input.GroupMemberType,
 			CreatedAt:  now,
 		},
 		Filter: input.Filter,
