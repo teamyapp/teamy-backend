@@ -33,7 +33,3 @@ CREATE TABLE user_group_relation (
 );
 
 DROP TABLE group_member_relation;
-
-
-
-

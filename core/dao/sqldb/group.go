@@ -157,7 +157,7 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 		UPDATE "group"
 		SET
 		    type = $1,
-			member_type = $2,
+		member_type = $2,
 		    name = $3,
 			create_at = $4,
 		    updated_at = $5

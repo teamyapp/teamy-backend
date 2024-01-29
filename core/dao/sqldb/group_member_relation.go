@@ -98,7 +98,6 @@ func (*GroupMemberRelation) FilterGroupIDsByMemberIDWithTx(ct context.Context, t
 	defer row.Close()
 
 	groupIDs = []uint64{}
-
 	for row.Next() {
 		var groupID uint64
 		err := row.Scan(&groupID)

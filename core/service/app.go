@@ -124,11 +124,7 @@ func (a App) FindAppsByGroupID(ct context.Context, groupID uint64) ([]entity.App
 		}
 
 		apps, err = a.appDao.FindAppsByAppIDsWithTx(ct, tx, appIDs)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	})
 
 	return apps, err
