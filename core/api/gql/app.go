@@ -59,33 +59,48 @@ func (a App) Versions(ctx context.Context) ([]AppVersion, error) {
 	}), nil
 }
 
-func (a App) Groups(ctx context.Context) ([]Group, error) {
-	groupUnions, err := a.deps.groupService.FindGroupsByAppID(ctx, a.app.ID)
+func (a App) UserGroups(ctx context.Context) ([]Group, error) {
+	groups, err := a.deps.groupService.FindUserGroupsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	groups := make([]Group, 0)
-	for _, group := range groupUnions {
+	userGroups := make([]Group, 0)
+	for _, group := range groups {
 		switch group.Type {
 		case entity.GroupTypeStatic:
-			switch group.MemberType {
-			case entity.GroupMemberTypeUser:
-				groups = append(groups, newStaticUserGroup(a.deps, group.StaticGroup))
-			case entity.GroupMemberTypeTeam:
-				groups = append(groups, newStaticTeamGroup(a.deps, group.StaticGroup))
-			default:
-				return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group member type %s", group.MemberType)))
-			}
+			userGroups = append(userGroups, newStaticUserGroup(a.deps, group.StaticGroup))
 		case entity.GroupTypeFilter:
-			groups = append(groups, newFilterGroup(a.deps, group.FilterGroup))
+			userGroups = append(userGroups, newFilterGroup(a.deps, group.FilterGroup))
 		default:
 			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
 		}
 	}
 
-	return groups, nil
+	return userGroups, nil
+}
+
+func (a App) TeamGroups(ctx context.Context) ([]Group, error) {
+	groups, err := a.deps.groupService.FindTeamGroupsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	teamGroups := make([]Group, 0)
+	for _, group := range groups {
+		switch group.Type {
+		case entity.GroupTypeStatic:
+			teamGroups = append(teamGroups, newStaticTeamGroup(a.deps, group.StaticGroup))
+		case entity.GroupTypeFilter:
+			teamGroups = append(teamGroups, newFilterGroup(a.deps, group.FilterGroup))
+		default:
+			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
+		}
+	}
+
+	return teamGroups, nil
 }
 
 func (a App) UserRollouts(ctx context.Context) ([]Rollout, error) {
