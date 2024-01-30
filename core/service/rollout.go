@@ -48,7 +48,6 @@ type Rollout struct {
 	rolloutViewerDao          dao.RolloutViewer
 	groupRolloutRelationDao   dao.GroupRolloutRelation
 	appRolloutRelationDao     dao.AppRolloutRelation
-	groupMemberRelationDao    dao.GroupMemberRelation
 	appVersionDao             dao.AppVersion
 	versionSelectorRepository *repository.VersionSelector
 	activatorRepository       *repository.Activator
@@ -144,53 +143,57 @@ func (r *Rollout) UpdateRollout(ct context.Context, rolloutID uint64, input Upda
 		rollout.SelectorID = input.VersionSelectorID
 		rollout.ActivatorID = input.ActivatorID
 		rollout.IsEnabled = input.IsEnabled
-		now := time.Now().UTC()
-		rollout.UpdatedAt = &now
 		return r.rolloutDao.UpdateRollout(ct, tx, rollout)
 	})
 
 	return rollout, err
 }
 
-func (r *Rollout) FindGroupRolloutRelationsByGroupID(ct context.Context, groupID uint64) ([]entity.GroupRolloutRelation, *errs.Error) {
-	return r.groupRolloutRelationDao.FindGroupRolloutRelationsByGroupID(ct, groupID)
-}
-
-func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uint64, teamID uint64) (*int, *errs.Error) {
+func (r *Rollout) FindRolloutsByGroupID(ct context.Context, groupID uint64) ([]entity.Rollout, *errs.Error) {
 	txCtx := transaction.NewTransactionsContext(
 		r.logger,
 		r.transactionFactory,
 		r.stateSyncer,
 		ct,
 	)
-	var maxActiveVersionNumber int = math.MinInt
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		groupIDs, err := r.appGroupRelationDao.FindGroupIDsByAppIDWithTx(ct, tx, appID)
+
+	var rollouts []entity.Rollout
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		groupRolloutRelations, err := r.groupRolloutRelationDao.FindGroupRolloutRelationsByGroupID(ct, groupID)
 		if err != nil {
 			return err
 		}
 
-		groupIDs, err = r.groupMemberRelationDao.FilterGroupIDsByMemberIDWithTx(ct, tx, groupIDs, teamID)
-		if err != nil {
-			return err
-		}
-
-		for _, teamGroupID := range groupIDs {
-			versionNumber, err := r.getTeamGroupActiveVersion(ct, teamID, teamGroupID)
-			if err != nil {
-				return err
-			}
-
-			if *versionNumber > maxActiveVersionNumber {
-				maxActiveVersionNumber = *versionNumber
-			}
-		}
-
-		return nil
+		rolloutIDs := collect.Map(groupRolloutRelations, func(groupRolloutRelation entity.GroupRolloutRelation, index int) uint64 {
+			return groupRolloutRelation.RolloutID
+		})
+		rollouts, err = r.rolloutDao.FindRolloutsByIDs(ct, rolloutIDs)
+		return err
 	})
 
+	return rollouts, err
+}
+
+func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uint64, teamID uint64) (*int, *errs.Error) {
+	teamGroupsIDs, err := r.appGroupRelationDao.FindGroupIDsByAppIDAndRelationType(ct, appID, entity.AppGroupRelationTypeTeam)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(teamGroupsIDs) == 0 {
+		return nil, nil
+	}
+
+	var maxActiveVersionNumber int = math.MinInt
+	for _, teamGroupID := range teamGroupsIDs {
+		versionNumber, err := r.getTeamGroupActiveVersion(ct, teamID, teamGroupID)
+		if err != nil {
+			return nil, err
+		}
+
+		if *versionNumber > maxActiveVersionNumber {
+			maxActiveVersionNumber = *versionNumber
+		}
 	}
 
 	return &maxActiveVersionNumber, nil
@@ -210,15 +213,6 @@ func (r *Rollout) newRollout(ct context.Context, rawRollout entity.Rollout) (rol
 
 	rolloutStore := store.NewRollout(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutDao, rawRollout.ID)
 	return rollout.NewRollout(ct, rolloutStore, activator, versionSelector)
-}
-
-func (r *Rollout) FindRolloutByID(ct context.Context, rolloutID uint64) (entity.Rollout, *errs.Error) {
-	rollout, err := r.rolloutDao.FindRolloutByID(ct, rolloutID)
-	if err != nil {
-		return entity.Rollout{}, err
-	}
-
-	return rollout, nil
 }
 
 func (r *Rollout) FindActivatorByID(ct context.Context, activatorID uint64) (entity.ActivatorUnion, *errs.Error) {
@@ -473,7 +467,6 @@ func NewRollout(
 	rolloutViewerDao dao.RolloutViewer,
 	groupRolloutRelationDao dao.GroupRolloutRelation,
 	appRolloutRelationDao dao.AppRolloutRelation,
-	groupMemberRelationDao dao.GroupMemberRelation,
 	appVersionDao dao.AppVersion,
 	versionSelectorRepository *repository.VersionSelector,
 	activatorRepository *repository.Activator,
@@ -488,7 +481,6 @@ func NewRollout(
 		rolloutViewerDao:          rolloutViewerDao,
 		groupRolloutRelationDao:   groupRolloutRelationDao,
 		appRolloutRelationDao:     appRolloutRelationDao,
-		groupMemberRelationDao:    groupMemberRelationDao,
 		appVersionDao:             appVersionDao,
 		versionSelectorRepository: versionSelectorRepository,
 		activatorRepository:       activatorRepository,

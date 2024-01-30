@@ -25,10 +25,6 @@ func (s StaticUserGroup) Type(ctx context.Context) entity.GroupType {
 	return s.group.Type
 }
 
-func (s StaticUserGroup) MemberType(ctx context.Context) entity.GroupMemberType {
-	return s.group.MemberType
-}
-
 func (s StaticUserGroup) Name(ctx context.Context) string {
 	return s.group.Name
 }
@@ -53,28 +49,26 @@ func (s StaticUserGroup) UpdatedAt(ctx context.Context) *graphql.Time {
 	return toGraphQLTimePtr(s.group.UpdatedAt)
 }
 
-func (s StaticUserGroup) GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error) {
-	relations, err := s.deps.groupService.FindGroupRolloutRelationsByGroupID(ctx, s.group.ID)
+func (s StaticUserGroup) Rollouts(ctx context.Context) ([]Rollout, error) {
+	rollouts, err := s.deps.rolloutService.FindRolloutsByGroupID(ctx, s.group.ID)
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	return collect.Map(relations, func(relation entity.GroupRolloutRelation, index int) GroupRolloutRelation {
-		return newGroupRolloutRelation(s.deps, relation)
+	return collect.Map(rollouts, func(rollout entity.Rollout, index int) Rollout {
+		return newRollout(s.deps, rollout)
 	}), nil
 }
 
-func (s StaticUserGroup) Apps(ctx context.Context) ([]App, error) {
-	apps, err := s.deps.appService.FindAppsByGroupID(ctx, s.group.ID)
+func (s StaticUserGroup) App(ctx context.Context) (App, error) {
+	app, err := s.deps.appService.FindAppByID(ctx, s.group.ID)
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ctx, err)
-		return nil, errs.ToResolverErr(err)
+		return App{}, errs.ToResolverErr(err)
 	}
 
-	return collect.Map(apps, func(app entity.App, index int) App {
-		return newApp(s.deps, app)
-	}), nil
+	return newApp(s.deps, app), nil
 }
 
 func (s StaticUserGroup) ToStaticUserGroup() (*StaticUserGroup, bool) {
@@ -123,12 +117,11 @@ func (m Mutation) CreateStaticUserGroup(
 		userIDs = append(userIDs, id)
 	}
 
-	createStaticUserGroupInput := service.CreateStaticGroupInput{
-		Name:            args.Input.Name,
-		MemberIDs:       userIDs,
-		GroupMemberType: entity.GroupMemberTypeUser,
+	createStaticUserGroupInput := service.CreateStaticUserGroupInput{
+		Name:    args.Input.Name,
+		UserIDs: userIDs,
 	}
-	group, err := m.deps.groupService.CreateAppStaticGroup(ctx, appID, createStaticUserGroupInput)
+	group, err := m.deps.groupService.CreateStaticUserGroup(ctx, appID, createStaticUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticUserGroup{}
@@ -172,12 +165,11 @@ func (m Mutation) UpdateStaticUserGroup(
 		userIDs = append(userIDs, id)
 	}
 
-	updateStatcUserGroupInput := service.UpdateStaticGroupInput{
-		Name:            args.Input.Name,
-		MemberIDs:       userIDs,
-		GroupMemberType: entity.GroupMemberTypeUser,
+	updateStatcUserGroupInput := service.UpdateStaticUserGroupInput{
+		Name:    args.Input.Name,
+		UserIDs: userIDs,
 	}
-	group, err := m.deps.groupService.UpdateStaticGroup(ctx, groupID, updateStatcUserGroupInput)
+	group, err := m.deps.groupService.UpdateStaticUserGroup(ctx, groupID, updateStatcUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return StaticUserGroup{}, errs.ToResolverErr(err)
@@ -207,12 +199,11 @@ func (m Mutation) CreateFilterUserGroup(
 	}
 
 	createFilterUserGroupInput := service.CreateFilterGroupInput{
-		Name:            args.Input.Name,
-		Filter:          args.Input.Filter,
-		GroupMemberType: entity.GroupMemberTypeUser,
+		Name:   args.Input.Name,
+		Filter: args.Input.Filter,
 	}
 
-	filterGroup, err := m.deps.groupService.CreateFilterGroup(ctx, appID, createFilterUserGroupInput)
+	filterGroup, err := m.deps.groupService.CreateFilterUserGroup(ctx, appID, createFilterUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return FilterGroup{}, errs.ToResolverErr(err)
