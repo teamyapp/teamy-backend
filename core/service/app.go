@@ -65,6 +65,7 @@ type App struct {
 	teamDao                    dao.Team
 	tagDao                     dao.Tag
 	appTagRelationDao          dao.AppTagRelation
+	appGroupRelationDao        dao.AppGroupRelation
 	jwtAuthority               security.JWTAuthority
 }
 
@@ -101,6 +102,32 @@ type GenerateTokenInput struct {
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
 	return a.appDao.FindAppByID(ct, appID)
+}
+
+func (a App) FindAppsByGroupID(ct context.Context, groupID uint64) ([]entity.App, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+
+	var apps []entity.App
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		appIDs, err := a.appGroupRelationDao.FindAppIDsByGroupIDWithTx(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		if len(appIDs) == 0 {
+			return nil
+		}
+
+		apps, err = a.appDao.FindAppsByAppIDsWithTx(ct, tx, appIDs)
+		return err
+	})
+
+	return apps, err
 }
 
 func (a App) FindSecretsByAppID(ct context.Context, appID uint64) ([]entity.AppSecret, *errs.Error) {
@@ -957,6 +984,7 @@ func NewApp(
 	teamDao dao.Team,
 	tagDao dao.Tag,
 	appTagRelationDao dao.AppTagRelation,
+	appGroupRelationDao dao.AppGroupRelation,
 	jwtAuthority security.JWTAuthority,
 ) App {
 	return App{
@@ -977,6 +1005,7 @@ func NewApp(
 		teamDao:                    teamDao,
 		tagDao:                     tagDao,
 		appTagRelationDao:          appTagRelationDao,
+		appGroupRelationDao:        appGroupRelationDao,
 		jwtAuthority:               jwtAuthority,
 	}
 }
