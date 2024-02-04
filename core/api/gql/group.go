@@ -13,11 +13,12 @@ import (
 type Group interface {
 	ID(ctx context.Context) graphql.ID
 	Type(ctx context.Context) entity.GroupType
+	MemberType(ctx context.Context) entity.GroupMemberType
 	Name(ctx context.Context) string
 	CreatedAt(ctx context.Context) graphql.Time
 	UpdatedAt(ctx context.Context) *graphql.Time
-	Rollouts(ctx context.Context) ([]Rollout, error)
-	App(ctx context.Context) (App, error)
+	GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error)
+	Apps(ctx context.Context) ([]App, error)
 	ToStaticUserGroup() (*StaticUserGroup, bool)
 	ToStaticTeamGroup() (*StaticTeamGroup, bool)
 	ToFilterGroup() (*FilterGroup, bool)
@@ -36,6 +37,10 @@ func (f FilterGroup) ID(ctx context.Context) graphql.ID {
 
 func (f FilterGroup) Type(ctx context.Context) entity.GroupType {
 	return f.filterGroup.Type
+}
+
+func (f FilterGroup) MemberType(ctx context.Context) entity.GroupMemberType {
+	return f.filterGroup.MemberType
 }
 
 func (f FilterGroup) Name(ctx context.Context) string {
@@ -58,26 +63,28 @@ func (f FilterGroup) UpdatedAt(ctx context.Context) *graphql.Time {
 	return toGraphQLTimePtr(f.filterGroup.UpdatedAt)
 }
 
-func (f FilterGroup) Rollouts(ctx context.Context) ([]Rollout, error) {
-	rollouts, err := f.deps.rolloutService.FindRolloutsByGroupID(ctx, f.filterGroup.ID)
+func (f FilterGroup) GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error) {
+	relations, err := f.deps.groupService.FindGroupRolloutRelationsByGroupID(ctx, f.filterGroup.ID)
 	if err != nil {
 		f.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	return collect.Map(rollouts, func(rollout entity.Rollout, index int) Rollout {
-		return newRollout(f.deps, rollout)
+	return collect.Map(relations, func(relation entity.GroupRolloutRelation, index int) GroupRolloutRelation {
+		return newGroupRolloutRelation(f.deps, relation)
 	}), nil
 }
 
-func (f FilterGroup) App(ctx context.Context) (App, error) {
-	app, err := f.deps.appService.FindAppByID(ctx, f.filterGroup.ID)
+func (f FilterGroup) Apps(ctx context.Context) ([]App, error) {
+	apps, err := f.deps.appService.FindAppsByGroupID(ctx, f.filterGroup.ID)
 	if err != nil {
 		f.deps.logger.ErrorWithContext(ctx, err)
-		return App{}, errs.ToResolverErr(err)
+		return nil, errs.ToResolverErr(err)
 	}
 
-	return newApp(f.deps, app), nil
+	return collect.Map(apps, func(app entity.App, index int) App {
+		return newApp(f.deps, app)
+	}), nil
 }
 
 func (f FilterGroup) ToStaticUserGroup() (*StaticUserGroup, bool) {
@@ -168,19 +175,13 @@ func (m Mutation) DeleteAppGroup(
 
 	switch group.Type {
 	case entity.GroupTypeStatic:
-		appGroupRelationType, err := m.deps.groupService.FindAppGroupRelationType(ctx, appID, groupID)
-		if err != nil {
-			m.deps.logger.ErrorWithContext(ctx, err)
-			return nil, errs.ToResolverErr(err)
-		}
-
-		switch appGroupRelationType {
-		case entity.AppGroupRelationTypeUser:
+		switch group.MemberType {
+		case entity.GroupMemberTypeUser:
 			return newStaticUserGroup(m.deps, group.StaticGroup), nil
-		case entity.AppGroupRelationTypeTeam:
+		case entity.GroupMemberTypeTeam:
 			return newStaticTeamGroup(m.deps, group.StaticGroup), nil
 		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown app group relation type"))
+			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group member type"))
 		}
 	case entity.GroupTypeFilter:
 		return newFilterGroup(m.deps, group.FilterGroup), nil

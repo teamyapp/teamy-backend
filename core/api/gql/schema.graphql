@@ -334,8 +334,7 @@ type App {
 	totalInstallations: Int!
 	installations: [TeamAppInstallation!]!
 	versions: [AppVersion!]!
-	userGroups: [Group!]!
-	teamGroups: [Group!]!
+	groups: [Group!]!
 	userRollouts: [Rollout!]!
 	teamRollouts: [Rollout!]!
 	managedByTeam: Team!
@@ -371,48 +370,57 @@ type AppVersion {
 	iconUrl: String
 }
 
+interface GroupRolloutRelation {
+	group: Group!
+	rollout: Rollout!
+}
+
 interface Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
 	name: String!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type StaticUserGroup implements Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
 	name: String!
 	users: [User!]!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type StaticTeamGroup implements Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
 	name: String!
 	teams: [Team!]!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type FilterGroup implements Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
 	name: String!
 	filter: String!
 	memberCount: Int!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type TeamAppInstallation {
@@ -652,6 +660,11 @@ enum Currency {
 enum GroupType {
 	STATIC
 	FILTER
+}
+
+enum GroupMemberType {
+	USER
+	TEAM
 }
 
 enum AppRolloutType {
