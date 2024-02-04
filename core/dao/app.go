@@ -9,6 +9,7 @@ import (
 )
 
 type App interface {
+	FindAppsByAppIDsWithTx(ct context.Context, tx *transaction.Transaction, appIDs []uint64) ([]entity.App, *errs.Error)
 	FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error)
 	FindAppsByManagedByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, managedByTeamID uint64) ([]entity.App, *errs.Error)
 	FindAppsByManagedByTeamID(ct context.Context, managedByTeamID uint64) ([]entity.App, *errs.Error)

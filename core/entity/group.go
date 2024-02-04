@@ -11,16 +11,25 @@ const (
 	GroupTypeFilter GroupType = "FILTER"
 )
 
+type GroupMemberType string
+
+const (
+	GroupMemberTypeUser GroupMemberType = "USER"
+	GroupMemberTypeTeam GroupMemberType = "TEAM"
+)
+
 type Group struct {
-	ID        uint64
-	Type      GroupType
-	Name      string
-	CreatedAt time.Time
-	UpdatedAt *time.Time
+	ID         uint64
+	Type       GroupType
+	MemberType GroupMemberType
+	Name       string
+	CreatedAt  time.Time
+	UpdatedAt  *time.Time
 }
 
 type GroupUnion struct {
 	Type        GroupType
+	MemberType  GroupMemberType
 	StaticGroup StaticGroup
 	FilterGroup FilterGroup
 }
