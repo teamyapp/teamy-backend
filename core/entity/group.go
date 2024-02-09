@@ -19,12 +19,13 @@ const (
 )
 
 type Group struct {
-	ID         uint64
-	Type       GroupType
-	MemberType GroupMemberType
-	Name       string
-	CreatedAt  time.Time
-	UpdatedAt  *time.Time
+	ID              uint64
+	Type            GroupType
+	MemberType      GroupMemberType
+	MaxRolloutIndex int
+	Name            string
+	CreatedAt       time.Time
+	UpdatedAt       *time.Time
 }
 
 type GroupUnion struct {

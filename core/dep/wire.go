@@ -54,7 +54,6 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.AppTagRelation), new(*sqldb.AppTagRelation)),
 	wire.Bind(new(dao.AppSecret), new(*sqldb.AppSecret)),
 	wire.Bind(new(dao.TeamAppInstallation), new(*sqldb.TeamAppInstallation)),
-	wire.Bind(new(dao.ActivatorTypeRelation), new(*sqldb.ActivatorTypeRelation)),
 	wire.Bind(new(dao.AppGroupRelation), new(*sqldb.AppGroupRelation)),
 	wire.Bind(new(dao.AppRolloutRelation), new(*sqldb.AppRolloutRelation)),
 	wire.Bind(new(dao.AppVersionChange), new(*sqldb.AppVersionChange)),
@@ -70,6 +69,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.VersionSelectorVersionRelation), new(*sqldb.VersionSelectorVersionRelation)),
 	wire.Bind(new(dao.VersionSelector), new(*sqldb.VersionSelector)),
 	wire.Bind(new(dao.GroupMemberRelation), new(*sqldb.GroupMemberRelation)),
+	wire.Bind(new(dao.Activator), new(*sqldb.Activator)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -90,7 +90,6 @@ var daoSet = wire.NewSet(
 	sqldb.NewApp,
 	sqldb.NewAppSecret,
 	sqldb.NewTeamAppInstallation,
-	sqldb.NewActivatorTypeRelation,
 	sqldb.NewAppGroupRelation,
 	sqldb.NewAppRolloutRelation,
 	sqldb.NewAppVersionChange,
@@ -108,6 +107,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewTag,
 	sqldb.NewAppTagRelation,
 	sqldb.NewGroupMemberRelation,
+	sqldb.NewActivator,
 )
 
 var repositorySet = wire.NewSet(

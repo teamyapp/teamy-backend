@@ -14,6 +14,7 @@ type Group interface {
 	ID(ctx context.Context) graphql.ID
 	Type(ctx context.Context) entity.GroupType
 	MemberType(ctx context.Context) entity.GroupMemberType
+	MaxRolloutIndex(ctx context.Context) int32
 	Name(ctx context.Context) string
 	CreatedAt(ctx context.Context) graphql.Time
 	UpdatedAt(ctx context.Context) *graphql.Time
@@ -41,6 +42,10 @@ func (f FilterGroup) Type(ctx context.Context) entity.GroupType {
 
 func (f FilterGroup) MemberType(ctx context.Context) entity.GroupMemberType {
 	return f.filterGroup.MemberType
+}
+
+func (f FilterGroup) MaxRolloutIndex(ctx context.Context) int32 {
+	return int32(f.filterGroup.MaxRolloutIndex)
 }
 
 func (f FilterGroup) Name(ctx context.Context) string {
@@ -106,17 +111,19 @@ func newFilterGroup(deps *Dependencies, filterGroup entity.FilterGroup) FilterGr
 	}
 }
 
-func (m Mutation) UpdateFilterGroup(
+func (m Mutation) CreateFilterGroup(
 	ctx context.Context,
 	args struct {
-		GroupID graphql.ID
-		Input   struct {
-			Name   string
-			Filter string
+		AppID graphql.ID
+		Input struct {
+			Name            string
+			Filter          string
+			GroupMemberType entity.GroupMemberType
+			RolloutIDs      []graphql.ID
 		}
 	},
 ) (FilterGroup, error) {
-	groupID, internalErr := fromGraphQLID(args.GroupID)
+	appID, internalErr := fromGraphQLID(args.AppID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
@@ -126,18 +133,129 @@ func (m Mutation) UpdateFilterGroup(
 		return FilterGroup{}, errs.ToResolverErr(internalErr)
 	}
 
-	updateFilterGroupInput := service.UpdateFilterGroupInput{
-		Name:   args.Input.Name,
-		Filter: args.Input.Filter,
+	rolloutIDs := make([]uint64, len(args.Input.RolloutIDs))
+	for i, id := range args.Input.RolloutIDs {
+		rolloutID, err := fromGraphQLID(id)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return FilterGroup{}, errs.ToResolverErr(internalErr)
+		}
+		rolloutIDs[i] = rolloutID
 	}
 
-	filterGroup, err := m.deps.groupService.UpdateFilterGroup(ctx, groupID, updateFilterGroupInput)
+	createFilterGroupInput := service.CreateFilterGroupInput{
+		Name:            args.Input.Name,
+		Filter:          args.Input.Filter,
+		GroupMemberType: args.Input.GroupMemberType,
+		RolloutIDs:      rolloutIDs,
+	}
+
+	filterGroup, err := m.deps.groupService.CreateFilterGroup(ctx, appID, createFilterGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return FilterGroup{}, errs.ToResolverErr(err)
 	}
 
 	return newFilterGroup(m.deps, filterGroup), nil
+}
+
+func (m Mutation) UpdateGroup(
+	ctx context.Context,
+	args struct {
+		AppID   graphql.ID
+		GroupID graphql.ID
+		Input   struct {
+			Name            string
+			Filter          *string
+			GroupMemberType entity.GroupMemberType
+			Type            entity.GroupType
+			RolloutIDs      []graphql.ID
+			MemberIDs       []graphql.ID
+		}
+	},
+) (Group, error) {
+	appID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	groupID, internalErr := fromGraphQLID(args.GroupID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	rolloutIDs := make([]uint64, len(args.Input.RolloutIDs))
+	for i, id := range args.Input.RolloutIDs {
+		rolloutID, err := fromGraphQLID(id)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return nil, errs.ToResolverErr(internalErr)
+		}
+		rolloutIDs[i] = rolloutID
+	}
+
+	memberIDs := make([]uint64, len(args.Input.MemberIDs))
+	for i, id := range args.Input.MemberIDs {
+		memberID, err := fromGraphQLID(id)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return nil, errs.ToResolverErr(internalErr)
+		}
+		memberIDs[i] = memberID
+	}
+
+	updateGroupInput := service.UpdateGroupInput{
+		Name:            args.Input.Name,
+		Filter:          *args.Input.Filter,
+		RolloutIDs:      rolloutIDs,
+		MemberIDs:       memberIDs,
+		GroupMemberType: args.Input.GroupMemberType,
+		Type:            args.Input.Type,
+	}
+
+	group, err := m.deps.groupService.UpdateGroup(ctx, appID, groupID, updateGroupInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	switch group.Type {
+	case entity.GroupTypeStatic:
+		switch group.MemberType {
+		case entity.GroupMemberTypeUser:
+			return newStaticUserGroup(m.deps, group.StaticGroup), nil
+		case entity.GroupMemberTypeTeam:
+			return newStaticTeamGroup(m.deps, group.StaticGroup), nil
+		default:
+			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group member type"))
+		}
+	case entity.GroupTypeFilter:
+		return newFilterGroup(m.deps, group.FilterGroup), nil
+	default:
+		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group type"))
+	}
 }
 
 func (m Mutation) DeleteAppGroup(

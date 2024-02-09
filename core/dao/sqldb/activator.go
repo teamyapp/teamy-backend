@@ -18,13 +18,17 @@ func (*Activator) CreateActivator(ct context.Context, tx *transaction.Transactio
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO activator (
 			id,
-			created_at,
-			updated_at
+			type,
+			created_at
 		) 
 		VALUES (
-			$1
+			$1,
+			$2,
+			$3
 		)`,
 		activator.ID,
+		activator.Type,
+		activator.CreatedAt,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
@@ -38,6 +42,7 @@ func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Tr
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
 			id,
+			type,
 			created_at,
 			updated_at
 		FROM activator
@@ -45,6 +50,7 @@ func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Tr
 		activatorID,
 	).Scan(
 		&activator.ID,
+		&activator.Type,
 		&activator.CreatedAt,
 		&activator.UpdatedAt,
 	)
@@ -73,10 +79,25 @@ func (*Activator) UpdateActivator(ct context.Context, tx *transaction.Transactio
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE activator
 		SET
+			type = $1,
 			updated_at = $2
-		WHERE id = $1`,
-		activator.ID,
+		WHERE id = $3`,
+		activator.Type,
 		activator.UpdatedAt,
+		activator.ID,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (*Activator) DeleteActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM activator
+		WHERE id = $1`,
+		activatorID,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())

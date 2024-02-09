@@ -187,14 +187,15 @@ func (*Rollout) UpdateRollout(
 			version_selector_id = $3,
 			viewers = $4,
 			is_enabled = $5,
-			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $6;
+			updated_at = $6
+		WHERE id = $7;
 		`,
 		rollout.ActivatorID,
 		rollout.Name,
 		rollout.SelectorID,
 		rollout.Viewers,
 		rollout.IsEnabled,
+		rollout.UpdatedAt,
 		rollout.ID,
 	)
 

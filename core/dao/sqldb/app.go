@@ -49,7 +49,6 @@ func (a *App) FindAppsByAppIDsWithTx(ct context.Context, tx *transaction.Transac
 
 	rows, err := tx.SQLTx().QueryContext(ct,
 		query,
-		appIDs,
 	)
 	if err != nil {
 		return []entity.App{}, errs.NewError(errs.Unknown, err.Error())

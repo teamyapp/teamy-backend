@@ -135,13 +135,13 @@ func (*GroupMemberRelation) CreateGroupMemberRelation(
 	return nil
 }
 
-func (*GroupMemberRelation) DeleteGroupMemberRelation(ct context.Context, tx *transaction.Transaction, teamID uint64, groupID uint64) *errs.Error {
+func (*GroupMemberRelation) DeleteGroupMemberRelation(ct context.Context, tx *transaction.Transaction, memberID uint64, groupID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
 		DELETE FROM group_member_relation
 		WHERE member_id = $1 AND group_id = $2;`,
-		teamID,
+		memberID,
 		groupID,
 	)
 

@@ -47,6 +47,10 @@ func (g GroupRolloutRelation) Rollout(ctx context.Context) (Rollout, error) {
 	return newRollout(g.deps, rollout), nil
 }
 
+func (g GroupRolloutRelation) OrderIndex() int32 {
+	return int32(g.groupRolloutRelation.OrderIndex)
+}
+
 func newGroupRolloutRelation(deps *Dependencies, groupRolloutRelation entity.GroupRolloutRelation) GroupRolloutRelation {
 	return GroupRolloutRelation{
 		deps:                 deps,

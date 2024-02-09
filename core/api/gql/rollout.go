@@ -19,6 +19,10 @@ func (r Rollout) ID() graphql.ID {
 	return toGraphQLID(r.rollout.ID)
 }
 
+func (r Rollout) Name() string {
+	return r.rollout.Name
+}
+
 func (r Rollout) IsEnabled() bool {
 	return r.rollout.IsEnabled
 }
@@ -56,6 +60,8 @@ func (r Rollout) Activator(ctx context.Context) (Activator, error) {
 	}
 
 	switch activator.Type {
+	case entity.ActivatorTypeStatic:
+		return newStaticActivator(activator.StaticActivator), nil
 	case entity.ActivatorTypeTimeRange:
 		return newTimeRangeActivator(activator.TimeRangeActivator), nil
 	case entity.ActivatorTypeMaxViewers:
@@ -77,6 +83,7 @@ func (m Mutation) CreateAppRollout(
 			VersionSelectorID graphql.ID
 			ActivatorID       graphql.ID
 			IsEnabled         bool
+			GroupIDs          []graphql.ID
 		}
 	},
 ) (Rollout, error) {
@@ -110,11 +117,27 @@ func (m Mutation) CreateAppRollout(
 		return Rollout{}, errs.ToResolverErr(internalErr)
 	}
 
+	groupIDs := make([]uint64, len(args.Input.GroupIDs))
+	for i, groupID := range args.Input.GroupIDs {
+		groupID, internalErr := fromGraphQLID(groupID)
+		if internalErr != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				internalErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return Rollout{}, errs.ToResolverErr(internalErr)
+		}
+
+		groupIDs[i] = groupID
+	}
+
 	createAppRolloutInput := service.CreateRolloutInput{
 		Name:              args.Input.Name,
 		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,
+		GroupIDs:          groupIDs,
 	}
 
 	rollout, err := m.deps.rolloutService.CreateAppRollout(
@@ -140,6 +163,7 @@ func (m Mutation) UpdateRollout(
 			ActivatorID       graphql.ID
 			VersionSelectorID graphql.ID
 			IsEnabled         bool
+			GroupIDs          []graphql.ID
 		}
 	},
 ) (Rollout, error) {
@@ -173,11 +197,27 @@ func (m Mutation) UpdateRollout(
 		return Rollout{}, errs.ToResolverErr(internalErr)
 	}
 
+	groupIDs := make([]uint64, len(args.Input.GroupIDs))
+	for i, groupID := range args.Input.GroupIDs {
+		groupID, internalErr := fromGraphQLID(groupID)
+		if internalErr != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				internalErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return Rollout{}, errs.ToResolverErr(internalErr)
+		}
+
+		groupIDs[i] = groupID
+	}
+
 	updateRolloutInput := service.UpdateRolloutInput{
 		Name:              args.Input.Name,
 		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,
+		GroupIDs:          groupIDs,
 	}
 
 	rollout, err := m.deps.rolloutService.UpdateRollout(ctx, rolloutID, updateRolloutInput)

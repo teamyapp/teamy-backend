@@ -5,11 +5,13 @@ import (
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/dao/entity"
 )
 
 type MaxViewersActivator interface {
-	FindMaxViewersActivatorByIDWithTx(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.MaxViewersActivator, *errs.Error)
-	FindMaxViewersActivatorByID(ct context.Context, ActivatorID uint64) (entity.MaxViewersActivator, *errs.Error)
-	CreateMaxViewersActivator(ct context.Context, tx *transaction.Transaction, activator entity.MaxViewersActivator) *errs.Error
+	FindMaxViewersActivatorByIDWithTx(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.PartialMaxViewersActivator, *errs.Error)
+	FindMaxViewersActivatorByID(ct context.Context, activatorID uint64) (entity.PartialMaxViewersActivator, *errs.Error)
+	CreateMaxViewersActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64, activator entity.PartialMaxViewersActivator) *errs.Error
+	UpdateMaxViewersActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64, activator entity.PartialMaxViewersActivator) *errs.Error
+	DeleteMaxViewersActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64) *errs.Error
 }

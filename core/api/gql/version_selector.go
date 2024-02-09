@@ -7,6 +7,7 @@ import (
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type VersionSelector interface {
@@ -101,13 +102,24 @@ func newExperimentVersionSelector(versionSelector entity.ExperimentVersionSelect
 func (m Mutation) CreateStaticVersionSelector(
 	ct context.Context,
 	args struct {
+		AppID graphql.ID
 		Input struct {
 			VersionNumber int32
 		}
 	},
 ) (StaticVersionSelector, error) {
+	appID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return StaticVersionSelector{}, errs.ToResolverErr(internalErr)
+	}
+
 	versionNumber := int(args.Input.VersionNumber)
-	versionSelector, err := m.deps.rolloutService.CreateStaticVersionSelector(ct, versionNumber)
+	versionSelector, err := m.deps.rolloutService.CreateStaticVersionSelector(ct, appID, versionNumber)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return StaticVersionSelector{}, errs.ToResolverErr(err)
@@ -116,22 +128,133 @@ func (m Mutation) CreateStaticVersionSelector(
 	return newStaticVersionSelector(versionSelector, m.deps), nil
 }
 
+func (m Mutation) UpdateVersionSelector(
+	ctx context.Context,
+	args struct {
+		AppID             graphql.ID
+		VersionSelectorID graphql.ID
+		Input             struct {
+			VersionNumber  *int32
+			VersionNumbers []int32
+			Type           entity.VersionSelectorType
+		}
+	},
+) (VersionSelector, error) {
+	versionSelectorID, internalErr := fromGraphQLID(args.VersionSelectorID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	AppID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	var versionNumber int
+	if args.Input.VersionNumber != nil {
+		versionNumber = int(*args.Input.VersionNumber)
+	}
+
+	updateVersionSelectorInput := service.UpdateVersionSelectorInput{
+		VersionNumber: versionNumber,
+		VersionNumbers: collect.Map(args.Input.VersionNumbers, func(versionNumber int32, index int) int {
+			return int(versionNumber)
+		}),
+		Type: args.Input.Type,
+	}
+
+	versionSelector, err := m.deps.rolloutService.UpdateVersionSelector(ctx, AppID, versionSelectorID, updateVersionSelectorInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	switch versionSelector.Type {
+	case entity.VersionSelectorTypeStatic:
+		return newStaticVersionSelector(versionSelector.StaticVersionSelector, m.deps), nil
+	case entity.VersionSelectorTypeExperiment:
+		return newExperimentVersionSelector(versionSelector.ExperimentVersionSelector, m.deps), nil
+	default:
+		return nil, errs.ToResolverErr(errs.NewError(
+			errs.Unknown,
+			"Unknown version selector type",
+		))
+	}
+
+}
+
 func (m Mutation) CreateExperimentVersionSelector(
 	ct context.Context,
 	args struct {
+		AppID graphql.ID
 		Input struct {
 			VersionNumbers []int32
 		}
 	},
 ) (ExperimentVersionSelector, error) {
+	AppID, internalErr := fromGraphQLID(args.AppID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return ExperimentVersionSelector{}, errs.ToResolverErr(internalErr)
+	}
+
 	versionNumbers := collect.Map(args.Input.VersionNumbers, func(versionNumber int32, index int) int {
 		return int(versionNumber)
 	})
-	versionSelector, err := m.deps.rolloutService.CreateExperimentVersionSelector(ct, versionNumbers)
+	versionSelector, err := m.deps.rolloutService.CreateExperimentVersionSelector(ct, AppID, versionNumbers)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return ExperimentVersionSelector{}, errs.ToResolverErr(err)
 	}
 
 	return newExperimentVersionSelector(versionSelector, m.deps), nil
+}
+
+func (m Mutation) DeleteVersionSelector(
+	ctx context.Context,
+	args struct {
+		VersionSelectorID graphql.ID
+	},
+) (VersionSelector, error) {
+	VersionSelectorID, internalErr := fromGraphQLID(args.VersionSelectorID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	versionSelector, err := m.deps.rolloutService.DeleteVersionSelector(ctx, VersionSelectorID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	switch versionSelector.Type {
+	case entity.VersionSelectorTypeStatic:
+		return newStaticVersionSelector(versionSelector.StaticVersionSelector, m.deps), nil
+	case entity.VersionSelectorTypeExperiment:
+		return newExperimentVersionSelector(versionSelector.ExperimentVersionSelector, m.deps), nil
+	default:
+		return nil, errs.ToResolverErr(errs.NewError(
+			errs.Unknown,
+			"Unknown version selector type",
+		))
+	}
 }

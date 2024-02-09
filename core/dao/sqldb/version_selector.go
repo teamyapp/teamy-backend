@@ -67,7 +67,7 @@ func (*VersionSelector) CreateVersionSelector(
 		INSERT INTO version_selector (
 			id,
 			type,
-			created_at,
+			created_at
 		) VALUES (
 			$1,
 			$2,
@@ -77,6 +77,43 @@ func (*VersionSelector) CreateVersionSelector(
 		versionSelector.ID,
 		versionSelector.Type,
 		versionSelector.CreatedAt,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (*VersionSelector) UpdateVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelector entity.VersionSelector) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		UPDATE version_selector
+		SET 
+			type = $1,
+			updated_at = $2
+		WHERE id = $3
+		`,
+		versionSelector.Type,
+		versionSelector.UpdatedAt,
+		versionSelector.ID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (*VersionSelector) DeleteVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelectorID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM version_selector
+		WHERE id = $1
+		`,
+		versionSelectorID,
 	)
 
 	if err != nil {

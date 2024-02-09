@@ -21,23 +21,23 @@ type CreateFilterGroupInput struct {
 	Name            string
 	Filter          string
 	GroupMemberType entity.GroupMemberType
-}
-type UpdateFilterGroupInput struct {
-	Name            string
-	Filter          string
-	GroupMemberType entity.GroupMemberType
+	RolloutIDs      []uint64
 }
 
 type CreateStaticGroupInput struct {
 	Name            string
 	MemberIDs       []uint64
 	GroupMemberType entity.GroupMemberType
+	RolloutIDs      []uint64
 }
 
-type UpdateStaticGroupInput struct {
+type UpdateGroupInput struct {
 	Name            string
-	MemberIDs       []uint64
+	Filter          string
 	GroupMemberType entity.GroupMemberType
+	RolloutIDs      []uint64
+	MemberIDs       []uint64
+	Type            entity.GroupType
 }
 
 type Group struct {
@@ -52,6 +52,8 @@ type Group struct {
 	userDao                 dao.User
 	teamDao                 dao.Team
 	appDao                  dao.App
+	groupDao                dao.Group
+	appRolloutRelation      dao.AppRolloutRelation
 }
 
 func (g *Group) CreateAppStaticGroup(
@@ -69,11 +71,12 @@ func (g *Group) CreateAppStaticGroup(
 	now := time.Now().UTC()
 	group := entity.StaticGroup{
 		Group: entity.Group{
-			ID:         genGroupIDRes.UniqueNumber,
-			Name:       input.Name,
-			Type:       entity.GroupTypeStatic,
-			MemberType: entity.GroupMemberTypeUser,
-			CreatedAt:  now,
+			ID:              genGroupIDRes.UniqueNumber,
+			Name:            input.Name,
+			Type:            entity.GroupTypeStatic,
+			MemberType:      input.GroupMemberType,
+			MaxRolloutIndex: len(input.RolloutIDs) - 1,
+			CreatedAt:       now,
 		},
 	}
 	txCtx := transaction.NewTransactionsContext(
@@ -124,145 +127,139 @@ func (g *Group) CreateAppStaticGroup(
 			}
 		}
 
+		for index, rolloutID := range input.RolloutIDs {
+			err := g.groupRolloutRelationDao.CreateGroupRolloutRelation(ct, tx, entity.GroupRolloutRelation{
+				GroupID:    group.ID,
+				RolloutID:  rolloutID,
+				OrderIndex: index,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
+
 	return group, err
 }
 
-func (g *Group) UpdateStaticGroup(
-	ct context.Context,
-	groupID uint64,
-	input UpdateStaticGroupInput,
-) (entity.StaticGroup, *errs.Error) {
-	var group entity.GroupUnion
+func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, input UpdateGroupInput) (entity.GroupUnion, *errs.Error) {
+	var groupUnion entity.GroupUnion
 	txCtx := transaction.NewTransactionsContext(
 		g.logger,
 		g.transactionFactory,
 		g.stateSyncer,
 		ct,
 	)
+
+	now := time.Now().UTC()
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		group, err = g.groupRepository.FindGroupByIDWithTx(ct, tx, groupID)
+		group, err := g.groupDao.FindGroupByIDWithTx(ct, tx, groupID)
 		if err != nil {
 			return err
 		}
 
-		switch input.GroupMemberType {
+		// Currently, we do not support update group member type
+		switch group.MemberType {
 		case entity.GroupMemberTypeUser:
-			if group.MemberType != entity.GroupMemberTypeUser {
-				return errs.NewError(errs.InvalidArgument, "group is not user group")
+			if input.GroupMemberType != entity.GroupMemberTypeUser {
+				return errs.NewError(errs.InvalidArgument, "invalid group member type")
 			}
 		case entity.GroupMemberTypeTeam:
-			if group.MemberType != entity.GroupMemberTypeTeam {
-				return errs.NewError(errs.InvalidArgument, "group is not team group")
+			if input.GroupMemberType != entity.GroupMemberTypeTeam {
+				return errs.NewError(errs.InvalidArgument, "invalid group member type")
 			}
 		default:
 			return errs.NewError(errs.InvalidArgument, "invalid group member type")
 		}
 
-		if group.Type != entity.GroupTypeStatic {
-			return errs.NewError(errs.InvalidArgument, "group is not static group")
+		switch input.Type {
+		case entity.GroupTypeStatic:
+			err = g.updateGroupMemberRelations(ct, tx, groupID, input.MemberIDs, input.GroupMemberType)
+		case entity.GroupTypeFilter:
+			break
+		default:
+			err = errs.NewError(errs.InvalidArgument, "invalid group type")
 		}
 
-		group.StaticGroup.Name = input.Name
-		now := time.Now().UTC()
-		group.StaticGroup.UpdatedAt = &now
-		err = g.groupRepository.UpdateStaticGroup(ct, tx, group.StaticGroup)
 		if err != nil {
 			return err
 		}
 
-		memberIDsSet := map[uint64]bool{}
-		for _, memberID := range input.MemberIDs {
-			switch input.GroupMemberType {
-			case entity.GroupMemberTypeUser:
-				_, err := g.userDao.FindUserByIDWithTx(ct, tx, memberID)
-				if err != nil {
-					return err
-				}
-			case entity.GroupMemberTypeTeam:
-				_, err := g.teamDao.FindTeamByIDWithTx(ct, tx, memberID)
-				if err != nil {
-					return err
-				}
-			default:
-				return errs.NewError(errs.InvalidArgument, "invalid group member type")
-			}
-
-			memberIDsSet[memberID] = true
-		}
-
-		currentUserIDs, err := g.groupMemberRelation.FindMemberIDsByGroupIDWithTx(ct, tx, group.StaticGroup.ID)
-		if err != nil {
-			return err
-		}
-
-		currentUserIDsSet := map[uint64]bool{}
-		for _, userID := range currentUserIDs {
-			currentUserIDsSet[userID] = true
-		}
-
-		detected := delta.DetectMapDelta(
-			currentUserIDsSet,
-			memberIDsSet,
-			delta.DetectValueDelta[bool],
-			delta.ToValueDelta[bool],
+		currentMaxRolloutIndex, err := g.updateGroupRolloutRelations(
+			ct,
+			tx,
+			groupID,
+			appID,
+			input.GroupMemberType,
+			input.RolloutIDs,
+			group.MaxRolloutIndex,
 		)
-		for memberID, detectedValue := range detected.Value {
-			switch detectedValue.KeyStatus {
-			case delta.AddedStatus:
-				err := g.groupMemberRelation.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
-					MemberID: memberID,
-					GroupID:  group.StaticGroup.ID,
-				})
-				if err != nil {
-					return err
-				}
-			case delta.RemovedStatus:
-				err := g.groupMemberRelation.DeleteGroupMemberRelation(ct, tx, group.StaticGroup.ID, memberID)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
-	return group.StaticGroup, err
-}
-
-func (g *Group) UpdateFilterGroup(ct context.Context, groupID uint64, input UpdateFilterGroupInput) (entity.FilterGroup, *errs.Error) {
-	var group entity.GroupUnion
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		group, err = g.groupRepository.FindGroupByIDWithTx(ct, tx, groupID)
 		if err != nil {
 			return err
 		}
 
-		if group.Type != entity.GroupTypeFilter {
-			return errs.NewError(errs.InvalidArgument, "group is not filter group")
+		updatedGroup := entity.Group{
+			ID:              groupID,
+			Type:            input.Type,
+			MemberType:      input.GroupMemberType,
+			UpdatedAt:       &now,
+			CreatedAt:       group.CreatedAt,
+			Name:            input.Name,
+			MaxRolloutIndex: currentMaxRolloutIndex,
 		}
 
-		group.FilterGroup.Name = input.Name
-		group.FilterGroup.Filter = input.Filter
-		now := time.Now().UTC()
-		group.FilterGroup.UpdatedAt = &now
+		if group.Type != input.Type {
+			err = g.groupRepository.DeletePartialGroup(ct, tx, groupID)
+			if err != nil {
+				return err
+			}
 
-		return g.groupRepository.UpdateFilterGroup(ct, tx, group.FilterGroup)
+			partialGroupInput := repository.CreatePartialGroupInput{
+				ID:     groupID,
+				Filter: input.Filter,
+				Type:   input.Type,
+			}
+			err = g.groupRepository.CreatePartialGroup(ct, tx, partialGroupInput)
+			if err != nil {
+				return err
+			}
+
+			err = g.groupDao.UpdateGroup(ct, tx, updatedGroup)
+			if err != nil {
+				return err
+			}
+
+			groupUnion, err = g.groupRepository.FindGroupByBaseGroupWithTx(ct, tx, updatedGroup)
+			return err
+		}
+
+		groupUnion.Type = input.Type
+		groupUnion.MemberType = input.GroupMemberType
+		switch input.Type {
+		case entity.GroupTypeStatic:
+			groupUnion.StaticGroup = entity.StaticGroup{
+				Group: updatedGroup,
+			}
+
+			err = g.groupRepository.UpdateStaticGroup(ct, tx, groupUnion.StaticGroup)
+		case entity.GroupTypeFilter:
+			groupUnion.FilterGroup = entity.FilterGroup{
+				Group:  updatedGroup,
+				Filter: input.Filter,
+				Count:  0,
+			}
+
+			err = g.groupRepository.UpdateFilterGroup(ct, tx, groupUnion.FilterGroup)
+		default:
+			err = errs.NewError(errs.InvalidArgument, "invalid group type")
+		}
+
+		return err
 	})
-	if err != nil {
-		return entity.FilterGroup{}, err
-	}
 
-	return group.FilterGroup, nil
+	return groupUnion, err
 }
 
 func (g *Group) FindUsersByGroupID(ct context.Context, groupID uint64) ([]entity.User, *errs.Error) {
@@ -346,7 +343,21 @@ func (g *Group) FindGroupRolloutRelationsByGroupID(ct context.Context, groupID u
 }
 
 func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.GroupUnion, *errs.Error) {
-	return g.groupRepository.FindGroupByID(ct, groupID)
+	var group entity.GroupUnion
+	txCtx := transaction.NewTransactionsContext(
+		g.logger,
+		g.transactionFactory,
+		g.stateSyncer,
+		ct,
+	)
+
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		group, err = g.groupRepository.FindGroupByIDWithTx(ct, tx, groupID)
+		return err
+	})
+
+	return group, err
 }
 
 func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64) (entity.GroupUnion, *errs.Error) {
@@ -399,11 +410,12 @@ func (g *Group) CreateFilterGroup(
 	now := time.Now().UTC()
 	filterGroup := entity.FilterGroup{
 		Group: entity.Group{
-			ID:         genGroupIDRes.UniqueNumber,
-			Name:       input.Name,
-			Type:       entity.GroupTypeFilter,
-			MemberType: input.GroupMemberType,
-			CreatedAt:  now,
+			ID:              genGroupIDRes.UniqueNumber,
+			Name:            input.Name,
+			Type:            entity.GroupTypeFilter,
+			MemberType:      input.GroupMemberType,
+			MaxRolloutIndex: len(input.RolloutIDs) - 1,
+			CreatedAt:       now,
 		},
 		Filter: input.Filter,
 		Count:  0,
@@ -414,19 +426,172 @@ func (g *Group) CreateFilterGroup(
 		g.stateSyncer,
 		ct,
 	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
 		if err != nil {
 			return err
+		}
+
+		for index, rolloutID := range input.RolloutIDs {
+			err := g.groupRolloutRelationDao.CreateGroupRolloutRelation(ct, tx, entity.GroupRolloutRelation{
+				GroupID:    filterGroup.ID,
+				RolloutID:  rolloutID,
+				OrderIndex: index,
+			})
+			if err != nil {
+				return err
+			}
 		}
 
 		appGroupRelation := entity.AppGroupRelation{
 			AppID:   appID,
 			GroupID: filterGroup.ID,
 		}
-		return g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
+		err = g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
+		return err
 	})
+
 	return filterGroup, err
+}
+
+func (g *Group) updateGroupMemberRelations(
+	ct context.Context,
+	tx *cloudTransaction.Transaction,
+	groupID uint64,
+	memberIDs []uint64,
+	groupMemberType entity.GroupMemberType,
+) *errs.Error {
+	memberIDsSet := map[uint64]bool{}
+	for _, memberID := range memberIDs {
+		switch groupMemberType {
+		case entity.GroupMemberTypeUser:
+			_, err := g.userDao.FindUserByIDWithTx(ct, tx, memberID)
+			if err != nil {
+				return err
+			}
+		case entity.GroupMemberTypeTeam:
+			_, err := g.teamDao.FindTeamByIDWithTx(ct, tx, memberID)
+			if err != nil {
+				return err
+			}
+		default:
+			return errs.NewError(errs.InvalidArgument, "invalid group member type")
+		}
+
+		memberIDsSet[memberID] = true
+	}
+
+	currentMemberIDs, err := g.groupMemberRelation.FindMemberIDsByGroupIDWithTx(ct, tx, groupID)
+	if err != nil {
+		return err
+	}
+
+	currentMemberIDsSet := map[uint64]bool{}
+	for _, userID := range currentMemberIDs {
+		currentMemberIDsSet[userID] = true
+	}
+
+	detected := delta.DetectMapDelta(
+		currentMemberIDsSet,
+		memberIDsSet,
+		delta.DetectValueDelta[bool],
+		delta.ToValueDelta[bool],
+	)
+	for memberID, detectedValue := range detected.Value {
+		switch detectedValue.KeyStatus {
+		case delta.AddedStatus:
+			err := g.groupMemberRelation.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
+				MemberID: memberID,
+				GroupID:  groupID,
+			})
+			if err != nil {
+				return err
+			}
+		case delta.RemovedStatus:
+			err := g.groupMemberRelation.DeleteGroupMemberRelation(ct, tx, memberID, groupID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (g *Group) updateGroupRolloutRelations(
+	ct context.Context,
+	tx *cloudTransaction.Transaction,
+	groupID uint64,
+	appID uint64,
+	groupMemberType entity.GroupMemberType,
+	rolloutIDs []uint64,
+	currentMaxRolloutIndex int,
+) (int, *errs.Error) {
+	currentRolloutIDs, err := g.groupRolloutRelationDao.FindGroupRolloutRelationsByGroupIDWithTx(ct, tx, groupID)
+	if err != nil {
+		return 0, err
+	}
+
+	currentRolloutIDsSet := map[uint64]bool{}
+	for _, groupRolloutRelation := range currentRolloutIDs {
+		currentRolloutIDsSet[groupRolloutRelation.RolloutID] = true
+	}
+
+	rolloutIDsSet := map[uint64]bool{}
+	for _, rolloutID := range rolloutIDs {
+		appRolloutRelation, err := g.appRolloutRelation.FindAppRolloutByAppIDAndRolloutIDWithTx(ct, tx, appID, rolloutID)
+		if err != nil {
+			return 0, err
+		}
+
+		if appRolloutRelation.Type != entity.AppRolloutRelationType(groupMemberType) {
+			return 0, errs.NewError(errs.InvalidArgument, "invalid rollout type")
+		}
+
+		rolloutIDsSet[rolloutID] = true
+	}
+
+	detected := delta.DetectMapDelta(
+		currentRolloutIDsSet,
+		rolloutIDsSet,
+		delta.DetectValueDelta[bool],
+		delta.ToValueDelta[bool],
+	)
+
+	for rolloutID, detectedValue := range detected.Value {
+		switch detectedValue.KeyStatus {
+		case delta.AddedStatus:
+			err := g.groupRolloutRelationDao.CreateGroupRolloutRelation(ct, tx, entity.GroupRolloutRelation{
+				GroupID:    groupID,
+				RolloutID:  rolloutID,
+				OrderIndex: currentMaxRolloutIndex + 1,
+			})
+			if err != nil {
+				return 0, err
+			}
+
+			currentMaxRolloutIndex++
+		case delta.RemovedStatus:
+			relation, err := g.groupRolloutRelationDao.FindGroupRolloutByGroupIDAndRolloutIDWithTx(ct, tx, groupID, rolloutID)
+			if err != nil {
+				return 0, err
+			}
+
+			err = g.groupRolloutRelationDao.DeleteGroupRolloutRelationsByGroupIDAndRolloutID(ct, tx, groupID, rolloutID)
+			if err != nil {
+				return 0, err
+			}
+
+			err = g.groupRolloutRelationDao.UpdateFromOrderIndexByGroupID(ct, tx, -1, relation.OrderIndex+1, groupID)
+			if err != nil {
+				return 0, err
+			}
+
+			currentMaxRolloutIndex--
+		}
+	}
+
+	return currentMaxRolloutIndex, nil
 }
 
 func NewGroup(
@@ -441,6 +606,8 @@ func NewGroup(
 	userDao dao.User,
 	teamDao dao.Team,
 	appDao dao.App,
+	groupDao dao.Group,
+	appRolloutRelation dao.AppRolloutRelation,
 ) *Group {
 	return &Group{
 		logger:                  logger,
@@ -454,5 +621,7 @@ func NewGroup(
 		userDao:                 userDao,
 		teamDao:                 teamDao,
 		appDao:                  appDao,
+		groupDao:                groupDao,
+		appRolloutRelation:      appRolloutRelation,
 	}
 }
