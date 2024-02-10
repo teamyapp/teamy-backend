@@ -515,7 +515,7 @@ func (r *Rollout) UpdateActivator(ct context.Context, activatorID uint64, input 
 				return err
 			}
 
-			activatorUnion, err = r.activatorRepository.FindActivatorByBaseActivatorWithTx(ct, tx, updatedActivator)
+			activatorUnion, err = r.activatorRepository.GetActivatorUnionFromBaseActivator(ct, tx, updatedActivator)
 			return err
 		}
 

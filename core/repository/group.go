@@ -38,6 +38,8 @@ func (g *Group) CreatePartialGroup(ct context.Context, tx *transaction.Transacti
 	}
 
 	switch input.Type {
+	case entity.GroupTypeStatic:
+		return nil
 	case entity.GroupTypeFilter:
 		filterGroup := entity.FilterGroup{
 			Group:  group,
@@ -45,8 +47,6 @@ func (g *Group) CreatePartialGroup(ct context.Context, tx *transaction.Transacti
 			Count:  0,
 		}
 		return g.filterGroupDao.CreateFilterGroup(ct, tx, filterGroup)
-	case entity.GroupTypeStatic:
-		return nil
 	default:
 		return errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", input.Type))
 	}
@@ -94,11 +94,7 @@ func (g *Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transact
 		return entity.GroupUnion{}, err
 	}
 
-	return g.getGroupUnionFromBaseGroup(ct, tx, group)
-}
-
-func (g *Group) FindGroupByBaseGroupWithTx(ct context.Context, tx *transaction.Transaction, baseGroup entity.Group) (entity.GroupUnion, *errs.Error) {
-	return g.getGroupUnionFromRawGroup(ct, tx, baseGroup)
+	return g.GetGroupUnionFromBaseGroup(ct, tx, group)
 }
 
 func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64) ([]entity.GroupUnion, *errs.Error) {
@@ -109,7 +105,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 
 	groupUnions := make([]entity.GroupUnion, 0)
 	for _, group := range groups {
-		groupUnion, err := g.getGroupUnionFromRawGroup(ct, tx, group)
+		groupUnion, err := g.GetGroupUnionFromBaseGroup(ct, tx, group)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +127,7 @@ func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, gro
 		return entity.GroupUnion{}, err
 	}
 
-	groupUnion, err := g.getGroupUnionFromRawGroup(ct, tx, group)
+	groupUnion, err := g.GetGroupUnionFromBaseGroup(ct, tx, group)
 	if err != nil {
 		return entity.GroupUnion{}, err
 	}
@@ -151,16 +147,16 @@ func (g *Group) DeletePartialGroup(ct context.Context, tx *transaction.Transacti
 
 func (g *Group) deletePartialGroup(ct context.Context, tx *transaction.Transaction, groupID uint64, groupType entity.GroupType) *errs.Error {
 	switch groupType {
-	case entity.GroupTypeFilter:
-		return g.filterGroupDao.DeleteFilterGroup(ct, tx, groupID)
 	case entity.GroupTypeStatic:
 		return nil
+	case entity.GroupTypeFilter:
+		return g.filterGroupDao.DeleteFilterGroup(ct, tx, groupID)
 	default:
 		return errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", groupType))
 	}
 }
 
-func (g *Group) getGroupUnionFromRawGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) (entity.GroupUnion, *errs.Error) {
+func (g *Group) GetGroupUnionFromBaseGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) (entity.GroupUnion, *errs.Error) {
 	switch group.Type {
 	case entity.GroupTypeStatic:
 		return entity.GroupUnion{

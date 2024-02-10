@@ -39,15 +39,7 @@ func (a *Activator) FindActivatorByIDWithTx(
 		return entity.ActivatorUnion{}, err
 	}
 
-	return a.getActivatorUnionFromRawActivator(ct, tx, activator)
-}
-
-func (a *Activator) FindActivatorByBaseActivatorWithTx(
-	ct context.Context,
-	tx *transaction.Transaction,
-	baseActivator entity.Activator,
-) (entity.ActivatorUnion, *errs.Error) {
-	return a.getActivatorUnionFromBaseActivator(ct, tx, baseActivator)
+	return a.GetActivatorUnionFromBaseActivator(ct, tx, activator)
 }
 
 func (a *Activator) CreatePartialActivator(ct context.Context, tx *transaction.Transaction, input CreatePartialActivatorInput) *errs.Error {
@@ -168,7 +160,7 @@ func (a *Activator) DeleteActivator(ct context.Context, tx *transaction.Transact
 		return entity.ActivatorUnion{}, err
 	}
 
-	activatorUnion, err := a.getActivatorUnionFromRawActivator(ct, tx, activator)
+	activatorUnion, err := a.GetActivatorUnionFromBaseActivator(ct, tx, activator)
 	if err != nil {
 		return entity.ActivatorUnion{}, err
 	}
@@ -200,11 +192,11 @@ func (a *Activator) deletePartialActivator(ct context.Context, tx *transaction.T
 	default:
 		err = errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", activatorType))
 	}
-	
+
 	return err
 }
 
-func (a *Activator) getActivatorUnionFromRawActivator(
+func (a *Activator) GetActivatorUnionFromBaseActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activator entity.Activator,

@@ -231,7 +231,7 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 				return err
 			}
 
-			groupUnion, err = g.groupRepository.FindGroupByBaseGroupWithTx(ct, tx, updatedGroup)
+			groupUnion, err = g.groupRepository.GetGroupUnionFromBaseGroup(ct, tx, updatedGroup)
 			return err
 		}
 
