@@ -160,20 +160,15 @@ func (m Mutation) UpdateVersionSelector(
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	var versionNumber int
-	if args.Input.VersionNumber != nil {
-		versionNumber = int(*args.Input.VersionNumber)
-	}
-
 	updateVersionSelectorInput := service.UpdateVersionSelectorInput{
-		VersionNumber: versionNumber,
+		VersionNumber: args.Input.VersionNumber,
 		VersionNumbers: collect.Map(args.Input.VersionNumbers, func(versionNumber int32, index int) int {
 			return int(versionNumber)
 		}),
 		Type: args.Input.Type,
 	}
 
-	versionSelector, err := m.deps.rolloutService.UpdateVersionSelector(ctx, AppID, versionSelectorID, updateVersionSelectorInput)
+	versionSelector, err := m.deps.rolloutService.UpdateVersionSelector(ctx, appID, versionSelectorID, updateVersionSelectorInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
@@ -214,7 +209,7 @@ func (m Mutation) CreateExperimentVersionSelector(
 	versionNumbers := collect.Map(args.Input.VersionNumbers, func(versionNumber int32, index int) int {
 		return int(versionNumber)
 	})
-	versionSelector, err := m.deps.rolloutService.CreateExperimentVersionSelector(ct, AppID, versionNumbers)
+	versionSelector, err := m.deps.rolloutService.CreateExperimentVersionSelector(ct, appID, versionNumbers)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return ExperimentVersionSelector{}, errs.ToResolverErr(err)

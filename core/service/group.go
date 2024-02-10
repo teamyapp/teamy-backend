@@ -33,7 +33,7 @@ type CreateStaticGroupInput struct {
 
 type UpdateGroupInput struct {
 	Name            string
-	Filter          string
+	Filter          *string
 	GroupMemberType entity.GroupMemberType
 	RolloutIDs      []uint64
 	MemberIDs       []uint64
@@ -210,6 +210,11 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 			MaxRolloutIndex: currentMaxRolloutIndex,
 		}
 
+		var filter string = ""
+		if input.Filter != nil {
+			filter = *input.Filter
+		}
+
 		if group.Type != input.Type {
 			err = g.groupRepository.DeletePartialGroup(ct, tx, groupID)
 			if err != nil {
@@ -218,7 +223,7 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 
 			partialGroupInput := repository.CreatePartialGroupInput{
 				ID:     groupID,
-				Filter: input.Filter,
+				Filter: filter,
 				Type:   input.Type,
 			}
 			err = g.groupRepository.CreatePartialGroup(ct, tx, partialGroupInput)
@@ -247,7 +252,7 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 		case entity.GroupTypeFilter:
 			groupUnion.FilterGroup = entity.FilterGroup{
 				Group:  updatedGroup,
-				Filter: input.Filter,
+				Filter: filter,
 				Count:  0,
 			}
 

@@ -303,22 +303,12 @@ func (m Mutation) UpdateActivator(
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	var maxViewers int
-	if args.Input.MaxViewers != nil {
-		maxViewers = int(*args.Input.MaxViewers)
-	}
-
-	var percentage int
-	if args.Input.Percentage != nil {
-		percentage = int(*args.Input.Percentage)
-	}
-
 	updateActivatorInput := service.UpdateActivatorInput{
 		Type:       args.Input.Type,
 		StartAt:    fromGraphQLTimePtr(args.Input.StartAt),
 		EndAt:      fromGraphQLTimePtr(args.Input.EndAt),
-		MaxViewers: maxViewers,
-		Percentage: percentage,
+		MaxViewers: args.Input.MaxViewers,
+		Percentage: args.Input.Percentage,
 	}
 	activator, err := m.deps.rolloutService.UpdateActivator(ctx, activatorID, updateActivatorInput)
 	if err != nil {

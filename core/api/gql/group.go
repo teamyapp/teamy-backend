@@ -144,8 +144,8 @@ func (m Mutation) CreateFilterGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return FilterGroup{}, errs.ToResolverErr(internalErr)
 		}
-		
-		rolloutIDs[i] = rolloutID
+
+		rolloutIDs[index] = rolloutID
 	}
 
 	createFilterGroupInput := service.CreateFilterGroupInput{
@@ -210,8 +210,8 @@ func (m Mutation) UpdateGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return nil, errs.ToResolverErr(internalErr)
 		}
-		
-		rolloutIDs[i] = rolloutID
+
+		rolloutIDs[index] = rolloutID
 	}
 
 	memberIDs := make([]uint64, len(args.Input.MemberIDs))
@@ -225,13 +225,13 @@ func (m Mutation) UpdateGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return nil, errs.ToResolverErr(internalErr)
 		}
-		
-		memberIDs[i] = memberID
+
+		memberIDs[index] = memberID
 	}
 
 	updateGroupInput := service.UpdateGroupInput{
 		Name:            args.Input.Name,
-		Filter:          *args.Input.Filter,
+		Filter:          args.Input.Filter,
 		RolloutIDs:      rolloutIDs,
 		MemberIDs:       memberIDs,
 		GroupMemberType: args.Input.GroupMemberType,

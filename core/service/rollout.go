@@ -44,13 +44,13 @@ type UpdateActivatorInput struct {
 	Type       entity.ActivatorType
 	StartAt    *time.Time
 	EndAt      *time.Time
-	MaxViewers int
-	Percentage int
+	MaxViewers *int32
+	Percentage *int32
 }
 
 type UpdateVersionSelectorInput struct {
 	Type           entity.VersionSelectorType
-	VersionNumber  int
+	VersionNumber  *int32
 	VersionNumbers []int
 }
 
@@ -491,6 +491,17 @@ func (r *Rollout) UpdateActivator(ct context.Context, activatorID uint64, input 
 			CreatedAt: activator.CreatedAt,
 			UpdatedAt: &now,
 		}
+
+		var maxViewers int = 0
+		if input.MaxViewers != nil {
+			maxViewers = int(*input.MaxViewers)
+		}
+
+		var percentage int = 0
+		if input.Percentage != nil {
+			percentage = int(*input.Percentage)
+		}
+
 		if activator.Type != input.Type {
 			err := r.activatorRepository.DeletePartialActivator(ct, tx, activatorID)
 			if err != nil {
@@ -502,8 +513,8 @@ func (r *Rollout) UpdateActivator(ct context.Context, activatorID uint64, input 
 				Type:       input.Type,
 				StartAt:    input.StartAt,
 				EndAt:      input.EndAt,
-				MaxViewers: input.MaxViewers,
-				Percentage: input.Percentage,
+				MaxViewers: maxViewers,
+				Percentage: percentage,
 			}
 			err = r.activatorRepository.CreatePartialActivator(ct, tx, createPartialActivatorInput)
 			if err != nil {
@@ -536,13 +547,13 @@ func (r *Rollout) UpdateActivator(ct context.Context, activatorID uint64, input 
 		case entity.ActivatorTypeMaxViewers:
 			activatorUnion.MaxViewersActivator = entity.MaxViewersActivator{
 				Activator:  updatedActivator,
-				MaxViewers: input.MaxViewers,
+				MaxViewers: maxViewers,
 			}
 			return r.activatorRepository.UpdateMaxViewersActivator(ct, tx, activatorUnion.MaxViewersActivator)
 		case entity.ActivatorTypePercentage:
 			activatorUnion.PercentageActivator = entity.PercentageActivator{
 				Activator:  updatedActivator,
-				Percentage: input.Percentage,
+				Percentage: percentage,
 			}
 
 			return r.activatorRepository.UpdatePercentageActivator(ct, tx, activatorUnion.PercentageActivator)
@@ -625,7 +636,12 @@ func (r *Rollout) UpdateVersionSelector(ct context.Context, appID uint64, select
 		now := time.Now().UTC()
 		switch versionSelectorUnion.Type {
 		case entity.VersionSelectorTypeStatic:
-			_, err := r.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, input.VersionNumber)
+			if input.VersionNumber == nil {
+				return errs.NewError(errs.InvalidArgument, "Version number is required for static version selector")
+			}
+
+			versionNumber := int(*input.VersionNumber)
+			_, err := r.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 			if err != nil {
 				return err
 			}
@@ -636,7 +652,7 @@ func (r *Rollout) UpdateVersionSelector(ct context.Context, appID uint64, select
 					Type:      entity.VersionSelectorTypeStatic,
 					UpdatedAt: &now,
 				},
-				VersionNumber: input.VersionNumber,
+				VersionNumber: versionNumber,
 			}
 			return r.versionSelectorRepository.UpdateStaticVersionSelector(ct, tx, versionSelectorUnion.StaticVersionSelector)
 		case entity.VersionSelectorTypeExperiment:
