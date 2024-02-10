@@ -294,7 +294,6 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 			return nil
 		}
 
-		// TODO: we can have bug if team and user do not share the same id generator
 		_, err = r.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if err != nil {
 			if err.Code == errs.NotFound {
