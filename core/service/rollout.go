@@ -139,7 +139,6 @@ func (r *Rollout) CreateAppRollout(
 			if err != nil {
 				return err
 			}
-
 		}
 
 		return r.appRolloutRelationDao.CreateAppRolloutRelation(ct, tx, entity.AppRolloutRelation{
@@ -420,6 +419,7 @@ func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) 
 		internalErr := errs.FromGRPCErr(rpcErr)
 		return entity.MaxViewersActivator{}, internalErr
 	}
+	
 	maxViewersActivator := entity.MaxViewersActivator{
 		MaxViewers: maxViewers,
 		Activator: entity.Activator{

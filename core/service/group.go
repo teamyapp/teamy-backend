@@ -336,11 +336,7 @@ func (g *Group) FindGroupsByAppID(ct context.Context, appID uint64) ([]entity.Gr
 
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return groups, nil
+	return groups, err
 }
 
 func (g *Group) FindGroupRolloutRelationsByGroupID(ct context.Context, groupID uint64) ([]entity.GroupRolloutRelation, *errs.Error) {
@@ -452,8 +448,7 @@ func (g *Group) CreateFilterGroup(
 			AppID:   appID,
 			GroupID: filterGroup.ID,
 		}
-		err = g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
-		return err
+		return g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
 	})
 
 	return filterGroup, err
