@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -19,6 +18,10 @@ func (r Rollout) ID() graphql.ID {
 	return toGraphQLID(r.rollout.ID)
 }
 
+func (r Rollout) Name() string {
+	return r.rollout.Name
+}
+
 func (r Rollout) IsEnabled() bool {
 	return r.rollout.IsEnabled
 }
@@ -30,14 +33,7 @@ func (r Rollout) VersionSelector(ctx context.Context) (VersionSelector, error) {
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch versionSelector.Type {
-	case entity.VersionSelectorTypeExperiment:
-		return newExperimentVersionSelector(versionSelector.ExperimentVersionSelector, r.deps), nil
-	case entity.VersionSelectorTypeStatic:
-		return newStaticVersionSelector(versionSelector.StaticVersionSelector, r.deps), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("Unknown version selector type: %s", versionSelector.Type)))
-	}
+	return getVersionSelectorFromVersionSelectorUnion(r.deps, versionSelector)
 }
 
 func (r Rollout) CreatedAt() graphql.Time {
@@ -55,16 +51,7 @@ func (r Rollout) Activator(ctx context.Context) (Activator, error) {
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch activator.Type {
-	case entity.ActivatorTypeTimeRange:
-		return newTimeRangeActivator(activator.TimeRangeActivator), nil
-	case entity.ActivatorTypeMaxViewers:
-		return newMaxViewersActivator(activator.MaxViewersActivator), nil
-	case entity.ActivatorTypePercentage:
-		return newPercentageActivator(activator.PercentageActivator), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("Unknown activator type: %s", activator.Type)))
-	}
+	return getActivatorFromActivatorUnion(r.deps, activator)
 }
 
 func (m Mutation) CreateAppRollout(
@@ -77,6 +64,7 @@ func (m Mutation) CreateAppRollout(
 			VersionSelectorID graphql.ID
 			ActivatorID       graphql.ID
 			IsEnabled         bool
+			GroupIDs          []graphql.ID
 		}
 	},
 ) (Rollout, error) {
@@ -110,11 +98,27 @@ func (m Mutation) CreateAppRollout(
 		return Rollout{}, errs.ToResolverErr(internalErr)
 	}
 
+	groupIDs := make([]uint64, len(args.Input.GroupIDs))
+	for index, groupID := range args.Input.GroupIDs {
+		groupID, internalErr := fromGraphQLID(groupID)
+		if internalErr != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				internalErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return Rollout{}, errs.ToResolverErr(internalErr)
+		}
+
+		groupIDs[index] = groupID
+	}
+
 	createAppRolloutInput := service.CreateRolloutInput{
 		Name:              args.Input.Name,
 		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,
+		GroupIDs:          groupIDs,
 	}
 
 	rollout, err := m.deps.rolloutService.CreateAppRollout(
@@ -140,6 +144,7 @@ func (m Mutation) UpdateRollout(
 			ActivatorID       graphql.ID
 			VersionSelectorID graphql.ID
 			IsEnabled         bool
+			GroupIDs          []graphql.ID
 		}
 	},
 ) (Rollout, error) {
@@ -173,11 +178,27 @@ func (m Mutation) UpdateRollout(
 		return Rollout{}, errs.ToResolverErr(internalErr)
 	}
 
+	groupIDs := make([]uint64, len(args.Input.GroupIDs))
+	for index, groupID := range args.Input.GroupIDs {
+		groupID, internalErr := fromGraphQLID(groupID)
+		if internalErr != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				internalErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return Rollout{}, errs.ToResolverErr(internalErr)
+		}
+
+		groupIDs[index] = groupID
+	}
+
 	updateRolloutInput := service.UpdateRolloutInput{
 		Name:              args.Input.Name,
 		VersionSelectorID: versionSelectorID,
 		ActivatorID:       activatorID,
 		IsEnabled:         args.Input.IsEnabled,
+		GroupIDs:          groupIDs,
 	}
 
 	rollout, err := m.deps.rolloutService.UpdateRollout(ctx, rolloutID, updateRolloutInput)

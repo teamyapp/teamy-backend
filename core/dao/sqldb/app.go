@@ -3,6 +3,7 @@ package sqldb
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -29,6 +30,45 @@ func (a *App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.E
 
 	defer tx.Rollback()
 	return a.FindAppByIDWithTx(ct, tx, appID)
+}
+
+func (a *App) FindAppsByAppIDsWithTx(ct context.Context, tx *transaction.Transaction, appIDs []uint64) ([]entity.App, *errs.Error) {
+	apps := []entity.App{}
+	appIdsStr := toIDsString(appIDs)
+	query := fmt.Sprintf(
+		`SELECT
+			id,
+			total_installations,
+			created_at,
+			updated_at,
+			managed_by_team_id
+		FROM app
+		WHERE id IN (%s);`,
+		appIdsStr,
+	)
+
+	rows, err := tx.SQLTx().QueryContext(ct, query)
+	if err != nil {
+		return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	for rows.Next() {
+		app := entity.App{}
+		err := rows.Scan(
+			&app.ID,
+			&app.TotalInstallations,
+			&app.CreatedAt,
+			&app.UpdatedAt,
+			&app.ManagedByTeamID,
+		)
+		if err != nil {
+			return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps, nil
 }
 
 func (a *App) FindAppByIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (entity.App, *errs.Error) {

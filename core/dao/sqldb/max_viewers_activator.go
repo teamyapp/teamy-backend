@@ -7,7 +7,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
-	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/dao/entity"
 )
 
 type MaxViewersActivator struct {
@@ -20,36 +20,34 @@ func (*MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
-) (entity.MaxViewersActivator, *errs.Error) {
-	maxViewersActivator := entity.MaxViewersActivator{}
+) (entity.PartialMaxViewersActivator, *errs.Error) {
+	maxViewersActivator := entity.PartialMaxViewersActivator{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
 			SELECT
-				activator_id,
 				max_viewers
 			FROM max_viewers_activator
 			WHERE activator_id = $1
 		`,
 		activatorID,
 	).Scan(
-		&maxViewersActivator.Activator.ID,
 		&maxViewersActivator.MaxViewers,
 	)
 
 	if err != nil {
-		return entity.MaxViewersActivator{}, errs.NewError(errs.Unknown, err.Error())
+		return entity.PartialMaxViewersActivator{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return maxViewersActivator, nil
 }
 
-func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, ActivatorID uint64) (entity.MaxViewersActivator, *errs.Error) {
+func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, ActivatorID uint64) (entity.PartialMaxViewersActivator, *errs.Error) {
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
 	tx, err := m.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
-		return entity.MaxViewersActivator{}, err
+		return entity.PartialMaxViewersActivator{}, err
 	}
 
 	defer tx.Rollback()
@@ -59,7 +57,8 @@ func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, Ac
 func (*MaxViewersActivator) CreateMaxViewersActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
-	activator entity.MaxViewersActivator,
+	activatorID uint64,
+	activator entity.PartialMaxViewersActivator,
 ) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(
 		ct,
@@ -73,8 +72,53 @@ func (*MaxViewersActivator) CreateMaxViewersActivator(
 				$2
 			)
 		`,
-		activator.Activator.ID,
+		activatorID,
 		activator.MaxViewers,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (*MaxViewersActivator) UpdateMaxViewersActivator(
+	ct context.Context,
+	tx *transaction.Transaction,
+	activatorID uint64,
+	activator entity.PartialMaxViewersActivator,
+) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(
+		ct,
+		`
+			UPDATE max_viewers_activator
+			SET max_viewers = $1
+			WHERE activator_id = $2
+		`,
+		activator.MaxViewers,
+		activatorID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (*MaxViewersActivator) DeleteMaxViewersActivator(
+	ct context.Context,
+	tx *transaction.Transaction,
+	activatorID uint64,
+) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(
+		ct,
+		`
+			DELETE FROM max_viewers_activator
+			WHERE activator_id = $1
+		`,
+		activatorID,
 	)
 
 	if err != nil {

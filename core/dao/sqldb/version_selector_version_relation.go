@@ -90,6 +90,74 @@ func (*VersionSelectorVersionRelation) CreateVersionSelectorVersionRelation(
 	return nil
 }
 
+func (*VersionSelectorVersionRelation) UpdateVersionSelectorVersionRelation(
+	ct context.Context,
+	tx *transaction.Transaction,
+	versionSelectorID uint64,
+	versionNumber int,
+	versionSelectorVersionRelation entity.VersionSelectorVersionRelation,
+) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		UPDATE version_selector_version_relation
+		SET version_number = $1
+		WHERE version_number = $2
+		AND version_selector_id = $3
+		`,
+		versionSelectorVersionRelation.VersionNumber,
+		versionNumber,
+		versionSelectorVersionRelation.VersionSelectorID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (v *VersionSelectorVersionRelation) DeleteVersionSelectorVersionRelationBySelectorID(
+	ct context.Context,
+	tx *transaction.Transaction,
+	versionSelectorID uint64,
+) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM version_selector_version_relation
+		WHERE version_selector_id = $1
+		`,
+		versionSelectorID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (v *VersionSelectorVersionRelation) DeleteVersionSelectorVersionRelationBySelectorIDAndVersionNumber(
+	ct context.Context,
+	tx *transaction.Transaction,
+	versionSelectorID uint64,
+	versionNumber int,
+) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM version_selector_version_relation
+		WHERE version_selector_id = $1 AND version_number = $2
+		`,
+		versionSelectorID,
+		versionNumber,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewVersionSelectorVersionRelation(
 	transactionFactory transaction.Factory,
 ) *VersionSelectorVersionRelation {

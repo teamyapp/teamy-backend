@@ -82,7 +82,7 @@ type Mutation {
 	# App
 	createApp(teamId: ID!, name: String!): App!
 	deleteApp(appId: ID!): App!
-	
+
 	# App Tag
 	addTagToApp(appId: ID!, value: String!): Tag!
 	removeTagFromApp(appId: ID!, tagId: ID!): Tag!
@@ -104,23 +104,25 @@ type Mutation {
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
 
 	createStaticUserGroup(appId: ID!, input: CreateStaticUserGroupInput!): StaticUserGroup!
-	updateStaticUserGroup(groupId: ID!,input: UpdateStaticUserGroupInput!): StaticUserGroup!
-	createFilterUserGroup(appId: ID!, input: CreateFilterUserGroupInput!): FilterGroup!
 	createStaticTeamGroup(appId: ID!, input: CreateStaticTeamGroupInput!): StaticTeamGroup!
-	updateStaticTeamGroup(groupId: ID!,input: UpdateStaticTeamGroupInput!): StaticTeamGroup!
-	createFilterTeamGroup(appId: ID!, input: CreateFilterTeamGroupInput!): FilterGroup!
+	createFilterGroup(appId: ID!, input: CreateFilterGroupInput!): FilterGroup!
+	updateGroup(appId: ID!, groupId: ID!, input: UpdateGroupInput!): Group!
 
-	updateFilterGroup(groupId: ID!, input: UpdateFilterGroupInput!): FilterGroup!
 	deleteAppGroup(appId: ID!, groupId: ID!): Group!
 
+	createStaticActivator: StaticActivator!
 	createTimeRangeActivator(input: CreateTimeRangeActivatorInput!): TimeRangeActivator!
 	createMaxViewersActivator(input: CreateMaxViewersActivatorInput!): MaxViewersActivator!
 	createPercentageActivator(input: CreatePercentageActivatorInput!): PercentageActivator!
+	updateActivator(activatorId: ID!, input: UpdateActivatorInput!): Activator!
+	deleteActivator(activatorId: ID!): Activator!
 
-	createStaticVersionSelector(input: CreateStaticVersionSelectorInput!): StaticVersionSelector!
-	createExperimentVersionSelector(input: CreateExperimentVersionSelectorInput!): ExperimentVersionSelector!
+	createStaticVersionSelector(appId: ID!, input: CreateStaticVersionSelectorInput!): StaticVersionSelector!
+	createExperimentVersionSelector(appId: ID!, input: CreateExperimentVersionSelectorInput!): ExperimentVersionSelector!
+	updateVersionSelector(appId: ID!, versionSelectorId: ID!, input: UpdateVersionSelectorInput!): VersionSelector!
+	deleteVersionSelector(versionSelectorId: ID!): VersionSelector!
 
-	createAppRollout(appID: ID!, appRolloutType: AppRolloutType!, input: CreateRolloutInput!): Rollout!
+	createAppRollout(appId: ID!, appRolloutType: AppRolloutType!, input: CreateAppRolloutInput!): Rollout!
 	updateRollout(rolloutId: ID!, input: UpdateRolloutInput!): Rollout!
 	deleteRollout(rolloutId: ID!): Rollout!
 }
@@ -266,6 +268,7 @@ type User {
 
 type Rollout {
 	id: ID!
+	name: String!
 	activator: Activator!
 	versionSelector: VersionSelector!
 	isEnabled: Boolean!
@@ -274,6 +277,13 @@ type Rollout {
 }
 
 interface Activator {
+	id: ID!
+	type: ActivatorType!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type StaticActivator implements Activator {
 	id: ID!
 	type: ActivatorType!
 	createdAt: Time!
@@ -334,8 +344,7 @@ type App {
 	totalInstallations: Int!
 	installations: [TeamAppInstallation!]!
 	versions: [AppVersion!]!
-	userGroups: [Group!]!
-	teamGroups: [Group!]!
+	groups: [Group!]!
 	userRollouts: [Rollout!]!
 	teamRollouts: [Rollout!]!
 	managedByTeam: Team!
@@ -371,48 +380,61 @@ type AppVersion {
 	iconUrl: String
 }
 
+interface GroupRolloutRelation {
+	group: Group!
+	rollout: Rollout!
+	orderIndex: Int!
+}
+
 interface Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
+	maxRolloutIndex: Int!
 	name: String!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type StaticUserGroup implements Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
+	maxRolloutIndex: Int!
 	name: String!
 	users: [User!]!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type StaticTeamGroup implements Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
+	maxRolloutIndex: Int!
 	name: String!
 	teams: [Team!]!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type FilterGroup implements Group {
 	id: ID!
 	type: GroupType!
+	memberType: GroupMemberType!
+	maxRolloutIndex: Int!
 	name: String!
 	filter: String!
-	memberCount: Int!
 	createdAt: Time!
 	updatedAt: Time
-	rollouts: [Rollout!]!
-	app: App!
+	groupRolloutRelations: [GroupRolloutRelation!]!
+	apps: [App!]!
 }
 
 type TeamAppInstallation {
@@ -547,37 +569,33 @@ input UpdateAppSecretInput {
 input CreateStaticUserGroupInput {
 	name: String!
 	userIds: [ID!]!
+	rolloutIds: [ID!]!
 }
 
-input UpdateStaticUserGroupInput {
-	name: String!
-	userIds: [ID!]!
-}
 
-input CreateFilterUserGroupInput {
+input CreateFilterGroupInput {
 	name: String!
 	filter: String!
+	groupMemberType: GroupMemberType!
+	rolloutIds: [ID!]!
 }
 
-input UpdateFilterGroupInput {
-	name: String!
-	filter: String!
-}
 
 input CreateStaticTeamGroupInput {
 	name: String!
 	teamIds: [ID!]!
+	rolloutIds: [ID!]!
 }
 
-input UpdateStaticTeamGroupInput {
+input UpdateGroupInput {
 	name: String!
-	teamIds: [ID!]!
+	type: GroupType!
+	rolloutIds: [ID!]!
+	groupMemberType: GroupMemberType!
+	memberIds: [ID!]!
+	filter: String
 }
 
-input CreateFilterTeamGroupInput {
-	name: String!
-	filter: String!
-}
 
 input CreateTimeRangeActivatorInput {
 	startAt: Time
@@ -592,18 +610,28 @@ input CreatePercentageActivatorInput {
 	percentage: Int!
 }
 
-input CreateRolloutInput {
+input UpdateActivatorInput {
+	type: ActivatorType!
+	startAt: Time
+	endAt: Time
+	maxViewers: Int
+	percentage: Int
+}
+
+input CreateAppRolloutInput {
 	name: String!
-	activatorID:  ID!
-	versionSelectorID: ID!
+	activatorId:  ID!
+	versionSelectorId: ID!
 	isEnabled:     Boolean!
+	groupIds: [ID!]!
 }
 
 input UpdateRolloutInput {
 	name: String!
-	activatorID:  ID!
-	versionSelectorID:  ID!
+	activatorId:  ID!
+	versionSelectorId:  ID!
 	isEnabled:     Boolean!
+	groupIds: [ID!]!
 }
 
 input CreateStaticVersionSelectorInput {
@@ -611,6 +639,12 @@ input CreateStaticVersionSelectorInput {
 }
 
 input CreateExperimentVersionSelectorInput {
+	versionNumbers: [Int!]!
+}
+
+input UpdateVersionSelectorInput {
+	type: VersionSelectorType!
+	versionNumber: Int
 	versionNumbers: [Int!]!
 }
 
@@ -654,12 +688,18 @@ enum GroupType {
 	FILTER
 }
 
+enum GroupMemberType {
+	USER
+	TEAM
+}
+
 enum AppRolloutType {
 	USER
 	TEAM
 }
 
 enum ActivatorType {
+	STATIC
 	TIME_RANGE
 	MAX_VIEWERS
 	PERCENTAGE

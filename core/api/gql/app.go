@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -59,48 +58,24 @@ func (a App) Versions(ctx context.Context) ([]AppVersion, error) {
 	}), nil
 }
 
-func (a App) UserGroups(ctx context.Context) ([]Group, error) {
-	groups, err := a.deps.groupService.FindUserGroupsByAppID(ctx, a.app.ID)
+func (a App) Groups(ctx context.Context) ([]Group, error) {
+	groupUnions, err := a.deps.groupService.FindGroupsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	userGroups := make([]Group, 0)
-	for _, group := range groups {
-		switch group.Type {
-		case entity.GroupTypeStatic:
-			userGroups = append(userGroups, newStaticUserGroup(a.deps, group.StaticGroup))
-		case entity.GroupTypeFilter:
-			userGroups = append(userGroups, newFilterGroup(a.deps, group.FilterGroup))
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
+	groups := make([]Group, 0)
+	for _, groupUnion := range groupUnions {
+		group, err := getGroupFromGroupUnion(a.deps, groupUnion)
+		if err != nil {
+			return nil, err
 		}
+
+		groups = append(groups, group)
 	}
 
-	return userGroups, nil
-}
-
-func (a App) TeamGroups(ctx context.Context) ([]Group, error) {
-	groups, err := a.deps.groupService.FindTeamGroupsByAppID(ctx, a.app.ID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ctx, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	teamGroups := make([]Group, 0)
-	for _, group := range groups {
-		switch group.Type {
-		case entity.GroupTypeStatic:
-			teamGroups = append(teamGroups, newStaticTeamGroup(a.deps, group.StaticGroup))
-		case entity.GroupTypeFilter:
-			teamGroups = append(teamGroups, newFilterGroup(a.deps, group.FilterGroup))
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
-		}
-	}
-
-	return teamGroups, nil
+	return groups, nil
 }
 
 func (a App) UserRollouts(ctx context.Context) ([]Rollout, error) {

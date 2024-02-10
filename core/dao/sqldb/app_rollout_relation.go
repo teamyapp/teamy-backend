@@ -52,6 +52,40 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationTypeWithTx(
 	return rolloutIDs, nil
 }
 
+func (a *AppRolloutRelation) FindAppRolloutByAppIDAndRolloutIDWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	appID, rolloutID uint64,
+) (*entity.AppRolloutRelation, *errs.Error) {
+	row := tx.SQLTx().QueryRowContext(ct,
+		`
+		SELECT
+			app_id,
+			rollout_id,
+			type
+		FROM app_rollout_relation
+		WHERE app_id = $1 AND rollout_id = $2`,
+		appID,
+		rolloutID,
+	)
+
+	var appRolloutRelation entity.AppRolloutRelation
+	err := row.Scan(
+		&appRolloutRelation.AppID,
+		&appRolloutRelation.RolloutID,
+		&appRolloutRelation.Type,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errs.NewError(errs.NotFound, "app_rollout_relation not found")
+		}
+		
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return &appRolloutRelation, nil
+}
+
 func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationType(ct context.Context, appID uint64, rolloutType entity.AppRolloutRelationType) ([]uint64, *errs.Error) {
 	opt := sql.TxOptions{
 		ReadOnly: true,

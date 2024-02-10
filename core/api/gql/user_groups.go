@@ -25,6 +25,14 @@ func (s StaticUserGroup) Type(ctx context.Context) entity.GroupType {
 	return s.group.Type
 }
 
+func (s StaticUserGroup) MemberType(ctx context.Context) entity.GroupMemberType {
+	return s.group.MemberType
+}
+
+func (s StaticUserGroup) MaxRolloutIndex(ctx context.Context) int32 {
+	return int32(s.group.MaxRolloutIndex)
+}
+
 func (s StaticUserGroup) Name(ctx context.Context) string {
 	return s.group.Name
 }
@@ -49,26 +57,28 @@ func (s StaticUserGroup) UpdatedAt(ctx context.Context) *graphql.Time {
 	return toGraphQLTimePtr(s.group.UpdatedAt)
 }
 
-func (s StaticUserGroup) Rollouts(ctx context.Context) ([]Rollout, error) {
-	rollouts, err := s.deps.rolloutService.FindRolloutsByGroupID(ctx, s.group.ID)
+func (s StaticUserGroup) GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error) {
+	relations, err := s.deps.groupService.FindGroupRolloutRelationsByGroupID(ctx, s.group.ID)
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	return collect.Map(rollouts, func(rollout entity.Rollout, index int) Rollout {
-		return newRollout(s.deps, rollout)
+	return collect.Map(relations, func(relation entity.GroupRolloutRelation, index int) GroupRolloutRelation {
+		return newGroupRolloutRelation(s.deps, relation)
 	}), nil
 }
 
-func (s StaticUserGroup) App(ctx context.Context) (App, error) {
-	app, err := s.deps.appService.FindAppByID(ctx, s.group.ID)
+func (s StaticUserGroup) Apps(ctx context.Context) ([]App, error) {
+	apps, err := s.deps.appService.FindAppsByGroupID(ctx, s.group.ID)
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ctx, err)
-		return App{}, errs.ToResolverErr(err)
+		return nil, errs.ToResolverErr(err)
 	}
 
-	return newApp(s.deps, app), nil
+	return collect.Map(apps, func(app entity.App, index int) App {
+		return newApp(s.deps, app)
+	}), nil
 }
 
 func (s StaticUserGroup) ToStaticUserGroup() (*StaticUserGroup, bool) {
@@ -88,8 +98,9 @@ func (m Mutation) CreateStaticUserGroup(
 	args struct {
 		AppID graphql.ID
 		Input struct {
-			Name    string
-			UserIDs []graphql.ID
+			Name       string
+			UserIDs    []graphql.ID
+			RolloutIDs []graphql.ID
 		}
 	},
 ) StaticUserGroup {
@@ -104,7 +115,7 @@ func (m Mutation) CreateStaticUserGroup(
 	}
 
 	userIDs := make([]uint64, len(args.Input.UserIDs))
-	for _, userID := range args.Input.UserIDs {
+	for index, userID := range args.Input.UserIDs {
 		id, err := fromGraphQLID(userID)
 		if err != nil {
 			internalErr := errs.NewError(
@@ -114,102 +125,38 @@ func (m Mutation) CreateStaticUserGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return StaticUserGroup{}
 		}
-		userIDs = append(userIDs, id)
+
+		userIDs[index] = id
 	}
 
-	createStaticUserGroupInput := service.CreateStaticUserGroupInput{
-		Name:    args.Input.Name,
-		UserIDs: userIDs,
-	}
-	group, err := m.deps.groupService.CreateStaticUserGroup(ctx, appID, createStaticUserGroupInput)
-	if err != nil {
-		m.deps.logger.ErrorWithContext(ctx, err)
-		return StaticUserGroup{}
-	}
-
-	return newStaticUserGroup(m.deps, group)
-}
-
-func (m Mutation) UpdateStaticUserGroup(
-	ctx context.Context,
-	args struct {
-		GroupID graphql.ID
-		Input   struct {
-			Name    string
-			UserIDs []graphql.ID
-		}
-	},
-) (StaticUserGroup, error) {
-	groupID, internalErr := fromGraphQLID(args.GroupID)
-	if internalErr != nil {
-		internalErr := errs.NewError(
-			errs.InvalidArgument,
-			internalErr.Error(),
-		)
-		m.deps.logger.ErrorWithContext(ctx, internalErr)
-		return StaticUserGroup{}, errs.ToResolverErr(internalErr)
-	}
-
-	userIDs := make([]uint64, len(args.Input.UserIDs))
-	for _, userID := range args.Input.UserIDs {
-		id, err := fromGraphQLID(userID)
+	rolloutIDs := make([]uint64, len(args.Input.RolloutIDs))
+	for index, rolloutID := range args.Input.RolloutIDs {
+		id, err := fromGraphQLID(rolloutID)
 		if err != nil {
 			internalErr := errs.NewError(
 				errs.InvalidArgument,
 				err.Error(),
 			)
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
-			return StaticUserGroup{}, errs.ToResolverErr(internalErr)
+			return StaticUserGroup{}
 		}
 
-		userIDs = append(userIDs, id)
+		rolloutIDs[index] = id
 	}
 
-	updateStatcUserGroupInput := service.UpdateStaticUserGroupInput{
-		Name:    args.Input.Name,
-		UserIDs: userIDs,
+	createStaticUserGroupInput := service.CreateStaticGroupInput{
+		Name:            args.Input.Name,
+		GroupMemberType: entity.GroupMemberTypeUser,
+		MemberIDs:       userIDs,
+		RolloutIDs:      rolloutIDs,
 	}
-	group, err := m.deps.groupService.UpdateStaticUserGroup(ctx, groupID, updateStatcUserGroupInput)
+	group, err := m.deps.groupService.CreateAppStaticGroup(ctx, appID, createStaticUserGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
-		return StaticUserGroup{}, errs.ToResolverErr(err)
+		return StaticUserGroup{}
 	}
 
-	return newStaticUserGroup(m.deps, group), nil
-}
-
-func (m Mutation) CreateFilterUserGroup(
-	ctx context.Context,
-	args struct {
-		AppID graphql.ID
-		Input struct {
-			Name   string
-			Filter string
-		}
-	},
-) (FilterGroup, error) {
-	appID, internalErr := fromGraphQLID(args.AppID)
-	if internalErr != nil {
-		internalErr := errs.NewError(
-			errs.InvalidArgument,
-			internalErr.Error(),
-		)
-		m.deps.logger.ErrorWithContext(ctx, internalErr)
-		return FilterGroup{}, errs.ToResolverErr(internalErr)
-	}
-
-	createFilterUserGroupInput := service.CreateFilterGroupInput{
-		Name:   args.Input.Name,
-		Filter: args.Input.Filter,
-	}
-
-	filterGroup, err := m.deps.groupService.CreateFilterUserGroup(ctx, appID, createFilterUserGroupInput)
-	if err != nil {
-		m.deps.logger.ErrorWithContext(ctx, err)
-		return FilterGroup{}, errs.ToResolverErr(err)
-	}
-
-	return newFilterGroup(m.deps, filterGroup), nil
+	return newStaticUserGroup(m.deps, group)
 }
 
 func newStaticUserGroup(deps *Dependencies, group entity.StaticGroup) StaticUserGroup {
