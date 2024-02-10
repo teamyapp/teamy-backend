@@ -79,7 +79,6 @@ func (g *Group) UpdateMaxRolloutIndexByGroupID(ct context.Context, tx *transacti
 	group.MaxRolloutIndex += step
 	now := time.Now().UTC()
 	group.UpdatedAt = &now
-
 	err = g.groupDao.UpdateGroup(ct, tx, group)
 	if err != nil {
 		return 0, err

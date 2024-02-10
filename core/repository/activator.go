@@ -52,12 +52,10 @@ func (a *Activator) CreatePartialActivator(ct context.Context, tx *transaction.T
 			StartAt: input.StartAt,
 			EndAt:   input.EndAt,
 		})
-
 	case entity.ActivatorTypeMaxViewers:
 		err = a.maxViewersActivatorDao.CreateMaxViewersActivator(ct, tx, input.ID, daoEntity.PartialMaxViewersActivator{
 			MaxViewers: input.MaxViewers,
 		})
-
 	case entity.ActivatorTypePercentage:
 		err = a.percentageActivatorDao.CreatePercentageActivator(ct, tx, input.ID, daoEntity.PartialPercentageActivator{
 			Percentage: input.Percentage,

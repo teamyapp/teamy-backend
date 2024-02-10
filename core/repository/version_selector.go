@@ -104,7 +104,6 @@ func (v *VersionSelector) UpdateExperimentVersionSelector(
 				return err
 			}
 		}
-
 	}
 
 	return nil
