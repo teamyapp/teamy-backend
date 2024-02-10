@@ -23,15 +23,13 @@ func (f *FilterGroup) FindFilterGroupByIDWithTx(ct context.Context, tx *transact
 		`
 		SELECT
 			group_id,
-			filter,
-			count
+			filter
 		FROM filter_group
 		WHERE group_id = $1;`,
 		groupID,
 	).Scan(
 		&filterGroup.Group.ID,
 		&filterGroup.Filter,
-		&filterGroup.Count,
 	)
 
 	if err != nil {
@@ -84,7 +82,6 @@ func (f *FilterGroup) FindFilterGroupsByIDsWithTx(ct context.Context, tx *transa
 		err := rows.Scan(
 			&filterGroup.Group.ID,
 			&filterGroup.Filter,
-			&filterGroup.Count,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -114,12 +111,10 @@ func (f *FilterGroup) CreateFilterGroup(ct context.Context, tx *transaction.Tran
 	_, err := tx.SQLTx().ExecContext(ct,
 		`INSERT INTO filter_group (
 			group_id,
-			filter,
-			count
-		) VALUES ($1, $2, $3)`,
+			filter
+		) VALUES ($1, $2)`,
 		group.Group.ID,
 		group.Filter,
-		group.Count,
 	)
 
 	if err != nil {
@@ -132,11 +127,10 @@ func (f *FilterGroup) CreateFilterGroup(ct context.Context, tx *transaction.Tran
 func (f *FilterGroup) UpdateFilterGroup(ct context.Context, tx *transaction.Transaction, group entity.FilterGroup) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`UPDATE filter_group
-			SET count = $1
-			WHERE group_id = $2 AND filter = $3`,
-		group.Count,
-		group.Group.ID,
+			SET filter = $1
+			WHERE group_id = $2`,
 		group.Filter,
+		group.Group.ID,
 	)
 
 	if err != nil {

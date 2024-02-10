@@ -42,5 +42,4 @@ type StaticGroup struct {
 type FilterGroup struct {
 	Group
 	Filter string
-	Count  int
 }

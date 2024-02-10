@@ -285,11 +285,11 @@ func (m Mutation) UpdateActivator(
 	args struct {
 		ActivatorID graphql.ID
 		Input       struct {
+			Type       entity.ActivatorType
 			StartAt    *graphql.Time
 			EndAt      *graphql.Time
 			MaxViewers *int32
 			Percentage *int32
-			Type       entity.ActivatorType
 		}
 	},
 ) (Activator, error) {

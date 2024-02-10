@@ -44,7 +44,6 @@ func (g *Group) CreatePartialGroup(ct context.Context, tx *transaction.Transacti
 		filterGroup := entity.FilterGroup{
 			Group:  group,
 			Filter: input.Filter,
-			Count:  0,
 		}
 		return g.filterGroupDao.CreateFilterGroup(ct, tx, filterGroup)
 	default:
@@ -177,7 +176,6 @@ func (g *Group) GetGroupUnionFromBaseGroup(ct context.Context, tx *transaction.T
 			FilterGroup: entity.FilterGroup{
 				Group:  group,
 				Filter: filterGroup.Filter,
-				Count:  filterGroup.Count,
 			},
 		}, nil
 	default:

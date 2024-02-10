@@ -134,9 +134,9 @@ func (m Mutation) UpdateVersionSelector(
 		AppID             graphql.ID
 		VersionSelectorID graphql.ID
 		Input             struct {
+			Type           entity.VersionSelectorType
 			VersionNumber  *int32
 			VersionNumbers []int32
-			Type           entity.VersionSelectorType
 		}
 	},
 ) (VersionSelector, error) {

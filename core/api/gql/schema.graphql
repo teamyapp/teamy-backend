@@ -431,7 +431,6 @@ type FilterGroup implements Group {
 	maxRolloutIndex: Int!
 	name: String!
 	filter: String!
-	memberCount: Int!
 	createdAt: Time!
 	updatedAt: Time
 	groupRolloutRelations: [GroupRolloutRelation!]!

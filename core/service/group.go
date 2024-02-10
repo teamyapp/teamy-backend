@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/teamyapp/cloud/app/api/proto"
@@ -19,25 +20,25 @@ import (
 
 type CreateFilterGroupInput struct {
 	Name            string
-	Filter          string
 	GroupMemberType entity.GroupMemberType
+	Filter          string
 	RolloutIDs      []uint64
 }
 
 type CreateStaticGroupInput struct {
 	Name            string
-	MemberIDs       []uint64
 	GroupMemberType entity.GroupMemberType
+	MemberIDs       []uint64
 	RolloutIDs      []uint64
 }
 
 type UpdateGroupInput struct {
 	Name            string
-	Filter          *string
-	GroupMemberType entity.GroupMemberType
-	RolloutIDs      []uint64
-	MemberIDs       []uint64
 	Type            entity.GroupType
+	GroupMemberType entity.GroupMemberType
+	Filter          *string
+	MemberIDs       []uint64
+	RolloutIDs      []uint64
 }
 
 type Group struct {
@@ -161,17 +162,8 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 		}
 
 		// Currently, we do not support update group member type
-		switch group.MemberType {
-		case entity.GroupMemberTypeUser:
-			if input.GroupMemberType != entity.GroupMemberTypeUser {
-				return errs.NewError(errs.InvalidArgument, "invalid group member type")
-			}
-		case entity.GroupMemberTypeTeam:
-			if input.GroupMemberType != entity.GroupMemberTypeTeam {
-				return errs.NewError(errs.InvalidArgument, "invalid group member type")
-			}
-		default:
-			return errs.NewError(errs.InvalidArgument, "invalid group member type")
+		if group.MemberType != input.GroupMemberType {
+			return errs.NewError(errs.InvalidArgument, fmt.Sprintf("invalid group member type, current: %s, new: %s", group.MemberType, input.GroupMemberType))
 		}
 
 		switch input.Type {
@@ -180,7 +172,7 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 		case entity.GroupTypeFilter:
 			break
 		default:
-			err = errs.NewError(errs.InvalidArgument, "invalid group type")
+			err = errs.NewError(errs.InvalidArgument, fmt.Sprintf("invalid group type %s", input.Type))
 		}
 
 		if err != nil {
@@ -253,7 +245,6 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 			groupUnion.FilterGroup = entity.FilterGroup{
 				Group:  updatedGroup,
 				Filter: filter,
-				Count:  0,
 			}
 
 			err = g.groupRepository.UpdateFilterGroup(ct, tx, groupUnion.FilterGroup)
@@ -419,7 +410,6 @@ func (g *Group) CreateFilterGroup(
 			CreatedAt:       now,
 		},
 		Filter: input.Filter,
-		Count:  0,
 	}
 	txCtx := transaction.NewTransactionsContext(
 		g.logger,

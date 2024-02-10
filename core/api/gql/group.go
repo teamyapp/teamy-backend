@@ -56,10 +56,6 @@ func (f FilterGroup) Filter(ctx context.Context) string {
 	return f.filterGroup.Filter
 }
 
-func (f FilterGroup) MemberCount(ctx context.Context) int32 {
-	return int32(f.filterGroup.Count)
-}
-
 func (f FilterGroup) CreatedAt(ctx context.Context) graphql.Time {
 	return toGraphQLTime(f.filterGroup.CreatedAt)
 }
@@ -171,9 +167,9 @@ func (m Mutation) UpdateGroup(
 		GroupID graphql.ID
 		Input   struct {
 			Name            string
-			Filter          *string
-			GroupMemberType entity.GroupMemberType
 			Type            entity.GroupType
+			GroupMemberType entity.GroupMemberType
+			Filter          *string
 			RolloutIDs      []graphql.ID
 			MemberIDs       []graphql.ID
 		}

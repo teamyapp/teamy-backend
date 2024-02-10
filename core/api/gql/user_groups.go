@@ -140,14 +140,14 @@ func (m Mutation) CreateStaticUserGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return StaticUserGroup{}
 		}
-		
+
 		rolloutIDs[index] = id
 	}
 
 	createStaticUserGroupInput := service.CreateStaticGroupInput{
 		Name:            args.Input.Name,
-		MemberIDs:       userIDs,
 		GroupMemberType: entity.GroupMemberTypeUser,
+		MemberIDs:       userIDs,
 		RolloutIDs:      rolloutIDs,
 	}
 	group, err := m.deps.groupService.CreateAppStaticGroup(ctx, appID, createStaticUserGroupInput)
