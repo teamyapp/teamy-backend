@@ -60,7 +60,6 @@ func (a *Activator) CreatePartialActivator(ct context.Context, tx *transaction.T
 		err = a.percentageActivatorDao.CreatePercentageActivator(ct, tx, input.ID, daoEntity.PartialPercentageActivator{
 			Percentage: input.Percentage,
 		})
-
 	default:
 		return errs.NewError(errs.Unknown, fmt.Sprintf("unknown activator type %s", input.Type))
 	}
