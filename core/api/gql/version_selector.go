@@ -161,7 +161,7 @@ func (m Mutation) UpdateVersionSelector(
 	}
 
 	updateVersionSelectorInput := service.UpdateVersionSelectorInput{
-		VersionNumber: args.Input.VersionNumber,
+		VersionNumber: intPtrFromInt32Ptr(args.Input.VersionNumber),
 		VersionNumbers: collect.Map(args.Input.VersionNumbers, func(versionNumber int32, index int) int {
 			return int(versionNumber)
 		}),

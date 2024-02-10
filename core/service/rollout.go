@@ -44,13 +44,13 @@ type UpdateActivatorInput struct {
 	Type       entity.ActivatorType
 	StartAt    *time.Time
 	EndAt      *time.Time
-	MaxViewers *int32
-	Percentage *int32
+	MaxViewers *int
+	Percentage *int
 }
 
 type UpdateVersionSelectorInput struct {
 	Type           entity.VersionSelectorType
-	VersionNumber  *int32
+	VersionNumber  *int
 	VersionNumbers []int
 }
 
@@ -419,7 +419,7 @@ func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) 
 		internalErr := errs.FromGRPCErr(rpcErr)
 		return entity.MaxViewersActivator{}, internalErr
 	}
-	
+
 	maxViewersActivator := entity.MaxViewersActivator{
 		MaxViewers: maxViewers,
 		Activator: entity.Activator{

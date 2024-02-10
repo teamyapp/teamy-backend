@@ -58,7 +58,7 @@ func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	return &id, err
 }
 
-func intPtrFromIntPtr(num *int32) *int {
+func intPtrFromInt32Ptr(num *int32) *int {
 	if num == nil {
 		return nil
 	}
@@ -118,7 +118,7 @@ func fromGraphQLSprintFilterPtr(gqlSprintFilter *SprintFilter) (*service.SprintF
 		SprintID:        sprintID,
 		StartAtAndAfter: fromGraphQLTimePtr(gqlSprintFilter.StartAtAndAfter),
 		SortByStartAt:   gqlSprintFilter.SortByStartAt,
-		CountLimit:      intPtrFromIntPtr(gqlSprintFilter.CountLimit),
+		CountLimit:      intPtrFromInt32Ptr(gqlSprintFilter.CountLimit),
 	}, nil
 }
 

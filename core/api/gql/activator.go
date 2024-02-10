@@ -307,8 +307,8 @@ func (m Mutation) UpdateActivator(
 		Type:       args.Input.Type,
 		StartAt:    fromGraphQLTimePtr(args.Input.StartAt),
 		EndAt:      fromGraphQLTimePtr(args.Input.EndAt),
-		MaxViewers: args.Input.MaxViewers,
-		Percentage: args.Input.Percentage,
+		MaxViewers: intPtrFromInt32Ptr(args.Input.MaxViewers),
+		Percentage: intPtrFromInt32Ptr(args.Input.Percentage),
 	}
 	activator, err := m.deps.rolloutService.UpdateActivator(ctx, activatorID, updateActivatorInput)
 	if err != nil {
