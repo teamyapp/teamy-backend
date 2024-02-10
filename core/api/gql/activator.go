@@ -338,7 +338,6 @@ func (m Mutation) UpdateActivator(
 	default:
 		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown activator type"))
 	}
-
 }
 
 func (m Mutation) DeleteActivator(

@@ -134,7 +134,7 @@ func (m Mutation) CreateFilterGroup(
 	}
 
 	rolloutIDs := make([]uint64, len(args.Input.RolloutIDs))
-	for i, id := range args.Input.RolloutIDs {
+	for index, id := range args.Input.RolloutIDs {
 		rolloutID, err := fromGraphQLID(id)
 		if err != nil {
 			internalErr := errs.NewError(
