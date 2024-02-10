@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -34,14 +33,7 @@ func (r Rollout) VersionSelector(ctx context.Context) (VersionSelector, error) {
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch versionSelector.Type {
-	case entity.VersionSelectorTypeExperiment:
-		return newExperimentVersionSelector(versionSelector.ExperimentVersionSelector, r.deps), nil
-	case entity.VersionSelectorTypeStatic:
-		return newStaticVersionSelector(versionSelector.StaticVersionSelector, r.deps), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("Unknown version selector type: %s", versionSelector.Type)))
-	}
+	return getVersionSelectorFromVersionSelectorUnion(r.deps, versionSelector)
 }
 
 func (r Rollout) CreatedAt() graphql.Time {
@@ -59,18 +51,7 @@ func (r Rollout) Activator(ctx context.Context) (Activator, error) {
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch activator.Type {
-	case entity.ActivatorTypeStatic:
-		return newStaticActivator(activator.StaticActivator), nil
-	case entity.ActivatorTypeTimeRange:
-		return newTimeRangeActivator(activator.TimeRangeActivator), nil
-	case entity.ActivatorTypeMaxViewers:
-		return newMaxViewersActivator(activator.MaxViewersActivator), nil
-	case entity.ActivatorTypePercentage:
-		return newPercentageActivator(activator.PercentageActivator), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("Unknown activator type: %s", activator.Type)))
-	}
+	return getActivatorFromActivatorUnion(r.deps, activator)
 }
 
 func (m Mutation) CreateAppRollout(
@@ -129,7 +110,7 @@ func (m Mutation) CreateAppRollout(
 			return Rollout{}, errs.ToResolverErr(internalErr)
 		}
 
-		groupIDs[i] = groupID
+		groupIDs[index] = groupID
 	}
 
 	createAppRolloutInput := service.CreateRolloutInput{
@@ -209,7 +190,7 @@ func (m Mutation) UpdateRollout(
 			return Rollout{}, errs.ToResolverErr(internalErr)
 		}
 
-		groupIDs[i] = groupID
+		groupIDs[index] = groupID
 	}
 
 	updateRolloutInput := service.UpdateRolloutInput{

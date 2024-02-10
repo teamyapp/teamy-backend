@@ -19,22 +19,7 @@ func (g GroupRolloutRelation) Group(ctx context.Context) (Group, error) {
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch group.Type {
-	case entity.GroupTypeStatic:
-		switch group.MemberType {
-		case entity.GroupMemberTypeUser:
-			return newStaticUserGroup(g.deps, group.StaticGroup), nil
-		case entity.GroupMemberTypeTeam:
-			return newStaticTeamGroup(g.deps, group.StaticGroup), nil
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group member type"))
-		}
-
-	case entity.GroupTypeFilter:
-		return newFilterGroup(g.deps, group.FilterGroup), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group type"))
-	}
+	return getGroupFromGroupUnion(g.deps, group)
 }
 
 func (g GroupRolloutRelation) Rollout(ctx context.Context) (Rollout, error) {

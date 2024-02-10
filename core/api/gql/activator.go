@@ -316,18 +316,7 @@ func (m Mutation) UpdateActivator(
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch activator.Type {
-	case entity.ActivatorTypeStatic:
-		return newStaticActivator(activator.StaticActivator), nil
-	case entity.ActivatorTypeTimeRange:
-		return newTimeRangeActivator(activator.TimeRangeActivator), nil
-	case entity.ActivatorTypeMaxViewers:
-		return newMaxViewersActivator(activator.MaxViewersActivator), nil
-	case entity.ActivatorTypePercentage:
-		return newPercentageActivator(activator.PercentageActivator), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown activator type"))
-	}
+	return getActivatorFromActivatorUnion(m.deps, activator)
 }
 
 func (m Mutation) DeleteActivator(
@@ -352,16 +341,5 @@ func (m Mutation) DeleteActivator(
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch activator.Type {
-	case entity.ActivatorTypeStatic:
-		return newStaticActivator(activator.StaticActivator), nil
-	case entity.ActivatorTypeTimeRange:
-		return newTimeRangeActivator(activator.TimeRangeActivator), nil
-	case entity.ActivatorTypeMaxViewers:
-		return newMaxViewersActivator(activator.MaxViewersActivator), nil
-	case entity.ActivatorTypePercentage:
-		return newPercentageActivator(activator.PercentageActivator), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown activator type"))
-	}
+	return getActivatorFromActivatorUnion(m.deps, activator)
 }

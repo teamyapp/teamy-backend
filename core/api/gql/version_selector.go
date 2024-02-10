@@ -174,17 +174,7 @@ func (m Mutation) UpdateVersionSelector(
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch versionSelector.Type {
-	case entity.VersionSelectorTypeStatic:
-		return newStaticVersionSelector(versionSelector.StaticVersionSelector, m.deps), nil
-	case entity.VersionSelectorTypeExperiment:
-		return newExperimentVersionSelector(versionSelector.ExperimentVersionSelector, m.deps), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(
-			errs.Unknown,
-			"Unknown version selector type",
-		))
-	}
+	return getVersionSelectorFromVersionSelectorUnion(m.deps, versionSelector)
 }
 
 func (m Mutation) CreateExperimentVersionSelector(
@@ -240,15 +230,5 @@ func (m Mutation) DeleteVersionSelector(
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch versionSelector.Type {
-	case entity.VersionSelectorTypeStatic:
-		return newStaticVersionSelector(versionSelector.StaticVersionSelector, m.deps), nil
-	case entity.VersionSelectorTypeExperiment:
-		return newExperimentVersionSelector(versionSelector.ExperimentVersionSelector, m.deps), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(
-			errs.Unknown,
-			"Unknown version selector type",
-		))
-	}
+	return getVersionSelectorFromVersionSelectorUnion(m.deps, versionSelector)
 }

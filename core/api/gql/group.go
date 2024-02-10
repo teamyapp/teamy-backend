@@ -244,21 +244,7 @@ func (m Mutation) UpdateGroup(
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch group.Type {
-	case entity.GroupTypeStatic:
-		switch group.MemberType {
-		case entity.GroupMemberTypeUser:
-			return newStaticUserGroup(m.deps, group.StaticGroup), nil
-		case entity.GroupMemberTypeTeam:
-			return newStaticTeamGroup(m.deps, group.StaticGroup), nil
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group member type"))
-		}
-	case entity.GroupTypeFilter:
-		return newFilterGroup(m.deps, group.FilterGroup), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group type"))
-	}
+	return getGroupFromGroupUnion(m.deps, group)
 }
 
 func (m Mutation) DeleteAppGroup(
@@ -294,19 +280,5 @@ func (m Mutation) DeleteAppGroup(
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch group.Type {
-	case entity.GroupTypeStatic:
-		switch group.MemberType {
-		case entity.GroupMemberTypeUser:
-			return newStaticUserGroup(m.deps, group.StaticGroup), nil
-		case entity.GroupMemberTypeTeam:
-			return newStaticTeamGroup(m.deps, group.StaticGroup), nil
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group member type"))
-		}
-	case entity.GroupTypeFilter:
-		return newFilterGroup(m.deps, group.FilterGroup), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group type"))
-	}
+	return getGroupFromGroupUnion(m.deps, group)
 }

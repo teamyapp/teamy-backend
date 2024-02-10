@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -67,22 +66,13 @@ func (a App) Groups(ctx context.Context) ([]Group, error) {
 	}
 
 	groups := make([]Group, 0)
-	for _, group := range groupUnions {
-		switch group.Type {
-		case entity.GroupTypeStatic:
-			switch group.MemberType {
-			case entity.GroupMemberTypeUser:
-				groups = append(groups, newStaticUserGroup(a.deps, group.StaticGroup))
-			case entity.GroupMemberTypeTeam:
-				groups = append(groups, newStaticTeamGroup(a.deps, group.StaticGroup))
-			default:
-				return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group member type %s", group.MemberType)))
-			}
-		case entity.GroupTypeFilter:
-			groups = append(groups, newFilterGroup(a.deps, group.FilterGroup))
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
+	for _, groupUnion := range groupUnions {
+		group, err := getGroupFromGroupUnion(a.deps, groupUnion)
+		if err != nil {
+			return nil, err
 		}
+
+		groups = append(groups, group)
 	}
 
 	return groups, nil
