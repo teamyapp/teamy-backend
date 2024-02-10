@@ -118,7 +118,7 @@ func (m Mutation) CreateAppRollout(
 	}
 
 	groupIDs := make([]uint64, len(args.Input.GroupIDs))
-	for i, groupID := range args.Input.GroupIDs {
+	for index, groupID := range args.Input.GroupIDs {
 		groupID, internalErr := fromGraphQLID(groupID)
 		if internalErr != nil {
 			internalErr := errs.NewError(
@@ -198,7 +198,7 @@ func (m Mutation) UpdateRollout(
 	}
 
 	groupIDs := make([]uint64, len(args.Input.GroupIDs))
-	for i, groupID := range args.Input.GroupIDs {
+	for index, groupID := range args.Input.GroupIDs {
 		groupID, internalErr := fromGraphQLID(groupID)
 		if internalErr != nil {
 			internalErr := errs.NewError(

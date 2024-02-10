@@ -44,7 +44,6 @@ func (g *Group) CreatePartialGroup(ct context.Context, tx *transaction.Transacti
 			Filter: input.Filter,
 			Count:  0,
 		}
-
 		return g.filterGroupDao.CreateFilterGroup(ct, tx, filterGroup)
 	case entity.GroupTypeStatic:
 		return nil
@@ -95,7 +94,7 @@ func (g *Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transact
 		return entity.GroupUnion{}, err
 	}
 
-	return g.getGroupUnionFromRawGroup(ct, tx, group)
+	return g.getGroupUnionFromBaseGroup(ct, tx, group)
 }
 
 func (g *Group) FindGroupByBaseGroupWithTx(ct context.Context, tx *transaction.Transaction, baseGroup entity.Group) (entity.GroupUnion, *errs.Error) {

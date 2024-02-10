@@ -94,9 +94,8 @@ CREATE TABLE app_group_relation (
 
 CREATE TABLE group_member_relation (
     group_id BIGINT NOT NULL REFERENCES "group" (id) on DELETE CASCADE,
-    member_id INTEGER NOT NULL
+    member_id BIGINT NOT NULL
 );
-
 
 CREATE TABLE filter_group (
     group_id BIGINT NOT NULL REFERENCES "group" (id) on DELETE CASCADE,
@@ -169,9 +168,15 @@ ALTER TABLE app_version
     DROP COLUMN created_by_user_id;
 DROP TABLE IF EXISTS app_secret;
 CREATE TABLE IF NOT EXISTS app_team_installation (
-	app_id BIGINT NOT NULL REFERENCES app (id) ON UPDATE CASCADE ON DELETE CASCADE,
-	installed_team_id BIGINT NOT NULL REFERENCES team (id) ON UPDATE CASCADE ON DELETE CASCADE,
-	installed_by_user_id BIGINT NOT NULL REFERENCES "user" (id) ON UPDATE CASCADE ON DELETE SET NULL,
+	app_id BIGINT NOT NULL REFERENCES app (id) 
+	    ON UPDATE CASCADE 
+	    ON DELETE CASCADE,
+	installed_team_id BIGINT NOT NULL REFERENCES team (id) 
+	    ON UPDATE CASCADE 
+	    ON DELETE CASCADE,
+	installed_by_user_id BIGINT NOT NULL REFERENCES "user" (id) 
+	    ON UPDATE CASCADE 
+	    ON DELETE SET NULL,
 	enabled_version_number INT NOT NULL,
 	installed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (app_id, installed_team_id)
@@ -183,6 +188,3 @@ DROP TABLE IF EXISTS time_range_activator;
 DROP TABLE IF EXISTS activator;
 DROP TABLE IF EXISTS version_selector_version_relation;
 DROP TABLE IF EXISTS version_selector;
-
-
-

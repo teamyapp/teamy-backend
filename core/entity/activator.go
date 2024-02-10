@@ -29,6 +29,7 @@ type ActivatorUnion struct {
 type StaticActivator struct {
 	Activator
 }
+
 type TimeRangeActivator struct {
 	Activator
 	StartAt *time.Time

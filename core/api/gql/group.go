@@ -144,6 +144,7 @@ func (m Mutation) CreateFilterGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return FilterGroup{}, errs.ToResolverErr(internalErr)
 		}
+		
 		rolloutIDs[i] = rolloutID
 	}
 
@@ -199,7 +200,7 @@ func (m Mutation) UpdateGroup(
 	}
 
 	rolloutIDs := make([]uint64, len(args.Input.RolloutIDs))
-	for i, id := range args.Input.RolloutIDs {
+	for index, id := range args.Input.RolloutIDs {
 		rolloutID, err := fromGraphQLID(id)
 		if err != nil {
 			internalErr := errs.NewError(
@@ -209,11 +210,12 @@ func (m Mutation) UpdateGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return nil, errs.ToResolverErr(internalErr)
 		}
+		
 		rolloutIDs[i] = rolloutID
 	}
 
 	memberIDs := make([]uint64, len(args.Input.MemberIDs))
-	for i, id := range args.Input.MemberIDs {
+	for index, id := range args.Input.MemberIDs {
 		memberID, err := fromGraphQLID(id)
 		if err != nil {
 			internalErr := errs.NewError(
@@ -223,6 +225,7 @@ func (m Mutation) UpdateGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return nil, errs.ToResolverErr(internalErr)
 		}
+		
 		memberIDs[i] = memberID
 	}
 

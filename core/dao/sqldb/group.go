@@ -163,10 +163,10 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 		UPDATE "group"
 		SET
 		    type = $1,
-			member_type = $2,
-			max_rollout_index = $3,
+		    member_type = $2,
+		    max_rollout_index = $3,
 		    name = $4,
-			created_at = $5,
+		    created_at = $5,
 		    updated_at = $6
 		WHERE id = $7;
 		`,

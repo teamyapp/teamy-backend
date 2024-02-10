@@ -139,6 +139,7 @@ func (m Mutation) CreateStaticUserGroup(
 			m.deps.logger.ErrorWithContext(ctx, internalErr)
 			return StaticUserGroup{}
 		}
+		
 		rolloutIDs[index] = id
 	}
 

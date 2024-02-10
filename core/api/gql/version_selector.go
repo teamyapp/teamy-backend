@@ -150,7 +150,7 @@ func (m Mutation) UpdateVersionSelector(
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	AppID, internalErr := fromGraphQLID(args.AppID)
+	appID, internalErr := fromGraphQLID(args.AppID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
@@ -190,7 +190,6 @@ func (m Mutation) UpdateVersionSelector(
 			"Unknown version selector type",
 		))
 	}
-
 }
 
 func (m Mutation) CreateExperimentVersionSelector(
@@ -202,7 +201,7 @@ func (m Mutation) CreateExperimentVersionSelector(
 		}
 	},
 ) (ExperimentVersionSelector, error) {
-	AppID, internalErr := fromGraphQLID(args.AppID)
+	appID, internalErr := fromGraphQLID(args.AppID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
