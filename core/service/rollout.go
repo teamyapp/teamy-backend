@@ -802,6 +802,11 @@ func (r *Rollout) getTeamGroupActiveVersion(
 
 	orderedRollouts := rollout.OrderedRollouts(rollouts)
 	versionNumber, err := orderedRollouts.GetVersionNumber(ct, teamID)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return versionNumber, err
 }
 
