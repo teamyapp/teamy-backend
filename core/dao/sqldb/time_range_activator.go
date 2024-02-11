@@ -3,6 +3,7 @@ package sqldb
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
@@ -37,6 +38,10 @@ func (*TimeRangeActivator) FindTimeRangeActivatorByIDWithTx(
 	)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return timeRangeActivator, errs.NewError(errs.NotFound, fmt.Sprintf("time range activator not found with id %d", activatorID))
+		}
+
 		return timeRangeActivator, errs.NewError(errs.Unknown, err.Error())
 	}
 

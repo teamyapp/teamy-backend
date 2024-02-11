@@ -146,24 +146,18 @@ func (a *Activator) UpdatePercentageActivator(ct context.Context, tx *transactio
 	})
 }
 
-func (a *Activator) DeleteActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.ActivatorUnion, *errs.Error) {
+func (a *Activator) DeleteActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64) *errs.Error {
 	activator, err := a.activatorDao.FindActivatorByIDWithTx(ct, tx, activatorID)
 	if err != nil {
-		return entity.ActivatorUnion{}, err
-	}
-
-	err = a.activatorDao.DeleteActivator(ct, tx, activatorID)
-	if err != nil {
-		return entity.ActivatorUnion{}, err
-	}
-
-	activatorUnion, err := a.GetActivatorUnionFromBaseActivator(ct, tx, activator)
-	if err != nil {
-		return entity.ActivatorUnion{}, err
+		return err
 	}
 
 	err = a.deletePartialActivator(ct, tx, activatorID, activator.Type)
-	return activatorUnion, err
+	if err != nil {
+		return err
+	}
+
+	return a.activatorDao.DeleteActivator(ct, tx, activatorID)
 }
 
 func (a *Activator) DeletePartialActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64) *errs.Error {

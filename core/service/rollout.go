@@ -165,14 +165,14 @@ func (r *Rollout) DeleteRollout(ct context.Context, rolloutID uint64) (entity.Ro
 			return err
 		}
 
-		_, err = r.activatorRepository.DeleteActivator(ct, tx, rollout.ActivatorID)
+		err = r.activatorRepository.DeleteActivator(ct, tx, rollout.ActivatorID)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		err = r.versionSelectorRepository.DeleteVersionSelector(ct, tx, rollout.SelectorID)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		return r.rolloutDao.DeleteRollout(ct, tx, rolloutID)
@@ -726,8 +726,12 @@ func (r *Rollout) DeleteActivator(ct context.Context, activatorID uint64) (entit
 
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		activatorUnion, err = r.activatorRepository.DeleteActivator(ct, tx, activatorID)
-		return err
+		activatorUnion, err = r.activatorRepository.FindActivatorByIDWithTx(ct, tx, activatorID)
+		if err != nil {
+			return err
+		}
+
+		return r.activatorRepository.DeleteActivator(ct, tx, activatorID)
 	})
 
 	return activatorUnion, err
