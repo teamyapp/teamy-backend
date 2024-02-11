@@ -153,9 +153,10 @@ func (*Rollout) CreateRollout(
 			activator_id,
 			version_selector_id,
 			viewers,
-			is_enabled
+			is_enabled,
+			created_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6);
+		VALUES ($1, $2, $3, $4, $5, $6, $7);
 		`,
 		rollout.ID,
 		rollout.Name,
@@ -163,6 +164,7 @@ func (*Rollout) CreateRollout(
 		rollout.SelectorID,
 		rollout.Viewers,
 		rollout.IsEnabled,
+		rollout.CreatedAt,
 	)
 
 	if err != nil {
@@ -187,8 +189,9 @@ func (*Rollout) UpdateRollout(
 			version_selector_id = $3,
 			viewers = $4,
 			is_enabled = $5,
-			updated_at = $6
-		WHERE id = $7;
+			updated_at = $6,
+			created_at = $7
+		WHERE id = $8;
 		`,
 		rollout.ActivatorID,
 		rollout.Name,
@@ -196,6 +199,7 @@ func (*Rollout) UpdateRollout(
 		rollout.Viewers,
 		rollout.IsEnabled,
 		rollout.UpdatedAt,
+		rollout.CreatedAt,
 		rollout.ID,
 	)
 

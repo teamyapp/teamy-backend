@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
@@ -52,6 +53,18 @@ func (r Rollout) Activator(ctx context.Context) (Activator, error) {
 	}
 
 	return getActivatorFromActivatorUnion(r.deps, activator)
+}
+
+func (r Rollout) GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error) {
+	relations, err := r.deps.rolloutService.FindGroupRolloutRelationsByRolloutID(ctx, r.rollout.ID)
+	if err != nil {
+		r.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(relations, func(relation entity.GroupRolloutRelation, index int) GroupRolloutRelation {
+		return newGroupRolloutRelation(r.deps, relation)
+	}), nil
 }
 
 func (m Mutation) CreateAppRollout(

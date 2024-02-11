@@ -202,6 +202,47 @@ func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, gro
 	return nil
 }
 
+func (g *Group) FilterGroupIDsByMemberTypeWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	groupIDs []uint64,
+	memberType entity.GroupMemberType,
+) ([]uint64, *errs.Error) {
+	if len(groupIDs) == 0 {
+		return []uint64{}, nil
+	}
+
+	idsString := toIDsString(groupIDs)
+	query := fmt.Sprintf(
+		`
+		SELECT
+			id
+		FROM "group"
+		WHERE id IN (%s) AND member_type = $1;
+		`,
+		idsString,
+	)
+
+	rows, err := tx.SQLTx().QueryContext(ct, query, memberType)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	result := make([]uint64, 0)
+	for rows.Next() {
+		var id uint64
+		err := rows.Scan(&id)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		result = append(result, id)
+	}
+
+	return result, nil
+}
+
 func NewGroup(transactionFactory transaction.Factory) *Group {
 	return &Group{
 		transactionFactory: transactionFactory,

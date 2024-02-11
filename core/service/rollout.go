@@ -91,6 +91,10 @@ func (r *Rollout) FindTeamRolloutsByAppID(ct context.Context, appID uint64) ([]e
 	return r.rolloutDao.FindRolloutsByIDs(ct, rolloutIDs)
 }
 
+func (r *Rollout) FindGroupRolloutRelationsByRolloutID(ct context.Context, rolloutID uint64) ([]entity.GroupRolloutRelation, *errs.Error) {
+	return r.groupRolloutRelationDao.FindGroupRolloutRelationsByRolloutID(ct, rolloutID)
+}
+
 func (r *Rollout) CreateAppRollout(
 	ct context.Context,
 	appID uint64,
@@ -111,6 +115,7 @@ func (r *Rollout) CreateAppRollout(
 		ActivatorID: input.ActivatorID,
 		IsEnabled:   input.IsEnabled,
 		Viewers:     0,
+		CreatedAt:   time.Now().UTC(),
 	}
 	txCtx := transaction.NewTransactionsContext(
 		r.logger,
@@ -303,6 +308,11 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 		}
 
 		groupIDs, err = r.groupMemberRelationDao.FilterGroupIDsByMemberIDWithTx(ct, tx, groupIDs, teamID)
+		if err != nil {
+			return err
+		}
+
+		groupIDs, err = r.groupRepository.FilterGroupIDsByMemberTypeWithTx(ct, tx, groupIDs, entity.GroupMemberTypeTeam)
 		if err != nil {
 			return err
 		}
@@ -792,6 +802,11 @@ func (r *Rollout) getTeamGroupActiveVersion(
 
 	orderedRollouts := rollout.OrderedRollouts(rollouts)
 	versionNumber, err := orderedRollouts.GetVersionNumber(ct, teamID)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return versionNumber, err
 }
 
