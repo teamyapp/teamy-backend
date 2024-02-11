@@ -1,6 +1,6 @@
 -- +migrate Up
 ALTER TABLE filter_group
-DROP COLUMN count;
+    DROP COLUMN count;
 
 ALTER TABLE app_version
     DROP CONSTRAINT IF EXISTS app_version_created_by_user_id_fkey;
