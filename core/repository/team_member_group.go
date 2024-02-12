@@ -47,7 +47,7 @@ func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transa
 		return nil, err
 	}
 
-	var teamMemberGroups []entity.TeamMemberGroup
+	teamMemberGroups := make([]entity.TeamMemberGroup, 0)
 	for _, rawTeamMemberGroup := range rawTeamMemberGroups {
 		memberUserIDs, err := t.teamMemberGroupUserRelationDao.FindMemberGroupUserIDsByMemberGroupID(ct, tx, rawTeamMemberGroup.ID)
 		if err != nil {
