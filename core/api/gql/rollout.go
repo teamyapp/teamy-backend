@@ -27,6 +27,10 @@ func (r Rollout) IsEnabled() bool {
 	return r.rollout.IsEnabled
 }
 
+func (r Rollout) Locked() bool {
+	return r.rollout.Locked
+}
+
 func (r Rollout) VersionSelector(ctx context.Context) (VersionSelector, error) {
 	versionSelector, err := r.deps.rolloutService.FindVersionSelectorByID(ctx, r.rollout.SelectorID)
 	if err != nil {

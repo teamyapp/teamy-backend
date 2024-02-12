@@ -114,24 +114,13 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 	return groupUnions, nil
 }
 
-func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.GroupUnion, *errs.Error) {
-	group, err := g.groupDao.FindGroupByIDWithTx(ct, tx, groupID)
+func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64, groupType entity.GroupType) *errs.Error {
+	err := g.groupDao.DeleteGroup(ct, tx, groupID)
 	if err != nil {
-		return entity.GroupUnion{}, err
+		return err
 	}
 
-	err = g.groupDao.DeleteGroup(ct, tx, groupID)
-	if err != nil {
-		return entity.GroupUnion{}, err
-	}
-
-	groupUnion, err := g.GetGroupUnionFromBaseGroup(ct, tx, group)
-	if err != nil {
-		return entity.GroupUnion{}, err
-	}
-
-	err = g.deletePartialGroup(ct, tx, groupID, group.Type)
-	return groupUnion, err
+	return g.deletePartialGroup(ct, tx, groupID, groupType)
 }
 
 func (g *Group) DeletePartialGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {

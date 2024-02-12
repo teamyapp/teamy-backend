@@ -32,6 +32,7 @@ func (*Rollout) FindRolloutByIDWithTx(
 			version_selector_id,
 			viewers,
 			is_enabled,
+			locked,
 			created_at,
 			updated_at
 		FROM rollout
@@ -45,6 +46,7 @@ func (*Rollout) FindRolloutByIDWithTx(
 		&rollout.SelectorID,
 		&rollout.Viewers,
 		&rollout.IsEnabled,
+		&rollout.Locked,
 		&rollout.CreatedAt,
 		&rollout.UpdatedAt,
 	)
@@ -89,6 +91,7 @@ func (*Rollout) FindRolloutsByIDsWithTx(
 			version_selector_id,
 			viewers,
 			is_enabled,
+			locked,
 			created_at,
 			updated_at
 		FROM rollout
@@ -113,6 +116,7 @@ func (*Rollout) FindRolloutsByIDsWithTx(
 			&rollout.SelectorID,
 			&rollout.Viewers,
 			&rollout.IsEnabled,
+			&rollout.Locked,
 			&rollout.CreatedAt,
 			&rollout.UpdatedAt,
 		)
@@ -154,9 +158,10 @@ func (*Rollout) CreateRollout(
 			version_selector_id,
 			viewers,
 			is_enabled,
+			locked,
 			created_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7);
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 		`,
 		rollout.ID,
 		rollout.Name,
@@ -164,6 +169,7 @@ func (*Rollout) CreateRollout(
 		rollout.SelectorID,
 		rollout.Viewers,
 		rollout.IsEnabled,
+		rollout.Locked,
 		rollout.CreatedAt,
 	)
 
@@ -189,15 +195,17 @@ func (*Rollout) UpdateRollout(
 			version_selector_id = $3,
 			viewers = $4,
 			is_enabled = $5,
-			updated_at = $6,
-			created_at = $7
-		WHERE id = $8;
+			locked = $6,
+			updated_at = $7,
+			created_at = $8
+		WHERE id = $9;
 		`,
 		rollout.ActivatorID,
 		rollout.Name,
 		rollout.SelectorID,
 		rollout.Viewers,
 		rollout.IsEnabled,
+		rollout.Locked,
 		rollout.UpdatedAt,
 		rollout.CreatedAt,
 		rollout.ID,

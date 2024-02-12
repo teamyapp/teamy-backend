@@ -23,6 +23,7 @@ func (*VersionSelector) FindVersionSelectorByIDWithTx(ct context.Context, tx *tr
 		SELECT 
 			id, 
 			type, 
+			locked,
 			created_at, 
 			updated_at
 		FROM version_selector
@@ -32,6 +33,7 @@ func (*VersionSelector) FindVersionSelectorByIDWithTx(ct context.Context, tx *tr
 	).Scan(
 		&versionSelector.ID,
 		&versionSelector.Type,
+		&versionSelector.Locked,
 		&versionSelector.CreatedAt,
 		&versionSelector.UpdatedAt,
 	)
@@ -67,15 +69,18 @@ func (*VersionSelector) CreateVersionSelector(
 		INSERT INTO version_selector (
 			id,
 			type,
+			locked,
 			created_at
 		) VALUES (
 			$1,
 			$2,
-			$3
+			$3,
+			$4
 		)
 		`,
 		versionSelector.ID,
 		versionSelector.Type,
+		versionSelector.Locked,
 		versionSelector.CreatedAt,
 	)
 
@@ -92,10 +97,12 @@ func (*VersionSelector) UpdateVersionSelector(ct context.Context, tx *transactio
 		UPDATE version_selector
 		SET 
 			type = $1,
-			updated_at = $2
-		WHERE id = $3
+			locked = $2,
+			updated_at = $3
+		WHERE id = $4
 		`,
 		versionSelector.Type,
+		versionSelector.Locked,
 		versionSelector.UpdatedAt,
 		versionSelector.ID,
 	)

@@ -28,6 +28,7 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 			member_type,
 			max_rollout_index,
 			name,
+			locked,
 			created_at,
 			updated_at
 		FROM "group"
@@ -39,6 +40,7 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 		&group.MemberType,
 		&group.MaxRolloutIndex,
 		&group.Name,
+		&group.Locked,
 		&group.CreatedAt,
 		&group.UpdatedAt,
 	)
@@ -78,6 +80,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 			member_type,
 			max_rollout_index,
 			name,
+			locked,
 			created_at,
 			updated_at
 		FROM "group"
@@ -100,6 +103,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 			&group.MemberType,
 			&group.MaxRolloutIndex,
 			&group.Name,
+			&group.Locked,
 			&group.CreatedAt,
 			&group.UpdatedAt,
 		)
@@ -136,16 +140,18 @@ func (g *Group) CreateGroup(ct context.Context, tx *transaction.Transaction, gro
 			member_type,
 			max_rollout_index,
 			name,
+			locked,
 			created_at,
 			updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7);
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 		`,
 		group.ID,
 		group.Type,
 		group.MemberType,
 		group.MaxRolloutIndex,
 		group.Name,
+		group.Locked,
 		group.CreatedAt,
 		group.UpdatedAt,
 	)
@@ -166,14 +172,16 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 		    member_type = $2,
 		    max_rollout_index = $3,
 		    name = $4,
-		    created_at = $5,
-		    updated_at = $6
-		WHERE id = $7;
+			locked = $5,
+		    created_at = $6,
+		    updated_at = $7
+		WHERE id = $8;
 		`,
 		Group.Type,
 		Group.MemberType,
 		Group.MaxRolloutIndex,
 		Group.Name,
+		Group.Locked,
 		Group.CreatedAt,
 		Group.UpdatedAt,
 		Group.ID,

@@ -30,6 +30,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"gopkg.in/yaml.v3"
@@ -38,6 +39,9 @@ import (
 var appPackageRoot = path.Join("app", "packages")
 var secretAlphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?@#_-")
 var secretLength = 32
+var defaultAppGroupName = "default app group"
+var defaultRolloutName = "default app rollout"
+var defaultAppVersionNumber = 1
 
 type UploadFunc func(io.Reader) *errs.Error
 
@@ -66,6 +70,12 @@ type App struct {
 	tagDao                     dao.Tag
 	appTagRelationDao          dao.AppTagRelation
 	appGroupRelationDao        dao.AppGroupRelation
+	groupRolloutRelationDao    dao.GroupRolloutRelation
+	appRolloutRelation         dao.AppRolloutRelation
+	rolloutDao                 dao.Rollout
+	groupRepository            *repository.Group
+	activatorRepository        *repository.Activator
+	versionSelectorRepository  *repository.VersionSelector
 	jwtAuthority               security.JWTAuthority
 }
 
@@ -291,11 +301,89 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 		return entity.App{}, errs.FromGRPCErr(rpcErr)
 	}
 
+	now := time.Now().UTC()
 	app := entity.App{
 		ID:                 genAppIDRes.UniqueNumber,
 		TotalInstallations: 0,
 		ManagedByTeamID:    teamID,
-		CreatedAt:          time.Now().UTC(),
+		CreatedAt:          now,
+	}
+
+	appVersion := entity.AppVersion{
+		AppID:           app.ID,
+		Number:          defaultAppVersionNumber,
+		AppName:         name,
+		Description:     "",
+		CreatedByUserID: userID,
+		IsReady:         true,
+		Locked:          true,
+		CreatedAt:       now,
+	}
+
+	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
+	genGroupIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
+	if rpcErr != nil {
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	staticTeamGroup := entity.StaticGroup{
+		Group: entity.Group{
+			ID:              genGroupIDRes.UniqueNumber,
+			Type:            entity.GroupTypeStatic,
+			MemberType:      entity.GroupMemberTypeTeam,
+			Name:            defaultAppGroupName,
+			MaxRolloutIndex: 0,
+			CreatedAt:       now,
+			Locked:          true,
+		},
+	}
+
+	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
+	genActivatorIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActivatorIDReq)
+	if rpcErr != nil {
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	staticActivator := entity.StaticActivator{
+		Activator: entity.Activator{
+			ID:        genActivatorIDRes.UniqueNumber,
+			Type:      entity.ActivatorTypeStatic,
+			CreatedAt: now,
+			Locked:    true,
+		},
+	}
+
+	genVersionSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "versionSelectorID"}
+	genVersionSelectorIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genVersionSelectorIDReq)
+	if rpcErr != nil {
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	staticVersionSelector := entity.StaticVersionSelector{
+		VersionSelector: entity.VersionSelector{
+			ID:        genVersionSelectorIDRes.UniqueNumber,
+			Type:      entity.VersionSelectorTypeStatic,
+			CreatedAt: now,
+			Locked:    true,
+		},
+		VersionNumber: defaultAppVersionNumber,
+	}
+
+	genRolloutIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "rolloutID"}
+	genRolloutIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genRolloutIDReq)
+	if rpcErr != nil {
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	rollout := entity.Rollout{
+		ID:          genRolloutIDRes.UniqueNumber,
+		Name:        defaultRolloutName,
+		ActivatorID: staticActivator.ID,
+		SelectorID:  staticVersionSelector.ID,
+		Viewers:     1,
+		IsEnabled:   true,
+		Locked:      true,
+		CreatedAt:   now,
 	}
 
 	txCtx := transaction.NewTransactionsContext(
@@ -310,14 +398,52 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 			return err
 		}
 
-		return a.appVersionDao.CreateAppVersion(ct, tx, entity.AppVersion{
-			AppID:           app.ID,
-			Number:          0,
-			AppName:         name,
-			Description:     "",
-			CreatedByUserID: userID,
-			IsReady:         true,
-			CreatedAt:       time.Now().UTC(),
+		err = a.appVersionDao.CreateAppVersion(ct, tx, appVersion)
+		if err != nil {
+			return err
+		}
+
+		err = a.groupRepository.CreateStaticGroup(ct, tx, staticTeamGroup)
+		if err != nil {
+			return err
+		}
+
+		err = a.activatorRepository.CreateStaticActivator(ct, tx, staticActivator)
+		if err != nil {
+			return err
+		}
+
+		err = a.versionSelectorRepository.CreateStaticVersionSelector(ct, tx, staticVersionSelector)
+		if err != nil {
+			return err
+		}
+
+		err = a.rolloutDao.CreateRollout(ct, tx, rollout)
+		if err != nil {
+			return err
+		}
+
+		err = a.groupRolloutRelationDao.CreateGroupRolloutRelation(ct, tx, entity.GroupRolloutRelation{
+			GroupID:    staticTeamGroup.ID,
+			RolloutID:  rollout.ID,
+			OrderIndex: 0,
+		})
+		if err != nil {
+			return err
+		}
+
+		err = a.appGroupRelationDao.CreateAppGroupRelation(ct, tx, entity.AppGroupRelation{
+			AppID:   app.ID,
+			GroupID: staticTeamGroup.ID,
+		})
+		if err != nil {
+			return err
+		}
+
+		return a.appRolloutRelation.CreateAppRolloutRelation(ct, tx, entity.AppRolloutRelation{
+			AppID:     app.ID,
+			RolloutID: rollout.ID,
+			Type:      entity.AppRolloutRelationTypeTeam,
 		})
 	})
 
@@ -762,14 +888,14 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 			return internalErr
 		}
 
+		if av.Locked {
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("app version %v is locked", versionNumber))
+		}
+
 		return a.appVersionDao.DeleteAppVersion(ct, tx, appID, versionNumber)
 	})
 
-	if err != nil {
-		return entity.AppVersion{}, err
-	}
-
-	return av, nil
+	return av, err
 }
 
 func (a App) FindPricesByAppVersionID(ct context.Context, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
@@ -985,6 +1111,12 @@ func NewApp(
 	tagDao dao.Tag,
 	appTagRelationDao dao.AppTagRelation,
 	appGroupRelationDao dao.AppGroupRelation,
+	groupRolloutRelationDao dao.GroupRolloutRelation,
+	appRolloutRelation dao.AppRolloutRelation,
+	rolloutDao dao.Rollout,
+	groupRepository *repository.Group,
+	activatorRepository *repository.Activator,
+	versionSelectorRepository *repository.VersionSelector,
 	jwtAuthority security.JWTAuthority,
 ) App {
 	return App{
@@ -1006,6 +1138,12 @@ func NewApp(
 		tagDao:                     tagDao,
 		appTagRelationDao:          appTagRelationDao,
 		appGroupRelationDao:        appGroupRelationDao,
+		groupRolloutRelationDao:    groupRolloutRelationDao,
+		appRolloutRelation:         appRolloutRelation,
+		rolloutDao:                 rolloutDao,
+		groupRepository:            groupRepository,
+		activatorRepository:        activatorRepository,
+		versionSelectorRepository:  versionSelectorRepository,
 		jwtAuthority:               jwtAuthority,
 	}
 }

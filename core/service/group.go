@@ -161,6 +161,10 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 			return err
 		}
 
+		if group.Locked {
+			return errs.NewError(errs.InvalidArgument, "group is locked")
+		}
+
 		// Currently, we do not support update group member type
 		if group.MemberType != input.GroupMemberType {
 			return errs.NewError(errs.InvalidArgument, fmt.Sprintf("invalid group member type, current: %s, new: %s", group.MemberType, input.GroupMemberType))
@@ -353,7 +357,7 @@ func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.GroupU
 }
 
 func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64) (entity.GroupUnion, *errs.Error) {
-	var group entity.GroupUnion
+	var groupUnion entity.GroupUnion
 	txCtx := transaction.NewTransactionsContext(
 		g.logger,
 		g.transactionFactory,
@@ -361,7 +365,20 @@ func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64)
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
+		group, err := g.groupDao.FindGroupByIDWithTx(ct, tx, groupID)
+		if err != nil {
+			return err
+		}
+
+		if group.Locked {
+			return errs.NewError(errs.InvalidArgument, "group is locked")
+		}
+
+		groupUnion, err = g.groupRepository.GetGroupUnionFromBaseGroup(ct, tx, group)
+		if err != nil {
+			return err
+		}
+
 		err = g.appGroupRelationDao.DeleteAppGroupRelation(ct, tx, appID, groupID)
 		if err != nil {
 			return err
@@ -377,15 +394,10 @@ func (g *Group) DeleteAppGroup(ct context.Context, appID uint64, groupID uint64)
 			return err
 		}
 
-		group, err = g.groupRepository.DeleteGroup(ct, tx, groupID)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return g.groupRepository.DeleteGroup(ct, tx, group.ID, group.Type)
 	})
 
-	return group, err
+	return groupUnion, err
 }
 
 func (g *Group) CreateFilterGroup(

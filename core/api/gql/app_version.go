@@ -67,6 +67,10 @@ func (a AppVersion) IsReady(ctx context.Context) bool {
 	return a.appVersion.IsReady
 }
 
+func (a AppVersion) Locked(ctx context.Context) bool {
+	return a.appVersion.Locked
+}
+
 func (a AppVersion) IconURL(ctx context.Context) *string {
 	return a.appVersion.IconURL
 }
