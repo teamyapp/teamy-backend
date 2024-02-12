@@ -11,6 +11,7 @@ type Rollout struct {
 	SelectorID  uint64
 	Viewers     int
 	IsEnabled   bool
+	Locked      bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
 }

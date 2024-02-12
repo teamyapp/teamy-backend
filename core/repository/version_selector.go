@@ -132,19 +132,14 @@ func (v *VersionSelector) CreateExperimentVersionSelector(
 	return nil
 }
 
-func (v *VersionSelector) FindVersionSelectorByID(
+func (v *VersionSelector) GetVersionSelectorUnionFromBaseVersionSelector(
 	ct context.Context,
 	tx *transaction.Transaction,
-	versionSelectorID uint64,
+	versionSelector entity.VersionSelector,
 ) (entity.VersionSelectorUnion, *errs.Error) {
-	versionSelector, err := v.versionSelectorDao.FindVersionSelectorByIDWithTx(ct, tx, versionSelectorID)
-	if err != nil {
-		return entity.VersionSelectorUnion{}, err
-	}
-
 	switch versionSelector.Type {
 	case entity.VersionSelectorTypeStatic:
-		versionNumber, err := v.findVersionNumberByStaticVersionSelectorID(ct, tx, versionSelectorID)
+		versionNumber, err := v.findVersionNumberByStaticVersionSelectorID(ct, tx, versionSelector.ID)
 		if err != nil {
 			return entity.VersionSelectorUnion{}, err
 		}
@@ -157,7 +152,7 @@ func (v *VersionSelector) FindVersionSelectorByID(
 			},
 		}, nil
 	case entity.VersionSelectorTypeExperiment:
-		versionNumbers, err := v.findVersionNumbersByExperimentVersionSelectorID(ct, tx, versionSelectorID)
+		versionNumbers, err := v.findVersionNumbersByExperimentVersionSelectorID(ct, tx, versionSelector.ID)
 		if err != nil {
 			return entity.VersionSelectorUnion{}, err
 		}
@@ -172,6 +167,19 @@ func (v *VersionSelector) FindVersionSelectorByID(
 	default:
 		return entity.VersionSelectorUnion{}, errs.NewError(errs.InvalidArgument, "invalid version selector type")
 	}
+}
+
+func (v *VersionSelector) FindVersionSelectorByID(
+	ct context.Context,
+	tx *transaction.Transaction,
+	versionSelectorID uint64,
+) (entity.VersionSelectorUnion, *errs.Error) {
+	versionSelector, err := v.versionSelectorDao.FindVersionSelectorByIDWithTx(ct, tx, versionSelectorID)
+	if err != nil {
+		return entity.VersionSelectorUnion{}, err
+	}
+
+	return v.GetVersionSelectorUnionFromBaseVersionSelector(ct, tx, versionSelector)
 }
 
 func (v *VersionSelector) DeleteVersionSelector(

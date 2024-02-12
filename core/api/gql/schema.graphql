@@ -273,6 +273,7 @@ type Rollout {
 	versionSelector: VersionSelector!
 	groupRolloutRelations: [GroupRolloutRelation!]!
 	isEnabled: Boolean!
+	locked: Boolean!
 	createdAt: Time!
 	updatedAt: Time
 }
@@ -379,6 +380,7 @@ type AppVersion {
 	isReady: Boolean!
 	app: App!
 	iconUrl: String
+	locked: Boolean!
 }
 
 interface GroupRolloutRelation {
@@ -397,6 +399,7 @@ interface Group {
 	updatedAt: Time
 	groupRolloutRelations: [GroupRolloutRelation!]!
 	apps: [App!]!
+	locked: Boolean!
 }
 
 type StaticUserGroup implements Group {
@@ -410,6 +413,7 @@ type StaticUserGroup implements Group {
 	updatedAt: Time
 	groupRolloutRelations: [GroupRolloutRelation!]!
 	apps: [App!]!
+	locked: Boolean!
 }
 
 type StaticTeamGroup implements Group {
@@ -423,6 +427,7 @@ type StaticTeamGroup implements Group {
 	updatedAt: Time
 	groupRolloutRelations: [GroupRolloutRelation!]!
 	apps: [App!]!
+	locked: Boolean!
 }
 
 type FilterGroup implements Group {
@@ -436,6 +441,7 @@ type FilterGroup implements Group {
 	updatedAt: Time
 	groupRolloutRelations: [GroupRolloutRelation!]!
 	apps: [App!]!
+	locked: Boolean!
 }
 
 type TeamAppInstallation {

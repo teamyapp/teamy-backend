@@ -70,6 +70,7 @@ type Rollout struct {
 	activatorRepository       *repository.Activator
 	groupRepository           *repository.Group
 	activatorDao              dao.Activator
+	versionSelectorDao        dao.VersionSelector
 	teamDao                   dao.Team
 }
 
@@ -170,6 +171,10 @@ func (r *Rollout) DeleteRollout(ct context.Context, rolloutID uint64) (entity.Ro
 			return err
 		}
 
+		if rollout.Locked {
+			return errs.NewError(errs.InvalidArgument, "Rollout is locked")
+		}
+
 		err = r.activatorRepository.DeleteActivator(ct, tx, rollout.ActivatorID)
 		if err != nil {
 			return err
@@ -196,6 +201,14 @@ func (r *Rollout) UpdateRollout(ct context.Context, rolloutID uint64, input Upda
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
+		rollout, err = r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
+		if err != nil {
+			return err
+		}
+
+		if rollout.Locked {
+			return errs.NewError(errs.InvalidArgument, "Rollout is locked")
+		}
 
 		newGroupIDSet := map[uint64]bool{}
 		for _, groupID := range input.GroupIDs {
@@ -257,11 +270,6 @@ func (r *Rollout) UpdateRollout(ct context.Context, rolloutID uint64, input Upda
 					return err
 				}
 			}
-		}
-
-		rollout, err = r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
-		if err != nil {
-			return err
 		}
 
 		rollout.Name = input.Name
@@ -494,6 +502,10 @@ func (r *Rollout) UpdateActivator(ct context.Context, activatorID uint64, input 
 			return err
 		}
 
+		if activator.Locked {
+			return errs.NewError(errs.InvalidArgument, "Activator is locked")
+		}
+
 		updatedActivator := entity.Activator{
 			ID:        activatorID,
 			Type:      input.Type,
@@ -635,8 +647,16 @@ func (r *Rollout) UpdateVersionSelector(ct context.Context, appID uint64, select
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		versionSelectorUnion, err = r.versionSelectorRepository.FindVersionSelectorByID(ct, tx, selectorID)
+		versionSelector, err := r.versionSelectorDao.FindVersionSelectorByIDWithTx(ct, tx, selectorID)
+		if err != nil {
+			return err
+		}
+
+		if versionSelector.Locked {
+			return errs.NewError(errs.InvalidArgument, "Version selector is locked")
+		}
+
+		versionSelectorUnion, err = r.versionSelectorRepository.GetVersionSelectorUnionFromBaseVersionSelector(ct, tx, versionSelector)
 		if err != nil {
 			return err
 		}
@@ -665,6 +685,10 @@ func (r *Rollout) UpdateVersionSelector(ct context.Context, appID uint64, select
 			}
 			return r.versionSelectorRepository.UpdateStaticVersionSelector(ct, tx, versionSelectorUnion.StaticVersionSelector)
 		case entity.VersionSelectorTypeExperiment:
+			if len(input.VersionNumbers) == 0 {
+				return errs.NewError(errs.InvalidArgument, "Version numbers are required for experiment version selector")
+			}
+
 			for _, versionNumber := range input.VersionNumbers {
 				_, err := r.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 				if err != nil {
@@ -735,8 +759,16 @@ func (r *Rollout) DeleteActivator(ct context.Context, activatorID uint64) (entit
 	)
 
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		activatorUnion, err = r.activatorRepository.FindActivatorByIDWithTx(ct, tx, activatorID)
+		activator, err := r.activatorDao.FindActivatorByID(ct, activatorID)
+		if err != nil {
+			return err
+		}
+
+		if activator.Locked {
+			return errs.NewError(errs.InvalidArgument, "Activator is locked")
+		}
+
+		activatorUnion, err = r.activatorRepository.GetActivatorUnionFromBaseActivator(ct, tx, activator)
 		if err != nil {
 			return err
 		}
@@ -756,8 +788,16 @@ func (r *Rollout) DeleteVersionSelector(ct context.Context, selectorID uint64) (
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		versionSelectorUnion, err = r.versionSelectorRepository.FindVersionSelectorByID(ct, tx, selectorID)
+		versionSelector, err := r.versionSelectorDao.FindVersionSelectorByID(ct, selectorID)
+		if err != nil {
+			return err
+		}
+
+		if versionSelector.Locked {
+			return errs.NewError(errs.InvalidArgument, "Version selector is locked")
+		}
+
+		versionSelectorUnion, err = r.versionSelectorRepository.GetVersionSelectorUnionFromBaseVersionSelector(ct, tx, versionSelector)
 		if err != nil {
 			return err
 		}
@@ -909,6 +949,7 @@ func NewRollout(
 	activatorRepository *repository.Activator,
 	groupRepository *repository.Group,
 	activatorDao dao.Activator,
+	versionSelectorDao dao.VersionSelector,
 	teamDao dao.Team,
 ) *Rollout {
 	return &Rollout{
@@ -927,6 +968,7 @@ func NewRollout(
 		activatorRepository:       activatorRepository,
 		groupRepository:           groupRepository,
 		activatorDao:              activatorDao,
+		versionSelectorDao:        versionSelectorDao,
 		teamDao:                   teamDao,
 	}
 }

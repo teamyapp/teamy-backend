@@ -18,6 +18,7 @@ type VersionSelectorUnion struct {
 type VersionSelector struct {
 	ID        uint64
 	Type      VersionSelectorType
+	Locked    bool
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 }

@@ -24,6 +24,7 @@ type Group struct {
 	MemberType      GroupMemberType
 	MaxRolloutIndex int
 	Name            string
+	Locked          bool
 	CreatedAt       time.Time
 	UpdatedAt       *time.Time
 }

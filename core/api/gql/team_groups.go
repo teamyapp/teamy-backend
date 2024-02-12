@@ -25,6 +25,10 @@ func (s StaticTeamGroup) Type(ctx context.Context) entity.GroupType {
 	return s.group.Type
 }
 
+func (s StaticTeamGroup) Locked(ctx context.Context) bool {
+	return s.group.Locked
+}
+
 func (s StaticTeamGroup) MemberType(ctx context.Context) entity.GroupMemberType {
 	return s.group.MemberType
 }

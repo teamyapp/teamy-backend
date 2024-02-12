@@ -16,6 +16,7 @@ type Group interface {
 	MemberType(ctx context.Context) entity.GroupMemberType
 	MaxRolloutIndex(ctx context.Context) int32
 	Name(ctx context.Context) string
+	Locked(ctx context.Context) bool
 	CreatedAt(ctx context.Context) graphql.Time
 	UpdatedAt(ctx context.Context) *graphql.Time
 	GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error)
@@ -38,6 +39,10 @@ func (f FilterGroup) ID(ctx context.Context) graphql.ID {
 
 func (f FilterGroup) Type(ctx context.Context) entity.GroupType {
 	return f.filterGroup.Type
+}
+
+func (f FilterGroup) Locked(ctx context.Context) bool {
+	return f.filterGroup.Locked
 }
 
 func (f FilterGroup) MemberType(ctx context.Context) entity.GroupMemberType {

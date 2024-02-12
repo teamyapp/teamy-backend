@@ -19,15 +19,18 @@ func (*Activator) CreateActivator(ct context.Context, tx *transaction.Transactio
 		INSERT INTO activator (
 			id,
 			type,
+			locked,
 			created_at
 		) 
 		VALUES (
 			$1,
 			$2,
-			$3
+			$3,
+			$4
 		)`,
 		activator.ID,
 		activator.Type,
+		activator.Locked,
 		activator.CreatedAt,
 	)
 	if err != nil {
@@ -43,6 +46,7 @@ func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Tr
 		SELECT
 			id,
 			type,
+			locked,
 			created_at,
 			updated_at
 		FROM activator
@@ -51,6 +55,7 @@ func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Tr
 	).Scan(
 		&activator.ID,
 		&activator.Type,
+		&activator.Locked,
 		&activator.CreatedAt,
 		&activator.UpdatedAt,
 	)
@@ -80,9 +85,11 @@ func (*Activator) UpdateActivator(ct context.Context, tx *transaction.Transactio
 		UPDATE activator
 		SET
 			type = $1,
-			updated_at = $2
-		WHERE id = $3`,
+			locked = $2,
+			updated_at = $3
+		WHERE id = $4`,
 		activator.Type,
+		activator.Locked,
 		activator.UpdatedAt,
 		activator.ID,
 	)

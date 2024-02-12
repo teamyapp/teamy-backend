@@ -25,6 +25,10 @@ func (s StaticUserGroup) Type(ctx context.Context) entity.GroupType {
 	return s.group.Type
 }
 
+func (s StaticUserGroup) Locked(ctx context.Context) bool {
+	return s.group.Locked
+}
+
 func (s StaticUserGroup) MemberType(ctx context.Context) entity.GroupMemberType {
 	return s.group.MemberType
 }

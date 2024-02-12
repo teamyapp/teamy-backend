@@ -14,6 +14,7 @@ const (
 type Activator struct {
 	ID        uint64
 	Type      ActivatorType
+	Locked    bool
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 }
