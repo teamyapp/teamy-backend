@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type User struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -168,6 +166,6 @@ func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user e
 	return nil
 }
 
-func NewUser(logger telemetry.Logger, transactionFactory transaction.Factory) User {
-	return User{logger: logger, transactionFactory: transactionFactory}
+func NewUser(transactionFactory transaction.Factory) User {
+	return User{transactionFactory: transactionFactory}
 }

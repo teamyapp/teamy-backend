@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TaskLink struct {
-	logger telemetry.Logger
 }
 
 var _ dao.TaskLink = (*TaskLink)(nil)
@@ -143,6 +141,6 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transact
 	return taskLinks, nil
 }
 
-func NewTaskLink(logger telemetry.Logger, sqlDB *sql.DB) TaskLink {
-	return TaskLink{logger: logger}
+func NewTaskLink() TaskLink {
+	return TaskLink{}
 }

@@ -6,14 +6,12 @@ import (
 	"time"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Group struct {
-	logger         telemetry.Logger
 	groupDao       dao.Group
 	filterGroupDao dao.FilterGroup
 }
@@ -181,9 +179,8 @@ func (g *Group) FilterGroupIDsByMemberTypeWithTx(
 	return g.groupDao.FilterGroupIDsByMemberTypeWithTx(ct, tx, groupIDs, groupMemberType)
 }
 
-func NewGroup(logger telemetry.Logger, groupDao dao.Group, filterGroupDao dao.FilterGroup) *Group {
+func NewGroup(groupDao dao.Group, filterGroupDao dao.FilterGroup) *Group {
 	return &Group{
-		logger:         logger,
 		groupDao:       groupDao,
 		filterGroupDao: filterGroupDao,
 	}

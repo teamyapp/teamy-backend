@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	daoEntity "github.com/teamyapp/teamy-backend/core/dao/entity"
+	"github.com/teamyapp/teamy-backend/core/repository"
+
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
@@ -38,21 +41,34 @@ type CreateTeamInput struct {
 	Name string
 }
 
+type CreateTeamMemberGroupInput struct {
+	Name   string
+	TeamID uint64
+}
+
+type UpdateTeamMemberGroupInput struct {
+	GroupID uint64
+	Name    string
+	TeamID  uint64
+}
+
 type Team struct {
-	logger                     telemetry.Logger
-	cloudWebAPIExternalBaseURL string
-	cloudClientRegistry        *client.Registry
-	authorizer                 client.Authorizer
-	featureToggles             feature.Toggles
-	stateSyncer                *realtime.StateSyncer
-	transactionFactory         cloudTransaction.Factory
-	taskDao                    dao.Task
-	sprintDao                  dao.Sprint
-	sprintParticipantDao       dao.SprintParticipant
-	teamDao                    dao.Team
-	teamMemberDao              dao.TeamMember
-	teamFileUploadSessionDao   dao.TeamFileUploadSession
-	teamGroupDao               dao.TeamGroup
+	logger                         telemetry.Logger
+	cloudWebAPIExternalBaseURL     string
+	cloudClientRegistry            *client.Registry
+	authorizer                     client.Authorizer
+	featureToggles                 feature.Toggles
+	stateSyncer                    *realtime.StateSyncer
+	transactionFactory             cloudTransaction.Factory
+	taskDao                        dao.Task
+	sprintDao                      dao.Sprint
+	sprintParticipantDao           dao.SprintParticipant
+	teamDao                        dao.Team
+	teamMemberDao                  dao.TeamMember
+	teamFileUploadSessionDao       dao.TeamFileUploadSession
+	teamMemberGroupDao             dao.TeamMemberGroup
+	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation
+	teamMemberGroupRepo            repository.TeamMemberGroup
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
@@ -300,32 +316,32 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		rtTx.AppendMutation(createTeamMemberMutation)
 
 		if t.featureToggles.EnableAuthorization {
-			teamGroups := []entity.TeamGroup{
+			teamMemberGroups := []daoEntity.TeamMemberGroup{
 				{
-					TeamID:      teamID,
-					Label:       entity.OwnerTeamGroupLabel,
-					UserGroupID: ownerGroupID,
-					CreatedAt:   time.Now().UTC(),
+					TeamID:                   teamID,
+					Name:                     "Owner",
+					AuthorizationUserGroupID: ownerGroupID,
+					CreatedAt:                time.Now().UTC(),
 				},
 				{
-					TeamID:      teamID,
-					Label:       entity.AdminTeamGroupLabel,
-					UserGroupID: adminGroupID,
-					CreatedAt:   time.Now().UTC(),
+					TeamID:                   teamID,
+					Name:                     "Admin",
+					AuthorizationUserGroupID: adminGroupID,
+					CreatedAt:                time.Now().UTC(),
 				},
 				{
-					TeamID:      teamID,
-					Label:       entity.MemberTeamGroupLabel,
-					UserGroupID: memberGroupID,
-					CreatedAt:   time.Now().UTC(),
+					TeamID:                   teamID,
+					Name:                     "Member",
+					AuthorizationUserGroupID: memberGroupID,
+					CreatedAt:                time.Now().UTC(),
 				},
 			}
-			for _, teamGroup := range teamGroups {
+			for _, teamMemberGroup := range teamMemberGroups {
 				teamGroupMutation := mutation.NewCreateTeamGroup(
 					t.logger,
 					t.stateSyncer,
-					t.teamGroupDao,
-					teamGroup,
+					t.teamMemberGroupDao,
+					teamMemberGroup,
 				)
 				internalErr = teamGroupMutation.Execute(ct, tx)
 				if internalErr != nil {
@@ -883,6 +899,153 @@ func (t Team) UpdateTeamMember(
 	return teamMember, nil
 }
 
+func (t Team) FindTeamMemberGroups(ct context.Context, teamID uint64) ([]entity.TeamMemberGroup, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+
+	var teamMemberGroups []entity.TeamMemberGroup
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		teamMemberGroups, internalErr = t.teamMemberGroupRepo.FindMemberGroupsByTeamID(ct, tx, teamID)
+		return internalErr
+	})
+	return teamMemberGroups, err
+}
+
+func (t Team) FindTeamMemberGroupByID(ct context.Context, id uint64) (entity.TeamMemberGroup, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+
+	var teamMemberGroup entity.TeamMemberGroup
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		teamMemberGroup, internalErr = t.teamMemberGroupRepo.FindMemberGroupByID(ct, tx, id)
+		return internalErr
+	})
+	return teamMemberGroup, err
+}
+
+func (t Team) CreateTeamMemberGroup(ct context.Context, input CreateTeamMemberGroupInput) (entity.TeamMemberGroup, *errs.Error) {
+	genTeamMemberGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamMemberGroupID"}
+	genTeamMemberGroupIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamMemberGroupIDReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.TeamMemberGroup{}, internalErr
+	}
+
+	createUserGroupRes, rpcErr := t.cloudClientRegistry.AuthorizationClient().CreateUserGroup(ct, &proto.CreateUserGroupRequest{
+		Name: fmt.Sprintf("Team(%d)/%s", input.TeamID, input.Name),
+	})
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.TeamMemberGroup{}, internalErr
+	}
+
+	teamMemberGroupID := genTeamMemberGroupIDRes.UniqueNumber
+	teamMemberGroupPartial := daoEntity.TeamMemberGroup{
+		ID:                       teamMemberGroupID,
+		Name:                     input.Name,
+		TeamID:                   input.TeamID,
+		AuthorizationUserGroupID: createUserGroupRes.UserGroup.GroupId,
+		CreatedAt:                time.Now().UTC(),
+	}
+
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return t.teamMemberGroupDao.CreateMemberGroup(ct, tx, teamMemberGroupPartial)
+	})
+	return repository.GetTeamMemberGroupFromRawTeamMemberGroup(teamMemberGroupPartial), internalErr
+}
+
+func (t Team) UpdateTeamMemberGroup(ct context.Context, input UpdateTeamMemberGroupInput) (entity.TeamMemberGroup, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+
+	var rawTeamMemberGroup daoEntity.TeamMemberGroup
+	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		rawTeamMemberGroup, internalErr = t.teamMemberGroupDao.FindMemberGroupByID(ct, tx, input.GroupID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		rawTeamMemberGroup.Name = input.Name
+		rawTeamMemberGroup.ID = input.GroupID
+		now := time.Now().UTC()
+		rawTeamMemberGroup.UpdatedAt = &now
+		return t.teamMemberGroupDao.UpdateMemberGroup(ct, tx, rawTeamMemberGroup)
+	})
+	return repository.GetTeamMemberGroupFromRawTeamMemberGroup(rawTeamMemberGroup), internalErr
+}
+
+func (t Team) DeleteTeamMemberGroup(ct context.Context, id uint64) (entity.TeamMemberGroup, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+
+	var teamMemberGroup entity.TeamMemberGroup
+	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		teamMemberGroup, internalErr = t.teamMemberGroupRepo.FindMemberGroupByID(ct, tx, id)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		return t.teamMemberGroupDao.DeleteMemberGroup(ct, tx, id)
+	})
+	return teamMemberGroup, internalErr
+}
+
+func (t Team) AddUserToTeamMemberGroup(ct context.Context, memberGroupID uint64, userID uint64) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return t.teamMemberGroupUserRelationDao.CreateMemberGroupUserRelation(ct, tx, daoEntity.TeamMemberGroupUserRelation{
+			GroupID: memberGroupID,
+			UserID:  userID,
+		})
+	})
+}
+
+func (t Team) RemoveUserFromTeamMemberGroup(ct context.Context, memberGroupID uint64, userID uint64) *errs.Error {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		return t.teamMemberGroupUserRelationDao.DeleteMemberGroupUserRelation(ct, tx, daoEntity.TeamMemberGroupUserRelation{
+			GroupID: memberGroupID,
+			UserID:  userID,
+		})
+	})
+}
+
 func NewTeam(
 	logger telemetry.Logger,
 	cloudWebAPIExternalBaseURL string,
@@ -897,22 +1060,26 @@ func NewTeam(
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
-	teamGroupDao dao.TeamGroup,
+	teamMemberGroupDao dao.TeamMemberGroup,
+	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation,
+	teamMemberGroupRepo repository.TeamMemberGroup,
 ) Team {
 	return Team{
-		logger:                     logger,
-		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
-		cloudClientRegistry:        cloudClientRegistry,
-		authorizer:                 authorizer,
-		featureToggles:             featureToggles,
-		stateSyncer:                stateSyncer,
-		transactionFactory:         transactionFactory,
-		taskDao:                    taskDao,
-		sprintDao:                  sprintDao,
-		sprintParticipantDao:       sprintParticipantDao,
-		teamMemberDao:              teamMemberDao,
-		teamDao:                    teamDao,
-		teamFileUploadSessionDao:   teamFileUploadSessionDao,
-		teamGroupDao:               teamGroupDao,
+		logger:                         logger,
+		cloudWebAPIExternalBaseURL:     cloudWebAPIExternalBaseURL,
+		cloudClientRegistry:            cloudClientRegistry,
+		authorizer:                     authorizer,
+		featureToggles:                 featureToggles,
+		stateSyncer:                    stateSyncer,
+		transactionFactory:             transactionFactory,
+		taskDao:                        taskDao,
+		sprintDao:                      sprintDao,
+		sprintParticipantDao:           sprintParticipantDao,
+		teamMemberDao:                  teamMemberDao,
+		teamDao:                        teamDao,
+		teamFileUploadSessionDao:       teamFileUploadSessionDao,
+		teamMemberGroupDao:             teamMemberGroupDao,
+		teamMemberGroupUserRelationDao: teamMemberGroupUserRelationDao,
+		teamMemberGroupRepo:            teamMemberGroupRepo,
 	}
 }

@@ -4,14 +4,12 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TaskAwaitForRelation struct {
-	logger telemetry.Logger
 }
 
 var _ dao.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
@@ -107,6 +105,6 @@ func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, tx *transaction
 	return nil
 }
 
-func NewTaskAwaitForRelation(logger telemetry.Logger) TaskAwaitForRelation {
-	return TaskAwaitForRelation{logger: logger}
+func NewTaskAwaitForRelation() TaskAwaitForRelation {
+	return TaskAwaitForRelation{}
 }

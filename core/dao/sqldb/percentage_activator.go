@@ -61,9 +61,9 @@ func (*PercentageActivator) CreatePercentageActivator(
 		    percentage
 		)
 		VALUES ($1, $2)
-	`, 
-	activatorID, 
-	activator.Percentage)
+	`,
+		activatorID,
+		activator.Percentage)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}
@@ -81,9 +81,9 @@ func (*PercentageActivator) UpdatePercentageActivator(
 		UPDATE percentage_activator
 		SET percentage = $2
 		WHERE activator_id = $1
-	`, 
-	activatorID, 
-	activator.Percentage)
+	`,
+		activatorID,
+		activator.Percentage)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}

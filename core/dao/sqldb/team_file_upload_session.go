@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type TeamFileUploadSession struct {
-	logger telemetry.Logger
 }
 
 var _ dao.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
@@ -123,6 +121,6 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 	return nil
 }
 
-func NewTeamFileUploadSession(logger telemetry.Logger) TeamFileUploadSession {
-	return TeamFileUploadSession{logger: logger}
+func NewTeamFileUploadSession() TeamFileUploadSession {
+	return TeamFileUploadSession{}
 }

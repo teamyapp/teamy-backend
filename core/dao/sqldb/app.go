@@ -6,14 +6,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type App struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -187,9 +185,8 @@ func (a *App) DeleteApp(ct context.Context, tx *transaction.Transaction, appID u
 	return nil
 }
 
-func NewApp(logger telemetry.Logger, transactionFactory transaction.Factory) *App {
+func NewApp(transactionFactory transaction.Factory) *App {
 	return &App{
-		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

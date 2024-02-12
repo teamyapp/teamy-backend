@@ -5,14 +5,12 @@ import (
 	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type AppVersion struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -240,9 +238,8 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 	return appVersion, nil
 }
 
-func NewAppVersion(logger telemetry.Logger, transactionFactory transaction.Factory) *AppVersion {
+func NewAppVersion(transactionFactory transaction.Factory) *AppVersion {
 	return &AppVersion{
-		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

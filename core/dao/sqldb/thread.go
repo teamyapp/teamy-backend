@@ -4,13 +4,11 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
 type Thread struct {
-	logger telemetry.Logger
 }
 
 var _ dao.Thread = (*Thread)(nil)
@@ -41,6 +39,6 @@ func (t Thread) DeleteThread(ct context.Context, tx *transaction.Transaction, th
 	return nil
 }
 
-func NewThread(logger telemetry.Logger) Thread {
-	return Thread{logger: logger}
+func NewThread() Thread {
+	return Thread{}
 }

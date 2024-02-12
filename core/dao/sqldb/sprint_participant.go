@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type SprintParticipant struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -236,9 +234,8 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 	return nil
 }
 
-func NewSprintParticipant(logger telemetry.Logger, transactionFactory transaction.Factory) SprintParticipant {
+func NewSprintParticipant(transactionFactory transaction.Factory) SprintParticipant {
 	return SprintParticipant{
-		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

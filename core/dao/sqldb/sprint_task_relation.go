@@ -4,14 +4,12 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type SprintTaskRelation struct {
-	logger telemetry.Logger
 }
 
 var _ dao.SprintTaskRelation = (*SprintTaskRelation)(nil)
@@ -114,6 +112,6 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, tx *tra
 	return nil
 }
 
-func NewSprintTaskRelation(logger telemetry.Logger) SprintTaskRelation {
-	return SprintTaskRelation{logger: logger}
+func NewSprintTaskRelation() SprintTaskRelation {
+	return SprintTaskRelation{}
 }

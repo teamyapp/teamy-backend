@@ -7,8 +7,28 @@ option go_package = "github.com/teamy-backend/core/api/proto";
 service Team {
 	rpc CreateTeam(CreateTeamRequest) returns (CreateTeamResponse);
 	rpc UpdateTeam(UpdateTeamRequest) returns (google.protobuf.Empty);
+	rpc ListTeamMembers(ListTeamMembersRequest) returns (ListTeamMembersResponse);
 	rpc AddMemberToTeam(AddMemberToTeamRequest) returns (google.protobuf.Empty);
 	rpc RemoveMemberFromTeam(RemoveMemberFromRequest) returns (google.protobuf.Empty);
+	rpc ListMemberGroups(ListMemberGroupsRequest) returns (ListTeamMemberGroupsResponse);
+	rpc CreateMemberGroup(CreateTeamMemberGroupRequest) returns (CreateTeamMemberGroupResponse);
+	rpc UpdateMemberGroup(UpdateTeamMemberGroupRequest) returns (google.protobuf.Empty);
+	rpc DeleteMemberGroup(DeleteTeamMemberGroupRequest) returns (google.protobuf.Empty);
+	rpc AddMemberToGroup(AddTeamMemberToGroupRequest) returns (google.protobuf.Empty);
+	rpc RemoveMemberFromGroup(RemoveTeamMemberFromGroupRequest) returns (google.protobuf.Empty);
+}
+
+message TeamMember {
+	uint64 userId = 1;
+	string firstName = 2;
+	string lastName = 3;
+	optional string profileUrl = 4;
+}
+
+message TeamMemberGroup {
+	uint64 groupId = 1;
+	string name = 2;
+	repeated uint64 memberUserIds = 3;
 }
 
 message CreateTeamRequest {
@@ -26,6 +46,14 @@ message UpdateTeamRequest {
 	uint64 ownerUserId = 4;
 }
 
+message ListTeamMembersRequest {
+	uint64 teamId = 1;
+}
+
+message ListTeamMembersResponse {
+	repeated TeamMember teamMembers = 1;
+}
+
 message AddMemberToTeamRequest {
 	uint64 teamId = 1;
 	uint64 memberUserId = 2;
@@ -35,3 +63,45 @@ message RemoveMemberFromRequest {
 	uint64 teamId = 1;
 	uint64 memberUserId = 2;
 }
+
+message ListMemberGroupsRequest {
+	uint64 teamId = 1;
+}
+
+message ListTeamMemberGroupsResponse {
+	repeated TeamMemberGroup groups = 1;
+}
+
+message CreateTeamMemberGroupRequest {
+	uint64 teamId = 1;
+	string name = 2;
+}
+
+message CreateTeamMemberGroupResponse {
+	uint64 groupId = 1;
+}
+
+message UpdateTeamMemberGroupRequest {
+	uint64 teamId = 1;
+	uint64 groupId = 2;
+	string name = 3;
+}
+
+message DeleteTeamMemberGroupRequest {
+	uint64 teamId = 1;
+	uint64 groupId = 2;
+}
+
+message AddTeamMemberToGroupRequest {
+	uint64 teamId = 1;
+	uint64 groupId = 2;
+	uint64 memberUserId = 3;
+}
+
+message RemoveTeamMemberFromGroupRequest {
+	uint64 teamId = 1;
+	uint64 groupId = 2;
+	uint64 memberUserId = 3;
+}
+
+

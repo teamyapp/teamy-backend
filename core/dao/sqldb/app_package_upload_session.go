@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type AppPackageUploadSession struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -37,7 +35,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 			created_at,
 			updated_at
 		FROM app_package_upload_session
-		WHERE app_id = $1 
+		WHERE app_id = $1
 		    AND version_number = $2
 		    AND file_upload_session_id = $3;`,
 		appID,
@@ -118,9 +116,8 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 	return nil
 }
 
-func NewAppPackageUploadSession(logger telemetry.Logger, transactionFactory transaction.Factory) *AppPackageUploadSession {
+func NewAppPackageUploadSession(transactionFactory transaction.Factory) *AppPackageUploadSession {
 	return &AppPackageUploadSession{
-		logger:             logger,
 		transactionFactory: transactionFactory,
 	}
 }

@@ -24,7 +24,6 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 ) ([]entity.GithubRequiredUserAction, *errs.Error) {
 	rows, err := g.db.Query(`
 	SELECT
-		id,
 	    team_id,
 	    action_user_id,
 	    user_action_type,
@@ -46,7 +45,6 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 	for rows.Next() {
 		requiredAction := entity.GithubRequiredUserAction{}
 		err = rows.Scan(
-			&requiredAction.ID,
 			&requiredAction.TeamID,
 			&requiredAction.ActionUserID,
 			&requiredAction.UserActionType,
@@ -64,6 +62,46 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 	return requiredActions, internalErr
 }
 
+func (g GithubRequiredUserAction) FindRequiredUserActionByActionTypeAndUserID(
+	ct context.Context,
+	teamID uint64,
+	actionType entity.GithubUserActionType,
+	actionUserID uint64,
+) (entity.GithubRequiredUserAction, *errs.Error) {
+	requiredAction := entity.GithubRequiredUserAction{}
+	err := g.db.QueryRow(`
+	SELECT
+	    team_id,
+	    action_user_id,
+	    user_action_type,
+	    is_completed,
+	    requested_at,
+	    requested_by_user_id
+	FROM apps_github_required_user_action
+	WHERE team_id = $1 AND user_action_type = $2 AND action_user_id = $3;
+	`,
+		teamID,
+		actionType,
+		actionUserID).
+		Scan(
+			&requiredAction.TeamID,
+			&requiredAction.ActionUserID,
+			&requiredAction.UserActionType,
+			&requiredAction.IsCompleted,
+			&requiredAction.RequestedAt,
+			&requiredAction.RequestedByUserID,
+		)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return entity.GithubRequiredUserAction{}, errs.NewError(errs.NotFound, err.Error())
+		}
+
+		return entity.GithubRequiredUserAction{}, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return requiredAction, nil
+}
+
 func (g GithubRequiredUserAction) CreateRequiredUserAction(
 	ct context.Context,
 	requiredUserAction entity.GithubRequiredUserAction,
@@ -71,7 +109,6 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(
 	_, err := g.db.Exec(`
 	INSERT INTO apps_github_required_user_action
 	(
-	    id,
 	    team_id,
 	    action_user_id,
 	    user_action_type,
@@ -79,9 +116,8 @@ func (g GithubRequiredUserAction) CreateRequiredUserAction(
 	    requested_at,
 	    requested_by_user_id
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7);
+	VALUES ($1, $2, $3, $4, $5, $6);
 `,
-		requiredUserAction.ID,
 		requiredUserAction.TeamID,
 		requiredUserAction.ActionUserID,
 		requiredUserAction.UserActionType,
@@ -110,14 +146,36 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(
 		    is_completed = $4,
 		    requested_at = $5,
 		    requested_by_user_id = $6
-		WHERE id = $7;`,
+		WHERE team_id = $7 AND user_action_type=$8 AND action_user_id=$9;`,
 		requiredUserAction.TeamID,
 		requiredUserAction.ActionUserID,
 		requiredUserAction.UserActionType,
 		requiredUserAction.IsCompleted,
 		requiredUserAction.RequestedAt,
 		requiredUserAction.RequestedByUserID,
-		requiredUserAction.ID,
+		requiredUserAction.TeamID,
+		requiredUserAction.UserActionType,
+		requiredUserAction.ActionUserID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (g GithubRequiredUserAction) DeleteRequiredUserActionsByActionTypeAndUserID(
+	ct context.Context,
+	actionType entity.GithubUserActionType,
+	actionUserID uint64,
+) *errs.Error {
+	_, err := g.db.Exec(`
+	DELETE FROM apps_github_required_user_action
+	WHERE user_action_type = $1 AND action_user_id = $2;
+`,
+		actionType,
+		actionUserID,
 	)
 
 	if err != nil {
