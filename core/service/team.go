@@ -277,6 +277,49 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		OwnerUserID:   userID,
 		CreatedAt:     time.Now(),
 	}
+
+	var teamMemberGroups []daoEntity.TeamMemberGroup
+	if t.featureToggles.EnableAuthorization {
+		genUniqueNumReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamMemberGroupID"}
+		ownerTeamMemberGroupIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genUniqueNumReq)
+		if err != nil {
+			return entity.Team{}, errs.FromGRPCErr(err)
+		}
+
+		adminTeamMemberGroupIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genUniqueNumReq)
+		if err != nil {
+			return entity.Team{}, errs.FromGRPCErr(err)
+		}
+
+		memberTeamMemberGroupIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genUniqueNumReq)
+		if err != nil {
+			return entity.Team{}, errs.FromGRPCErr(err)
+		}
+
+		teamMemberGroups = []daoEntity.TeamMemberGroup{
+			{
+				ID:                       ownerTeamMemberGroupIDRes.UniqueNumber,
+				TeamID:                   teamID,
+				Name:                     "Owner",
+				AuthorizationUserGroupID: ownerGroupID,
+				CreatedAt:                time.Now().UTC(),
+			},
+			{
+				ID:                       adminTeamMemberGroupIDRes.UniqueNumber,
+				TeamID:                   teamID,
+				Name:                     "Admin",
+				AuthorizationUserGroupID: adminGroupID,
+				CreatedAt:                time.Now().UTC(),
+			},
+			{
+				ID:                       memberTeamMemberGroupIDRes.UniqueNumber,
+				TeamID:                   teamID,
+				Name:                     "Member",
+				AuthorizationUserGroupID: memberGroupID,
+				CreatedAt:                time.Now().UTC(),
+			},
+		}
+	}
 	txCtx := transaction.NewTransactionsContext(
 		t.logger,
 		t.transactionFactory,
@@ -316,26 +359,6 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		rtTx.AppendMutation(createTeamMemberMutation)
 
 		if t.featureToggles.EnableAuthorization {
-			teamMemberGroups := []daoEntity.TeamMemberGroup{
-				{
-					TeamID:                   teamID,
-					Name:                     "Owner",
-					AuthorizationUserGroupID: ownerGroupID,
-					CreatedAt:                time.Now().UTC(),
-				},
-				{
-					TeamID:                   teamID,
-					Name:                     "Admin",
-					AuthorizationUserGroupID: adminGroupID,
-					CreatedAt:                time.Now().UTC(),
-				},
-				{
-					TeamID:                   teamID,
-					Name:                     "Member",
-					AuthorizationUserGroupID: memberGroupID,
-					CreatedAt:                time.Now().UTC(),
-				},
-			}
 			for _, teamMemberGroup := range teamMemberGroups {
 				teamGroupMutation := mutation.NewCreateTeamGroup(
 					t.logger,

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/teamyapp/teamy-backend/core/repository"
+
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -682,6 +684,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	teamyBackendDB.CreateTable(daotest.TeamMemberTableName)
 	teamyBackendDB.CreateTable(daotest.TeamFileUploadSessionTableName)
 	teamyBackendDB.CreateTable(daotest.TeamMemberGroupTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupUserRelationTableName)
 	teamyBackendDB.CreateTable(daotest.SprintTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
@@ -694,6 +697,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
 	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
 	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
+	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	teamService := NewTeam(
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
@@ -710,6 +714,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,
 		teamMemberGroupUserRelationDao,
+		teamMemberGroupRepo,
 	)
 	return TeamTestRef{
 		teamService:                    teamService,
