@@ -82,24 +82,20 @@ message CreateTeamMemberGroupResponse {
 }
 
 message UpdateTeamMemberGroupRequest {
-	uint64 teamId = 1;
-	uint64 groupId = 2;
-	string name = 3;
+	uint64 groupId = 1;
+	string name = 2;
 }
 
 message DeleteTeamMemberGroupRequest {
-	uint64 teamId = 1;
-	uint64 groupId = 2;
+	uint64 groupId = 1;
 }
 
 message AddTeamMemberToGroupRequest {
-	uint64 teamId = 1;
-	uint64 groupId = 2;
-	uint64 memberUserId = 3;
+	uint64 groupId = 1;
+	uint64 memberUserId = 2;
 }
 
 message RemoveTeamMemberFromGroupRequest {
-	uint64 teamId = 1;
-	uint64 groupId = 2;
-	uint64 memberUserId = 3;
+	uint64 groupId = 1;
+	uint64 memberUserId = 2;
 }
