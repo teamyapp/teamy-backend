@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Invitation struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -287,6 +285,6 @@ func (i Invitation) DeleteInvitation(ct context.Context, tx *transaction.Transac
 	return nil
 }
 
-func NewInvitation(logger telemetry.Logger, transactionFactory transaction.Factory) Invitation {
-	return Invitation{logger: logger, transactionFactory: transactionFactory}
+func NewInvitation(transactionFactory transaction.Factory) Invitation {
+	return Invitation{transactionFactory: transactionFactory}
 }

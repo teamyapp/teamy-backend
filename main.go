@@ -228,6 +228,12 @@ func startServiceRunner(
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
+	teamRPCAPI := dep.InitTeamRPCAPI(
+		logger,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		sqlDB,
+		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL))
 	rn := runner.NewServiceRunnerBuilder(
 		logger,
 		nw,
@@ -241,6 +247,7 @@ func startServiceRunner(
 			taskRPCAPI,
 			taskLinkRPCAPI,
 			sprintRPCAPI,
+			teamRPCAPI,
 		}).
 		Build()
 	rn.Start(nil)

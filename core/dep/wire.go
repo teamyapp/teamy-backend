@@ -40,7 +40,8 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)),
 	wire.Bind(new(dao.Thread), new(sqldb.Thread)),
 	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
-	wire.Bind(new(dao.TeamGroup), new(sqldb.TeamGroup)),
+	wire.Bind(new(dao.TeamMemberGroup), new(sqldb.TeamMemberGroup)),
+	wire.Bind(new(dao.TeamMemberGroupUserRelation), new(sqldb.TeamMemberGroupUserRelation)),
 	wire.Bind(new(dao.User), new(sqldb.User)),
 	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
 	wire.Bind(new(dao.Team), new(sqldb.Team)),
@@ -78,7 +79,8 @@ var daoSet = wire.NewSet(
 	sqldb.NewSprintTaskRelation,
 	sqldb.NewThread,
 	sqldb.NewTeamMember,
-	sqldb.NewTeamGroup,
+	sqldb.NewTeamMemberGroup,
+	sqldb.NewTeamMemberGroupUserRelation,
 	sqldb.NewUser,
 	sqldb.NewUserFileUploadSession,
 	sqldb.NewTeam,
@@ -114,12 +116,12 @@ var repositorySet = wire.NewSet(
 	repository.NewGroup,
 	repository.NewActivator,
 	repository.NewVersionSelector,
+	repository.NewTeamMemberGroup,
 )
 
 var serviceSet = wire.NewSet(
 	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
 	newHTTPClient,
-	repositorySet,
 	service.NewThread,
 	service.NewTask,
 	service.NewTaskLink,
@@ -161,6 +163,7 @@ func InitGraphQLAPI(
 		wire.Bind(new(tracer.Tracer), new(cloudGQL.PrometheusTracer)),
 		newPrometheusTracer,
 		daoSet,
+		repositorySet,
 		transaction.NewFactory,
 		serviceSet,
 		client.NewAuthorizer,
@@ -236,6 +239,25 @@ func InitTaskLinkRPCAPI(
 	return api.TaskLinkRPC{}
 }
 
+func InitTeamRPCAPI(
+	logger telemetry.Logger,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	sqlDB *sql.DB,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+) api.TeamRPC {
+	wire.Build(
+		daoSet,
+		repositorySet,
+		serviceSet,
+		client.NewAuthorizer,
+		feature.NewStaticToggles,
+		transaction.NewFactory,
+		api.NewTeamRPC,
+	)
+	return api.TeamRPC{}
+}
+
 func newHTTPClient(
 	mapServerURL MapServerURL,
 ) *storage.HTTPClient {
@@ -282,7 +304,9 @@ func newTeamService(
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
-	teamGroupDao dao.TeamGroup,
+	teamMemberGroupDao dao.TeamMemberGroup,
+	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation,
+	teamMemberGroupRepo repository.TeamMemberGroup,
 ) service.Team {
 	return service.NewTeam(
 		logger,
@@ -298,7 +322,9 @@ func newTeamService(
 		teamDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
-		teamGroupDao)
+		teamMemberGroupDao,
+		teamMemberGroupUserRelationDao,
+		teamMemberGroupRepo)
 }
 
 func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) cloudGQL.PrometheusTracer {

@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
-	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
@@ -22,23 +21,24 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
-	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
 )
 
 type TeamTestRef struct {
-	transactionFactory       transaction.Factory
-	teamService              Team
-	teamDao                  dao.Team
-	teamMemberDao            dao.TeamMember
-	teamFileUploadSessionDao dao.TeamFileUploadSession
-	teamGroupDao             dao.TeamGroup
-	cloudTestKit             testkit.TestKit
+	transactionFactory             transaction.Factory
+	teamService                    Team
+	teamDao                        dao.Team
+	teamMemberDao                  dao.TeamMember
+	teamFileUploadSessionDao       dao.TeamFileUploadSession
+	teamMemberGroupDao             dao.TeamMemberGroup
+	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation
+	cloudTestKit                   testkit.TestKit
 }
 
 func TestTeamService_FindTeamByID(t *testing.T) {
@@ -261,33 +261,6 @@ func TestTeamService_CreateTeam(t *testing.T) {
 	require.Nil(t, teamInMemory.IconURL)
 	require.NotNil(t, teamInMemory.CreatedAt)
 	require.Nil(t, teamInMemory.UpdatedAt)
-
-	assertTeamGroupAndUserPermissions(
-		t,
-		teamRef,
-		ct,
-		newTeam.ID,
-		entity.OwnerTeamGroupLabel,
-		requesterUserID,
-		authorization.TeamOwnerResourceTypeOperations)
-	assertTeamGroupAndUserPermissions(
-		t,
-		teamRef,
-		ct,
-		newTeam.ID,
-		entity.AdminTeamGroupLabel,
-		requesterUserID,
-		authorization.TeamAdminResourceTypeOperations,
-	)
-	assertTeamGroupAndUserPermissions(
-		t,
-		teamRef,
-		ct,
-		newTeam.ID,
-		entity.MemberTeamGroupLabel,
-		requesterUserID,
-		authorization.TeamMemberResourceTypeOperations,
-	)
 }
 
 func TestTeamService_UpdateTeam(t *testing.T) {
@@ -709,7 +682,8 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	teamyBackendDB.CreateTable(daotest.TeamTableName)
 	teamyBackendDB.CreateTable(daotest.TeamMemberTableName)
 	teamyBackendDB.CreateTable(daotest.TeamFileUploadSessionTableName)
-	teamyBackendDB.CreateTable(daotest.TeamGroupTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupUserRelationTableName)
 	teamyBackendDB.CreateTable(daotest.SprintTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
@@ -720,7 +694,9 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
-	teamGroupDao := daotest.NewTeamGroup(teamyBackendDB, transactionFactory)
+	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
+	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
+	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	teamService := NewTeam(
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
@@ -735,41 +711,17 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		teamDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
-		teamGroupDao,
+		teamMemberGroupDao,
+		teamMemberGroupUserRelationDao,
+		teamMemberGroupRepo,
 	)
 	return TeamTestRef{
-		teamService:              teamService,
-		teamDao:                  teamDao,
-		teamMemberDao:            teamMemberDao,
-		teamFileUploadSessionDao: teamFileUploadSessionDao,
-		teamGroupDao:             teamGroupDao,
-		cloudTestKit:             cloudTestKit,
+		teamService:                    teamService,
+		teamDao:                        teamDao,
+		teamMemberDao:                  teamMemberDao,
+		teamFileUploadSessionDao:       teamFileUploadSessionDao,
+		teamMemberGroupDao:             teamMemberGroupDao,
+		teamMemberGroupUserRelationDao: teamMemberGroupUserRelationDao,
+		cloudTestKit:                   cloudTestKit,
 	}, true
-}
-
-func assertTeamGroupAndUserPermissions(
-	t *testing.T,
-	teamRef TeamTestRef,
-	ct context.Context,
-	teamID uint64,
-	groupLabel string,
-	requesterUserID uint64,
-	resourceTypeOperations []cloudAuthorization.ResourceTypeOperation,
-) bool {
-	_, err := teamRef.teamGroupDao.FindGroupByTeamIDAndLabel(ct, teamID, groupLabel)
-	require.Nil(t, err)
-
-	for _, resourceTypeOperation := range resourceTypeOperations {
-		hasPermission, err := teamRef.cloudTestKit.AuthorizationService.HasPermission(
-			ct,
-			resourceTypeOperation.ResourceType,
-			teamID,
-			resourceTypeOperation.Operation,
-			requesterUserID,
-		)
-		require.Nil(t, err)
-		require.True(t, hasPermission)
-	}
-
-	return true
 }

@@ -5,14 +5,12 @@ import (
 
 	"github.com/teamyapp/cloud/libs/delta"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type VersionSelector struct {
-	logger                            telemetry.Logger
 	versionSelectorDao                dao.VersionSelector
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation
 }
@@ -244,12 +242,10 @@ func (v *VersionSelector) findVersionNumbersByExperimentVersionSelectorID(ct con
 }
 
 func NewVersionSelector(
-	logger telemetry.Logger,
 	versionSelectorDao dao.VersionSelector,
 	versionSelectorVersionRelationDao dao.VersionSelectorVersionRelation,
 ) *VersionSelector {
 	return &VersionSelector{
-		logger:                            logger,
 		versionSelectorDao:                versionSelectorDao,
 		versionSelectorVersionRelationDao: versionSelectorVersionRelationDao,
 	}

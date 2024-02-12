@@ -79,7 +79,7 @@ func (a *AppRolloutRelation) FindAppRolloutByAppIDAndRolloutIDWithTx(
 		if err == sql.ErrNoRows {
 			return nil, errs.NewError(errs.NotFound, "app_rollout_relation not found")
 		}
-		
+
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
 

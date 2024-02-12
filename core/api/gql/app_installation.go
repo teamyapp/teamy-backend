@@ -29,9 +29,9 @@ func (t TeamAppInstallation) InstalledTeam(ctx context.Context) (Team, error) {
 
 func (t TeamAppInstallation) ActiveAppVersion(ctx context.Context) (*AppVersion, error) {
 	appVersionNumber, err := t.deps.rolloutService.GetActiveAppVersionNumberForTeam(
-	    ctx, 
-	    t.teamAppInstallation.AppID, 
-	    t.teamAppInstallation.InstalledTeamID)
+		ctx,
+		t.teamAppInstallation.AppID,
+		t.teamAppInstallation.InstalledTeamID)
 	if err != nil {
 		return nil, errs.ToResolverErr(err)
 	}

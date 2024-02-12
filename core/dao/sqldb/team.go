@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Team struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -233,6 +231,6 @@ func (t Team) DeleteTeam(ct context.Context, tx *transaction.Transaction, teamID
 	return nil
 }
 
-func NewTeam(logger telemetry.Logger, transactionFactory transaction.Factory) Team {
-	return Team{logger: logger, transactionFactory: transactionFactory}
+func NewTeam(transactionFactory transaction.Factory) Team {
+	return Team{transactionFactory: transactionFactory}
 }

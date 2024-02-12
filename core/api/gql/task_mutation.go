@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+
 	"github.com/teamyapp/teamy-backend/core/entity"
 
 	"github.com/graph-gophers/graphql-go"

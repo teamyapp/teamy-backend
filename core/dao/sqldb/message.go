@@ -7,14 +7,12 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
 type Message struct {
-	logger             telemetry.Logger
 	transactionFactory transaction.Factory
 }
 
@@ -177,6 +175,6 @@ func (m Message) DeleteMessage(ct context.Context, tx *transaction.Transaction, 
 	return nil
 }
 
-func NewMessage(logger telemetry.Logger, transactionFactory transaction.Factory) Message {
-	return Message{logger: logger, transactionFactory: transactionFactory}
+func NewMessage(transactionFactory transaction.Factory) Message {
+	return Message{transactionFactory: transactionFactory}
 }

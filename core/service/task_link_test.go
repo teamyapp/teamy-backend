@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/teamyapp/teamy-backend/core/repository"
+
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -108,7 +110,9 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
-	teamGroupDao := daotest.NewTeamGroup(teamyBackendDB, transactionFactory)
+	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
+	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
+	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	teamService := NewTeam(
 		logger,
 		cloudTestKitConfig.WebAPIBaseURL,
@@ -123,7 +127,9 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		teamDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
-		teamGroupDao,
+		teamMemberGroupDao,
+		teamMemberGroupUserRelationDao,
+		teamMemberGroupRepo,
 	)
 	taskService := NewTask(
 		logger,
