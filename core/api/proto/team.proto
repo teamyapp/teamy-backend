@@ -103,5 +103,3 @@ message RemoveTeamMemberFromGroupRequest {
 	uint64 groupId = 2;
 	uint64 memberUserId = 3;
 }
-
-
