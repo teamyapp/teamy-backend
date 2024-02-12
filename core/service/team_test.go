@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamyapp/teamy-backend/core/repository"
-
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -28,6 +26,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
 )
 
