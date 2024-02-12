@@ -31,7 +31,9 @@ func (g GithubRequiredUserAction) FindRequiredUserActionsByActionUserID(
 	    requested_at,
 	    requested_by_user_id
 	FROM apps_github_required_user_action
-	WHERE team_id = $1 AND action_user_id = $2;
+	WHERE
+		team_id = $1 AND
+		action_user_id = $2;
 `,
 		teamID, actionUserID)
 	if err != nil {
@@ -78,7 +80,10 @@ func (g GithubRequiredUserAction) FindRequiredUserActionByActionTypeAndUserID(
 	    requested_at,
 	    requested_by_user_id
 	FROM apps_github_required_user_action
-	WHERE team_id = $1 AND user_action_type = $2 AND action_user_id = $3;
+	WHERE
+		team_id = $1 AND
+	    user_action_type = $2 AND
+	    action_user_id = $3;
 	`,
 		teamID,
 		actionType,
@@ -146,7 +151,10 @@ func (g GithubRequiredUserAction) UpdateRequiredUserAction(
 		    is_completed = $4,
 		    requested_at = $5,
 		    requested_by_user_id = $6
-		WHERE team_id = $7 AND user_action_type=$8 AND action_user_id=$9;`,
+		WHERE
+			team_id = $7 AND
+			user_action_type=$8 AND
+			action_user_id=$9;`,
 		requiredUserAction.TeamID,
 		requiredUserAction.ActionUserID,
 		requiredUserAction.UserActionType,
@@ -172,7 +180,9 @@ func (g GithubRequiredUserAction) DeleteRequiredUserActionsByActionTypeAndUserID
 ) *errs.Error {
 	_, err := g.db.Exec(`
 	DELETE FROM apps_github_required_user_action
-	WHERE user_action_type = $1 AND action_user_id = $2;
+	WHERE
+		user_action_type = $1 AND
+		action_user_id = $2;
 `,
 		actionType,
 		actionUserID,
