@@ -143,6 +143,19 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByRolloutIDWithTx(
 	return groupRolloutRelations, nil
 }
 
+func (g *GroupRolloutRelation) FindGroupRolloutRelationsByRolloutID(ct context.Context, rolloutID uint64) ([]entity.GroupRolloutRelation, *errs.Error) {
+	opt := sql.TxOptions{
+		ReadOnly: true,
+	}
+	tx, err := g.transactionFactory.BeginTx(ct, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+	return g.FindGroupRolloutRelationsByRolloutIDWithTx(ct, tx, rolloutID)
+}
+
 func (g *GroupRolloutRelation) CreateGroupRolloutRelation(ct context.Context, tx *transaction.Transaction, groupRolloutRelation entity.GroupRolloutRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`

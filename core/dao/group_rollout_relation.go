@@ -13,6 +13,7 @@ type GroupRolloutRelation interface {
 	FindGroupRolloutRelationsByRolloutIDWithTx(ct context.Context, tx *transaction.Transaction, rolloutID uint64) ([]entity.GroupRolloutRelation, *errs.Error)
 	FindGroupRolloutByGroupIDAndRolloutIDWithTx(ct context.Context, tx *transaction.Transaction, groupID, rolloutID uint64) (*entity.GroupRolloutRelation, *errs.Error)
 	FindGroupRolloutRelationsByGroupID(ct context.Context, groupID uint64) ([]entity.GroupRolloutRelation, *errs.Error)
+	FindGroupRolloutRelationsByRolloutID(ct context.Context, rolloutID uint64) ([]entity.GroupRolloutRelation, *errs.Error)
 	CreateGroupRolloutRelation(ct context.Context, tx *transaction.Transaction, groupRolloutRelation entity.GroupRolloutRelation) *errs.Error
 	DeleteGroupRolloutRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error
 	DeleteGroupRolloutRelationsByGroupIDAndRolloutID(ct context.Context, tx *transaction.Transaction, groupID, rolloutID uint64) *errs.Error

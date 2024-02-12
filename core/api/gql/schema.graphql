@@ -271,6 +271,7 @@ type Rollout {
 	name: String!
 	activator: Activator!
 	versionSelector: VersionSelector!
+	groupRolloutRelations: [GroupRolloutRelation!]!
 	isEnabled: Boolean!
 	createdAt: Time!
 	updatedAt: Time

@@ -183,6 +183,15 @@ func (g *Group) GetGroupUnionFromBaseGroup(ct context.Context, tx *transaction.T
 	}
 }
 
+func (g *Group) FilterGroupIDsByMemberTypeWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	groupIDs []uint64,
+	groupMemberType entity.GroupMemberType,
+) ([]uint64, *errs.Error) {
+	return g.groupDao.FilterGroupIDsByMemberTypeWithTx(ct, tx, groupIDs, groupMemberType)
+}
+
 func NewGroup(logger telemetry.Logger, groupDao dao.Group, filterGroupDao dao.FilterGroup) *Group {
 	return &Group{
 		logger:         logger,

@@ -16,4 +16,5 @@ type Group interface {
 	CreateGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) *errs.Error
 	UpdateGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) *errs.Error
 	DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error
+	FilterGroupIDsByMemberTypeWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64, memberType entity.GroupMemberType) ([]uint64, *errs.Error)
 }
