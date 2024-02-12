@@ -12,7 +12,7 @@ ALTER TABLE team_member_group
 ALTER TABLE team_member_group
 	RENAME COLUMN user_group_id TO authorization_user_group_id;
 ALTER TABLE team_member_group
-	ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+	ADD COLUMN updated_at TIMESTAMP;
 
 CREATE TABLE team_member_group_user_relation
 (
