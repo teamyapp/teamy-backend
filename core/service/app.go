@@ -74,7 +74,6 @@ type App struct {
 	appTagRelationDao          dao.AppTagRelation
 	appGroupRelationDao        dao.AppGroupRelation
 	groupRolloutRelationDao    dao.GroupRolloutRelation
-	groupMemberRelationDao     dao.GroupMemberRelation
 	appRolloutRelation         dao.AppRolloutRelation
 	rolloutDao                 dao.Rollout
 	groupRepository            *repository.Group
@@ -1122,7 +1121,6 @@ func NewApp(
 	appTagRelationDao dao.AppTagRelation,
 	appGroupRelationDao dao.AppGroupRelation,
 	groupRolloutRelationDao dao.GroupRolloutRelation,
-	groupMemberRelationDao dao.GroupMemberRelation,
 	appRolloutRelation dao.AppRolloutRelation,
 	rolloutDao dao.Rollout,
 	groupRepository *repository.Group,
@@ -1149,7 +1147,6 @@ func NewApp(
 		tagDao:                     tagDao,
 		appTagRelationDao:          appTagRelationDao,
 		appGroupRelationDao:        appGroupRelationDao,
-		groupMemberRelationDao:     groupMemberRelationDao,
 		groupRolloutRelationDao:    groupRolloutRelationDao,
 		appRolloutRelation:         appRolloutRelation,
 		rolloutDao:                 rolloutDao,
