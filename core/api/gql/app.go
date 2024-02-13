@@ -7,6 +7,7 @@ import (
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type App struct {
@@ -162,7 +163,9 @@ func (m Mutation) CreateApp(
 	ctx context.Context,
 	args struct {
 		TeamID graphql.ID
-		Name   string
+		Input  struct {
+			Name string
+		}
 	}) (App, error) {
 	teamID, internalErr := fromGraphQLID(args.TeamID)
 	if internalErr != nil {
@@ -174,7 +177,10 @@ func (m Mutation) CreateApp(
 		return App{}, errs.ToResolverErr(internalErr)
 	}
 
-	app, err := m.deps.appService.CreateApp(ctx, args.Name, teamID)
+	createAppInput := service.CreateAppInput{
+		Name: args.Input.Name,
+	}
+	app, err := m.deps.appService.CreateApp(ctx, teamID, createAppInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return App{}, errs.ToResolverErr(err)

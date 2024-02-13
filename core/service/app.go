@@ -43,6 +43,9 @@ var defaultAppGroupName = "default app group"
 var defaultRolloutName = "default app rollout"
 var defaultAppVersionNumber = 1
 
+type CreateAppInput struct {
+	Name string
+}
 type UploadFunc func(io.Reader) *errs.Error
 
 const (
@@ -289,7 +292,7 @@ func (a App) FindAppVersionByAppIDAndNumber(ct context.Context, appID uint64, ve
 	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
-func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.App, *errs.Error) {
+func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateAppInput) (entity.App, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -312,7 +315,7 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 	appVersion := entity.AppVersion{
 		AppID:           app.ID,
 		Number:          defaultAppVersionNumber,
-		AppName:         name,
+		AppName:         createAppInput.Name,
 		Description:     "",
 		CreatedByUserID: userID,
 		IsReady:         true,
@@ -336,6 +339,7 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 			CreatedAt:       now,
 			Locked:          true,
 		},
+		MemberIDs: []uint64{teamID},
 	}
 
 	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
@@ -392,8 +396,13 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 		a.stateSyncer,
 		ct,
 	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := a.appDao.CreateApp(ct, tx, app)
+	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		_, err := a.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
+		err = a.appDao.CreateApp(ct, tx, app)
 		if err != nil {
 			return err
 		}
@@ -447,14 +456,14 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 		})
 	})
 
-	if err != nil {
-		return entity.App{}, err
+	if internalErr != nil {
+		return entity.App{}, internalErr
 	}
 
 	if a.featureToggles.EnableAuthorization {
-		err = a.authorizer.RegisterResource(ct, authorization.AppResourceType, app.ID)
-		if err != nil {
-			return entity.App{}, err
+		internalErr = a.authorizer.RegisterResource(ct, authorization.AppResourceType, app.ID)
+		if internalErr != nil {
+			return entity.App{}, internalErr
 		}
 
 		// When create a new app,
@@ -477,14 +486,14 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 			})
 		}
 
-		_, err = a.authorizer.CreateUserGroupAndAssignPermissions(ct,
+		_, internalErr = a.authorizer.CreateUserGroupAndAssignPermissions(ct,
 			userID,
 			appAdminUserGroupName,
 			&appAdminDescription,
 			appAdminOperations,
 		)
-		if err != nil {
-			return entity.App{}, err
+		if internalErr != nil {
+			return entity.App{}, internalErr
 		}
 
 		appMemberUserGroupName := fmt.Sprintf("App%d/Member", app.ID)
@@ -498,14 +507,14 @@ func (a App) CreateApp(ct context.Context, name string, teamID uint64) (entity.A
 			})
 		}
 
-		_, err = a.authorizer.CreateUserGroupAndAssignPermissions(ct,
+		_, internalErr = a.authorizer.CreateUserGroupAndAssignPermissions(ct,
 			userID,
 			appMemberUserGroupName,
 			&appMemberDescription,
 			appMemberOperations,
 		)
-		if err != nil {
-			return entity.App{}, err
+		if internalErr != nil {
+			return entity.App{}, internalErr
 		}
 	}
 

@@ -38,6 +38,7 @@ type GroupUnion struct {
 
 type StaticGroup struct {
 	Group
+	MemberIDs []uint64
 }
 
 type FilterGroup struct {
