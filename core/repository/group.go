@@ -195,7 +195,11 @@ func (g *Group) FilterGroupIDsByMemberTypeWithTx(
 	return g.groupDao.FilterGroupIDsByMemberTypeWithTx(ct, tx, groupIDs, groupMemberType)
 }
 
-func NewGroup(groupDao dao.Group, filterGroupDao dao.FilterGroup, groupMemberRelationDao dao.GroupMemberRelation) *Group {
+func NewGroup(
+    groupDao dao.Group, 
+    filterGroupDao dao.FilterGroup, 
+    groupMemberRelationDao dao.GroupMemberRelation,
+) *Group {
 	return &Group{
 		groupDao:               groupDao,
 		filterGroupDao:         filterGroupDao,
