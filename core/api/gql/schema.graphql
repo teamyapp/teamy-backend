@@ -80,7 +80,7 @@ type Mutation {
 	deleteFile(fileId: ID!): FileMetadata!
 
 	# App
-	createApp(teamId: ID!, name: String!): App!
+	createApp(teamId: ID!, input: CreateAppInput!): App!
 	deleteApp(appId: ID!): App!
 
 	# App Tag
@@ -487,6 +487,10 @@ input AppFilter {
 }
 
 # Inputs
+input CreateAppInput {
+	name: String!
+}
+
 input CreateTaskInput {
 	goal: String!
 	context: String

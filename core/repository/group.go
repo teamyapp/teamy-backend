@@ -12,8 +12,9 @@ import (
 )
 
 type Group struct {
-	groupDao       dao.Group
-	filterGroupDao dao.FilterGroup
+	groupDao               dao.Group
+	filterGroupDao         dao.FilterGroup
+	groupMemberRelationDao dao.GroupMemberRelation
 }
 
 type CreatePartialGroupInput struct {
@@ -23,7 +24,22 @@ type CreatePartialGroupInput struct {
 }
 
 func (g *Group) CreateStaticGroup(ct context.Context, tx *transaction.Transaction, staticGroup entity.StaticGroup) *errs.Error {
-	return g.groupDao.CreateGroup(ct, tx, staticGroup.Group)
+	err := g.groupDao.CreateGroup(ct, tx, staticGroup.Group)
+	if err != nil {
+		return err
+	}
+
+	for _, memberID := range staticGroup.MemberIDs {
+		err := g.groupMemberRelationDao.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
+			GroupID:  staticGroup.ID,
+			MemberID: memberID,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (g *Group) UpdateStaticGroup(ct context.Context, tx *transaction.Transaction, staticGroup entity.StaticGroup) *errs.Error {
@@ -179,9 +195,10 @@ func (g *Group) FilterGroupIDsByMemberTypeWithTx(
 	return g.groupDao.FilterGroupIDsByMemberTypeWithTx(ct, tx, groupIDs, groupMemberType)
 }
 
-func NewGroup(groupDao dao.Group, filterGroupDao dao.FilterGroup) *Group {
+func NewGroup(groupDao dao.Group, filterGroupDao dao.FilterGroup, groupMemberRelationDao dao.GroupMemberRelation) *Group {
 	return &Group{
-		groupDao:       groupDao,
-		filterGroupDao: filterGroupDao,
+		groupDao:               groupDao,
+		filterGroupDao:         filterGroupDao,
+		groupMemberRelationDao: groupMemberRelationDao,
 	}
 }

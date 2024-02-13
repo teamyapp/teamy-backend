@@ -2,7 +2,7 @@
 ALTER TABLE team_group
 	RENAME TO team_member_group;
 ALTER TABLE team_member_group
-	DROP CONSTRAINT team_group_pkey;
+	DROP CONSTRAINT pk_team_roles;
 ALTER TABLE team_member_group
 	ADD COLUMN id BIGINT PRIMARY KEY;
 ALTER TABLE team_member_group

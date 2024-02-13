@@ -79,6 +79,7 @@ func (g *Group) CreateAppStaticGroup(
 			MaxRolloutIndex: len(input.RolloutIDs) - 1,
 			CreatedAt:       now,
 		},
+		MemberIDs: input.MemberIDs,
 	}
 	txCtx := transaction.NewTransactionsContext(
 		g.logger,
@@ -87,20 +88,6 @@ func (g *Group) CreateAppStaticGroup(
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := g.groupRepository.CreateStaticGroup(ct, tx, group)
-		if err != nil {
-			return err
-		}
-
-		appGroupRelation := entity.AppGroupRelation{
-			AppID:   appID,
-			GroupID: group.ID,
-		}
-		err = g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
-		if err != nil {
-			return err
-		}
-
 		for _, memberID := range input.MemberIDs {
 			switch input.GroupMemberType {
 			case entity.GroupMemberTypeUser:
@@ -118,14 +105,20 @@ func (g *Group) CreateAppStaticGroup(
 			default:
 				return errs.NewError(errs.InvalidArgument, "invalid group member type")
 			}
+		}
 
-			err = g.groupMemberRelation.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
-				MemberID: memberID,
-				GroupID:  group.ID,
-			})
-			if err != nil {
-				return err
-			}
+		err := g.groupRepository.CreateStaticGroup(ct, tx, group)
+		if err != nil {
+			return err
+		}
+
+		appGroupRelation := entity.AppGroupRelation{
+			AppID:   appID,
+			GroupID: group.ID,
+		}
+		err = g.appGroupRelationDao.CreateAppGroupRelation(ct, tx, appGroupRelation)
+		if err != nil {
+			return err
 		}
 
 		for index, rolloutID := range input.RolloutIDs {
