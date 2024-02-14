@@ -15,4 +15,5 @@ type AppSecret interface {
 	CreateAppSecret(ct context.Context, tx *transaction.Transaction, appSecret entity.AppSecret) *errs.Error
 	UpdateAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error
 	DeleteAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error
+	DeleteAppSecretsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error
 }

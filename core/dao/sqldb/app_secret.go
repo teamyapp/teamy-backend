@@ -179,6 +179,21 @@ func (*AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
+func (*AppSecret) DeleteAppSecretsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM app_secret
+		WHERE app_id = $1`,
+		appID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 var _ dao.AppSecret = (*AppSecret)(nil)
 
 func NewAppSecret(transactionFactory transaction.Factory) *AppSecret {

@@ -13,4 +13,5 @@ type RolloutViewer interface {
 	FindRolloutViewerByViewerIDAndRolloutID(ct context.Context, viewerID uint64, RolloutID uint64) (entity.RolloutViewer, *errs.Error)
 	UpdateRolloutViewer(ct context.Context, tx *transaction.Transaction, viewer entity.RolloutViewer) *errs.Error
 	CreateRolloutViewer(ct context.Context, tx *transaction.Transaction, viewer entity.RolloutViewer) *errs.Error
+	DeleteRolloutViewersByRolloutID(ct context.Context, tx *transaction.Transaction, rolloutID uint64) *errs.Error
 }

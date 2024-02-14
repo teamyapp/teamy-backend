@@ -15,4 +15,5 @@ type AppGroupRelation interface {
 	FindGroupIDsByAppID(ct context.Context, appID uint64) ([]uint64, *errs.Error)
 	CreateAppGroupRelation(ct context.Context, tx *transaction.Transaction, appGroupRelation entity.AppGroupRelation) *errs.Error
 	DeleteAppGroupRelation(ct context.Context, tx *transaction.Transaction, appID uint64, groupID uint64) *errs.Error
+	DeleteAppGroupRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error
 }

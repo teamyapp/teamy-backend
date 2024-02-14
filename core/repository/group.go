@@ -149,7 +149,7 @@ func (g *Group) DeletePartialGroup(ct context.Context, tx *transaction.Transacti
 func (g *Group) deletePartialGroup(ct context.Context, tx *transaction.Transaction, groupID uint64, groupType entity.GroupType) *errs.Error {
 	switch groupType {
 	case entity.GroupTypeStatic:
-		return nil
+		return g.groupMemberRelationDao.DeleteGroupMemberRelationsByGroupID(ct, tx, groupID)
 	case entity.GroupTypeFilter:
 		return g.filterGroupDao.DeleteFilterGroup(ct, tx, groupID)
 	default:

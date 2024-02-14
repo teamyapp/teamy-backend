@@ -13,4 +13,5 @@ type Tag interface {
 	FindTagByValueWithTx(ct context.Context, tx *transaction.Transaction, value string) (entity.Tag, *errs.Error)
 	FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, tagID uint64) (entity.Tag, *errs.Error)
 	CreateTag(ct context.Context, tx *transaction.Transaction, tag entity.Tag) *errs.Error
+	DeleteTag(ct context.Context, tx *transaction.Transaction, tagID uint64) *errs.Error
 }

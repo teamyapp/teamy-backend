@@ -80,6 +80,8 @@ type App struct {
 	activatorRepository        *repository.Activator
 	versionSelectorRepository  *repository.VersionSelector
 	jwtAuthority               security.JWTAuthority
+	groupService               *Group
+	rolloutService             *Rollout
 }
 
 type AppFilter struct {
@@ -657,28 +659,80 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 		a.stateSyncer,
 		ct,
 	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var internalErr *errs.Error
-		app, internalErr = a.appDao.FindAppByIDWithTx(ct, tx, appID)
-		if internalErr != nil {
-			return internalErr
+	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		app, err = a.appDao.FindAppByIDWithTx(ct, tx, appID)
+		if err != nil {
+			return err
 		}
 
-		internalErr = a.appDao.DeleteApp(ct, tx, appID)
-		if internalErr != nil {
-			return internalErr
+		groupIDs, err := a.appGroupRelationDao.FindGroupIDsByAppIDWithTx(ct, tx, appID)
+		if err != nil {
+			return err
 		}
 
-		return nil
+		for _, groupID := range groupIDs {
+			_, err = a.groupService.deleteGroup(ct, tx, groupID, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		versions, err := a.appVersionDao.FindAppVersionsByAppIDWithTx(ct, tx, appID)
+		if err != nil {
+			return err
+		}
+
+		for _, version := range versions {
+			err = a.appVersionDao.DeleteAppVersion(ct, tx, appID, version.Number)
+			if err != nil {
+				return err
+			}
+		}
+
+		tagIDs, err := a.appTagRelationDao.FindTagIDsByAppIDWithTx(ct, tx, appID)
+		if err != nil {
+			return err
+		}
+
+		for _, tagID := range tagIDs {
+			err = a.appTagRelationDao.DeleteAppTagRelationByAppIDAndTagID(ct, tx, appID, tagID)
+			if err != nil {
+				return err
+			}
+
+			err = a.tagDao.DeleteTag(ct, tx, tagID)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = a.appSecretDao.DeleteAppSecretsByAppID(ct, tx, appID)
+		if err != nil {
+			return err
+		}
+
+		err = a.teamAppInstallationDao.DeleteTeamAppInstallationsByAppID(ct, tx, appID)
+		if err != nil {
+			return err
+		}
+
+		rolloutIDs, err := a.appRolloutRelation.FindRolloutIDsByAppIDWithTx(ct, tx, appID)
+		if err != nil {
+			return err
+		}
+
+		for _, rolloutID := range rolloutIDs {
+			_, err = a.rolloutService.deleteRollout(ct, tx, rolloutID, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		return a.appDao.DeleteApp(ct, tx, appID)
 	})
 
-	if err != nil {
-		return entity.App{}, err
-	}
-
-	// TODO: delete registered app resource and groups
-
-	return app, nil
+	return app, transactionErr
 }
 
 func (a App) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
@@ -1127,6 +1181,8 @@ func NewApp(
 	activatorRepository *repository.Activator,
 	versionSelectorRepository *repository.VersionSelector,
 	jwtAuthority security.JWTAuthority,
+	groupService *Group,
+	rolloutService *Rollout,
 ) App {
 	return App{
 		logger:                     logger,
@@ -1154,5 +1210,7 @@ func NewApp(
 		activatorRepository:        activatorRepository,
 		versionSelectorRepository:  versionSelectorRepository,
 		jwtAuthority:               jwtAuthority,
+		groupService:               groupService,
+		rolloutService:             rolloutService,
 	}
 }
