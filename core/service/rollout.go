@@ -927,7 +927,7 @@ func (r *Rollout) deleteRollout(
 	}
 
 	if rollout.Locked && !deleteLocked {
-		return entity.Rollout{}, errs.NewError(errs.InvalidArgument, "Rollout is locked")
+		return entity.Rollout{}, errs.NewError(errs.InvalidOperation, "Rollout is locked")
 	}
 
 	err = r.activatorRepository.DeleteActivator(ct, tx, rollout.ActivatorID)

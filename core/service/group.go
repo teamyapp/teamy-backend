@@ -574,7 +574,7 @@ func (g *Group) deleteGroup(
 	}
 
 	if group.Locked && !deleteLocked {
-		return entity.GroupUnion{}, errs.NewError(errs.InvalidArgument, "group is locked")
+		return entity.GroupUnion{}, errs.NewError(errs.InvalidOperation, "group is locked")
 	}
 
 	groupUnion, err := g.groupRepository.GetGroupUnionFromBaseGroup(ct, tx, group)
