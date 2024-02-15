@@ -130,6 +130,21 @@ func (*RolloutViewer) UpdateRolloutViewer(
 	return nil
 }
 
+func (r *RolloutViewer) DeleteRolloutViewersByRolloutID(ct context.Context, tx *transaction.Transaction, rolloutID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM rollout_viewer
+		WHERE rollout_id = $1;
+	`,
+		rolloutID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewRolloutViewer(
 	transactionFactory transaction.Factory,
 ) *RolloutViewer {

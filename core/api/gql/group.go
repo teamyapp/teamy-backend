@@ -248,23 +248,12 @@ func (m Mutation) UpdateGroup(
 	return getGroupFromGroupUnion(m.deps, group)
 }
 
-func (m Mutation) DeleteAppGroup(
+func (m Mutation) DeleteGroup(
 	ctx context.Context,
 	args struct {
-		AppID   graphql.ID
 		GroupID graphql.ID
 	},
 ) (Group, error) {
-	appID, internalErr := fromGraphQLID(args.AppID)
-	if internalErr != nil {
-		internalErr := errs.NewError(
-			errs.InvalidArgument,
-			internalErr.Error(),
-		)
-		m.deps.logger.ErrorWithContext(ctx, internalErr)
-		return nil, errs.ToResolverErr(internalErr)
-	}
-
 	groupID, internalErr := fromGraphQLID(args.GroupID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
@@ -275,7 +264,7 @@ func (m Mutation) DeleteAppGroup(
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	group, err := m.deps.groupService.DeleteAppGroup(ctx, appID, groupID)
+	group, err := m.deps.groupService.DeleteGroup(ctx, groupID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)

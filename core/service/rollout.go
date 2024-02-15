@@ -164,31 +164,13 @@ func (r *Rollout) DeleteRollout(ct context.Context, rolloutID uint64) (entity.Ro
 		r.stateSyncer,
 		ct,
 	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		rollout, err = r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
-		if err != nil {
-			return err
-		}
-
-		if rollout.Locked {
-			return errs.NewError(errs.InvalidArgument, "Rollout is locked")
-		}
-
-		err = r.activatorRepository.DeleteActivator(ct, tx, rollout.ActivatorID)
-		if err != nil {
-			return err
-		}
-
-		err = r.versionSelectorRepository.DeleteVersionSelector(ct, tx, rollout.SelectorID)
-		if err != nil {
-			return err
-		}
-
-		return r.rolloutDao.DeleteRollout(ct, tx, rolloutID)
+		rollout, err = r.deleteRollout(ct, tx, rolloutID, false)
+		return err
 	})
 
-	return rollout, err
+	return rollout, transactionErr
 }
 
 func (r *Rollout) UpdateRollout(ct context.Context, rolloutID uint64, input UpdateRolloutInput) (entity.Rollout, *errs.Error) {
@@ -931,6 +913,50 @@ func (r *Rollout) newRollout(
 
 	rolloutStore := store.NewRollout(r.logger, r.transactionFactory, r.stateSyncer, r.rolloutDao, rawRollout.ID)
 	return rollout.NewRollout(ct, rolloutStore, activator, versionSelector)
+}
+
+func (r *Rollout) deleteRollout(
+	ct context.Context,
+	tx *cloudTransaction.Transaction,
+	rolloutID uint64,
+	deleteLocked bool,
+) (entity.Rollout, *errs.Error) {
+	rollout, err := r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
+	if err != nil {
+		return entity.Rollout{}, err
+	}
+
+	if rollout.Locked && !deleteLocked {
+		return entity.Rollout{}, errs.NewError(errs.InvalidOperation, "Rollout is locked")
+	}
+
+	err = r.activatorRepository.DeleteActivator(ct, tx, rollout.ActivatorID)
+	if err != nil {
+		return entity.Rollout{}, err
+	}
+
+	err = r.versionSelectorRepository.DeleteVersionSelector(ct, tx, rollout.SelectorID)
+	if err != nil {
+		return entity.Rollout{}, err
+	}
+
+	err = r.groupRolloutRelationDao.DeleteGroupRolloutRelationsByRolloutID(ct, tx, rolloutID)
+	if err != nil {
+		return entity.Rollout{}, err
+	}
+
+	err = r.appRolloutRelationDao.DeleteAppRolloutRelationsByRolloutID(ct, tx, rolloutID)
+	if err != nil {
+		return entity.Rollout{}, err
+	}
+
+	err = r.rolloutViewerDao.DeleteRolloutViewersByRolloutID(ct, tx, rolloutID)
+	if err != nil {
+		return entity.Rollout{}, err
+	}
+
+	err = r.rolloutDao.DeleteRollout(ct, tx, rolloutID)
+	return rollout, err
 }
 
 func NewRollout(

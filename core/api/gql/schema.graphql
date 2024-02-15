@@ -108,7 +108,7 @@ type Mutation {
 	createFilterGroup(appId: ID!, input: CreateFilterGroupInput!): FilterGroup!
 	updateGroup(appId: ID!, groupId: ID!, input: UpdateGroupInput!): Group!
 
-	deleteAppGroup(appId: ID!, groupId: ID!): Group!
+	deleteGroup(groupId: ID!): Group!
 
 	createStaticActivator: StaticActivator!
 	createTimeRangeActivator(input: CreateTimeRangeActivatorInput!): TimeRangeActivator!

@@ -17,5 +17,6 @@ type GroupRolloutRelation interface {
 	CreateGroupRolloutRelation(ct context.Context, tx *transaction.Transaction, groupRolloutRelation entity.GroupRolloutRelation) *errs.Error
 	DeleteGroupRolloutRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error
 	DeleteGroupRolloutRelationsByGroupIDAndRolloutID(ct context.Context, tx *transaction.Transaction, groupID, rolloutID uint64) *errs.Error
+	DeleteGroupRolloutRelationsByRolloutID(ct context.Context, tx *transaction.Transaction, rolloutID uint64) *errs.Error
 	UpdateFromOrderIndexByGroupID(ct context.Context, tx *transaction.Transaction, step int, orderIndex int, groupID uint64) *errs.Error
 }

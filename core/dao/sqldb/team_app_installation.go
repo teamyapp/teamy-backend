@@ -189,6 +189,22 @@ func (*TeamAppInstallation) DeleteTeamAppInstallationByID(ct context.Context, tx
 	return nil
 }
 
+func (*TeamAppInstallation) DeleteTeamAppInstallationsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(
+		ct,
+		`
+		DELETE FROM team_app_installation
+		WHERE app_id = $1;`,
+		appID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewTeamAppInstallation(
 	transactionFactory transaction.Factory,
 ) *TeamAppInstallation {

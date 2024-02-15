@@ -138,6 +138,21 @@ func (*AppGroupRelation) DeleteAppGroupRelation(ct context.Context, tx *transact
 	return nil
 }
 
+func (*AppGroupRelation) DeleteAppGroupRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM app_group_relation 
+		WHERE group_id = $1`,
+		groupID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewAppGroupRelation(transactionFactory transaction.Factory) *AppGroupRelation {
 	return &AppGroupRelation{
 		transactionFactory: transactionFactory,

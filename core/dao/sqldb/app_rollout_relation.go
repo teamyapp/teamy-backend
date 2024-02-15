@@ -100,6 +100,36 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationType(ct context.Con
 	return a.FindRolloutIDsByAppIDAndRelationTypeWithTx(ct, tx, appID, rolloutType)
 }
 
+func (a *AppRolloutRelation) FindRolloutIDsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]uint64, *errs.Error) {
+	rows, err := tx.SQLTx().QueryContext(ct,
+		`
+		SELECT
+			rollout_id
+		FROM app_rollout_relation
+		WHERE app_id = $1`,
+		appID,
+	)
+
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+
+	var rolloutIDs []uint64
+	for rows.Next() {
+		var rolloutID uint64
+		err := rows.Scan(&rolloutID)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		rolloutIDs = append(rolloutIDs, rolloutID)
+	}
+
+	return rolloutIDs, nil
+}
+
 func (*AppRolloutRelation) CreateAppRolloutRelation(ct context.Context, tx *transaction.Transaction, appRolloutRelation entity.AppRolloutRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct,
 		`INSERT INTO app_rollout_relation (
@@ -115,6 +145,24 @@ func (*AppRolloutRelation) CreateAppRolloutRelation(ct context.Context, tx *tran
 		appRolloutRelation.AppID,
 		appRolloutRelation.RolloutID,
 		appRolloutRelation.Type,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (a *AppRolloutRelation) DeleteAppRolloutRelationsByRolloutID(
+	ct context.Context,
+	tx *transaction.Transaction,
+	rolloutID uint64,
+) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM app_rollout_relation
+		WHERE rollout_id = $1`,
+		rolloutID,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())

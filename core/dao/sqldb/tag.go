@@ -114,6 +114,19 @@ func (*Tag) CreateTag(ct context.Context, tx *transaction.Transaction, tag entit
 	return nil
 }
 
+func (t *Tag) DeleteTag(ct context.Context, tx *transaction.Transaction, tagID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+	DELETE FROM tag
+	WHERE id = $1;`,
+		tagID,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewTag(transactionFactory transaction.Factory) *Tag {
 	return &Tag{
 		transactionFactory: transactionFactory,
