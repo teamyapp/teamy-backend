@@ -94,7 +94,9 @@ type Mutation {
 	updateAppSecret(secretId: ID!, input: UpdateAppSecretInput!): AppSecret!
 	deleteAppSecret(secretId: ID!): AppSecret!
 
-	createAppVersion(appId: ID!, input: CreateAppVersionInput!): AppVersion!
+	createAppVersion(appId: ID!): AppVersion!
+	updateAppVersion(appId: ID!, input: UpdateAppVersionInput!): AppVersion!
+
 	createAppPackageUploadSession(appId: ID!, versionNumber: Int!): ID!
 	finishAppPackageUploadSession(
 		appId: ID!
@@ -377,7 +379,7 @@ type AppVersion {
 	createdAt: Time!
 	createdBy: User!
 	prices: [Money!]!
-	isReady: Boolean!
+	status: AppVersionStatus!
 	app: App!
 	iconUrl: String
 	locked: Boolean!
@@ -564,9 +566,8 @@ input FileMetadataInput {
 	name: String!
 }
 
-input CreateAppVersionInput {
-	appName: String!
-	description: String!
+input UpdateAppVersionInput {
+	status: AppVersionStatus!
 }
 
 input CreateAppSecretInput {
@@ -702,6 +703,13 @@ enum GroupType {
 enum GroupMemberType {
 	USER
 	TEAM
+}
+
+enum AppVersionStatus {
+	INIT
+	UPLOADING
+	PROCESSING
+	READY
 }
 
 enum AppRolloutType {
