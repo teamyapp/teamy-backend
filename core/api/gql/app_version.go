@@ -63,8 +63,8 @@ func (a AppVersion) Prices(ctx context.Context) ([]Money, error) {
 	}), nil
 }
 
-func (a AppVersion) IsReady(ctx context.Context) bool {
-	return a.appVersion.IsReady
+func (a AppVersion) Status(ctx context.Context) entity.AppVersionStatus {
+	return a.appVersion.Status
 }
 
 func (a AppVersion) Locked(ctx context.Context) bool {
@@ -93,9 +93,34 @@ func (m Mutation) CreateAppVersion(
 	ctx context.Context,
 	args struct {
 		AppID graphql.ID
-		Input struct {
-			AppName     string
-			Description string
+	},
+) (AppVersion, error) {
+	appID, argErr := fromGraphQLID(args.AppID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return AppVersion{}, errs.ToResolverErr(internalErr)
+	}
+
+	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return AppVersion{}, errs.ToResolverErr(err)
+	}
+
+	return newAppVersion(m.deps, appVersion), nil
+}
+
+func (m Mutation) UpdateAppVersion(
+	ctx context.Context,
+	args struct {
+		AppID         graphql.ID
+		VersionNumber int32
+		Input         struct {
+			Status entity.AppVersionStatus
 		}
 	},
 ) (AppVersion, error) {
@@ -109,11 +134,11 @@ func (m Mutation) CreateAppVersion(
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
-	createAppVersionInput := service.CreateAppVersionInput{
-		AppName:     args.Input.AppName,
-		Description: args.Input.Description,
+	updateAppVersionInput := service.UpdateAppVersionInput{
+		Status: args.Input.Status,
 	}
-	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID, createAppVersionInput)
+
+	appVersion, err := m.deps.appService.UpdateAppVersion(ctx, appID, int(args.VersionNumber), updateAppVersionInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppVersion{}, errs.ToResolverErr(err)

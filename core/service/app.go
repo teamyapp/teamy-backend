@@ -95,11 +95,6 @@ type UpdateAppTeamInstallationInput struct {
 	EnabledVersionNumber int32
 }
 
-type CreateAppVersionInput struct {
-	AppName     string
-	Description string
-}
-
 type CreateAppSecretInput struct {
 	Name string
 }
@@ -115,6 +110,10 @@ type UpdateAppInput struct {
 type GenerateTokenInput struct {
 	SecretID uint64
 	Secret   string
+}
+
+type UpdateAppVersionInput struct {
+	Status entity.AppVersionStatus
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
@@ -322,7 +321,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		AppName:         createAppInput.Name,
 		Description:     "",
 		CreatedByUserID: userID,
-		IsReady:         true,
+		Status:          entity.AppVersionStatusInit,
 		Locked:          true,
 		CreatedAt:       now,
 	}
@@ -758,7 +757,7 @@ func (a App) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]entity.
 	return a.appVersionDao.FindAppVersionsByAppID(ct, appID)
 }
 
-func (a App) CreateAppVersion(ct context.Context, appID uint64, createAppVersionInput CreateAppVersionInput) (entity.AppVersion, *errs.Error) {
+func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersion, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.AppVersion{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -780,11 +779,10 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64, createAppVersion
 
 	av := entity.AppVersion{
 		AppID:           appID,
-		AppName:         createAppVersionInput.AppName,
-		Description:     createAppVersionInput.Description,
 		CreatedByUserID: userID,
-		IsReady:         false,
+		Status:          entity.AppVersionStatusInit,
 		CreatedAt:       time.Now().UTC(),
+		Locked:          false,
 	}
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,
@@ -796,7 +794,6 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64, createAppVersion
 		maxVersion, err := a.appVersionDao.FindMaxVersionNumberWithTx(ct, tx, appID)
 		if err != nil {
 			if err.Code == errs.NotFound {
-				// no version exists, start from 0
 				maxVersion = 0
 			} else {
 				return err
@@ -812,11 +809,32 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64, createAppVersion
 		return nil
 	})
 
-	if err != nil {
-		return entity.AppVersion{}, err
-	}
+	return av, err
+}
 
-	return av, nil
+func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber int, input UpdateAppVersionInput) (entity.AppVersion, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+
+	var av entity.AppVersion
+	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		av, internalErr = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		av.Status = input.Status
+		now := time.Now().UTC()
+		av.UpdatedAt = &now
+		return a.appVersionDao.UpdateAppVersion(ct, tx, av)
+	})
+
+	return av, err
 }
 
 func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64, versionNumber int) (uint64, *errs.Error) {
@@ -1144,16 +1162,6 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		return wgErr
 	}
 
-	appVersion := entity.AppVersion{
-		AppID:           appID,
-		Number:          versionNumber,
-		CreatedByUserID: userID,
-		AppName:         manifestData.AppName,
-		Description:     manifestData.Description,
-		HasUiExtension:  manifestData.HasUiExtension,
-		IsReady:         true,
-		CreatedAt:       time.Now().UTC(),
-	}
 	txCtx := transaction.NewTransactionsContext(
 		a.logger,
 		a.transactionFactory,
@@ -1161,10 +1169,18 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		ct,
 	)
 	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		_, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+		appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if err != nil {
 			return err
 		}
+
+		now := time.Now().UTC()
+		appVersion.Number = versionNumber
+		appVersion.AppName = manifestData.AppName
+		appVersion.Description = manifestData.Description
+		appVersion.HasUiExtension = manifestData.HasUiExtension
+		appVersion.Status = entity.AppVersionStatusReady
+		appVersion.UpdatedAt = &now
 
 		err = a.appVersionDao.UpdateAppVersion(ct, tx, appVersion)
 		if err != nil {

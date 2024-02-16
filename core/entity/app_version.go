@@ -4,6 +4,15 @@ import (
 	"time"
 )
 
+type AppVersionStatus string
+
+const (
+	AppVersionStatusInit       AppVersionStatus = "INIT"
+	AppVersionStatusUploading  AppVersionStatus = "UPLOADING"
+	AppVersionStatusProcessing AppVersionStatus = "PROCESSING"
+	AppVersionStatusReady      AppVersionStatus = "READY"
+)
+
 type AppVersion struct {
 	AppID           uint64
 	Number          int
@@ -11,8 +20,9 @@ type AppVersion struct {
 	Description     string
 	HasUiExtension  bool
 	CreatedAt       time.Time
+	UpdatedAt       *time.Time
 	CreatedByUserID uint64
-	IsReady         bool
+	Status          AppVersionStatus
 	Locked          bool
 	IconURL         *string
 }
