@@ -362,7 +362,7 @@ type Tag {
 type AppSecret {
 	id: ID!
 	name: String!
-	token: String!
+	token: String
 	addedAt: Time!
 	addedBy: User!
 	lastUsedAt: Time

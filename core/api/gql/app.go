@@ -27,7 +27,7 @@ func (a App) Secrets(ctx context.Context) ([]AppSecret, error) {
 	}
 
 	return collect.Map(secrets, func(appSecret entity.AppSecret, index int) AppSecret {
-		return newAppSecret(a.deps, appSecret)
+		return newAppSecret(a.deps, appSecret, false)
 	}), nil
 }
 

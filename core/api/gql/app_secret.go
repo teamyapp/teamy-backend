@@ -10,8 +10,9 @@ import (
 )
 
 type AppSecret struct {
-	deps      *Dependencies
-	appSecret entity.AppSecret
+	deps         *Dependencies
+	appSecret    entity.AppSecret
+	includeToken bool
 }
 
 func (a AppSecret) ID(ctx context.Context) graphql.ID {
@@ -26,7 +27,11 @@ func (a AppSecret) AddedAt(ctx context.Context) graphql.Time {
 	return toGraphQLTime(a.appSecret.AddedAt)
 }
 
-func (a AppSecret) Token(ctx context.Context) (string, error) {
+func (a AppSecret) Token(ctx context.Context) (*string, error) {
+	if !a.includeToken {
+		return nil, nil
+	}
+
 	generateTokenInput := service.GenerateTokenInput{
 		SecretID: a.appSecret.ID,
 		Secret:   a.appSecret.Secret,
@@ -35,10 +40,10 @@ func (a AppSecret) Token(ctx context.Context) (string, error) {
 	token, err := a.deps.appService.GetAppSecretToken(ctx, generateTokenInput)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
-		return "", errs.ToResolverErr(err)
+		return nil, errs.ToResolverErr(err)
 	}
 
-	return token, nil
+	return &token, nil
 }
 
 func (a AppSecret) AddedBy(ctx context.Context) (User, error) {
@@ -93,7 +98,7 @@ func (m Mutation) CreateAppSecret(
 		return AppSecret{}, errs.ToResolverErr(err)
 	}
 
-	return newAppSecret(m.deps, appSecret), nil
+	return newAppSecret(m.deps, appSecret, true), nil
 }
 
 func (m Mutation) UpdateAppSecret(
@@ -124,7 +129,7 @@ func (m Mutation) UpdateAppSecret(
 		return AppSecret{}, errs.ToResolverErr(err)
 	}
 
-	return newAppSecret(m.deps, appSecret), nil
+	return newAppSecret(m.deps, appSecret, false), nil
 }
 
 func (m Mutation) DeleteAppSecret(
@@ -149,9 +154,9 @@ func (m Mutation) DeleteAppSecret(
 		return AppSecret{}, errs.ToResolverErr(err)
 	}
 
-	return newAppSecret(m.deps, appSecret), nil
+	return newAppSecret(m.deps, appSecret, false), nil
 }
 
-func newAppSecret(deps *Dependencies, appSecret entity.AppSecret) AppSecret {
-	return AppSecret{deps: deps, appSecret: appSecret}
+func newAppSecret(deps *Dependencies, appSecret entity.AppSecret, includeToken bool) AppSecret {
+	return AppSecret{deps: deps, appSecret: appSecret, includeToken: includeToken}
 }
