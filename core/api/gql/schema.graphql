@@ -375,7 +375,7 @@ type AppVersion {
 	number: Int!
 	appName: String!
 	description: String!
-	changes: [String!]!
+	changes: [AppVersionChange!]!
 	createdAt: Time!
 	createdBy: User!
 	prices: [Money!]!
@@ -383,6 +383,12 @@ type AppVersion {
 	app: App!
 	locked: Boolean!
 	errorMessage: String
+}
+
+type AppVersionChange {
+	id: ID!
+	appVersion: AppVersion!
+	change: String!
 }
 
 interface GroupRolloutRelation {

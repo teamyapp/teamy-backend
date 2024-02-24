@@ -27,14 +27,16 @@ func (a AppVersion) Description(ctx context.Context) string {
 	return a.appVersion.Description
 }
 
-func (a AppVersion) Changes(ctx context.Context) ([]string, error) {
-	changes, err := a.deps.appService.FindAppVersionChangesByAppVersionID(ctx, a.appVersion.AppID, a.appVersion.Number)
+func (a AppVersion) Changes(ctx context.Context) ([]AppVersionChange, error) {
+	changes, err := a.deps.appService.FindAppVersionChangesByAppIDAndVersionNumber(ctx, a.appVersion.AppID, a.appVersion.Number)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	return changes, nil
+	return collect.Map(changes, func(change entity.AppVersionChange, index int) AppVersionChange {
+		return newAppVersionChange(a.deps, change)
+	}), nil
 }
 
 func (a AppVersion) CreatedAt(ctx context.Context) graphql.Time {

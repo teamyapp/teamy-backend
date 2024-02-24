@@ -59,7 +59,7 @@ const (
 
 type App struct {
 	logger                     telemetry.Logger
-	storageMapClient           storage.MapClient
+	objectStore                storage.ObjectStore
 	cloudClientRegistry        *client.Registry
 	authorizer                 client.Authorizer
 	featureToggles             feature.Toggles
@@ -1144,7 +1144,7 @@ func (a App) FindPricesByAppVersionID(ct context.Context, appID uint64, versionN
 	return a.appVersionPriceDao.FindAppVersionPricesByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
-func (a App) FindAppVersionChangesByAppVersionID(ct context.Context, appID uint64, versionNumber int) ([]string, *errs.Error) {
+func (a App) FindAppVersionChangesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]entity.AppVersionChange, *errs.Error) {
 	return a.appVersionChangeDao.FindAppVersionChangesByAppIDAndVersionNumber(ct, appID, versionNumber)
 }
 
@@ -1159,7 +1159,7 @@ func (a App) uploadAppPackageFiles(
 	versionNumber int,
 	uploadSession *proto.UploadSession,
 ) *errs.Error {
-	fileReader, err := a.storageMapClient.Get(strconv.FormatInt(int64(uploadSession.FileId), 10))
+	fileReader, err := a.objectStore.Get(ct, strconv.FormatInt(int64(uploadSession.FileId), 10))
 	if err != nil {
 		return err
 	}
@@ -1191,7 +1191,7 @@ func (a App) uploadAppPackageFiles(
 			headerName := a.removeTarFilePrefix(header.Name)
 			err := a.processFile(ct, userID, appID, versionNumber, tarReader, headerName, func(reader io.Reader) *errs.Error {
 				storageMapKey := path.Join(appPackageRoot, appIDStr, versionNumberStr, headerName)
-				return a.storageMapClient.Put(storageMapKey, reader)
+				return a.objectStore.Put(ct, storageMapKey, reader)
 			})
 
 			if err != nil {
@@ -1375,7 +1375,7 @@ func (a App) createStaticGroupEntity(
 
 func NewApp(
 	logger telemetry.Logger,
-	storageMapClient storage.MapClient,
+	objectStore storage.ObjectStore,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
@@ -1404,7 +1404,7 @@ func NewApp(
 ) App {
 	return App{
 		logger:                     logger,
-		storageMapClient:           storageMapClient,
+		objectStore:                objectStore,
 		cloudClientRegistry:        cloudClientRegistry,
 		authorizer:                 authorizer,
 		featureToggles:             featureToggles,

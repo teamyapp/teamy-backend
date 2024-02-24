@@ -16,7 +16,7 @@ type AppVersionChange struct {
 
 var _ dao.AppVersionChange = (*AppVersionChange)(nil)
 
-func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) ([]string, *errs.Error) {
+func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) ([]entity.AppVersionChange, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(
 		ct,
 		`
@@ -34,10 +34,10 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 
 	defer rows.Close()
 
-	var changes []string
+	var changes []entity.AppVersionChange
 	for rows.Next() {
-		var change string
-		err := rows.Scan(&change)
+		var change entity.AppVersionChange
+		err := rows.Scan(&change.Change)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
@@ -48,7 +48,7 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 	return changes, nil
 }
 
-func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]string, *errs.Error) {
+func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]entity.AppVersionChange, *errs.Error) {
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}

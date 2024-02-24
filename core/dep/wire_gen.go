@@ -188,7 +188,7 @@ var daoSet = wire.NewSet(wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(ne
 
 var repositorySet = wire.NewSet(repository.NewGroup, repository.NewActivator, repository.NewVersionSelector, repository.NewTeamMemberGroup)
 
-var serviceSet = wire.NewSet(wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)), newHTTPClient, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp, service.NewGroup, service.NewRollout)
+var serviceSet = wire.NewSet(wire.Bind(new(storage.ObjectStore), new(*storage.HTTPClient)), newHTTPClient, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp, service.NewGroup, service.NewRollout)
 
 func newJWTAuthority(logger telemetry.Logger, signingKey JWTSigningKey) security.JWTAuthority {
 	return security.NewJWTAuthority(logger, string(signingKey))
