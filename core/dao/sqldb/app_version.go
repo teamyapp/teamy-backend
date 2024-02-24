@@ -146,7 +146,8 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			$7,
 			$8,
 			$9,
-			$10
+			$10,
+			$11
 		);`,
 		appVersion.AppID,
 		appVersion.Number,
