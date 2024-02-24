@@ -30,6 +30,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/transaction"
@@ -37,7 +38,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var appPackageRoot = path.Join("app", "packages")
+var appPackageRoot = path.Join("files", "apps")
 var secretAlphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?@#_-")
 var secretLength = 32
 var defaultAppGroupName = "default app group"
@@ -747,6 +748,11 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 			}
 		}
 
+		err = a.appPackageUploadSessionDao.DeleteAppPackageUploadSessionsByAppID(ct, tx, appID)
+		if err != nil {
+			return err
+		}
+
 		return a.appDao.DeleteApp(ct, tx, appID)
 	})
 
@@ -829,6 +835,10 @@ func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber in
 		}
 
 		av.Status = input.Status
+		if input.Status == entity.AppVersionStatusInit {
+			av.ErrorMessage = nil
+		}
+
 		now := time.Now().UTC()
 		av.UpdatedAt = &now
 		return a.appVersionDao.UpdateAppVersion(ct, tx, av)
@@ -877,7 +887,39 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return a.appPackageUploadSessionDao.CreateAppPackageUploadSession(ct, tx, fileUploadSession)
+		err := a.appPackageUploadSessionDao.CreateAppPackageUploadSession(ct, tx, fileUploadSession)
+		if err != nil {
+			return err
+		}
+
+		appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+		if err != nil {
+			return err
+		}
+
+		if appVersion.Status != entity.AppVersionStatusInit && appVersion.Status != entity.AppVersionStatusError {
+			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("app version is not in init status: appID=%v, versionNumber=%v", appID, versionNumber))
+		}
+
+		appVersion.Status = entity.AppVersionStatusUploading
+		now := time.Now().UTC()
+		appVersion.UpdatedAt = &now
+
+		updateAppVersionMutation := mutation.NewUpdateAppVersion(
+			a.logger,
+			a.stateSyncer,
+			a.appVersionDao,
+			a.appDao,
+			appVersion,
+		)
+
+		err = updateAppVersionMutation.Execute(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		rtTx.AppendMutation(updateAppVersionMutation)
+		return nil
 	})
 	return res.UploadSessionId, err
 }
@@ -940,7 +982,33 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		now := time.Now().UTC()
 		appPackageUploadSession.IsCompleted = true
 		appPackageUploadSession.UpdatedAt = &now
-		return a.appPackageUploadSessionDao.UpdateAppPackageFileUploadSession(ct, tx, appPackageUploadSession)
+		err = a.appPackageUploadSessionDao.UpdateAppPackageFileUploadSession(ct, tx, appPackageUploadSession)
+		if err != nil {
+			return err
+		}
+
+		appVersion, err = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+		if err != nil {
+			return err
+		}
+
+		appVersion.Status = entity.AppVersionStatusProcessing
+		appVersion.UpdatedAt = &now
+		updateAppVersionMutation := mutation.NewUpdateAppVersion(
+			a.logger,
+			a.stateSyncer,
+			a.appVersionDao,
+			a.appDao,
+			appVersion,
+		)
+
+		err = updateAppVersionMutation.Execute(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		rtTx.AppendMutation(updateAppVersionMutation)
+		return nil
 	})
 
 	go func() {
@@ -948,9 +1016,45 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		err := a.uploadAppPackageFiles(ct, userID, appID, versionNumber, uploadSession)
 		if err != nil {
 			a.logger.ErrorWithContext(ct, err)
+			errMessage := err.Message
+			txCtx := transaction.NewTransactionsContext(
+				a.logger,
+				a.transactionFactory,
+				a.stateSyncer,
+				ct,
+			)
+
+			transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+				appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+				if err != nil {
+					return err
+				}
+				now := time.Now().UTC()
+				appVersion.Status = entity.AppVersionStatusError
+				appVersion.UpdatedAt = &now
+				appVersion.ErrorMessage = &errMessage
+				updateAppVersionMutation := mutation.NewUpdateAppVersion(
+					a.logger,
+					a.stateSyncer,
+					a.appVersionDao,
+					a.appDao,
+					appVersion,
+				)
+
+				err = updateAppVersionMutation.Execute(ct, tx)
+				if err != nil {
+					return err
+				}
+
+				rtTx.AppendMutation(updateAppVersionMutation)
+				return nil
+			})
+
+			if transactionErr != nil {
+				a.logger.ErrorWithContext(ct, transactionErr)
+			}
 			return
 		}
-		// TODO: change app version status to ready
 	}()
 
 	return appVersion, err
@@ -1174,23 +1278,15 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 			return err
 		}
 
-		now := time.Now().UTC()
-		appVersion.Number = versionNumber
-		appVersion.AppName = manifestData.AppName
-		appVersion.Description = manifestData.Description
-		appVersion.HasUiExtension = manifestData.HasUiExtension
-		appVersion.Status = entity.AppVersionStatusReady
-		appVersion.UpdatedAt = &now
+		for currencyStr, price := range manifestData.Prices {
+			currency, ok := entity.CurrencyStrToCurrency[currencyStr]
+			if !ok {
+				return errs.NewError(errs.InvalidArgument, fmt.Sprintf("invalid currency: %v", currencyStr))
+			}
 
-		err = a.appVersionDao.UpdateAppVersion(ct, tx, appVersion)
-		if err != nil {
-			return err
-		}
-
-		for currency, price := range manifestData.Prices {
 			appVersionPrice := entity.AppVersionPrice{
 				Money: entity.Money{
-					Currency: entity.Currency(currency),
+					Currency: currency,
 					Amount:   price,
 				},
 				AppID:         appVersion.AppID,
@@ -1210,17 +1306,48 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 			}
 
 			change := entity.AppVersionChange{
+				ID:            genAppSecretIDRes.UniqueNumber,
 				AppID:         appVersion.AppID,
-				ChangeID:      genAppSecretIDRes.UniqueNumber,
 				VersionNumber: appVersion.Number,
 				Change:        change,
 			}
-			err := a.appVersionChangeDao.CreateAppVersionChange(ct, tx, change)
+
+			createAppVersionChangeMutation := mutation.NewCreateAppVersionChange(
+				a.logger,
+				a.stateSyncer,
+				change,
+				a.appVersionChangeDao,
+				a.appDao,
+			)
+
+			err := createAppVersionChangeMutation.Execute(ct, tx)
 			if err != nil {
 				return err
 			}
+
+			rtTx.AppendMutation(createAppVersionChangeMutation)
 		}
 
+		now := time.Now().UTC()
+		appVersion.Number = versionNumber
+		appVersion.AppName = manifestData.AppName
+		appVersion.Description = manifestData.Description
+		appVersion.HasUiExtension = manifestData.HasUiExtension
+		appVersion.Status = entity.AppVersionStatusReady
+		appVersion.UpdatedAt = &now
+		updateAppVersionMutation := mutation.NewUpdateAppVersion(
+			a.logger,
+			a.stateSyncer,
+			a.appVersionDao,
+			a.appDao,
+			appVersion,
+		)
+
+		err = updateAppVersionMutation.Execute(ct, tx)
+		if err != nil {
+			return err
+		}
+		rtTx.AppendMutation(updateAppVersionMutation)
 		return nil
 	})
 }

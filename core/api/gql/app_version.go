@@ -85,6 +85,10 @@ func (a AppVersion) App(ctx context.Context) (App, error) {
 	return newApp(a.deps, app), nil
 }
 
+func (a AppVersion) ErrorMessage(ctx context.Context) *string {
+	return a.appVersion.ErrorMessage
+}
+
 func newAppVersion(deps *Dependencies, appVersion entity.AppVersion) AppVersion {
 	return AppVersion{deps: deps, appVersion: appVersion}
 }

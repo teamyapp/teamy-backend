@@ -95,7 +95,7 @@ type Mutation {
 	deleteAppSecret(secretId: ID!): AppSecret!
 
 	createAppVersion(appId: ID!): AppVersion!
-	updateAppVersion(appId: ID!, input: UpdateAppVersionInput!): AppVersion!
+	updateAppVersion(appId: ID!, versionNumber: Int!, input: UpdateAppVersionInput!): AppVersion!
 
 	createAppPackageUploadSession(appId: ID!, versionNumber: Int!): ID!
 	finishAppPackageUploadSession(
@@ -383,6 +383,7 @@ type AppVersion {
 	app: App!
 	iconUrl: String
 	locked: Boolean!
+	errorMessage: String
 }
 
 interface GroupRolloutRelation {
@@ -710,6 +711,7 @@ enum AppVersionStatus {
 	UPLOADING
 	PROCESSING
 	READY
+	ERROR
 }
 
 enum AppRolloutType {

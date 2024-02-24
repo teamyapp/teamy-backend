@@ -17,6 +17,32 @@ type AppPackageUploadSession struct {
 
 var _ dao.AppPackageUploadSession = (*AppPackageUploadSession)(nil)
 
+func (a *AppPackageUploadSession) FindAppPackageUploadSessionByAppIDWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	appID uint64,
+) ([]entity.AppPackageUploadSession, *errs.Error) {
+	var uploadSessions []entity.AppPackageUploadSession
+	err := tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := a.db.GetTable(AppPackageUploadSessionTableName)
+			if err != nil {
+				return err
+			}
+
+			for _, rawRow := range table.Rows {
+				currUploadSession := rawRow.(entity.AppPackageUploadSession)
+				if currUploadSession.AppID == appID {
+					uploadSessions = append(uploadSessions, currUploadSession)
+				}
+			}
+
+			return nil
+		},
+	})
+	return uploadSessions, err
+}
+
 func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
@@ -150,6 +176,58 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 					session.AppID,
 					session.VersionNumber),
 			}
+		},
+	})
+}
+
+func (a *AppPackageUploadSession) DeleteAppPackageUploadSessionsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	oldAppPackageUploadSessions, err := a.FindAppPackageUploadSessionByAppIDWithTx(ct, tx, appID)
+	if err != nil {
+		return err
+	}
+
+	return tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := a.db.GetTable(AppPackageUploadSessionTableName)
+			if err != nil {
+				return err
+			}
+
+			rows := make([]interface{}, 0)
+			for _, rawRow := range table.Rows {
+				currUploadSession := rawRow.(entity.AppPackageUploadSession)
+				if currUploadSession.AppID == appID {
+					continue
+				}
+
+				rows = append(rows, rawRow)
+			}
+
+			table.Rows = rows
+			return nil
+		},
+		Undo: func() *errs.Error {
+			table, err := a.db.GetTable(AppPackageUploadSessionTableName)
+			if err != nil {
+				return err
+			}
+
+			for _, rawRow := range table.Rows {
+				currUploadSession := rawRow.(entity.AppPackageUploadSession)
+				if currUploadSession.AppID == appID {
+					return &errs.Error{
+						Code: errs.Unknown,
+						Message: fmt.Sprintf("row already exists: appID=%v",
+							appID),
+					}
+				}
+			}
+
+			for _, uploadSession := range oldAppPackageUploadSessions {
+				table.Rows = append(table.Rows, uploadSession)
+			}
+
+			return nil
 		},
 	})
 }

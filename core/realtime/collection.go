@@ -3,6 +3,8 @@ package realtime
 type CollectionType string
 
 const (
+	AppVersionCollectionType           CollectionType = "AppVersion"
+	AppVersionChangeCollectionType     CollectionType = "AppVersionChange"
 	TaskCollectionType                 CollectionType = "Task"
 	TaskLinkCollectionType             CollectionType = "TaskLink"
 	InvitationCollectionType           CollectionType = "Invitation"
