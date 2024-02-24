@@ -9,8 +9,8 @@ import (
 )
 
 type AppVersionChange struct {
-	appVersionChange entity.AppVersionChange
 	deps             *Dependencies
+	appVersionChange entity.AppVersionChange
 }
 
 func (a AppVersionChange) ID() graphql.ID {
