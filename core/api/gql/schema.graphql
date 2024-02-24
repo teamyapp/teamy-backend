@@ -381,7 +381,6 @@ type AppVersion {
 	prices: [Money!]!
 	status: AppVersionStatus!
 	app: App!
-	iconUrl: String
 	locked: Boolean!
 	errorMessage: String
 }

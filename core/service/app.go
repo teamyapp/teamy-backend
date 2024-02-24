@@ -897,8 +897,8 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 			return err
 		}
 
-		if appVersion.Status != entity.AppVersionStatusInit && 
-		appVersion.Status != entity.AppVersionStatusError {
+		if appVersion.Status != entity.AppVersionStatusInit &&
+			appVersion.Status != entity.AppVersionStatusError {
 			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("app version is not in init status: appID=%v, versionNumber=%v", appID, versionNumber))
 		}
 
@@ -1030,7 +1030,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 				if err != nil {
 					return err
 				}
-				
+
 				now := time.Now().UTC()
 				appVersion.Status = entity.AppVersionStatusError
 				appVersion.UpdatedAt = &now
@@ -1055,7 +1055,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 			if transactionErr != nil {
 				a.logger.ErrorWithContext(ct, transactionErr)
 			}
-			
+
 			return
 		}
 	}()
@@ -1282,7 +1282,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		}
 
 		for currencyStr, price := range manifestData.Prices {
-			currency, ok := entity.CurrencyStrToCurrency[currencyStr]
+			currency, ok := entity.StringToCurrency[currencyStr]
 			if !ok {
 				return errs.NewError(errs.InvalidArgument, fmt.Sprintf("invalid currency: %v", currencyStr))
 			}
@@ -1350,7 +1350,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		if err != nil {
 			return err
 		}
-		
+
 		rtTx.AppendMutation(updateAppVersionMutation)
 		return nil
 	})

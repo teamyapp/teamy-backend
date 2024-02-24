@@ -71,10 +71,6 @@ func (a AppVersion) Locked(ctx context.Context) bool {
 	return a.appVersion.Locked
 }
 
-func (a AppVersion) IconURL(ctx context.Context) *string {
-	return a.appVersion.IconURL
-}
-
 func (a AppVersion) App(ctx context.Context) (App, error) {
 	app, err := a.deps.appService.FindAppByID(ctx, a.appVersion.AppID)
 	if err != nil {
