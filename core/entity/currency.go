@@ -6,6 +6,6 @@ const (
 	CurrencyUSD Currency = "USD"
 )
 
-var CurrencyStrToCurrency = map[string]Currency{
+var StringToCurrency = map[string]Currency{
 	"USD": CurrencyUSD,
 }

@@ -25,7 +25,6 @@ type AppVersion struct {
 	CreatedByUserID uint64
 	Status          AppVersionStatus
 	Locked          bool
-	IconURL         *string
 	ErrorMessage    *string
 }
 

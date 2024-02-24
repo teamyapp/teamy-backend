@@ -150,8 +150,7 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			$8,
 			$9,
 			$10,
-			$11,
-			$12
+			$11
 		);`,
 		appVersion.AppID,
 		appVersion.Number,
@@ -163,7 +162,6 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 		appVersion.CreatedByUserID,
 		appVersion.Status,
 		appVersion.Locked,
-		appVersion.IconURL,
 		appVersion.ErrorMessage,
 	)
 	if err != nil {
@@ -182,17 +180,15 @@ func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transact
 			description = $3,
 			status = $4,
 			locked = $5,
-			icon_url = $6,
-			created_at = $7,
-			updated_at = $8,
-			error_message = $9
-		WHERE app_id = $10 AND number = $11;`,
+			created_at = $6,
+			updated_at = $7,
+			error_message = $8
+		WHERE app_id = $9 AND number = $10;`,
 		appVersion.AppName,
 		appVersion.HasUiExtension,
 		appVersion.Description,
 		appVersion.Status,
 		appVersion.Locked,
-		appVersion.IconURL,
 		appVersion.CreatedAt,
 		appVersion.UpdatedAt,
 		appVersion.ErrorMessage,
