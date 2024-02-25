@@ -21,7 +21,9 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 		ct,
 		`
 		SELECT 
-			change 
+			app_id,
+			version_number,
+			change
 		FROM app_version_change 
 		WHERE app_id = $1 AND version_number = $2`,
 		appID,
@@ -36,8 +38,13 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 
 	var changes []entity.AppVersionChange
 	for rows.Next() {
-		var change entity.AppVersionChange
-		err := rows.Scan(&change.Change)
+		change := entity.AppVersionChange{}
+		err := rows.Scan(
+			&change.AppID,
+			&change.VersionNumber,
+			&change.Change,
+		)
+
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
