@@ -116,6 +116,20 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 	return nil
 }
 
+func (a *AppPackageUploadSession) DeleteAppPackageUploadSessionsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
+		DELETE FROM app_package_upload_session
+		WHERE app_id = $1;`,
+		appID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewAppPackageUploadSession(transactionFactory transaction.Factory) *AppPackageUploadSession {
 	return &AppPackageUploadSession{
 		transactionFactory: transactionFactory,

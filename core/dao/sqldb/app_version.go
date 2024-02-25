@@ -43,7 +43,7 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 			created_by_user_id,
 			status,
 	        locked,
-			icon_url
+			error_message
 		FROM app_version
 		WHERE app_id = $1;`,
 		appID,
@@ -67,7 +67,7 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 			&appVersion.CreatedByUserID,
 			&appVersion.Status,
 			&appVersion.Locked,
-			&appVersion.IconURL,
+			&appVersion.ErrorMessage,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -134,7 +134,8 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			updated_at,
 			created_by_user_id,
 			status,
-			locked
+			locked,
+			error_message
 		) VALUES (
 			$1,
 			$2,
@@ -145,7 +146,8 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			$7,
 			$8,
 			$9,
-			$10
+			$10,
+			$11
 		);`,
 		appVersion.AppID,
 		appVersion.Number,
@@ -157,6 +159,7 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 		appVersion.CreatedByUserID,
 		appVersion.Status,
 		appVersion.Locked,
+		appVersion.ErrorMessage,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
@@ -172,22 +175,22 @@ func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transact
 			app_name = $1,
 			has_ui_extension = $2,
 			description = $3,
-			status = $4
-			locked = $5
-			icon_url = $6
-			created_at = $7
-			updated_at = $8
-		WHERE app_id = $7 AND number = $8;`,
+			status = $4,
+			locked = $5,
+			created_at = $6,
+			updated_at = $7,
+			error_message = $8
+		WHERE app_id = $9 AND number = $10;`,
 		appVersion.AppName,
 		appVersion.HasUiExtension,
 		appVersion.Description,
 		appVersion.Status,
 		appVersion.Locked,
-		appVersion.IconURL,
-		appVersion.AppID,
-		appVersion.Number,
 		appVersion.CreatedAt,
 		appVersion.UpdatedAt,
+		appVersion.ErrorMessage,
+		appVersion.AppID,
+		appVersion.Number,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
@@ -223,8 +226,7 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 			updated_at,
 			created_by_user_id,
 			status,
-			locked,
-			icon_url
+			locked
 		FROM app_version
 		WHERE app_id = $1 AND number = $2;`,
 		appID,
@@ -240,7 +242,6 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 		&appVersion.CreatedByUserID,
 		&appVersion.Status,
 		&appVersion.Locked,
-		&appVersion.IconURL,
 	)
 	if err != nil {
 		return entity.AppVersion{}, errs.NewError(errs.Unknown, err.Error())

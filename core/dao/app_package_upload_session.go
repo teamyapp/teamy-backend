@@ -26,4 +26,9 @@ type AppPackageUploadSession interface {
 		tx *transaction.Transaction,
 		session entity.AppPackageUploadSession,
 	) *errs.Error
+	DeleteAppPackageUploadSessionsByAppID(
+		ct context.Context,
+		tx *transaction.Transaction,
+		appID uint64,
+	) *errs.Error
 }

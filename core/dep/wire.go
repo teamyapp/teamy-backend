@@ -120,7 +120,7 @@ var repositorySet = wire.NewSet(
 )
 
 var serviceSet = wire.NewSet(
-	wire.Bind(new(storage.MapClient), new(*storage.HTTPClient)),
+	wire.Bind(new(storage.ObjectStore), new(*storage.HTTPClient)),
 	newHTTPClient,
 	service.NewThread,
 	service.NewTask,

@@ -11,6 +11,7 @@ const (
 	AppVersionStatusUploading  AppVersionStatus = "UPLOADING"
 	AppVersionStatusProcessing AppVersionStatus = "PROCESSING"
 	AppVersionStatusReady      AppVersionStatus = "READY"
+	AppVersionStatusError      AppVersionStatus = "ERROR"
 )
 
 type AppVersion struct {
@@ -24,12 +25,12 @@ type AppVersion struct {
 	CreatedByUserID uint64
 	Status          AppVersionStatus
 	Locked          bool
-	IconURL         *string
+	ErrorMessage    *string
 }
 
 type AppVersionChange struct {
+	ID            uint64
 	AppID         uint64
-	ChangeID      uint64
 	VersionNumber int
 	Change        string
 }
