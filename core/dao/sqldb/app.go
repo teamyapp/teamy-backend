@@ -17,6 +17,39 @@ type App struct {
 
 var _ dao.App = (*App)(nil)
 
+func (a *App) FindAppsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.App, *errs.Error) {
+	apps := []entity.App{}
+	rows, err := tx.SQLTx().Query(`
+		SELECT
+			id,
+			total_installations,
+			created_at,
+			updated_at,
+			managed_by_team_id
+		FROM app;`)
+	if err != nil {
+		return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	for rows.Next() {
+		app := entity.App{}
+		err := rows.Scan(
+			&app.ID,
+			&app.TotalInstallations,
+			&app.CreatedAt,
+			&app.UpdatedAt,
+			&app.ManagedByTeamID,
+		)
+		if err != nil {
+			return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps, nil
+}
+
 func (a *App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
 	opt := sql.TxOptions{
 		ReadOnly: true,

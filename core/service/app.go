@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -88,8 +90,7 @@ type App struct {
 }
 
 type AppFilter struct {
-	AppID  *uint64
-	TeamID *uint64
+	TagValues []string
 }
 
 type UpdateAppTeamInstallationInput struct {
@@ -115,6 +116,34 @@ type GenerateTokenInput struct {
 
 type UpdateAppVersionInput struct {
 	Status entity.AppVersionStatus
+}
+
+func (a App) FindApps(ct context.Context, appFilter *AppFilter) ([]entity.App, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+
+	var apps []entity.App
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		if appFilter == nil || len(appFilter.TagValues) == 0 {
+			apps, err = a.appDao.FindAppsWithTx(ct, tx)
+			return err
+		} else {
+			appIDs, err := a.appTagRelationDao.FindAppIDsByTagValuesWithTx(ct, tx, appFilter.TagValues)
+			if err != nil {
+				return err
+			}
+
+			apps, err = a.appDao.FindAppsByAppIDsWithTx(ct, tx, appIDs)
+			return err
+		}
+	})
+
+	return apps, transactionErr
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
@@ -322,7 +351,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		AppName:         createAppInput.Name,
 		Description:     "",
 		CreatedByUserID: userID,
-		Status:          entity.AppVersionStatusInit,
+		Status:          entity.AppVersionStatusReady,
 		Locked:          true,
 		CreatedAt:       now,
 	}
@@ -1191,7 +1220,12 @@ func (a App) uploadAppPackageFiles(
 			headerName := a.removeTarFilePrefix(header.Name)
 			err := a.processFile(ct, userID, appID, versionNumber, tarReader, headerName, func(reader io.Reader) *errs.Error {
 				storageMapKey := path.Join(appPackageRoot, appIDStr, versionNumberStr, headerName)
-				return a.objectStore.Put(ct, storageMapKey, reader)
+				ext := filepath.Ext(headerName)
+				mimeType := mime.TypeByExtension(ext)
+
+				return a.objectStore.Put(ct, storageMapKey, reader, storage.ObjectMetadataInput{
+					ContentType: mimeType,
+				})
 			})
 
 			if err != nil {

@@ -31,6 +31,6 @@ type SprintFilter struct {
 
 type AppFilter struct {
 	Query         *string
-	Tag           *string
+	TagValues     []string
 	IsOnPromotion *bool
 }

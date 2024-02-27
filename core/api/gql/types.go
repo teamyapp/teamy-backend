@@ -122,6 +122,16 @@ func fromGraphQLSprintFilterPtr(gqlSprintFilter *SprintFilter) (*service.SprintF
 	}, nil
 }
 
+func fromGraphQLAppFilterPtr(gqlAppFilter *AppFilter) (*service.AppFilter, error) {
+	if gqlAppFilter == nil {
+		return nil, nil
+	}
+
+	return &service.AppFilter{
+		TagValues: gqlAppFilter.TagValues,
+	}, nil
+}
+
 func fromGraphQLTeamFilterPtr(teamFilter *TeamFilter) (*service.TeamFilter, error) {
 	if teamFilter == nil {
 		return nil, nil
