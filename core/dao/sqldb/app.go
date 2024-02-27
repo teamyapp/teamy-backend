@@ -205,6 +205,26 @@ func (a *App) CreateApp(ct context.Context, tx *transaction.Transaction, app ent
 	return nil
 }
 
+func (a *App) UpdateApp(ct context.Context, tx *transaction.Transaction, app entity.App) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
+		UPDATE app
+		SET
+			total_installations = $1,
+			updated_at = $2,
+			managed_by_team_id = $3
+		WHERE id = $4;`,
+		app.TotalInstallations,
+		app.UpdatedAt,
+		app.ManagedByTeamID,
+		app.ID,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func (a *App) DeleteApp(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM app

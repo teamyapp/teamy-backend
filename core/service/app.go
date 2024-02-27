@@ -284,7 +284,20 @@ func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return a.teamAppInstallationDao.CreateTeamAppInstallation(ct, tx, teamAppInstallation)
+		err := a.teamAppInstallationDao.CreateTeamAppInstallation(ct, tx, teamAppInstallation)
+		if err != nil {
+			return err
+		}
+
+		app, err := a.appDao.FindAppByID(ct, appID)
+		if err != nil {
+			return err
+		}
+
+		app.TotalInstallations++
+		now := time.Now().UTC()
+		app.UpdatedAt = &now
+		return a.appDao.UpdateApp(ct, tx, app)
 	})
 	return teamAppInstallation, err
 }
@@ -304,7 +317,20 @@ func (a App) UninstallAppFromTeam(ct context.Context, appInstallationID uint64) 
 			return internalErr
 		}
 
-		return a.teamAppInstallationDao.DeleteTeamAppInstallationByID(ct, tx, appInstallationID)
+		err := a.teamAppInstallationDao.DeleteTeamAppInstallationByID(ct, tx, appInstallationID)
+		if err != nil {
+			return err
+		}
+
+		app, err := a.appDao.FindAppByID(ct, teamAppInstallation.AppID)
+		if err != nil {
+			return err
+		}
+
+		app.TotalInstallations--
+		now := time.Now().UTC()
+		app.UpdatedAt = &now
+		return a.appDao.UpdateApp(ct, tx, app)
 	})
 	return teamAppInstallation, err
 }

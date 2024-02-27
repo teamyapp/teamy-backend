@@ -16,5 +16,6 @@ type App interface {
 	FindAppsByManagedByTeamID(ct context.Context, managedByTeamID uint64) ([]entity.App, *errs.Error)
 	FindAppByIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (entity.App, *errs.Error)
 	CreateApp(ct context.Context, tx *transaction.Transaction, app entity.App) *errs.Error
+	UpdateApp(ct context.Context, tx *transaction.Transaction, app entity.App) *errs.Error
 	DeleteApp(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error
 }
