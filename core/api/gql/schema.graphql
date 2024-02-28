@@ -490,7 +490,7 @@ input SprintFilter {
 
 input AppFilter {
 	query: String
-	tag: String
+	tagValues: [String!]!
 	isOnPromotion: Boolean
 }
 

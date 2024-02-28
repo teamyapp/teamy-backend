@@ -9,6 +9,11 @@ import (
 )
 
 type AppTagRelation interface {
+	FindAppIDsByTagValuesWithTx(
+		ct context.Context,
+		tx *transaction.Transaction,
+		tagValues []string,
+	) ([]uint64, *errs.Error)
 	FindAppTagByAppIDAndTagIDRelationWithTx(
 		ct context.Context,
 		tx *transaction.Transaction,

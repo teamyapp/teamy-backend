@@ -17,6 +17,39 @@ type App struct {
 
 var _ dao.App = (*App)(nil)
 
+func (a *App) FindAppsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.App, *errs.Error) {
+	apps := []entity.App{}
+	rows, err := tx.SQLTx().Query(`
+		SELECT
+			id,
+			total_installations,
+			created_at,
+			updated_at,
+			managed_by_team_id
+		FROM app;`)
+	if err != nil {
+		return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	for rows.Next() {
+		app := entity.App{}
+		err := rows.Scan(
+			&app.ID,
+			&app.TotalInstallations,
+			&app.CreatedAt,
+			&app.UpdatedAt,
+			&app.ManagedByTeamID,
+		)
+		if err != nil {
+			return []entity.App{}, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps, nil
+}
+
 func (a *App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
 	opt := sql.TxOptions{
 		ReadOnly: true,
@@ -164,6 +197,26 @@ func (a *App) CreateApp(ct context.Context, tx *transaction.Transaction, app ent
 		app.CreatedAt,
 		app.UpdatedAt,
 		app.ManagedByTeamID,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (a *App) UpdateApp(ct context.Context, tx *transaction.Transaction, app entity.App) *errs.Error {
+	_, err := tx.SQLTx().Exec(`
+		UPDATE app
+		SET
+			total_installations = $1,
+			updated_at = $2,
+			managed_by_team_id = $3
+		WHERE id = $4;`,
+		app.TotalInstallations,
+		app.UpdatedAt,
+		app.ManagedByTeamID,
+		app.ID,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())

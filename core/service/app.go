@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -88,8 +90,7 @@ type App struct {
 }
 
 type AppFilter struct {
-	AppID  *uint64
-	TeamID *uint64
+	TagValues []string
 }
 
 type UpdateAppTeamInstallationInput struct {
@@ -115,6 +116,34 @@ type GenerateTokenInput struct {
 
 type UpdateAppVersionInput struct {
 	Status entity.AppVersionStatus
+}
+
+func (a App) FindApps(ct context.Context, appFilter *AppFilter) ([]entity.App, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		a.logger,
+		a.transactionFactory,
+		a.stateSyncer,
+		ct,
+	)
+
+	var apps []entity.App
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		if appFilter == nil || len(appFilter.TagValues) == 0 {
+			apps, err = a.appDao.FindAppsWithTx(ct, tx)
+			return err
+		} else {
+			appIDs, err := a.appTagRelationDao.FindAppIDsByTagValuesWithTx(ct, tx, appFilter.TagValues)
+			if err != nil {
+				return err
+			}
+
+			apps, err = a.appDao.FindAppsByAppIDsWithTx(ct, tx, appIDs)
+			return err
+		}
+	})
+
+	return apps, transactionErr
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
@@ -255,7 +284,20 @@ func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (
 		ct,
 	)
 	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return a.teamAppInstallationDao.CreateTeamAppInstallation(ct, tx, teamAppInstallation)
+		err := a.teamAppInstallationDao.CreateTeamAppInstallation(ct, tx, teamAppInstallation)
+		if err != nil {
+			return err
+		}
+
+		app, err := a.appDao.FindAppByID(ct, appID)
+		if err != nil {
+			return err
+		}
+
+		app.TotalInstallations++
+		now := time.Now().UTC()
+		app.UpdatedAt = &now
+		return a.appDao.UpdateApp(ct, tx, app)
 	})
 	return teamAppInstallation, err
 }
@@ -275,7 +317,20 @@ func (a App) UninstallAppFromTeam(ct context.Context, appInstallationID uint64) 
 			return internalErr
 		}
 
-		return a.teamAppInstallationDao.DeleteTeamAppInstallationByID(ct, tx, appInstallationID)
+		err := a.teamAppInstallationDao.DeleteTeamAppInstallationByID(ct, tx, appInstallationID)
+		if err != nil {
+			return err
+		}
+
+		app, err := a.appDao.FindAppByID(ct, teamAppInstallation.AppID)
+		if err != nil {
+			return err
+		}
+
+		app.TotalInstallations--
+		now := time.Now().UTC()
+		app.UpdatedAt = &now
+		return a.appDao.UpdateApp(ct, tx, app)
 	})
 	return teamAppInstallation, err
 }
@@ -322,7 +377,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		AppName:         createAppInput.Name,
 		Description:     "",
 		CreatedByUserID: userID,
-		Status:          entity.AppVersionStatusInit,
+		Status:          entity.AppVersionStatusReady,
 		Locked:          true,
 		CreatedAt:       now,
 	}
@@ -1191,7 +1246,11 @@ func (a App) uploadAppPackageFiles(
 			headerName := a.removeTarFilePrefix(header.Name)
 			err := a.processFile(ct, userID, appID, versionNumber, tarReader, headerName, func(reader io.Reader) *errs.Error {
 				storageMapKey := path.Join(appPackageRoot, appIDStr, versionNumberStr, headerName)
-				return a.objectStore.Put(ct, storageMapKey, reader)
+				ext := filepath.Ext(headerName)
+				mimeType := mime.TypeByExtension(ext)
+				return a.objectStore.Put(ct, storageMapKey, reader, storage.ObjectMetadataInput{
+					ContentType: mimeType,
+				})
 			})
 
 			if err != nil {
@@ -1231,9 +1290,9 @@ func (a App) processFile(ct context.Context, userID uint64, appID uint64, versio
 
 func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64, versionNumber int, reader *tar.Reader, uploaderFunc UploadFunc) *errs.Error {
 	manifestData := struct {
-		AppName        string         `yaml:"app_name"`
+		AppName        string         `yaml:"appName"`
 		Description    string         `yaml:"description"`
-		HasUiExtension bool           `yaml:"has_ui_extension"`
+		HasUiExtension bool           `yaml:"hasUiExtension"`
 		Changes        []string       `yaml:"changes"`
 		Prices         map[string]int `yaml:"prices"`
 	}{}

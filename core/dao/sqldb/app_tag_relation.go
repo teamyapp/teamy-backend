@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
@@ -17,6 +18,42 @@ type AppTagRelation struct {
 }
 
 var _ dao.AppTagRelation = (*AppTagRelation)(nil)
+
+func (*AppTagRelation) FindAppIDsByTagValuesWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	tagValues []string,
+) ([]uint64, *errs.Error) {
+	tagsStr := strings.Join(tagValues, ",")
+	query := fmt.Sprintf(
+		`SELECT
+			app_id
+		FROM app_tag_relation
+		WHERE value IN (%s);`,
+		tagsStr,
+	)
+
+	rows, err := tx.SQLTx().QueryContext(ct, query)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	appIDs := []uint64{}
+	for rows.Next() {
+		var appID uint64
+		err := rows.Scan(
+			&appID,
+		)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		appIDs = append(appIDs, appID)
+	}
+
+	return appIDs, nil
+}
 
 func (*AppTagRelation) FindTagIDsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]uint64, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(ct,

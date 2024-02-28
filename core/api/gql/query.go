@@ -109,7 +109,22 @@ func (q Query) Sprints(ct context.Context, args struct {
 func (q Query) Apps(ct context.Context, args struct {
 	Filter *AppFilter
 }) ([]App, error) {
-	panic("not implemented")
+	appFilter, argErr := fromGraphQLAppFilterPtr(args.Filter)
+	if argErr != nil {
+		internalErr := errs.NewError(errs.InvalidArgument, argErr.Error())
+		q.deps.logger.ErrorWithContext(ct, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	apps, err := q.deps.appService.FindApps(ct, appFilter)
+	if err != nil {
+		q.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(apps, func(app entity.App, _ int) App {
+		return newApp(q.deps, app)
+	}), nil
 }
 
 func NewQuery(deps *Dependencies) Query {
