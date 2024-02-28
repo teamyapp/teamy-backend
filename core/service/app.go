@@ -1290,9 +1290,9 @@ func (a App) processFile(ct context.Context, userID uint64, appID uint64, versio
 
 func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64, versionNumber int, reader *tar.Reader, uploaderFunc UploadFunc) *errs.Error {
 	manifestData := struct {
-		AppName        string         `yaml:"app_name"`
+		AppName        string         `yaml:"appName"`
 		Description    string         `yaml:"description"`
-		HasUiExtension bool           `yaml:"has_ui_extension"`
+		HasUiExtension bool           `yaml:"hasUiExtension"`
 		Changes        []string       `yaml:"changes"`
 		Prices         map[string]int `yaml:"prices"`
 	}{}
