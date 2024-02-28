@@ -1248,7 +1248,6 @@ func (a App) uploadAppPackageFiles(
 				storageMapKey := path.Join(appPackageRoot, appIDStr, versionNumberStr, headerName)
 				ext := filepath.Ext(headerName)
 				mimeType := mime.TypeByExtension(ext)
-
 				return a.objectStore.Put(ct, storageMapKey, reader, storage.ObjectMetadataInput{
 					ContentType: mimeType,
 				})

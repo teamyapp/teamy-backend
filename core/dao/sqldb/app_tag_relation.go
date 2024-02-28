@@ -23,7 +23,7 @@ func (*AppTagRelation) FindAppIDsByTagValuesWithTx(
 	tx *transaction.Transaction,
 	tagValues []string,
 ) ([]uint64, *errs.Error) {
-	tagsStr := toStrsString(tagValues)
+	tagsStr := strings.Join(tagValues, ",")
 	query := fmt.Sprintf(
 		`SELECT
 			app_id

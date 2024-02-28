@@ -13,12 +13,3 @@ func toIDsString(ids []uint64) string {
 
 	return strings.Join(idStrings, ",")
 }
-
-func toStrsString(strs []string) string {
-	strStrings := make([]string, 0)
-	for _, singleStr := range strs {
-		strStrings = append(strStrings, singleStr)
-	}
-
-	return strings.Join(strStrings, ",")
-}
