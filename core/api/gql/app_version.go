@@ -39,6 +39,10 @@ func (a AppVersion) Changes(ctx context.Context) ([]AppVersionChange, error) {
 	}), nil
 }
 
+func (a AppVersion) HasUiExtension(ctx context.Context) bool {
+	return a.appVersion.HasUiExtension
+}
+
 func (a AppVersion) CreatedAt(ctx context.Context) graphql.Time {
 	return toGraphQLTime(a.appVersion.CreatedAt)
 }
