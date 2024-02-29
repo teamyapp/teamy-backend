@@ -375,6 +375,7 @@ type AppVersion {
 	number: Int!
 	appName: String!
 	description: String!
+	hasUiExtension: Boolean!
 	changes: [AppVersionChange!]!
 	createdAt: Time!
 	createdBy: User!
