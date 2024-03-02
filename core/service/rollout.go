@@ -456,7 +456,7 @@ func (r *Rollout) matchFilterGroup(
 		Now:    time.Now,
 		Output: os.Stdout,
 		CustomNativeGlobals: map[string]any{
-			"member":          member,
+			memberTypeName:    member,
 			propCallable.Name: propCallable,
 		},
 	}
