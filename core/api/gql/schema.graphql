@@ -95,7 +95,11 @@ type Mutation {
 	deleteAppSecret(secretId: ID!): AppSecret!
 
 	createAppVersion(appId: ID!): AppVersion!
-	updateAppVersion(appId: ID!, versionNumber: Int!, input: UpdateAppVersionInput!): AppVersion!
+	updateAppVersion(
+		appId: ID!
+		versionNumber: Int!
+		input: UpdateAppVersionInput!
+	): AppVersion!
 
 	createAppPackageUploadSession(appId: ID!, versionNumber: Int!): ID!
 	finishAppPackageUploadSession(
@@ -105,28 +109,109 @@ type Mutation {
 	): AppVersion!
 	deleteAppVersion(appId: ID!, versionNumber: Int!): AppVersion!
 
-	createStaticUserGroup(appId: ID!, input: CreateStaticUserGroupInput!): StaticUserGroup!
-	createStaticTeamGroup(appId: ID!, input: CreateStaticTeamGroupInput!): StaticTeamGroup!
+	createStaticUserGroup(
+		appId: ID!
+		input: CreateStaticUserGroupInput!
+	): StaticUserGroup!
+	createStaticTeamGroup(
+		appId: ID!
+		input: CreateStaticTeamGroupInput!
+	): StaticTeamGroup!
 	createFilterGroup(appId: ID!, input: CreateFilterGroupInput!): FilterGroup!
 	updateGroup(appId: ID!, groupId: ID!, input: UpdateGroupInput!): Group!
 
 	deleteGroup(groupId: ID!): Group!
 
 	createStaticActivator: StaticActivator!
-	createTimeRangeActivator(input: CreateTimeRangeActivatorInput!): TimeRangeActivator!
-	createMaxViewersActivator(input: CreateMaxViewersActivatorInput!): MaxViewersActivator!
-	createPercentageActivator(input: CreatePercentageActivatorInput!): PercentageActivator!
+	createTimeRangeActivator(
+		input: CreateTimeRangeActivatorInput!
+	): TimeRangeActivator!
+	createMaxViewersActivator(
+		input: CreateMaxViewersActivatorInput!
+	): MaxViewersActivator!
+	createPercentageActivator(
+		input: CreatePercentageActivatorInput!
+	): PercentageActivator!
 	updateActivator(activatorId: ID!, input: UpdateActivatorInput!): Activator!
 	deleteActivator(activatorId: ID!): Activator!
 
-	createStaticVersionSelector(appId: ID!, input: CreateStaticVersionSelectorInput!): StaticVersionSelector!
-	createExperimentVersionSelector(appId: ID!, input: CreateExperimentVersionSelectorInput!): ExperimentVersionSelector!
-	updateVersionSelector(appId: ID!, versionSelectorId: ID!, input: UpdateVersionSelectorInput!): VersionSelector!
+	createStaticVersionSelector(
+		appId: ID!
+		input: CreateStaticVersionSelectorInput!
+	): StaticVersionSelector!
+	createExperimentVersionSelector(
+		appId: ID!
+		input: CreateExperimentVersionSelectorInput!
+	): ExperimentVersionSelector!
+	updateVersionSelector(
+		appId: ID!
+		versionSelectorId: ID!
+		input: UpdateVersionSelectorInput!
+	): VersionSelector!
 	deleteVersionSelector(versionSelectorId: ID!): VersionSelector!
 
-	createAppRollout(appId: ID!, appRolloutType: AppRolloutType!, input: CreateAppRolloutInput!): Rollout!
+	createAppRollout(
+		appId: ID!
+		appRolloutType: AppRolloutType!
+		input: CreateAppRolloutInput!
+	): Rollout!
 	updateRollout(rolloutId: ID!, input: UpdateRolloutInput!): Rollout!
 	deleteRollout(rolloutId: ID!): Rollout!
+
+	createProject(input: CreateProjectInput!): Project!
+	updateProject(projectId: ID!, input: UpdateProjectInput!): Project!
+	deleteProject(projectId: ID!): Project!
+
+	createStory(projectId: ID!, input: CreateStoryInput!): Story!
+	updateStory(storyId: ID!, input: UpdateStoryInput!): Story!
+	addTaskToStory(storyId: ID!, taskId: ID!): Story!
+	removeTaskFromStory(storyId: ID!, taskId: ID!): Story!
+	deleteStory(storyId: ID!): Story!
+
+	createPhase(projectId: ID!, input: CreatePhaseInput!): Phase!
+	updatePhase(phaseId: ID!, input: UpdatePhaseInput!): Phase!
+	addStoryToPhase(phaseId: ID!, storyId: ID!): Phase!
+	removeStoryFromPhase(phaseId: ID!, storyId: ID!): Phase!
+}
+
+type Project {
+	id: ID!
+	creator: User!
+	name: String!
+	expectedStartAt: Time
+	actualStartAt: Time
+	expectedEndAt: Time
+	actualEndAt: Time
+	createdAt: Time!
+	updatedAt: Time
+	phases: [Phase!]!
+	stories: [Story!]!
+}
+
+type Phase {
+	id: ID!
+	creator: User!
+	name: String!
+	status: PhaseStatus!
+	expectedStartAt: Time!
+	actualStartAt: Time
+	expectedEndAt: Time!
+	actualEndAt: Time
+	createdAt: Time!
+	updatedAt: Time
+	stories: [Story!]!
+}
+
+type Story {
+	id: ID!
+	name: String!
+	creator: User!
+	owner: User!
+	status: StoryStatus!
+	priority: Priority
+	createdAt: Time!
+	updatedAt: Time
+	tasks: [Task!]!
 }
 
 type Task {
@@ -169,7 +254,6 @@ type Message {
 	createdAt: Time!
 	updatedAt: Time
 }
-
 
 type Thread {
 	id: ID!
@@ -496,6 +580,48 @@ input AppFilter {
 }
 
 # Inputs
+input CreateProjectInput {
+	name: String!
+	expectedStartAt: Time
+	expectedEndAt: Time
+}
+
+input UpdateProjectInput {
+	name: String!
+	expectedStartAt: Time
+	actualStartAt: Time
+	expectedEndAt: Time
+	actualEndAt: Time
+}
+
+input CreatePhaseInput {
+	name: String!
+	expectedStartAt: Time!
+	expectedEndAt: Time!
+}
+
+input UpdatePhaseInput {
+	name: String!
+	expectedStartAt: Time!
+	expectedEndAt: Time!
+	actualStartAt: Time
+	actualEndAt: Time
+	status: PhaseStatus!
+}
+
+input CreateStoryInput {
+	name: String!
+	ownerId: ID!
+	priority: Priority!
+}
+
+input UpdateStoryInput {
+	name: String!
+	ownerId: ID!
+	status: StoryStatus!
+	priority: Priority!
+}
+
 input CreateAppInput {
 	name: String!
 }
@@ -591,14 +717,12 @@ input CreateStaticUserGroupInput {
 	rolloutIds: [ID!]!
 }
 
-
 input CreateFilterGroupInput {
 	name: String!
 	filter: String!
 	groupMemberType: GroupMemberType!
 	rolloutIds: [ID!]!
 }
-
 
 input CreateStaticTeamGroupInput {
 	name: String!
@@ -614,7 +738,6 @@ input UpdateGroupInput {
 	memberIds: [ID!]!
 	filter: String
 }
-
 
 input CreateTimeRangeActivatorInput {
 	startAt: Time
@@ -639,17 +762,17 @@ input UpdateActivatorInput {
 
 input CreateAppRolloutInput {
 	name: String!
-	activatorId:  ID!
+	activatorId: ID!
 	versionSelectorId: ID!
-	isEnabled:     Boolean!
+	isEnabled: Boolean!
 	groupIds: [ID!]!
 }
 
 input UpdateRolloutInput {
 	name: String!
-	activatorId:  ID!
-	versionSelectorId:  ID!
-	isEnabled:     Boolean!
+	activatorId: ID!
+	versionSelectorId: ID!
+	isEnabled: Boolean!
 	groupIds: [ID!]!
 }
 
@@ -674,6 +797,20 @@ enum InvitationStatus {
 	EXPIRED
 }
 
+enum PhaseStatus {
+	TODO
+	IN_PROGRESS
+	PAUSED
+	COMPLETED
+}
+
+enum StoryStatus {
+	TODO
+	IN_PROGRESS
+	PAUSED
+	COMPLETED
+}
+
 enum TaskAction {
 	START
 	DELETE
@@ -691,7 +828,7 @@ enum TaskStatus {
 	DELIVERED
 }
 
-enum Priority{
+enum Priority {
 	URGENT
 	HIGH
 	MEDIUM

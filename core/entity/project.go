@@ -4,6 +4,7 @@ import "time"
 
 type Project struct {
 	ID              uint64
+	CreatorID       uint64
 	Name            string
 	ExpectedStartAt *time.Time
 	ActualStartAt   *time.Time

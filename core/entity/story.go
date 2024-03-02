@@ -14,6 +14,9 @@ const (
 type Story struct {
 	ID        uint64
 	Name      string
+	CreatorID uint64
+	OwnerID   uint64
+	Status    StoryStatus
 	Priority  Priority
 	CreatedAt time.Time
 	UpdatedAt *time.Time

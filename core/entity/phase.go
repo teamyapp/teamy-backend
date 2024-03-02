@@ -13,6 +13,7 @@ const (
 
 type Phase struct {
 	ID              uint64
+	CreatorID       uint64
 	Name            string
 	Status          PhaseStatus
 	ExpectedStartAt time.Time
