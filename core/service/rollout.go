@@ -1164,8 +1164,6 @@ var propCallable = lang.Callable{
 		if len(args) != 2 {
 			return nil, &lang.Err{
 				Message:           "getProp requires 2 arguments",
-				Line:              0,
-				Column:            0,
 				FromGeneratedCode: true,
 			}
 		}
@@ -1175,8 +1173,6 @@ var propCallable = lang.Callable{
 		if !ok {
 			return nil, &lang.Err{
 				Message:           "identifier must be string",
-				Line:              0,
-				Column:            0,
 				FromGeneratedCode: true,
 			}
 		}
@@ -1188,8 +1184,6 @@ var propCallable = lang.Callable{
 			if !valueReflect.IsValid() {
 				return nil, &lang.Err{
 					Message:           fmt.Sprintf("unknown field: identifier=%v, fieldName=%v", identifier, fieldName),
-					Line:              0,
-					Column:            0,
 					FromGeneratedCode: true,
 				}
 			}
