@@ -17,16 +17,6 @@ func (p Phase) ID() graphql.ID {
 	return toGraphQLID(p.phase.ID)
 }
 
-func (p Phase) Creator(ct context.Context) (User, error) {
-	user, err := p.deps.userService.FindUserByID(ct, p.phase.CreatorID)
-	if err != nil {
-		p.deps.logger.ErrorWithContext(ct, err)
-		return User{}, errs.ToResolverErr(err)
-	}
-
-	return newUser(p.deps, user), nil
-}
-
 func (p Phase) Name() string {
 	return p.phase.Name
 }
@@ -49,6 +39,16 @@ func (p Phase) ExpectedEndAt() graphql.Time {
 
 func (p Phase) ActualEndAt() *graphql.Time {
 	return toGraphQLTimePtr(p.phase.ActualEndAt)
+}
+
+func (p Phase) Creator(ct context.Context) (User, error) {
+	user, err := p.deps.userService.FindUserByID(ct, p.phase.CreatorID)
+	if err != nil {
+		p.deps.logger.ErrorWithContext(ct, err)
+		return User{}, errs.ToResolverErr(err)
+	}
+
+	return newUser(p.deps, user), nil
 }
 
 func (p Phase) CreatedAt() graphql.Time {
@@ -91,6 +91,34 @@ func (m Mutation) UpdatePhase(ct context.Context, args struct {
 func (m Mutation) DeletePhase(ct context.Context, args struct {
 	PhaseID graphql.ID
 }) (graphql.ID, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) AddStoryToPhase(ct context.Context, args struct {
+	PhaseID graphql.ID
+	StoryID graphql.ID
+}) (Phase, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) AddStoriesToPhase(ct context.Context, args struct {
+	PhaseID  graphql.ID
+	StoryIDs []graphql.ID
+}) (Phase, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) RemoveStoryFromPhase(ct context.Context, args struct {
+	PhaseID graphql.ID
+	StoryID graphql.ID
+}) (Phase, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) RemoveStoriesFromPhase(ct context.Context, args struct {
+	PhaseID  graphql.ID
+	StoryIDs []graphql.ID
+}) (Phase, error) {
 	panic("not implemented")
 }
 

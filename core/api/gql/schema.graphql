@@ -165,13 +165,18 @@ type Mutation {
 	createStory(projectId: ID!, input: CreateStoryInput!): Story!
 	updateStory(storyId: ID!, input: UpdateStoryInput!): Story!
 	addTaskToStory(storyId: ID!, taskId: ID!): Story!
+	addTasksToStory(storyId: ID!, taskIds: [ID!]!): Story!
 	removeTaskFromStory(storyId: ID!, taskId: ID!): Story!
+	removeTasksFromStory(storyId: ID, taskId: [ID!]!): Story!
 	deleteStory(storyId: ID!): Story!
 
 	createPhase(projectId: ID!, input: CreatePhaseInput!): Phase!
 	updatePhase(phaseId: ID!, input: UpdatePhaseInput!): Phase!
 	addStoryToPhase(phaseId: ID!, storyId: ID!): Phase!
+	addStoriesToPhase(phaseId: ID!, storyIds: [ID!]!): Phase!
 	removeStoryFromPhase(phaseId: ID!, storyId: ID!): Phase!
+	removeStoriesFromPhase(phaseId: ID!, storyIds: [ID!]!): Phase!
+	deletePhase(phaseId: ID!): Phase!
 }
 
 type Project {

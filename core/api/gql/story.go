@@ -90,6 +90,34 @@ func (m Mutation) DeleteStory(ct context.Context, args struct {
 	panic("not implemented")
 }
 
+func (m Mutation) AddTaskToStory(ct context.Context, args struct {
+	StoryID graphql.ID
+	TaskID  graphql.ID
+}) (Task, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) AddTasksToStory(ct context.Context, args struct {
+	StoryID graphql.ID
+	TaskIDs []graphql.ID
+}) (Story, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) RemoveTaskFromStory(ct context.Context, args struct {
+	StoryID graphql.ID
+	TaskID  graphql.ID
+}) (Task, error) {
+	panic("not implemented")
+}
+
+func (m Mutation) RemoveTasksFromStory(ct context.Context, args struct {
+	StoryID graphql.ID
+	TaskIDs []graphql.ID
+}) (Story, error) {
+	panic("not implemented")
+}
+
 func newStory(deps *Dependencies, story entity.Story) Story {
 	return Story{deps, story}
 }

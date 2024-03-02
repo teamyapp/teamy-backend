@@ -17,16 +17,6 @@ func (p Project) ID() graphql.ID {
 	return toGraphQLID(p.project.ID)
 }
 
-func (p Project) Creator(ct context.Context) (User, error) {
-	user, err := p.deps.userService.FindUserByID(ct, p.project.CreatorID)
-	if err != nil {
-		p.deps.logger.ErrorWithContext(ct, err)
-		return User{}, errs.ToResolverErr(err)
-	}
-
-	return newUser(p.deps, user), nil
-}
-
 func (p Project) Name() string {
 	return p.project.Name
 }
@@ -45,6 +35,16 @@ func (p Project) ExpectedEndAt() *graphql.Time {
 
 func (p Project) ActualEndAt() *graphql.Time {
 	return toGraphQLTimePtr(p.project.ActualEndAt)
+}
+
+func (p Project) Creator(ct context.Context) (User, error) {
+	user, err := p.deps.userService.FindUserByID(ct, p.project.CreatorID)
+	if err != nil {
+		p.deps.logger.ErrorWithContext(ct, err)
+		return User{}, errs.ToResolverErr(err)
+	}
+
+	return newUser(p.deps, user), nil
 }
 
 func (p Project) CreatedAt() graphql.Time {
