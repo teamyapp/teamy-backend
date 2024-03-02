@@ -9,7 +9,6 @@ type Project struct {
 	ActualStartAt   *time.Time
 	ExpectedEndAt   *time.Time
 	ActualEndAt     *time.Time
-	CreatorID       uint64
 	CreatedAt       time.Time
 	UpdatedAt       *time.Time
 }
