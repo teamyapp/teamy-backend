@@ -176,12 +176,12 @@ type Mutation {
 
 type Project {
 	id: ID!
-	creator: User!
 	name: String!
 	expectedStartAt: Time
 	actualStartAt: Time
 	expectedEndAt: Time
 	actualEndAt: Time
+	creator: User!
 	createdAt: Time!
 	updatedAt: Time
 	phases: [Phase!]!
@@ -190,13 +190,13 @@ type Project {
 
 type Phase {
 	id: ID!
-	creator: User!
 	name: String!
 	status: PhaseStatus!
 	expectedStartAt: Time!
 	actualStartAt: Time
 	expectedEndAt: Time!
 	actualEndAt: Time
+	creator: User!
 	createdAt: Time!
 	updatedAt: Time
 	stories: [Story!]!
@@ -205,10 +205,10 @@ type Phase {
 type Story {
 	id: ID!
 	name: String!
-	creator: User!
 	owner: User!
 	status: StoryStatus!
 	priority: Priority
+	creator: User!
 	createdAt: Time!
 	updatedAt: Time
 	tasks: [Task!]!
@@ -603,8 +603,8 @@ input CreatePhaseInput {
 input UpdatePhaseInput {
 	name: String!
 	expectedStartAt: Time!
-	expectedEndAt: Time!
 	actualStartAt: Time
+	expectedEndAt: Time!
 	actualEndAt: Time
 	status: PhaseStatus!
 }
