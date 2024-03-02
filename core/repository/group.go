@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"github.com/teamyapp/cloud/libs/delta"
 	"time"
 
 	"github.com/teamyapp/cloud/libs/errs"
@@ -160,11 +161,17 @@ func (g *Group) deletePartialGroup(ct context.Context, tx *transaction.Transacti
 func (g *Group) GetGroupUnionFromBaseGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) (entity.GroupUnion, *errs.Error) {
 	switch group.Type {
 	case entity.GroupTypeStatic:
+		memberIDs, err := g.groupMemberRelationDao.FindMemberIDsByGroupIDWithTx(ct, tx, group.ID)
+		if err != nil {
+			return entity.GroupUnion{}, err
+		}
+
 		return entity.GroupUnion{
 			Type:       entity.GroupTypeStatic,
 			MemberType: group.MemberType,
 			StaticGroup: entity.StaticGroup{
-				Group: group,
+				Group:     group,
+				MemberIDs: memberIDs,
 			},
 		}, nil
 	case entity.GroupTypeFilter:
@@ -195,10 +202,58 @@ func (g *Group) FilterGroupIDsByMemberTypeWithTx(
 	return g.groupDao.FilterGroupIDsByMemberTypeWithTx(ct, tx, groupIDs, groupMemberType)
 }
 
+func (g *Group) UpdateStaticGroupMemberRelations(
+	ct context.Context,
+	tx *transaction.Transaction,
+	groupID uint64,
+	memberIDs []uint64,
+) *errs.Error {
+	group, err := g.FindGroupByIDWithTx(ct, tx, groupID)
+	if err != nil {
+		return err
+	}
+
+	newMemberIDsSet := map[uint64]bool{}
+	for _, memberID := range memberIDs {
+		newMemberIDsSet[memberID] = true
+	}
+
+	currentMemberIDsSet := map[uint64]bool{}
+	for _, userID := range group.StaticGroup.MemberIDs {
+		currentMemberIDsSet[userID] = true
+	}
+
+	detected := delta.DetectMapDelta(
+		currentMemberIDsSet,
+		newMemberIDsSet,
+		delta.DetectValueDelta[bool],
+		delta.ToValueDelta[bool],
+	)
+	for memberID, detectedValue := range detected.Value {
+		switch detectedValue.KeyStatus {
+		case delta.AddedStatus:
+			err := g.groupMemberRelationDao.CreateGroupMemberRelation(ct, tx, entity.GroupMemberRelation{
+				MemberID: memberID,
+				GroupID:  groupID,
+			})
+			if err != nil {
+				return err
+			}
+		case delta.RemovedStatus:
+			err := g.groupMemberRelationDao.DeleteGroupMemberRelation(ct, tx, memberID, groupID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func NewGroup(
-    groupDao dao.Group, 
-    filterGroupDao dao.FilterGroup, 
-    groupMemberRelationDao dao.GroupMemberRelation,
+	groupDao dao.Group,
+	filterGroupDao dao.FilterGroup,
+	groupMemberRelationDao dao.GroupMemberRelation,
 ) *Group {
 	return &Group{
 		groupDao:               groupDao,

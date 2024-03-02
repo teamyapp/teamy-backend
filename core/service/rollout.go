@@ -3,7 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/teamyapp/cloud/libs/lang"
+	"os"
+	"reflect"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/benbjohnson/clock"
@@ -64,7 +68,6 @@ type Rollout struct {
 	rolloutViewerDao          dao.RolloutViewer
 	groupRolloutRelationDao   dao.GroupRolloutRelation
 	appRolloutRelationDao     dao.AppRolloutRelation
-	groupMemberRelationDao    dao.GroupMemberRelation
 	appVersionDao             dao.AppVersion
 	versionSelectorRepository *repository.VersionSelector
 	activatorRepository       *repository.Activator
@@ -297,17 +300,24 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 			return err
 		}
 
-		groupIDs, err = r.groupMemberRelationDao.FilterGroupIDsByMemberIDWithTx(ct, tx, groupIDs, teamID)
-		if err != nil {
-			return err
-		}
-
 		groupIDs, err = r.groupRepository.FilterGroupIDsByMemberTypeWithTx(ct, tx, groupIDs, entity.GroupMemberTypeTeam)
 		if err != nil {
 			return err
 		}
 
-		for _, teamGroupID := range groupIDs {
+		groups, err := r.groupRepository.FindGroupsByIDsWithTx(ct, tx, groupIDs)
+		if err != nil {
+			return err
+		}
+
+		matchedGroupIDs, err := r.matchGroups(groups, teamID, func(memberID uint64) (any, *errs.Error) {
+			return r.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, teamGroupID := range matchedGroupIDs {
 			versionNumber, err := r.getTeamGroupActiveVersion(ct, tx, teamID, teamGroupID)
 			if err != nil {
 				return err
@@ -328,13 +338,153 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 	return maxActiveVersionNumber, err
 }
 
+func (r *Rollout) matchGroups(
+	groups []entity.GroupUnion,
+	memberID uint64,
+	getMember func(memberID uint64) (any, *errs.Error),
+) ([]uint64, *errs.Error) {
+	matchedGroupIDs := make([]uint64, 0)
+	for _, groupUnion := range groups {
+		isMatch, err := r.matchGroup(groupUnion, memberID, getMember)
+		if err != nil {
+			return nil, err
+		}
+
+		if isMatch {
+			switch groupUnion.Type {
+			case entity.GroupTypeStatic:
+				matchedGroupIDs = append(matchedGroupIDs, groupUnion.StaticGroup.ID)
+			case entity.GroupTypeFilter:
+				matchedGroupIDs = append(matchedGroupIDs, groupUnion.FilterGroup.ID)
+			default:
+				return nil, errs.NewError(errs.Unknown, fmt.Sprintf("Unknown group type: %s", groupUnion.Type))
+			}
+		}
+	}
+
+	return matchedGroupIDs, nil
+}
+
+func (r *Rollout) matchGroup(
+	groupUnion entity.GroupUnion,
+	memberID uint64,
+	getMember func(memberID uint64) (any, *errs.Error),
+) (bool, *errs.Error) {
+	switch groupUnion.Type {
+	case entity.GroupTypeStatic:
+		return matchStaticGroup(groupUnion.StaticGroup, memberID), nil
+	case entity.GroupTypeFilter:
+		return r.matchFilterGroup(groupUnion.FilterGroup, memberID, getMember)
+	default:
+		return false, errs.NewError(errs.Unknown, fmt.Sprintf("Unknown group type: %s", groupUnion.Type))
+	}
+}
+
+func matchStaticGroup(staticGroup entity.StaticGroup, memberID uint64) bool {
+	for _, groupMemberID := range staticGroup.MemberIDs {
+		if groupMemberID == memberID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *Rollout) matchFilterGroup(
+	filterGroup entity.FilterGroup,
+	memberID uint64,
+	getMember func(memberID uint64) (any, *errs.Error),
+) (bool, *errs.Error) {
+	member, err := getMember(memberID)
+	if err != nil {
+		return false, err
+	}
+
+	scanner := lang.NewScanner()
+	tokens, langErrs := scanner.ScanTokens(filterGroup.Filter)
+	if len(langErrs) > 0 {
+		return false, &errs.Error{
+			Code:    errs.InvalidArgument,
+			Message: fmt.Sprintf("Failed to scan tokens from filter: %v", langErrs),
+		}
+	}
+
+	parser := lang.NewParser()
+	statements, langErrs := parser.Parse(tokens)
+	if len(langErrs) > 0 {
+		return false, &errs.Error{
+			Code:    errs.InvalidArgument,
+			Message: fmt.Sprintf("Failed to parse filter: %v", langErrs),
+		}
+	}
+
+	if len(statements) < 1 {
+		return false, &errs.Error{
+			Code:    errs.InvalidArgument,
+			Message: "Empty filter",
+		}
+	}
+
+	lastStatement := statements[len(statements)-1]
+	if lastStatement.Type != lang.ExpressionStatementType {
+		return false, &errs.Error{
+			Code:    errs.InvalidArgument,
+			Message: "Invalid filter",
+		}
+	}
+
+	scopeResolver := lang.NewStaticAnalyzer()
+	analyzerErr := scopeResolver.Analyze(statements)
+	if analyzerErr != nil {
+		return false, &errs.Error{
+			Code:    errs.InvalidArgument,
+			Message: fmt.Sprintf("Failed to analyze filter: %v", analyzerErr),
+		}
+	}
+
+	runtime := &lang.Runtime{
+		Now:    time.Now,
+		Output: os.Stdout,
+		CustomNativeGlobals: map[string]any{
+			"member":  member,
+			"getProp": propCallable,
+		},
+	}
+	executor := lang.NewExecutor(runtime)
+	values, executeErr := executor.Execute(scopeResolver, statements)
+	if executeErr != nil {
+		return false, &errs.Error{
+			Code:    errs.Unknown,
+			Message: fmt.Sprintf("Failed to execute filter: %v", executeErr),
+		}
+	}
+
+	if len(values) < 1 {
+		return false, &errs.Error{
+			Code:    errs.Unknown,
+			Message: "Empty filter result",
+		}
+	}
+
+	lastValue := values[len(values)-1]
+	boolValue, ok := lastValue.(bool)
+	if !ok {
+		return false, &errs.Error{
+			Code:    errs.Unknown,
+			Message: "Filter result must be boolean",
+		}
+	}
+
+	return boolValue, nil
+}
+
 func (r *Rollout) FindRolloutByID(ct context.Context, rolloutID uint64) (entity.Rollout, *errs.Error) {
-	rollout, err := r.rolloutDao.FindRolloutByID(ct, rolloutID)
+	ro, err := r.rolloutDao.FindRolloutByID(ct, rolloutID)
 	if err != nil {
 		return entity.Rollout{}, err
 	}
 
-	return rollout, nil
+	return ro, nil
 }
 
 func (r *Rollout) FindActivatorByID(ct context.Context, activatorID uint64) (entity.ActivatorUnion, *errs.Error) {
@@ -969,7 +1119,6 @@ func NewRollout(
 	rolloutViewerDao dao.RolloutViewer,
 	groupRolloutRelationDao dao.GroupRolloutRelation,
 	appRolloutRelationDao dao.AppRolloutRelation,
-	groupMemberRelationDao dao.GroupMemberRelation,
 	appVersionDao dao.AppVersion,
 	versionSelectorRepository *repository.VersionSelector,
 	activatorRepository *repository.Activator,
@@ -988,7 +1137,6 @@ func NewRollout(
 		rolloutViewerDao:          rolloutViewerDao,
 		groupRolloutRelationDao:   groupRolloutRelationDao,
 		appRolloutRelationDao:     appRolloutRelationDao,
-		groupMemberRelationDao:    groupMemberRelationDao,
 		appVersionDao:             appVersionDao,
 		versionSelectorRepository: versionSelectorRepository,
 		activatorRepository:       activatorRepository,
@@ -997,4 +1145,47 @@ func NewRollout(
 		versionSelectorDao:        versionSelectorDao,
 		teamDao:                   teamDao,
 	}
+}
+
+var propCallable = lang.Callable{
+	Name:  "getProp",
+	Arity: 2,
+	Execute: func(closure *lang.Environment, args ...any) (any, *lang.Err) {
+		if len(args) != 2 {
+			return nil, &lang.Err{
+				Message:           "getProp requires 2 arguments",
+				Line:              0,
+				Column:            0,
+				FromGeneratedCode: true,
+			}
+		}
+
+		obj := args[0]
+		identifier, ok := args[1].(string)
+		if !ok {
+			return nil, &lang.Err{
+				Message:           "identifier must be string",
+				Line:              0,
+				Column:            0,
+				FromGeneratedCode: true,
+			}
+		}
+
+		reference := strings.Split(identifier, ".")
+		valueReflect := reflect.ValueOf(obj)
+		for _, fieldName := range reference {
+			valueReflect = valueReflect.FieldByName(fieldName)
+			if !valueReflect.IsValid() {
+				return nil, &lang.Err{
+					Message:           fmt.Sprintf("unknown field: identifier=%v, fieldName=%v", identifier, fieldName),
+					Line:              0,
+					Column:            0,
+					FromGeneratedCode: true,
+				}
+			}
+		}
+
+		value := valueReflect.Interface()
+		return lang.ToInternalValue(value), nil
+	},
 }
