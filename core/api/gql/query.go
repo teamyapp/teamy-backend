@@ -3,6 +3,7 @@ package gql
 import (
 	"context"
 
+	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -14,6 +15,28 @@ type Query struct {
 
 func (q Query) Me(ct context.Context) (User, error) {
 	user, err := q.deps.userService.Me(ct)
+	if err != nil {
+		q.deps.logger.ErrorWithContext(ct, err)
+		return User{}, errs.ToResolverErr(err)
+	}
+
+	return newUser(q.deps, user), nil
+}
+
+func (q Query) User(ct context.Context, args struct {
+	UserID graphql.ID
+}) (User, error) {
+	userID, internalErr := fromGraphQLID(args.UserID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		q.deps.logger.ErrorWithContext(ct, internalErr)
+		return User{}, errs.ToResolverErr(internalErr)
+	}
+
+	user, err := q.deps.userService.FindUserByID(ct, userID)
 	if err != nil {
 		q.deps.logger.ErrorWithContext(ct, err)
 		return User{}, errs.ToResolverErr(err)
