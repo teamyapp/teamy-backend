@@ -5,6 +5,7 @@ schema {
 
 type Query {
 	me: User!
+	user(userId: ID!): User!
 	tasks(filter: TaskFilter): [Task!]!
 	teams(filter: TeamFilter): [Team!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
