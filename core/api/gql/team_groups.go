@@ -42,7 +42,7 @@ func (s StaticTeamGroup) Name(ctx context.Context) string {
 }
 
 func (s StaticTeamGroup) Teams(ctx context.Context) ([]Team, error) {
-	teams, err := s.deps.groupService.FindTeamsByGroupID(ctx, s.group.ID)
+	teams, err := s.deps.groupService.FindTeamsByStaticGroupID(ctx, s.group.ID)
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)

@@ -42,7 +42,7 @@ func (s StaticUserGroup) Name(ctx context.Context) string {
 }
 
 func (s StaticUserGroup) Users(ctx context.Context) ([]User, error) {
-	users, err := s.deps.groupService.FindUsersByGroupID(ctx, s.group.ID)
+	users, err := s.deps.groupService.FindUsersByStaticGroupID(ctx, s.group.ID)
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
