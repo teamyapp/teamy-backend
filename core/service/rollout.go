@@ -9,14 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teamyapp/cloud/libs/lang"
-
 	"github.com/benbjohnson/clock"
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/delta"
 	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/lang"
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/cloud/libs/rollout"
 	"github.com/teamyapp/cloud/libs/telemetry"
@@ -28,6 +27,9 @@ import (
 	"github.com/teamyapp/teamy-backend/core/store"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
+
+const teamMemberTypeName = "team"
+const userMemberTypeName = "user"
 
 type CreateRolloutInput struct {
 	Name              string
@@ -311,9 +313,13 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 			return err
 		}
 
-		matchedGroupIDs, err := r.matchGroups(groups, teamID, func(memberID uint64) (any, *errs.Error) {
-			return r.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
-		})
+		matchedGroupIDs, err := r.matchGroups(
+			groups,
+			teamID,
+			teamMemberTypeName,
+			func(memberID uint64) (any, *errs.Error) {
+				return r.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+			})
 		if err != nil {
 			return err
 		}
@@ -342,11 +348,12 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 func (r *Rollout) matchGroups(
 	groups []entity.GroupUnion,
 	memberID uint64,
+	memberTypeName string,
 	getMember func(memberID uint64) (any, *errs.Error),
 ) ([]uint64, *errs.Error) {
 	matchedGroupIDs := make([]uint64, 0)
 	for _, groupUnion := range groups {
-		isMatch, err := r.matchGroup(groupUnion, memberID, getMember)
+		isMatch, err := r.matchGroup(groupUnion, memberID, memberTypeName, getMember)
 		if err != nil {
 			return nil, err
 		}
@@ -369,13 +376,14 @@ func (r *Rollout) matchGroups(
 func (r *Rollout) matchGroup(
 	groupUnion entity.GroupUnion,
 	memberID uint64,
+	memberTypeName string,
 	getMember func(memberID uint64) (any, *errs.Error),
 ) (bool, *errs.Error) {
 	switch groupUnion.Type {
 	case entity.GroupTypeStatic:
 		return matchStaticGroup(groupUnion.StaticGroup, memberID), nil
 	case entity.GroupTypeFilter:
-		return r.matchFilterGroup(groupUnion.FilterGroup, memberID, getMember)
+		return r.matchFilterGroup(groupUnion.FilterGroup, memberID, memberTypeName, getMember)
 	default:
 		return false, errs.NewError(errs.Unknown, fmt.Sprintf("Unknown group type: %s", groupUnion.Type))
 	}
@@ -394,6 +402,7 @@ func matchStaticGroup(staticGroup entity.StaticGroup, memberID uint64) bool {
 func (r *Rollout) matchFilterGroup(
 	filterGroup entity.FilterGroup,
 	memberID uint64,
+	memberTypeName string,
 	getMember func(memberID uint64) (any, *errs.Error),
 ) (bool, *errs.Error) {
 	member, err := getMember(memberID)
@@ -447,8 +456,8 @@ func (r *Rollout) matchFilterGroup(
 		Now:    time.Now,
 		Output: os.Stdout,
 		CustomNativeGlobals: map[string]any{
-			"member":  member,
-			"getProp": propCallable,
+			"member":          member,
+			propCallable.Name: propCallable,
 		},
 	}
 	executor := lang.NewExecutor(runtime)
