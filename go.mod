@@ -9,13 +9,13 @@ require (
 	github.com/google/wire v0.6.0
 	github.com/graph-gophers/graphql-go v1.5.0
 	github.com/stretchr/testify v1.9.0
-	github.com/teamyapp/cloud v0.0.0-20240302110226-51be5094daef
+	github.com/teamyapp/cloud v0.0.0-20240303200943-4acec85b105f
 	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace github.com/teamyapp/cloud => ../cloud
+// replace github.com/teamyapp/cloud => ../cloud
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
