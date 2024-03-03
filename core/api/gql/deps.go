@@ -17,6 +17,7 @@ type Dependencies struct {
 	threadService     service.Thread
 	groupService      *service.Group
 	rolloutService    *service.Rollout
+	projectService    *service.Project
 }
 
 func NewDependencies(
@@ -31,6 +32,7 @@ func NewDependencies(
 	threadService service.Thread,
 	groupService *service.Group,
 	rolloutService *service.Rollout,
+	projectService *service.Project,
 ) *Dependencies {
 	return &Dependencies{
 		logger:            logger,
@@ -44,5 +46,6 @@ func NewDependencies(
 		threadService:     threadService,
 		groupService:      groupService,
 		rolloutService:    rolloutService,
+		projectService:    projectService,
 	}
 }

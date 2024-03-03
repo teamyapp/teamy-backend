@@ -71,6 +71,13 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.VersionSelector), new(*sqldb.VersionSelector)),
 	wire.Bind(new(dao.GroupMemberRelation), new(*sqldb.GroupMemberRelation)),
 	wire.Bind(new(dao.Activator), new(*sqldb.Activator)),
+	wire.Bind(new(dao.Story), new(*sqldb.Story)),
+	wire.Bind(new(dao.Phase), new(*sqldb.Phase)),
+	wire.Bind(new(dao.Project), new(*sqldb.Project)),
+	wire.Bind(new(dao.PhaseStoryRelation), new(*sqldb.PhaseStoryRelation)),
+	wire.Bind(new(dao.StoryTaskRelation), new(*sqldb.StoryTaskRelation)),
+	wire.Bind(new(dao.ProjectPhaseRelation), new(*sqldb.ProjectPhaseRelation)),
+	wire.Bind(new(dao.ProjectStoryRelation), new(*sqldb.ProjectStoryRelation)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -110,6 +117,13 @@ var daoSet = wire.NewSet(
 	sqldb.NewAppTagRelation,
 	sqldb.NewGroupMemberRelation,
 	sqldb.NewActivator,
+	sqldb.NewProject,
+	sqldb.NewPhase,
+	sqldb.NewStory,
+	sqldb.NewProjectPhaseRelation,
+	sqldb.NewProjectStoryRelation,
+	sqldb.NewPhaseStoryRelation,
+	sqldb.NewStoryTaskRelation,
 )
 
 var repositorySet = wire.NewSet(
@@ -130,6 +144,7 @@ var serviceSet = wire.NewSet(
 	service.NewSprint,
 	newUserService,
 	service.NewApp,
+	service.NewProject,
 	service.NewGroup,
 	service.NewRollout,
 )

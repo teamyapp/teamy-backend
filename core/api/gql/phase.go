@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Phase struct {
@@ -60,7 +62,15 @@ func (p Phase) UpdatedAt() *graphql.Time {
 }
 
 func (p Phase) Stories(ct context.Context) ([]Story, error) {
-	panic("not implemented")
+	stories, err := p.deps.projectService.FindStoriesByPhaseID(ct, p.phase.ID)
+	if err != nil {
+		p.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(stories, func(story entity.Story, _ int) Story {
+		return newStory(p.deps, story)
+	}), nil
 }
 
 func (m Mutation) CreatePhase(ct context.Context, args struct {
@@ -71,7 +81,29 @@ func (m Mutation) CreatePhase(ct context.Context, args struct {
 		ExpectedEndAt   graphql.Time
 	}
 }) (Phase, error) {
-	panic("not implemented")
+	projectID, internalErr := fromGraphQLID(args.ProjectID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	createPhaseInput := service.CreatePhaseInput{
+		Name:            args.Input.Name,
+		ExpectedStartAt: fromGraphQLTime(args.Input.ExpectedStartAt),
+		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
+	}
+
+	phase, err := m.deps.projectService.CreatePhase(ct, projectID, createPhaseInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
+	}
+
+	return newPhase(m.deps, phase), nil
 }
 
 func (m Mutation) UpdatePhase(ct context.Context, args struct {
@@ -85,41 +117,196 @@ func (m Mutation) UpdatePhase(ct context.Context, args struct {
 		Status          entity.PhaseStatus
 	}
 }) (Phase, error) {
-	panic("not implemented")
+	phaseID, internalErr := fromGraphQLID(args.PhaseID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	updatePhaseInput := service.UpdatePhaseInput{
+		Name:            args.Input.Name,
+		ExpectedStartAt: fromGraphQLTime(args.Input.ExpectedStartAt),
+		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
+		ActualStartAt:   fromGraphQLTimePtr(args.Input.ActualStartAt),
+		ActualEndAt:     fromGraphQLTimePtr(args.Input.ActualEndAt),
+		Status:          args.Input.Status,
+	}
+
+	phase, err := m.deps.projectService.UpdatePhase(ct, phaseID, updatePhaseInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
+	}
+
+	return newPhase(m.deps, phase), nil
 }
 
 func (m Mutation) DeletePhase(ct context.Context, args struct {
 	PhaseID graphql.ID
 }) (Phase, error) {
-	panic("not implemented")
+	phaseID, internalErr := fromGraphQLID(args.PhaseID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	phase, err := m.deps.projectService.DeletePhase(ct, phaseID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
+	}
+
+	return newPhase(m.deps, phase), nil
 }
 
 func (m Mutation) AddStoryToPhase(ct context.Context, args struct {
 	PhaseID graphql.ID
 	StoryID graphql.ID
 }) (Phase, error) {
-	panic("not implemented")
+	phaseID, internalErr := fromGraphQLID(args.PhaseID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	storyID, internalErr := fromGraphQLID(args.StoryID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	phase, err := m.deps.projectService.AddStoryToPhase(ct, phaseID, storyID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
+	}
+
+	return newPhase(m.deps, phase), nil
 }
 
 func (m Mutation) AddStoriesToPhase(ct context.Context, args struct {
 	PhaseID  graphql.ID
 	StoryIDs []graphql.ID
 }) (Phase, error) {
-	panic("not implemented")
+	phaseID, internalErr := fromGraphQLID(args.PhaseID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	storyIDs := make([]uint64, len(args.StoryIDs))
+	for index, storyID := range args.StoryIDs {
+		id, internalErr := fromGraphQLID(storyID)
+		if internalErr != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				internalErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ct, internalErr)
+			return Phase{}, errs.ToResolverErr(internalErr)
+		}
+
+		storyIDs[index] = id
+	}
+
+	phase, err := m.deps.projectService.AddStoriesToPhase(ct, phaseID, storyIDs)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
+	}
+
+	return newPhase(m.deps, phase), nil
 }
 
 func (m Mutation) RemoveStoryFromPhase(ct context.Context, args struct {
 	PhaseID graphql.ID
 	StoryID graphql.ID
 }) (Phase, error) {
-	panic("not implemented")
+	phaseID, internalErr := fromGraphQLID(args.PhaseID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	storyID, internalErr := fromGraphQLID(args.StoryID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	phase, err := m.deps.projectService.RemoveStoryFromPhase(ct, phaseID, storyID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
+	}
+
+	return newPhase(m.deps, phase), nil
 }
 
 func (m Mutation) RemoveStoriesFromPhase(ct context.Context, args struct {
 	PhaseID  graphql.ID
 	StoryIDs []graphql.ID
 }) (Phase, error) {
-	panic("not implemented")
+	phaseID, internalErr := fromGraphQLID(args.PhaseID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Phase{}, errs.ToResolverErr(internalErr)
+	}
+
+	storyIDs := make([]uint64, len(args.StoryIDs))
+	for index, storyID := range args.StoryIDs {
+		id, internalErr := fromGraphQLID(storyID)
+		if internalErr != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				internalErr.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ct, internalErr)
+			return Phase{}, errs.ToResolverErr(internalErr)
+		}
+
+		storyIDs[index] = id
+	}
+
+	phase, err := m.deps.projectService.RemoveStoriesFromPhase(ct, phaseID, storyIDs)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
+	}
+
+	return newPhase(m.deps, phase), nil
 }
 
 func newPhase(deps *Dependencies, phase entity.Phase) Phase {
