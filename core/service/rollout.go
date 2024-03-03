@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/benbjohnson/clock"
@@ -319,7 +317,12 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 			teamID,
 			teamMemberTypeName,
 			func(memberID uint64) (any, *errs.Error) {
-				return r.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+				team, err := r.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+				if err != nil {
+					return nil, err
+				}
+
+				return langInstanceFromTeam(team), nil
 			})
 		if err != nil {
 			return err
@@ -459,8 +462,7 @@ func (r *Rollout) matchFilterGroup(
 		Now:    time.Now,
 		Output: os.Stdout,
 		CustomNativeGlobals: map[string]any{
-			memberTypeName:    member,
-			propCallable.Name: propCallable,
+			memberTypeName: member,
 		},
 	}
 	executor := lang.NewExecutor(runtime)
@@ -1084,21 +1086,21 @@ func (r *Rollout) deleteRollout(
 	rolloutID uint64,
 	deleteLocked bool,
 ) (entity.Rollout, *errs.Error) {
-	rollout, err := r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
+	ro, err := r.rolloutDao.FindRolloutByIDWithTx(ct, tx, rolloutID)
 	if err != nil {
 		return entity.Rollout{}, err
 	}
 
-	if rollout.Locked && !deleteLocked {
+	if ro.Locked && !deleteLocked {
 		return entity.Rollout{}, errs.NewError(errs.InvalidOperation, "Rollout is locked")
 	}
 
-	err = r.activatorRepository.DeleteActivator(ct, tx, rollout.ActivatorID)
+	err = r.activatorRepository.DeleteActivator(ct, tx, ro.ActivatorID)
 	if err != nil {
 		return entity.Rollout{}, err
 	}
 
-	err = r.versionSelectorRepository.DeleteVersionSelector(ct, tx, rollout.SelectorID)
+	err = r.versionSelectorRepository.DeleteVersionSelector(ct, tx, ro.SelectorID)
 	if err != nil {
 		return entity.Rollout{}, err
 	}
@@ -1119,7 +1121,32 @@ func (r *Rollout) deleteRollout(
 	}
 
 	err = r.rolloutDao.DeleteRollout(ct, tx, rolloutID)
-	return rollout, err
+	return ro, err
+}
+
+func langInstanceFromTeam(team entity.Team) *lang.Instance {
+	instanceMethods := map[string]lang.Callable{
+		lang.ConstructorMethodName: lang.NewConstructorWithFields(map[string]any{
+			"id":             team.ID,
+			"name":           team.Name,
+			"iconUrl":        team.IconURL,
+			"creatorUserId":  team.CreatorUserID,
+			"ownerUserid":    team.OwnerUserID,
+			"activeSprintId": team.ActiveSprintID,
+			"createdAt":      team.CreatedAt,
+			"updatedAt":      team.UpdatedAt,
+		}),
+	}
+	class := lang.NewClass(
+		"Team",
+		instanceMethods,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		true)
+	return lang.NewInstance(class, nil, true)
 }
 
 func NewRollout(
@@ -1158,41 +1185,4 @@ func NewRollout(
 		versionSelectorDao:        versionSelectorDao,
 		teamDao:                   teamDao,
 	}
-}
-
-var propCallable = lang.Callable{
-	Name:  "getProp",
-	Arity: 2,
-	Execute: func(closure *lang.Environment, args ...any) (any, *lang.Err) {
-		if len(args) != 2 {
-			return nil, &lang.Err{
-				Message:           "getProp requires 2 arguments",
-				FromGeneratedCode: true,
-			}
-		}
-
-		obj := args[0]
-		identifier, ok := args[1].(string)
-		if !ok {
-			return nil, &lang.Err{
-				Message:           "identifier must be string",
-				FromGeneratedCode: true,
-			}
-		}
-
-		reference := strings.Split(identifier, ".")
-		valueReflect := reflect.ValueOf(obj)
-		for _, fieldName := range reference {
-			valueReflect = valueReflect.FieldByName(fieldName)
-			if !valueReflect.IsValid() {
-				return nil, &lang.Err{
-					Message:           fmt.Sprintf("unknown field: identifier=%v, fieldName=%v", identifier, fieldName),
-					FromGeneratedCode: true,
-				}
-			}
-		}
-
-		value := valueReflect.Interface()
-		return lang.ToInternalValue(value), nil
-	},
 }
