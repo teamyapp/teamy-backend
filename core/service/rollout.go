@@ -314,6 +314,7 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 		}
 
 		matchedGroupIDs, err := r.matchGroups(
+			ct,
 			groups,
 			teamID,
 			teamMemberTypeName,
@@ -346,6 +347,7 @@ func (r *Rollout) GetActiveAppVersionNumberForTeam(ct context.Context, appID uin
 }
 
 func (r *Rollout) matchGroups(
+	ct context.Context,
 	groups []entity.GroupUnion,
 	memberID uint64,
 	memberTypeName string,
@@ -355,7 +357,8 @@ func (r *Rollout) matchGroups(
 	for _, groupUnion := range groups {
 		isMatch, err := r.matchGroup(groupUnion, memberID, memberTypeName, getMember)
 		if err != nil {
-			return nil, err
+			r.logger.ErrorWithContext(ct, err)
+			continue
 		}
 
 		if isMatch {
