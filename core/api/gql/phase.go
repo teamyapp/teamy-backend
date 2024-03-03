@@ -90,7 +90,7 @@ func (m Mutation) UpdatePhase(ct context.Context, args struct {
 
 func (m Mutation) DeletePhase(ct context.Context, args struct {
 	PhaseID graphql.ID
-}) (graphql.ID, error) {
+}) (Phase, error) {
 	panic("not implemented")
 }
 

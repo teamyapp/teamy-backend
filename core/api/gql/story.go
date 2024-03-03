@@ -93,7 +93,7 @@ func (m Mutation) DeleteStory(ct context.Context, args struct {
 func (m Mutation) AddTaskToStory(ct context.Context, args struct {
 	StoryID graphql.ID
 	TaskID  graphql.ID
-}) (Task, error) {
+}) (Story, error) {
 	panic("not implemented")
 }
 
@@ -107,7 +107,7 @@ func (m Mutation) AddTasksToStory(ct context.Context, args struct {
 func (m Mutation) RemoveTaskFromStory(ct context.Context, args struct {
 	StoryID graphql.ID
 	TaskID  graphql.ID
-}) (Task, error) {
+}) (Story, error) {
 	panic("not implemented")
 }
 

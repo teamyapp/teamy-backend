@@ -168,7 +168,7 @@ type Mutation {
 	addTaskToStory(storyId: ID!, taskId: ID!): Story!
 	addTasksToStory(storyId: ID!, taskIds: [ID!]!): Story!
 	removeTaskFromStory(storyId: ID!, taskId: ID!): Story!
-	removeTasksFromStory(storyId: ID, taskId: [ID!]!): Story!
+	removeTasksFromStory(storyId: ID!, taskIds: [ID!]!): Story!
 	deleteStory(storyId: ID!): Story!
 
 	createPhase(projectId: ID!, input: CreatePhaseInput!): Phase!
@@ -213,7 +213,7 @@ type Story {
 	name: String!
 	owner: User!
 	status: StoryStatus!
-	priority: Priority
+	priority: Priority!
 	creator: User!
 	createdAt: Time!
 	updatedAt: Time
