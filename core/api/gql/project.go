@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type Project struct {
@@ -56,11 +58,27 @@ func (p Project) UpdatedAt() *graphql.Time {
 }
 
 func (p Project) Phases(ct context.Context) ([]Phase, error) {
-	panic("not implemented")
+	phases, err := p.deps.projectService.FindPhasesByProjectID(ct, p.project.ID)
+	if err != nil {
+		p.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(phases, func(phase entity.Phase, _ int) Phase {
+		return newPhase(p.deps, phase)
+	}), nil
 }
 
 func (p Project) Stories(ct context.Context) ([]Story, error) {
-	panic("not implemented")
+	stories, err := p.deps.projectService.FindStoriesByProjectID(ct, p.project.ID)
+	if err != nil {
+		p.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(stories, func(story entity.Story, _ int) Story {
+		return newStory(p.deps, story)
+	}), nil
 }
 
 func (m Mutation) CreateProject(ct context.Context, args struct {
@@ -70,7 +88,19 @@ func (m Mutation) CreateProject(ct context.Context, args struct {
 		ExpectedEndAt   *graphql.Time
 	}
 }) (Project, error) {
-	panic("not implemented")
+	createProjectInput := service.CreateProjectInput{
+		Name:            args.Input.Name,
+		ExpectedStartAt: fromGraphQLTimePtr(args.Input.ExpectedStartAt),
+		ExpectedEndAt:   fromGraphQLTimePtr(args.Input.ExpectedEndAt),
+	}
+
+	project, err := m.deps.projectService.CreateProject(ct, createProjectInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Project{}, errs.ToResolverErr(err)
+	}
+
+	return newProject(m.deps, project), nil
 }
 
 func (m Mutation) UpdateProject(ct context.Context, args struct {
@@ -83,13 +113,53 @@ func (m Mutation) UpdateProject(ct context.Context, args struct {
 		ActualEndAt     *graphql.Time
 	}
 }) (Project, error) {
-	panic("not implemented")
+	projectID, internalErr := fromGraphQLID(args.ProjectID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Project{}, errs.ToResolverErr(internalErr)
+	}
+
+	updateProjectInput := service.UpdateProjectInput{
+		Name:            args.Input.Name,
+		ExpectedStartAt: fromGraphQLTimePtr(args.Input.ExpectedStartAt),
+		ActualStartAt:   fromGraphQLTimePtr(args.Input.ActualStartAt),
+		ExpectedEndAt:   fromGraphQLTimePtr(args.Input.ExpectedEndAt),
+		ActualEndAt:     fromGraphQLTimePtr(args.Input.ActualEndAt),
+	}
+
+	project, err := m.deps.projectService.UpdateProject(ct, projectID, updateProjectInput)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Project{}, errs.ToResolverErr(err)
+	}
+
+	return newProject(m.deps, project), nil
 }
 
 func (m Mutation) DeleteProject(ct context.Context, args struct {
 	ProjectID graphql.ID
 }) (Project, error) {
-	panic("not implemented")
+	projectID, internalErr := fromGraphQLID(args.ProjectID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Project{}, errs.ToResolverErr(internalErr)
+	}
+
+	project, err := m.deps.projectService.DeleteProject(ct, projectID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Project{}, errs.ToResolverErr(err)
+	}
+
+	return newProject(m.deps, project), nil
 }
 
 func newProject(deps *Dependencies, project entity.Project) Project {
