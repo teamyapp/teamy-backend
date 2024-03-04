@@ -150,7 +150,6 @@ func (p *Project) CreateProject(ct context.Context, input CreateProjectInput) (e
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return p.projectDao.CreateProject(ct, tx, project)
 	})
-
 	return project, transactionErr
 }
 
