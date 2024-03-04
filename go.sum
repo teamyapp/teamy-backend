@@ -123,6 +123,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/teamyapp/cloud v0.0.0-20240303235952-518f86458d80 h1:kF740IuKlr1cg55vISzS2QoNVAYEPSScLCnNa2fpQ9Q=
 github.com/teamyapp/cloud v0.0.0-20240303235952-518f86458d80/go.mod h1:/+0WBbLta00ZJX3xYH2Vf65TUi9HcUtRgNQAay/yXsY=
+github.com/teamyapp/cloud v0.0.0-20240304081200-9d96b3861480 h1:RiF9LRCQagNr4vE+V1Z75tdbFcv58ASFvfUp8KVdpis=
+github.com/teamyapp/cloud v0.0.0-20240304081200-9d96b3861480/go.mod h1:/+0WBbLta00ZJX3xYH2Vf65TUi9HcUtRgNQAay/yXsY=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 go.opentelemetry.io/otel v1.6.3/go.mod h1:7BgNga5fNlF/iZjG06hM3yofffp0ofKCDwSXx1GC4dI=
 go.opentelemetry.io/otel v1.16.0 h1:Z7GVAX/UkAXPKsy94IU+i6thsQS4nb7LviLpnaNeW8s=
