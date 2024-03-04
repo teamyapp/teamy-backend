@@ -1069,11 +1069,11 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 
 	go func() {
 		ct := context.Background()
-		err := a.uploadAppPackageFiles(ct, userID, appID, versionNumber, uploadSession)
+		err = a.uploadAppPackageFiles(ct, userID, appID, versionNumber, uploadSession)
 		if err != nil {
 			a.logger.ErrorWithContext(ct, err)
 			errMessage := err.Message
-			txCtx := transaction.NewTransactionsContext(
+			txCtx = transaction.NewTransactionsContext(
 				a.logger,
 				a.transactionFactory,
 				a.stateSyncer,
@@ -1081,7 +1081,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 			)
 
 			transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-				appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+				appVersion, err = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 				if err != nil {
 					return err
 				}
@@ -1187,6 +1187,11 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 
 		if av.Locked {
 			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("app version %v is locked", versionNumber))
+		}
+
+		err := a.appVersionPriceDao.DeleteAppVersionPrice(ct, tx, appID, versionNumber)
+		if err != nil {
+			return err
 		}
 
 		return a.appVersionDao.DeleteAppVersion(ct, tx, appID, versionNumber)

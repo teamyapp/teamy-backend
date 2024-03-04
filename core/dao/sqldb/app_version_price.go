@@ -19,8 +19,8 @@ var _ dao.AppVersionPrice = (*AppVersionPrice)(nil)
 func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
-		SELECT currency, amount 
-		FROM app_version_price 
+		SELECT currency, amount
+		FROM app_version_price
 		WHERE app_id = $1 AND version_number = $2
 		`,
 		appID,
@@ -65,9 +65,9 @@ func (*AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transactio
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		INSERT INTO app_version_price (
-		  app_id, 
-		  version_number, 
-		  currency, 
+		  app_id,
+		  version_number,
+		  currency,
 		  amount
 		)
 		VALUES ($1, $2, $3, $4)
@@ -76,6 +76,23 @@ func (*AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transactio
 		appVersionPrice.VersionNumber,
 		appVersionPrice.Money.Currency,
 		appVersionPrice.Money.Amount,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (*AppVersionPrice) DeleteAppVersionPrice(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM app_version_price
+		WHERE app_id = $1 AND version_number = $2
+		`,
+		appID,
+		versionNumber,
 	)
 
 	if err != nil {
