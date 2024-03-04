@@ -1139,6 +1139,7 @@ func langInstanceFromTeam(team entity.Team) *lang.Instance {
 	}
 	class := lang.NewClass(
 		"Team",
+		nil,
 		instanceMethods,
 		nil,
 		nil,
