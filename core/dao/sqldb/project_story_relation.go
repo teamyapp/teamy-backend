@@ -34,6 +34,7 @@ func (p *ProjectStoryRelation) FindStoryIDsByProjectIDWithTx(ct context.Context,
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
+		
 		storyIDs = append(storyIDs, storyID)
 	}
 

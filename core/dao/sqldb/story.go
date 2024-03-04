@@ -32,7 +32,6 @@ func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Trans
 		FROM story
 		WHERE id IN (%s)
 	`, idsStr)
-
 	rows, err := tx.SQLTx().QueryContext(ct, query)
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
@@ -54,6 +53,7 @@ func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Trans
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
+		
 		stories = append(stories, story)
 	}
 

@@ -34,6 +34,7 @@ func (p *ProjectPhaseRelation) FindPhaseIDsByProjectIDWithTx(ct context.Context,
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
+		
 		phaseIDs = append(phaseIDs, phaseID)
 	}
 

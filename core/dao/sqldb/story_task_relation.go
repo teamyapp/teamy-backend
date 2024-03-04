@@ -34,6 +34,7 @@ func (s *StoryTaskRelation) FindTaskIDsByStoryIDWithTx(ct context.Context, tx *t
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
+		
 		taskIDs = append(taskIDs, taskID)
 	}
 

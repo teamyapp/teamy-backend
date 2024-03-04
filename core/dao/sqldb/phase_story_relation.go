@@ -34,6 +34,7 @@ func (p *PhaseStoryRelation) FindStoryIDsByPhaseIDWithTx(ct context.Context, tx 
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
+		
 		storyIDs = append(storyIDs, storyID)
 	}
 
@@ -63,7 +64,9 @@ func (p *PhaseStoryRelation) DeletePhaseStoryRelation(ct context.Context, tx *tr
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM phase_story_relation
 		WHERE phase_id = $1 AND story_id = $2
-	`, phaseID, storyID)
+	`, 
+	phaseID, 
+	storyID)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}

@@ -17,7 +17,6 @@ var _ dao.Project = (*Project)(nil)
 
 func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) (entity.Project, *errs.Error) {
 	project := entity.Project{}
-
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
 		id,
@@ -121,7 +120,6 @@ func (p *Project) DeleteProject(ct context.Context, tx *transaction.Transaction,
 		DELETE FROM project
 		WHERE id = $1;
 	`, projectID)
-
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}

@@ -67,4 +67,3 @@ DROP TABLE project_story_relation;
 DROP TABLE story;
 DROP TABLE phase;
 DROP TABLE project;
-

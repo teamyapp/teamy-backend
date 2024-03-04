@@ -94,6 +94,7 @@ func (p *Phase) FindPhasesByIDsWithTx(ct context.Context, tx *transaction.Transa
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
+		
 		phases = append(phases, phase)
 	}
 
