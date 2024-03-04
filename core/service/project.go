@@ -31,34 +31,6 @@ type UpdateProjectInput struct {
 	ActualEndAt     *time.Time
 }
 
-type CreatePhaseInput struct {
-	Name            string
-	ExpectedStartAt time.Time
-	ExpectedEndAt   time.Time
-}
-
-type UpdatePhaseInput struct {
-	Name            string
-	ExpectedStartAt time.Time
-	ActualStartAt   *time.Time
-	ExpectedEndAt   time.Time
-	ActualEndAt     *time.Time
-	Status          entity.PhaseStatus
-}
-
-type CreateStoryInput struct {
-	Name     string
-	OwnerID  uint64
-	Priority entity.Priority
-}
-
-type UpdateStoryInput struct {
-	Name     string
-	OwnerID  uint64
-	Status   entity.StoryStatus
-	Priority entity.Priority
-}
-
 type Project struct {
 	logger                  telemetry.Logger
 	cloudClientRegistry     *client.Registry

@@ -17,6 +17,19 @@ import (
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
+type CreateStoryInput struct {
+	Name     string
+	OwnerID  uint64
+	Priority entity.Priority
+}
+
+type UpdateStoryInput struct {
+	Name     string
+	OwnerID  uint64
+	Status   entity.StoryStatus
+	Priority entity.Priority
+}
+
 type Story struct {
 	logger                  telemetry.Logger
 	cloudClientRegistry     *client.Registry

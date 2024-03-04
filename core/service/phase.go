@@ -17,6 +17,21 @@ import (
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
+type CreatePhaseInput struct {
+	Name            string
+	ExpectedStartAt time.Time
+	ExpectedEndAt   time.Time
+}
+
+type UpdatePhaseInput struct {
+	Name            string
+	ExpectedStartAt time.Time
+	ActualStartAt   *time.Time
+	ExpectedEndAt   time.Time
+	ActualEndAt     *time.Time
+	Status          entity.PhaseStatus
+}
+
 type Phase struct {
 	logger                  telemetry.Logger
 	cloudClientRegistry     *client.Registry
