@@ -16,19 +16,117 @@ type Project struct {
 var _ dao.Project = (*Project)(nil)
 
 func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) (entity.Project, *errs.Error) {
-	panic("implement me")
+	project := entity.Project{}
+
+	err := tx.SQLTx().QueryRowContext(ct, `
+		SELECT
+			id,
+			name,
+			expected_start_at,
+			actual_start_at,
+			expected_end_at,
+			actual_end_at,
+			creator_id,
+			created_at,
+			updated_at
+		FROM project
+		WHERE id = $1
+	`, projectID).Scan(
+		&project.ID,
+		&project.Name,
+		&project.ExpectedStartAt,
+		&project.ActualStartAt,
+		&project.ExpectedEndAt,
+		&project.ActualEndAt,
+		&project.CreatorID,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	)
+
+	if err != nil {
+		return entity.Project{}, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return project, nil
+
 }
 
 func (p *Project) CreateProject(ct context.Context, tx *transaction.Transaction, project entity.Project) *errs.Error {
-	panic("implement me")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		INSERT INTO project (
+			id,
+			name,
+			expected_start_at,
+			actual_start_at,
+			expected_end_at,
+			actual_end_at,
+			creator_id,
+			created_at,
+			updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+	`,
+		project.ID,
+		project.Name,
+		project.ExpectedStartAt,
+		project.ActualStartAt,
+		project.ExpectedEndAt,
+		project.ActualEndAt,
+		project.CreatorID,
+		project.CreatedAt,
+		project.UpdatedAt,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
 }
 
 func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction, project entity.Project) *errs.Error {
-	panic("implement me")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		UPDATE project
+		SET
+			name = $1,
+			expected_start_at = $2,
+			actual_start_at = $3,
+			expected_end_at = $4,
+			actual_end_at = $5,
+			creator_id = $6,
+			created_at = $7,
+			updated_at = $8
+		WHERE id = $9;
+	`,
+		project.Name,
+		project.ExpectedStartAt,
+		project.ActualStartAt,
+		project.ExpectedEndAt,
+		project.ActualEndAt,
+		project.CreatorID,
+		project.CreatedAt,
+		project.UpdatedAt,
+		project.ID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
 }
 
 func (p *Project) DeleteProject(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
-	panic("implement me")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM project
+		WHERE id = $1;
+	`, projectID)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
 }
 
 func NewProject(transactionFactory transaction.Factory) *Project {

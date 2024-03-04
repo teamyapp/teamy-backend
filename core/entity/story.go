@@ -16,7 +16,7 @@ type Story struct {
 	Name      string
 	OwnerID   uint64
 	Status    StoryStatus
-	Priority  Priority
+	Priority  *Priority
 	CreatorID uint64
 	CreatedAt time.Time
 	UpdatedAt *time.Time
