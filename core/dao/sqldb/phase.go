@@ -18,7 +18,6 @@ var _ dao.Phase = (*Phase)(nil)
 
 func (p *Phase) FindPhaseByIDWithTx(ct context.Context, tx *transaction.Transaction, phaseID uint64) (entity.Phase, *errs.Error) {
 	phase := entity.Phase{}
-
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
 			id,

@@ -20,15 +20,15 @@ func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Tran
 
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
-			id,
-			name,
-			expected_start_at,
-			actual_start_at,
-			expected_end_at,
-			actual_end_at,
-			creator_id,
-			created_at,
-			updated_at
+		id,
+		name,
+		expected_start_at,
+		actual_start_at,
+		expected_end_at,
+		actual_end_at,
+		creator_id,
+		created_at,
+		updated_at
 		FROM project
 		WHERE id = $1
 	`, projectID).Scan(
@@ -88,14 +88,14 @@ func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction,
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE project
 		SET
-			name = $1,
-			expected_start_at = $2,
-			actual_start_at = $3,
-			expected_end_at = $4,
-			actual_end_at = $5,
-			creator_id = $6,
-			created_at = $7,
-			updated_at = $8
+		name = $1,
+		expected_start_at = $2,
+		actual_start_at = $3,
+		expected_end_at = $4,
+		actual_end_at = $5,
+		creator_id = $6,
+		created_at = $7,
+		updated_at = $8
 		WHERE id = $9;
 	`,
 		project.Name,
