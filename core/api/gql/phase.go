@@ -62,7 +62,7 @@ func (p Phase) UpdatedAt() *graphql.Time {
 }
 
 func (p Phase) Stories(ct context.Context) ([]Story, error) {
-	stories, err := p.deps.projectService.FindStoriesByPhaseID(ct, p.phase.ID)
+	stories, err := p.deps.phaseService.FindStoriesByPhaseID(ct, p.phase.ID)
 	if err != nil {
 		p.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
@@ -97,7 +97,7 @@ func (m Mutation) CreatePhase(ct context.Context, args struct {
 		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
 	}
 
-	phase, err := m.deps.projectService.CreatePhase(ct, projectID, createPhaseInput)
+	phase, err := m.deps.phaseService.CreatePhase(ct, projectID, createPhaseInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Phase{}, errs.ToResolverErr(err)
@@ -136,7 +136,7 @@ func (m Mutation) UpdatePhase(ct context.Context, args struct {
 		Status:          args.Input.Status,
 	}
 
-	phase, err := m.deps.projectService.UpdatePhase(ct, phaseID, updatePhaseInput)
+	phase, err := m.deps.phaseService.UpdatePhase(ct, phaseID, updatePhaseInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Phase{}, errs.ToResolverErr(err)
@@ -158,7 +158,7 @@ func (m Mutation) DeletePhase(ct context.Context, args struct {
 		return Phase{}, errs.ToResolverErr(internalErr)
 	}
 
-	phase, err := m.deps.projectService.DeletePhase(ct, phaseID)
+	phase, err := m.deps.phaseService.DeletePhase(ct, phaseID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Phase{}, errs.ToResolverErr(err)
@@ -191,7 +191,7 @@ func (m Mutation) AddStoryToPhase(ct context.Context, args struct {
 		return Phase{}, errs.ToResolverErr(internalErr)
 	}
 
-	phase, err := m.deps.projectService.AddStoryToPhase(ct, phaseID, storyID)
+	phase, err := m.deps.phaseService.AddStoryToPhase(ct, phaseID, storyID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Phase{}, errs.ToResolverErr(err)
@@ -214,22 +214,27 @@ func (m Mutation) AddStoriesToPhase(ct context.Context, args struct {
 		return Phase{}, errs.ToResolverErr(internalErr)
 	}
 
-	storyIDs := make([]uint64, len(args.StoryIDs))
-	for index, storyID := range args.StoryIDs {
-		id, internalErr := fromGraphQLID(storyID)
-		if internalErr != nil {
-			internalErr := errs.NewError(
-				errs.InvalidArgument,
-				internalErr.Error(),
-			)
-			m.deps.logger.ErrorWithContext(ct, internalErr)
-			return Phase{}, errs.ToResolverErr(internalErr)
-		}
+	storyIDs, err := collect.MapWithErr(
+		args.StoryIDs,
+		func(storyID graphql.ID, _ int) (uint64, *errs.Error) {
+			id, internalErr := fromGraphQLID(storyID)
+			if internalErr != nil {
+				return 0, errs.NewError(
+					errs.InvalidArgument,
+					internalErr.Error(),
+				)
+			}
 
-		storyIDs[index] = id
+			return id, nil
+		},
+	)
+
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Phase{}, errs.ToResolverErr(err)
 	}
 
-	phase, err := m.deps.projectService.AddStoriesToPhase(ct, phaseID, storyIDs)
+	phase, err := m.deps.phaseService.AddStoriesToPhase(ct, phaseID, storyIDs)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Phase{}, errs.ToResolverErr(err)
@@ -262,7 +267,7 @@ func (m Mutation) RemoveStoryFromPhase(ct context.Context, args struct {
 		return Phase{}, errs.ToResolverErr(internalErr)
 	}
 
-	phase, err := m.deps.projectService.RemoveStoryFromPhase(ct, phaseID, storyID)
+	phase, err := m.deps.phaseService.RemoveStoryFromPhase(ct, phaseID, storyID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Phase{}, errs.ToResolverErr(err)
@@ -285,22 +290,21 @@ func (m Mutation) RemoveStoriesFromPhase(ct context.Context, args struct {
 		return Phase{}, errs.ToResolverErr(internalErr)
 	}
 
-	storyIDs := make([]uint64, len(args.StoryIDs))
-	for index, storyID := range args.StoryIDs {
-		id, internalErr := fromGraphQLID(storyID)
-		if internalErr != nil {
-			internalErr := errs.NewError(
-				errs.InvalidArgument,
-				internalErr.Error(),
-			)
-			m.deps.logger.ErrorWithContext(ct, internalErr)
-			return Phase{}, errs.ToResolverErr(internalErr)
-		}
+	storyIDs, err := collect.MapWithErr(
+		args.StoryIDs,
+		func(storyID graphql.ID, _ int) (uint64, *errs.Error) {
+			id, internalErr := fromGraphQLID(storyID)
+			if internalErr != nil {
+				return 0, errs.NewError(
+					errs.InvalidArgument,
+					internalErr.Error(),
+				)
+			}
 
-		storyIDs[index] = id
-	}
+			return id, nil
+		})
 
-	phase, err := m.deps.projectService.RemoveStoriesFromPhase(ct, phaseID, storyIDs)
+	phase, err := m.deps.phaseService.RemoveStoriesFromPhase(ct, phaseID, storyIDs)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Phase{}, errs.ToResolverErr(err)

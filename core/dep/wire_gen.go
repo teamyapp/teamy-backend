@@ -102,10 +102,12 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	story := sqldb.NewStory(factory)
 	projectPhaseRelation := sqldb.NewProjectPhaseRelation(factory)
 	projectStoryRelation := sqldb.NewProjectStoryRelation(factory)
+	serviceProject := service.NewProject(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, projectStoryRelation, user, task)
 	phaseStoryRelation := sqldb.NewPhaseStoryRelation(factory)
+	servicePhase := service.NewPhase(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, phaseStoryRelation)
 	storyTaskRelation := sqldb.NewStoryTaskRelation(factory)
-	serviceProject := service.NewProject(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, projectStoryRelation, phaseStoryRelation, storyTaskRelation, user, task)
-	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceApp, serviceInvitation, serviceThread, serviceGroup, serviceRollout, serviceProject)
+	serviceStory := service.NewStory(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, story, projectStoryRelation, storyTaskRelation, user, task)
+	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceApp, serviceInvitation, serviceThread, serviceGroup, serviceRollout, serviceProject, servicePhase, serviceStory)
 	resolver := gql2.NewResolver(dependencies)
 	gqlService := api.NewGraphQL(logger, prometheusTracer, resolver)
 	return gqlService, nil
@@ -196,7 +198,7 @@ var daoSet = wire.NewSet(wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(ne
 
 var repositorySet = wire.NewSet(repository.NewGroup, repository.NewActivator, repository.NewVersionSelector, repository.NewTeamMemberGroup)
 
-var serviceSet = wire.NewSet(wire.Bind(new(storage.ObjectStore), new(*storage.HTTPClient)), newHTTPClient, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp, service.NewProject, service.NewGroup, service.NewRollout)
+var serviceSet = wire.NewSet(wire.Bind(new(storage.ObjectStore), new(*storage.HTTPClient)), newHTTPClient, service.NewThread, service.NewTask, service.NewTaskLink, service.NewInvitation, newTeamService, service.NewSprint, newUserService, service.NewApp, service.NewProject, service.NewPhase, service.NewStory, service.NewGroup, service.NewRollout)
 
 func newJWTAuthority(logger telemetry.Logger, signingKey JWTSigningKey) security.JWTAuthority {
 	return security.NewJWTAuthority(logger, string(signingKey))

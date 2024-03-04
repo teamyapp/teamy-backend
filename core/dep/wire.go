@@ -145,6 +145,8 @@ var serviceSet = wire.NewSet(
 	newUserService,
 	service.NewApp,
 	service.NewProject,
+	service.NewPhase,
+	service.NewStory,
 	service.NewGroup,
 	service.NewRollout,
 )

@@ -60,7 +60,7 @@ func (s Story) UpdatedAt() *graphql.Time {
 }
 
 func (s Story) Tasks(ct context.Context) ([]Task, error) {
-	tasks, err := s.deps.projectService.FindTasksByStoryID(ct, s.story.ID)
+	tasks, err := s.deps.storyService.FindTasksByStoryID(ct, s.story.ID)
 	if err != nil {
 		s.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
@@ -105,7 +105,7 @@ func (m Mutation) CreateStory(ct context.Context, args struct {
 		Priority: args.Input.Priority,
 	}
 
-	story, err := m.deps.projectService.CreateStory(ct, projectID, createStoryInput)
+	story, err := m.deps.storyService.CreateStory(ct, projectID, createStoryInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Story{}, errs.ToResolverErr(err)
@@ -150,7 +150,7 @@ func (m Mutation) UpdateStory(ct context.Context, args struct {
 		Priority: args.Input.Priority,
 	}
 
-	story, err := m.deps.projectService.UpdateStory(ct, storyID, updateStoryInput)
+	story, err := m.deps.storyService.UpdateStory(ct, storyID, updateStoryInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Story{}, errs.ToResolverErr(err)
@@ -172,7 +172,7 @@ func (m Mutation) DeleteStory(ct context.Context, args struct {
 		return Story{}, errs.ToResolverErr(internalErr)
 	}
 
-	story, err := m.deps.projectService.DeleteStory(ct, storyID)
+	story, err := m.deps.storyService.DeleteStory(ct, storyID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Story{}, errs.ToResolverErr(err)
@@ -205,7 +205,7 @@ func (m Mutation) AddTaskToStory(ct context.Context, args struct {
 		return Story{}, errs.ToResolverErr(internalErr)
 	}
 
-	story, err := m.deps.projectService.AddTaskToStory(ct, storyID, taskID)
+	story, err := m.deps.storyService.AddTaskToStory(ct, storyID, taskID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Story{}, errs.ToResolverErr(err)
@@ -228,21 +228,24 @@ func (m Mutation) AddTasksToStory(ct context.Context, args struct {
 		return Story{}, errs.ToResolverErr(internalErr)
 	}
 
-	taskIDs := make([]uint64, len(args.TaskIDs))
-	for index, taskID := range args.TaskIDs {
+	taskIDs, err := collect.MapWithErr(args.TaskIDs, func(taskID graphql.ID, _ int) (uint64, *errs.Error) {
 		id, internalErr := fromGraphQLID(taskID)
 		if internalErr != nil {
-			internalErr := errs.NewError(
+			return 0, errs.NewError(
 				errs.InvalidArgument,
 				internalErr.Error(),
 			)
-			m.deps.logger.ErrorWithContext(ct, internalErr)
-			return Story{}, errs.ToResolverErr(internalErr)
 		}
-		taskIDs[index] = id
+
+		return id, nil
+	})
+
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Story{}, errs.ToResolverErr(err)
 	}
 
-	story, err := m.deps.projectService.AddTasksToStory(ct, storyID, taskIDs)
+	story, err := m.deps.storyService.AddTasksToStory(ct, storyID, taskIDs)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Story{}, errs.ToResolverErr(err)
@@ -275,7 +278,7 @@ func (m Mutation) RemoveTaskFromStory(ct context.Context, args struct {
 		return Story{}, errs.ToResolverErr(internalErr)
 	}
 
-	story, err := m.deps.projectService.RemoveTaskFromStory(ct, storyID, taskID)
+	story, err := m.deps.storyService.RemoveTaskFromStory(ct, storyID, taskID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Story{}, errs.ToResolverErr(err)
@@ -298,21 +301,24 @@ func (m Mutation) RemoveTasksFromStory(ct context.Context, args struct {
 		return Story{}, errs.ToResolverErr(internalErr)
 	}
 
-	taskIDs := make([]uint64, len(args.TaskIDs))
-	for index, taskID := range args.TaskIDs {
+	taskIDs, err := collect.MapWithErr(args.TaskIDs, func(taskID graphql.ID, _ int) (uint64, *errs.Error) {
 		id, internalErr := fromGraphQLID(taskID)
 		if internalErr != nil {
-			internalErr := errs.NewError(
+			return 0, errs.NewError(
 				errs.InvalidArgument,
 				internalErr.Error(),
 			)
-			m.deps.logger.ErrorWithContext(ct, internalErr)
-			return Story{}, errs.ToResolverErr(internalErr)
 		}
-		taskIDs[index] = id
+
+		return id, nil
+	})
+
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Story{}, errs.ToResolverErr(err)
 	}
 
-	story, err := m.deps.projectService.RemoveTasksFromStory(ct, storyID, taskIDs)
+	story, err := m.deps.storyService.RemoveTasksFromStory(ct, storyID, taskIDs)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Story{}, errs.ToResolverErr(err)

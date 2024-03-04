@@ -18,6 +18,8 @@ type Dependencies struct {
 	groupService      *service.Group
 	rolloutService    *service.Rollout
 	projectService    *service.Project
+	phaseService      *service.Phase
+	storyService      *service.Story
 }
 
 func NewDependencies(
@@ -33,6 +35,8 @@ func NewDependencies(
 	groupService *service.Group,
 	rolloutService *service.Rollout,
 	projectService *service.Project,
+	phaseService *service.Phase,
+	storyService *service.Story,
 ) *Dependencies {
 	return &Dependencies{
 		logger:            logger,
@@ -47,5 +51,7 @@ func NewDependencies(
 		groupService:      groupService,
 		rolloutService:    rolloutService,
 		projectService:    projectService,
+		phaseService:      phaseService,
+		storyService:      storyService,
 	}
 }
