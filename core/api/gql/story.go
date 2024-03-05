@@ -47,7 +47,7 @@ func (s Story) Status() entity.StoryStatus {
 	return s.story.Status
 }
 
-func (s Story) Priority() entity.Priority {
+func (s Story) Priority() *entity.Priority {
 	return s.story.Priority
 }
 
@@ -76,7 +76,7 @@ func (m Mutation) CreateStory(ct context.Context, args struct {
 	Input     struct {
 		Name     string
 		OwnerID  graphql.ID
-		Priority entity.Priority
+		Priority *entity.Priority
 	}
 }) (Story, error) {
 	projectID, internalErr := fromGraphQLID(args.ProjectID)
@@ -120,7 +120,7 @@ func (m Mutation) UpdateStory(ct context.Context, args struct {
 		Name     string
 		OwnerID  graphql.ID
 		Status   entity.StoryStatus
-		Priority entity.Priority
+		Priority *entity.Priority
 	}
 }) (Story, error) {
 	storyID, internalErr := fromGraphQLID(args.StoryID)

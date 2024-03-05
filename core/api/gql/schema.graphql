@@ -213,7 +213,7 @@ type Story {
 	name: String!
 	owner: User!
 	status: StoryStatus!
-	priority: Priority!
+	priority: Priority
 	creator: User!
 	createdAt: Time!
 	updatedAt: Time
@@ -618,14 +618,14 @@ input UpdatePhaseInput {
 input CreateStoryInput {
 	name: String!
 	ownerId: ID!
-	priority: Priority!
+	priority: Priority
 }
 
 input UpdateStoryInput {
 	name: String!
 	ownerId: ID!
 	status: StoryStatus!
-	priority: Priority!
+	priority: Priority
 }
 
 input CreateAppInput {

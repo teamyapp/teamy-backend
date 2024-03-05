@@ -20,14 +20,14 @@ import (
 type CreateStoryInput struct {
 	Name     string
 	OwnerID  uint64
-	Priority entity.Priority
+	Priority *entity.Priority
 }
 
 type UpdateStoryInput struct {
 	Name     string
 	OwnerID  uint64
 	Status   entity.StoryStatus
-	Priority entity.Priority
+	Priority *entity.Priority
 }
 
 type Story struct {
