@@ -43,9 +43,9 @@ import (
 var appPackageRoot = path.Join("files", "apps")
 var secretAlphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?@#_-")
 var secretLength = 32
-var defaultAppGroupName = "default app group"
-var defaultPublicGroupName = "public group"
-var defaultRolloutName = "default app rollout"
+var defaultAppOwnersGroupName = "App Owners"
+var defaultPublicGroupName = "Public"
+var defaultRolloutName = "default rollout"
 var defaultAppVersionNumber = 1
 
 type CreateAppInput struct {
@@ -382,35 +382,45 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		CreatedAt:       now,
 	}
 
-	staticTeamGroup, err := a.createStaticGroupEntity(
-		teamID,
-		entity.Group{
+	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
+	genGroupIDRes, rpcErr := a.cloudClientRegistry.
+		GeneratorClient().
+		GenerateUniqueNumber(ct, genGroupIDReq)
+	if rpcErr != nil {
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	appOwnersGroup := entity.StaticGroup{
+		Group: entity.Group{
+			ID:              genGroupIDRes.UniqueNumber,
 			Type:            entity.GroupTypeStatic,
 			MemberType:      entity.GroupMemberTypeTeam,
-			Name:            defaultAppGroupName,
+			Name:            defaultAppOwnersGroupName,
 			MaxRolloutIndex: 0,
 			CreatedAt:       now,
 			Locked:          true,
 		},
-	)
-	if err != nil {
-		return entity.App{}, err
+		MemberIDs: []uint64{teamID},
 	}
 
-	//TODO: create public team filter group when the matcher is ready
-	staticPublicTeamGroup, err := a.createStaticGroupEntity(
-		teamID,
-		entity.Group{
-			Type:            entity.GroupTypeStatic,
+	genGroupIDRes, rpcErr = a.cloudClientRegistry.
+		GeneratorClient().
+		GenerateUniqueNumber(ct, genGroupIDReq)
+	if rpcErr != nil {
+		return entity.App{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	publicGroup := entity.FilterGroup{
+		Group: entity.Group{
+			ID:              genGroupIDRes.UniqueNumber,
+			Type:            entity.GroupTypeFilter,
 			MemberType:      entity.GroupMemberTypeTeam,
 			Name:            defaultPublicGroupName,
 			MaxRolloutIndex: 0,
 			CreatedAt:       now,
 			Locked:          true,
 		},
-	)
-	if err != nil {
-		return entity.App{}, err
+		Filter: "true;",
 	}
 
 	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
@@ -483,12 +493,12 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 			return err
 		}
 
-		err = a.groupRepository.CreateStaticGroup(ct, tx, staticTeamGroup)
+		err = a.groupRepository.CreateStaticGroup(ct, tx, appOwnersGroup)
 		if err != nil {
 			return err
 		}
 
-		err = a.groupRepository.CreateStaticGroup(ct, tx, staticPublicTeamGroup)
+		err = a.groupRepository.CreateFilterGroup(ct, tx, publicGroup)
 		if err != nil {
 			return err
 		}
@@ -509,7 +519,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		}
 
 		err = a.groupRolloutRelationDao.CreateGroupRolloutRelation(ct, tx, entity.GroupRolloutRelation{
-			GroupID:    staticTeamGroup.ID,
+			GroupID:    appOwnersGroup.ID,
 			RolloutID:  rollout.ID,
 			OrderIndex: 0,
 		})
@@ -519,7 +529,15 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 
 		err = a.appGroupRelationDao.CreateAppGroupRelation(ct, tx, entity.AppGroupRelation{
 			AppID:   app.ID,
-			GroupID: staticTeamGroup.ID,
+			GroupID: appOwnersGroup.ID,
+		})
+		if err != nil {
+			return err
+		}
+
+		err = a.appGroupRelationDao.CreateAppGroupRelation(ct, tx, entity.AppGroupRelation{
+			AppID:   app.ID,
+			GroupID: publicGroup.ID,
 		})
 		if err != nil {
 			return err
@@ -1418,23 +1436,6 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		rtTx.AppendMutation(updateAppVersionMutation)
 		return nil
 	})
-}
-
-func (a App) createStaticGroupEntity(
-	memberID uint64,
-	group entity.Group,
-) (entity.StaticGroup, *errs.Error) {
-	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
-	genGroupIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(context.Background(), genGroupIDReq)
-	if rpcErr != nil {
-		return entity.StaticGroup{}, errs.FromGRPCErr(rpcErr)
-	}
-
-	group.ID = genGroupIDRes.UniqueNumber
-	return entity.StaticGroup{
-		Group:     group,
-		MemberIDs: []uint64{memberID},
-	}, nil
 }
 
 func NewApp(
