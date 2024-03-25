@@ -19,15 +19,15 @@ import (
 
 type CreateProjectInput struct {
 	Name            string
-	ExpectedStartAt *time.Time
-	ExpectedEndAt   *time.Time
+	ExpectedStartAt time.Time
+	ExpectedEndAt   time.Time
 }
 
 type UpdateProjectInput struct {
 	Name            string
-	ExpectedStartAt *time.Time
+	ExpectedStartAt time.Time
 	ActualStartAt   *time.Time
-	ExpectedEndAt   *time.Time
+	ExpectedEndAt   time.Time
 	ActualEndAt     *time.Time
 }
 
@@ -43,8 +43,31 @@ type Project struct {
 	storyDao                dao.Story
 	projectPhaseRelationDao dao.ProjectPhaseRelation
 	projectStoryRelationDao dao.ProjectStoryRelation
+	teamProjectRelationDao  dao.TeamProjectRelation
 	userDao                 dao.User
 	taskDao                 dao.Task
+}
+
+func (p *Project) FindProjectsByTeamID(ct context.Context, teamID uint64) ([]entity.Project, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		p.logger,
+		p.transactionFactory,
+		p.stateSyncer,
+		ct,
+	)
+
+	var projects []entity.Project
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		projectIDs, err := p.teamProjectRelationDao.FindProjectIDsByTeamIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
+		projects, err = p.projectDao.FindProjectsByIDsWithTx(ct, tx, projectIDs)
+		return err
+	})
+
+	return projects, transactionErr
 }
 
 func (p *Project) FindStoriesByProjectID(ct context.Context, projectID uint64) ([]entity.Story, *errs.Error) {
@@ -91,7 +114,7 @@ func (p *Project) FindPhasesByProjectID(ct context.Context, projectID uint64) ([
 	return phases, transactionErr
 }
 
-func (p *Project) CreateProject(ct context.Context, input CreateProjectInput) (entity.Project, *errs.Error) {
+func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateProjectInput) (entity.Project, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.Project{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -119,8 +142,18 @@ func (p *Project) CreateProject(ct context.Context, input CreateProjectInput) (e
 		CreatedAt:       time.Now(),
 	}
 
+	teamProjectRelation := entity.TeamProjectRelation{
+		TeamID:    teamID,
+		ProjectID: project.ID,
+	}
+
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return p.projectDao.CreateProject(ct, tx, project)
+		err := p.projectDao.CreateProject(ct, tx, project)
+		if err != nil {
+			return err
+		}
+
+		return p.teamProjectRelationDao.CreateTeamProjectRelation(ct, tx, teamProjectRelation)
 	})
 	return project, transactionErr
 }
@@ -189,6 +222,7 @@ func NewProject(
 	storyDao dao.Story,
 	projectPhaseRelationDao dao.ProjectPhaseRelation,
 	projectStoryRelationDao dao.ProjectStoryRelation,
+	teamProjectRelationDao dao.TeamProjectRelation,
 	userDao dao.User,
 	taskDao dao.Task,
 ) *Project {
@@ -204,6 +238,7 @@ func NewProject(
 		storyDao:                storyDao,
 		projectPhaseRelationDao: projectPhaseRelationDao,
 		projectStoryRelationDao: projectStoryRelationDao,
+		teamProjectRelationDao:  teamProjectRelationDao,
 		userDao:                 userDao,
 		taskDao:                 taskDao,
 	}

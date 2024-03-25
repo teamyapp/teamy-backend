@@ -17,6 +17,10 @@ type Story struct {
 var _ dao.Story = (*Story)(nil)
 
 func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Transaction, storyIDs []uint64) ([]entity.Story, *errs.Error) {
+	if len(storyIDs) == 0 {
+		return []entity.Story{}, nil
+	}
+
 	stories := []entity.Story{}
 	idsStr := toIDsString(storyIDs)
 	query := fmt.Sprintf(`
@@ -53,7 +57,7 @@ func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Trans
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
-		
+
 		stories = append(stories, story)
 	}
 

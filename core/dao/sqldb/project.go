@@ -2,6 +2,7 @@ package sqldb
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
@@ -14,6 +15,56 @@ type Project struct {
 }
 
 var _ dao.Project = (*Project)(nil)
+
+func (p *Project) FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Transaction, projectIDs []uint64) ([]entity.Project, *errs.Error) {
+	if len(projectIDs) == 0 {
+		return []entity.Project{}, nil
+	}
+
+	projects := []entity.Project{}
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			name,
+			expected_start_at,
+			actual_start_at,
+			expected_end_at,
+			actual_end_at,
+			creator_id,
+			created_at,
+			updated_at
+		FROM project
+		WHERE id IN (%s)
+	`, toIDsString(projectIDs))
+	rows, err := tx.SQLTx().QueryContext(ct, query)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		project := entity.Project{}
+		err := rows.Scan(
+			&project.ID,
+			&project.Name,
+			&project.ExpectedStartAt,
+			&project.ActualStartAt,
+			&project.ExpectedEndAt,
+			&project.ActualEndAt,
+			&project.CreatorID,
+			&project.CreatedAt,
+			&project.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		projects = append(projects, project)
+	}
+
+	return projects, nil
+}
 
 func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) (entity.Project, *errs.Error) {
 	project := entity.Project{}

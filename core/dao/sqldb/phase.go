@@ -53,6 +53,10 @@ func (p *Phase) FindPhaseByIDWithTx(ct context.Context, tx *transaction.Transact
 }
 
 func (p *Phase) FindPhasesByIDsWithTx(ct context.Context, tx *transaction.Transaction, phaseIDs []uint64) ([]entity.Phase, *errs.Error) {
+	if len(phaseIDs) == 0 {
+		return []entity.Phase{}, nil
+	}
+
 	phases := []entity.Phase{}
 	idsStr := toIDsString(phaseIDs)
 	query := fmt.Sprintf(`
@@ -94,7 +98,7 @@ func (p *Phase) FindPhasesByIDsWithTx(ct context.Context, tx *transaction.Transa
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
-		
+
 		phases = append(phases, phase)
 	}
 

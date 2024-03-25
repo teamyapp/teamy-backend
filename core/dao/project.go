@@ -10,6 +10,7 @@ import (
 
 type Project interface {
 	FindProjectByIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) (entity.Project, *errs.Error)
+	FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Transaction, projectIDs []uint64) ([]entity.Project, *errs.Error)
 	CreateProject(ct context.Context, tx *transaction.Transaction, project entity.Project) *errs.Error
 	UpdateProject(ct context.Context, tx *transaction.Transaction, project entity.Project) *errs.Error
 	DeleteProject(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error

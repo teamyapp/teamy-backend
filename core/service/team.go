@@ -65,10 +65,41 @@ type Team struct {
 	sprintParticipantDao           dao.SprintParticipant
 	teamDao                        dao.Team
 	teamMemberDao                  dao.TeamMember
+	teamProjectRelationDao         dao.TeamProjectRelation
 	teamFileUploadSessionDao       dao.TeamFileUploadSession
 	teamMemberGroupDao             dao.TeamMemberGroup
 	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation
 	teamMemberGroupRepo            repository.TeamMemberGroup
+}
+
+func (t Team) FindTeamByProjectID(ct context.Context, projectID uint64) (entity.Team, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		t.logger,
+		t.transactionFactory,
+		t.stateSyncer,
+		ct,
+	)
+
+	var team entity.Team
+	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		teamIDs, internalErr := t.teamProjectRelationDao.FindTeamIDsByProjectIDWithTx(ct, tx, projectID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		if len(teamIDs) == 0 {
+			return errs.NewError(errs.NotFound, fmt.Sprintf("team not found: projectID=%v", projectID))
+		}
+
+		if len(teamIDs) > 1 {
+			return errs.NewError(errs.InvalidValue, fmt.Sprintf("multiple teams found for project: projectID=%v, teamIDs=%v", projectID, teamIDs))
+		}
+
+		team, internalErr = t.teamDao.FindTeamByIDWithTx(ct, tx, teamIDs[0])
+		return internalErr
+	})
+
+	return team, err
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
@@ -1082,6 +1113,7 @@ func NewTeam(
 	sprintParticipantDao dao.SprintParticipant,
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
+	teamProjectRelationDao dao.TeamProjectRelation,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberGroupDao dao.TeamMemberGroup,
 	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation,
@@ -1098,6 +1130,7 @@ func NewTeam(
 		taskDao:                        taskDao,
 		sprintDao:                      sprintDao,
 		sprintParticipantDao:           sprintParticipantDao,
+		teamProjectRelationDao:         teamProjectRelationDao,
 		teamMemberDao:                  teamMemberDao,
 		teamDao:                        teamDao,
 		teamFileUploadSessionDao:       teamFileUploadSessionDao,

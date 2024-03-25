@@ -84,6 +84,18 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 	}), nil
 }
 
+func (t Team) Projects(ct context.Context) ([]Project, error) {
+	projects, err := t.deps.projectService.FindProjectsByTeamID(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(projects, func(project entity.Project, _ int) Project {
+		return newProject(t.deps, project)
+	}), nil
+}
+
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
