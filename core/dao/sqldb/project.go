@@ -34,6 +34,7 @@ func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction
 	if err != nil {
 		return nil, errs.NewError(errs.Unknown, err.Error())
 	}
+
 	defer rows.Close()
 
 	var projects []entity.Project
