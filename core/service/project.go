@@ -19,15 +19,15 @@ import (
 
 type CreateProjectInput struct {
 	Name            string
-	ExpectedStartAt *time.Time
-	ExpectedEndAt   *time.Time
+	ExpectedStartAt time.Time
+	ExpectedEndAt   time.Time
 }
 
 type UpdateProjectInput struct {
 	Name            string
-	ExpectedStartAt *time.Time
+	ExpectedStartAt time.Time
 	ActualStartAt   *time.Time
-	ExpectedEndAt   *time.Time
+	ExpectedEndAt   time.Time
 	ActualEndAt     *time.Time
 }
 
@@ -39,12 +39,31 @@ type Project struct {
 	transactionFactory      cloudTransaction.Factory
 	stateSyncer             *realtime.StateSyncer
 	projectDao              dao.Project
+	teamDao                 dao.Team
 	phaseDao                dao.Phase
 	storyDao                dao.Story
 	projectPhaseRelationDao dao.ProjectPhaseRelation
 	projectStoryRelationDao dao.ProjectStoryRelation
 	userDao                 dao.User
 	taskDao                 dao.Task
+}
+
+func (p *Project) FindProjectsByTeamID(ct context.Context, teamID uint64) ([]entity.Project, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		p.logger,
+		p.transactionFactory,
+		p.stateSyncer,
+		ct,
+	)
+
+	var projects []entity.Project
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		projects, err = p.projectDao.FindProjectsByTeamIDWithTx(ct, tx, teamID)
+		return err
+	})
+
+	return projects, transactionErr
 }
 
 func (p *Project) FindStoriesByProjectID(ct context.Context, projectID uint64) ([]entity.Story, *errs.Error) {
@@ -91,7 +110,7 @@ func (p *Project) FindPhasesByProjectID(ct context.Context, projectID uint64) ([
 	return phases, transactionErr
 }
 
-func (p *Project) CreateProject(ct context.Context, input CreateProjectInput) (entity.Project, *errs.Error) {
+func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateProjectInput) (entity.Project, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
 		return entity.Project{}, errs.NewError(errs.Unauthenticated, "user ID not found")
@@ -117,9 +136,15 @@ func (p *Project) CreateProject(ct context.Context, input CreateProjectInput) (e
 		ExpectedEndAt:   input.ExpectedEndAt,
 		CreatorID:       userID,
 		CreatedAt:       time.Now(),
+		TeamID:          teamID,
 	}
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		_, err := p.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+		if err != nil {
+			return err
+		}
+
 		return p.projectDao.CreateProject(ct, tx, project)
 	})
 	return project, transactionErr
@@ -185,6 +210,7 @@ func NewProject(
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	projectDao dao.Project,
+	teamDao dao.Team,
 	phaseDao dao.Phase,
 	storyDao dao.Story,
 	projectPhaseRelationDao dao.ProjectPhaseRelation,
@@ -200,6 +226,7 @@ func NewProject(
 		transactionFactory:      transactionFactory,
 		stateSyncer:             stateSyncer,
 		projectDao:              projectDao,
+		teamDao:                 teamDao,
 		phaseDao:                phaseDao,
 		storyDao:                storyDao,
 		projectPhaseRelationDao: projectPhaseRelationDao,

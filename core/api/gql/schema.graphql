@@ -159,7 +159,7 @@ type Mutation {
 	updateRollout(rolloutId: ID!, input: UpdateRolloutInput!): Rollout!
 	deleteRollout(rolloutId: ID!): Rollout!
 
-	createProject(input: CreateProjectInput!): Project!
+	createProject(teamId: ID!, input: CreateProjectInput!): Project!
 	updateProject(projectId: ID!, input: UpdateProjectInput!): Project!
 	deleteProject(projectId: ID!): Project!
 
@@ -183,15 +183,16 @@ type Mutation {
 type Project {
 	id: ID!
 	name: String!
-	expectedStartAt: Time
+	expectedStartAt: Time!
 	actualStartAt: Time
-	expectedEndAt: Time
+	expectedEndAt: Time!
 	actualEndAt: Time
 	creator: User!
 	createdAt: Time!
 	updatedAt: Time
 	phases: [Phase!]!
 	stories: [Story!]!
+	team: Team!
 }
 
 type Phase {
@@ -300,6 +301,7 @@ type Team {
 	managedApps: [App!]!
 	taskActivities: [TaskActivity!]!
 	activeSprint: Sprint
+	projects: [Project!]!
 }
 
 type TeamMember {
@@ -588,15 +590,15 @@ input AppFilter {
 # Inputs
 input CreateProjectInput {
 	name: String!
-	expectedStartAt: Time
-	expectedEndAt: Time
+	expectedStartAt: Time!
+	expectedEndAt: Time!
 }
 
 input UpdateProjectInput {
 	name: String!
-	expectedStartAt: Time
+	expectedStartAt: Time!
 	actualStartAt: Time
-	expectedEndAt: Time
+	expectedEndAt: Time!
 	actualEndAt: Time
 }
 

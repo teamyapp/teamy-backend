@@ -23,16 +23,16 @@ func (p Project) Name() string {
 	return p.project.Name
 }
 
-func (p Project) ExpectedStartAt() *graphql.Time {
-	return toGraphQLTimePtr(p.project.ExpectedStartAt)
+func (p Project) ExpectedStartAt() graphql.Time {
+	return toGraphQLTime(p.project.ExpectedStartAt)
 }
 
 func (p Project) ActualStartAt() *graphql.Time {
 	return toGraphQLTimePtr(p.project.ActualStartAt)
 }
 
-func (p Project) ExpectedEndAt() *graphql.Time {
-	return toGraphQLTimePtr(p.project.ExpectedEndAt)
+func (p Project) ExpectedEndAt() graphql.Time {
+	return toGraphQLTime(p.project.ExpectedEndAt)
 }
 
 func (p Project) ActualEndAt() *graphql.Time {
@@ -81,20 +81,41 @@ func (p Project) Stories(ct context.Context) ([]Story, error) {
 	}), nil
 }
 
-func (m Mutation) CreateProject(ct context.Context, args struct {
-	Input struct {
-		Name            string
-		ExpectedStartAt *graphql.Time
-		ExpectedEndAt   *graphql.Time
-	}
-}) (Project, error) {
-	createProjectInput := service.CreateProjectInput{
-		Name:            args.Input.Name,
-		ExpectedStartAt: fromGraphQLTimePtr(args.Input.ExpectedStartAt),
-		ExpectedEndAt:   fromGraphQLTimePtr(args.Input.ExpectedEndAt),
+func (p Project) Team(ct context.Context) (Team, error) {
+	team, err := p.deps.teamService.FindTeamByID(ct, p.project.TeamID)
+	if err != nil {
+		p.deps.logger.ErrorWithContext(ct, err)
+		return Team{}, errs.ToResolverErr(err)
 	}
 
-	project, err := m.deps.projectService.CreateProject(ct, createProjectInput)
+	return newTeam(p.deps, team), nil
+}
+
+func (m Mutation) CreateProject(ct context.Context, args struct {
+	TeamID graphql.ID
+	Input  struct {
+		Name            string
+		ExpectedStartAt graphql.Time
+		ExpectedEndAt   graphql.Time
+	}
+}) (Project, error) {
+	teamID, internalErr := fromGraphQLID(args.TeamID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Project{}, errs.ToResolverErr(internalErr)
+	}
+
+	createProjectInput := service.CreateProjectInput{
+		Name:            args.Input.Name,
+		ExpectedStartAt: fromGraphQLTime(args.Input.ExpectedStartAt),
+		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
+	}
+
+	project, err := m.deps.projectService.CreateProject(ct, teamID, createProjectInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
 		return Project{}, errs.ToResolverErr(err)
@@ -107,9 +128,9 @@ func (m Mutation) UpdateProject(ct context.Context, args struct {
 	ProjectID graphql.ID
 	Input     struct {
 		Name            string
-		ExpectedStartAt *graphql.Time
+		ExpectedStartAt graphql.Time
 		ActualStartAt   *graphql.Time
-		ExpectedEndAt   *graphql.Time
+		ExpectedEndAt   graphql.Time
 		ActualEndAt     *graphql.Time
 	}
 }) (Project, error) {
@@ -125,9 +146,9 @@ func (m Mutation) UpdateProject(ct context.Context, args struct {
 
 	updateProjectInput := service.UpdateProjectInput{
 		Name:            args.Input.Name,
-		ExpectedStartAt: fromGraphQLTimePtr(args.Input.ExpectedStartAt),
+		ExpectedStartAt: fromGraphQLTime(args.Input.ExpectedStartAt),
 		ActualStartAt:   fromGraphQLTimePtr(args.Input.ActualStartAt),
-		ExpectedEndAt:   fromGraphQLTimePtr(args.Input.ExpectedEndAt),
+		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
 		ActualEndAt:     fromGraphQLTimePtr(args.Input.ActualEndAt),
 	}
 

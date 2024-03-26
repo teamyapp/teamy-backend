@@ -102,7 +102,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	story := sqldb.NewStory(factory)
 	projectPhaseRelation := sqldb.NewProjectPhaseRelation(factory)
 	projectStoryRelation := sqldb.NewProjectStoryRelation(factory)
-	serviceProject := service.NewProject(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, projectStoryRelation, user, task)
+	serviceProject := service.NewProject(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, team, phase, story, projectPhaseRelation, projectStoryRelation, user, task)
 	phaseStoryRelation := sqldb.NewPhaseStoryRelation(factory)
 	servicePhase := service.NewPhase(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, phaseStoryRelation)
 	storyTaskRelation := sqldb.NewStoryTaskRelation(factory)
