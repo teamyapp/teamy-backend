@@ -39,11 +39,11 @@ type Project struct {
 	transactionFactory      cloudTransaction.Factory
 	stateSyncer             *realtime.StateSyncer
 	projectDao              dao.Project
+	teamDao                 dao.Team
 	phaseDao                dao.Phase
 	storyDao                dao.Story
 	projectPhaseRelationDao dao.ProjectPhaseRelation
 	projectStoryRelationDao dao.ProjectStoryRelation
-	teamProjectRelationDao  dao.TeamProjectRelation
 	userDao                 dao.User
 	taskDao                 dao.Task
 }
@@ -58,12 +58,8 @@ func (p *Project) FindProjectsByTeamID(ct context.Context, teamID uint64) ([]ent
 
 	var projects []entity.Project
 	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		projectIDs, err := p.teamProjectRelationDao.FindProjectIDsByTeamIDWithTx(ct, tx, teamID)
-		if err != nil {
-			return err
-		}
-
-		projects, err = p.projectDao.FindProjectsByIDsWithTx(ct, tx, projectIDs)
+		var err *errs.Error
+		projects, err = p.projectDao.FindProjectsByTeamIDWithTx(ct, tx, teamID)
 		return err
 	})
 
@@ -140,20 +136,16 @@ func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateP
 		ExpectedEndAt:   input.ExpectedEndAt,
 		CreatorID:       userID,
 		CreatedAt:       time.Now(),
-	}
-
-	teamProjectRelation := entity.TeamProjectRelation{
-		TeamID:    teamID,
-		ProjectID: project.ID,
+		TeamID:          teamID,
 	}
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		err := p.projectDao.CreateProject(ct, tx, project)
+		_, err := p.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if err != nil {
 			return err
 		}
 
-		return p.teamProjectRelationDao.CreateTeamProjectRelation(ct, tx, teamProjectRelation)
+		return p.projectDao.CreateProject(ct, tx, project)
 	})
 	return project, transactionErr
 }
@@ -218,11 +210,11 @@ func NewProject(
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	projectDao dao.Project,
+	teamDao dao.Team,
 	phaseDao dao.Phase,
 	storyDao dao.Story,
 	projectPhaseRelationDao dao.ProjectPhaseRelation,
 	projectStoryRelationDao dao.ProjectStoryRelation,
-	teamProjectRelationDao dao.TeamProjectRelation,
 	userDao dao.User,
 	taskDao dao.Task,
 ) *Project {
@@ -234,11 +226,11 @@ func NewProject(
 		transactionFactory:      transactionFactory,
 		stateSyncer:             stateSyncer,
 		projectDao:              projectDao,
+		teamDao:                 teamDao,
 		phaseDao:                phaseDao,
 		storyDao:                storyDao,
 		projectPhaseRelationDao: projectPhaseRelationDao,
 		projectStoryRelationDao: projectStoryRelationDao,
-		teamProjectRelationDao:  teamProjectRelationDao,
 		userDao:                 userDao,
 		taskDao:                 taskDao,
 	}

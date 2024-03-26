@@ -12,4 +12,5 @@ type Project struct {
 	CreatorID       uint64
 	CreatedAt       time.Time
 	UpdatedAt       *time.Time
+	TeamID          uint64
 }

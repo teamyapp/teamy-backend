@@ -82,7 +82,7 @@ func (p Project) Stories(ct context.Context) ([]Story, error) {
 }
 
 func (p Project) Team(ct context.Context) (Team, error) {
-	team, err := p.deps.teamService.FindTeamByProjectID(ct, p.project.ID)
+	team, err := p.deps.teamService.FindTeamByID(ct, p.project.TeamID)
 	if err != nil {
 		p.deps.logger.ErrorWithContext(ct, err)
 		return Team{}, errs.ToResolverErr(err)

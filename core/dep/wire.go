@@ -78,7 +78,6 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.StoryTaskRelation), new(*sqldb.StoryTaskRelation)),
 	wire.Bind(new(dao.ProjectPhaseRelation), new(*sqldb.ProjectPhaseRelation)),
 	wire.Bind(new(dao.ProjectStoryRelation), new(*sqldb.ProjectStoryRelation)),
-	wire.Bind(new(dao.TeamProjectRelation), new(*sqldb.TeamProjectRelation)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -125,7 +124,6 @@ var daoSet = wire.NewSet(
 	sqldb.NewProjectStoryRelation,
 	sqldb.NewPhaseStoryRelation,
 	sqldb.NewStoryTaskRelation,
-	sqldb.NewTeamProjectRelation,
 )
 
 var repositorySet = wire.NewSet(
@@ -322,7 +320,6 @@ func newTeamService(
 	sprintParticipantDao dao.SprintParticipant,
 	teamDao dao.Team,
 	teamMemberDao dao.TeamMember,
-	teamProjectRelationDao dao.TeamProjectRelation,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberGroupDao dao.TeamMemberGroup,
 	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation,
@@ -341,7 +338,6 @@ func newTeamService(
 		sprintParticipantDao,
 		teamDao,
 		teamMemberDao,
-		teamProjectRelationDao,
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,
 		teamMemberGroupUserRelationDao,
