@@ -57,7 +57,7 @@ func (p *Project) FindProjectsByTeamID(ct context.Context, teamID uint64) ([]ent
 	)
 
 	var projects []entity.Project
-	txErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		projects, err = p.projectDao.FindProjectsByTeamIDWithTx(ct, tx, teamID)
 		return err
