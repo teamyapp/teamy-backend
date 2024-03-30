@@ -72,7 +72,7 @@ func (p *ProjectPhaseRelation) DeleteProjectPhaseRelation(ct context.Context, tx
 	return nil
 }
 
-func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationByProjectID(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
+func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationsByProjectID(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project_phase_relation
 		WHERE project_id = $1
@@ -84,7 +84,7 @@ func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationByProjectID(ct context.
 	return nil
 }
 
-func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationByPhaseID(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error {
+func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationsByPhaseID(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project_phase_relation
 		WHERE phase_id = $1

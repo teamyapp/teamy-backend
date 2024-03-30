@@ -40,6 +40,7 @@ type Story struct {
 	projectDao              dao.Project
 	storyDao                dao.Story
 	projectStoryRelationDao dao.ProjectStoryRelation
+	phaseStoryRelationDao   dao.PhaseStoryRelation
 	storyTaskRelationDao    dao.StoryTaskRelation
 	userDao                 dao.User
 	taskDao                 dao.Task
@@ -169,6 +170,21 @@ func (s *Story) DeleteStory(ct context.Context, storyID uint64) (entity.Story, *
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		err = s.projectStoryRelationDao.DeleteProjectStoryRelationsByStoryID(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		err = s.phaseStoryRelationDao.DeletePhaseStoryRelationsByStoryID(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		err = s.storyTaskRelationDao.DeleteStoryTaskRelationsByStoryID(ct, tx, storyID)
 		if err != nil {
 			return err
 		}
@@ -321,6 +337,7 @@ func NewStory(
 	projectDao dao.Project,
 	storyDao dao.Story,
 	projectStoryRelationDao dao.ProjectStoryRelation,
+	phaseStoryRelationDao dao.PhaseStoryRelation,
 	storyTaskRelationDao dao.StoryTaskRelation,
 	userDao dao.User,
 	taskDao dao.Task,
@@ -335,6 +352,7 @@ func NewStory(
 		projectDao:              projectDao,
 		storyDao:                storyDao,
 		projectStoryRelationDao: projectStoryRelationDao,
+		phaseStoryRelationDao:   phaseStoryRelationDao,
 		storyTaskRelationDao:    storyTaskRelationDao,
 		userDao:                 userDao,
 		taskDao:                 taskDao,

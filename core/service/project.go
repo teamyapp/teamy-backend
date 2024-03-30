@@ -201,12 +201,12 @@ func (p *Project) DeleteProject(ct context.Context, projectID uint64) (entity.Pr
 			return err
 		}
 
-		err = p.projectPhaseRelationDao.DeleteProjectPhaseRelationByProjectID(ct, tx, projectID)
+		err = p.projectPhaseRelationDao.DeleteProjectPhaseRelationsByProjectID(ct, tx, projectID)
 		if err != nil {
 			return err
 		}
 
-		err = p.projectStoryRelationDao.DeleteProjectStoryRelationByProjectID(ct, tx, projectID)
+		err = p.projectStoryRelationDao.DeleteProjectStoryRelationsByProjectID(ct, tx, projectID)
 		if err != nil {
 			return err
 		}

@@ -73,6 +73,7 @@ type Task struct {
 	taskAwaitForRelationDao dao.TaskAwaitForRelation
 	sprintParticipantDao    dao.SprintParticipant
 	sprintTaskRelationDao   dao.SprintTaskRelation
+	storyTaskRelationDao    dao.StoryTaskRelation
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
@@ -614,6 +615,11 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			)
 			rtTx.AppendMutation(deleteSprintTaskRelationMutation)
 			internalErr = deleteSprintTaskRelationMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			internalErr = t.storyTaskRelationDao.DeleteStoryTaskRelationsByTaskID(ct, tx, taskID)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -1266,6 +1272,7 @@ func NewTask(
 	taskAwaitForRelationDao dao.TaskAwaitForRelation,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintTaskRelationDao dao.SprintTaskRelation,
+	storyTaskRelationDao dao.StoryTaskRelation,
 ) Task {
 	return Task{
 		logger:                  logger,
@@ -1281,5 +1288,6 @@ func NewTask(
 		taskAwaitForRelationDao: taskAwaitForRelationDao,
 		sprintParticipantDao:    sprintParticipantDao,
 		sprintTaskRelationDao:   sprintTaskRelationDao,
+		storyTaskRelationDao:    storyTaskRelationDao,
 	}
 }

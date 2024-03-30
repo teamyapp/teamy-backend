@@ -34,7 +34,7 @@ func (s *StoryTaskRelation) FindTaskIDsByStoryIDWithTx(ct context.Context, tx *t
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
-		
+
 		taskIDs = append(taskIDs, taskID)
 	}
 
@@ -65,6 +65,30 @@ func (s *StoryTaskRelation) DeleteStoryTaskRelation(ct context.Context, tx *tran
 		DELETE FROM story_task_relation
 		WHERE story_id = $1 AND task_id = $2
 	`, storyID, taskID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (s *StoryTaskRelation) DeleteStoryTaskRelationsByStoryID(ct context.Context, tx *transaction.Transaction, storyID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM story_task_relation
+		WHERE story_id = $1
+	`, storyID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (s *StoryTaskRelation) DeleteStoryTaskRelationsByTaskID(ct context.Context, tx *transaction.Transaction, taskID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM story_task_relation
+		WHERE task_id = $1
+	`, taskID)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}
