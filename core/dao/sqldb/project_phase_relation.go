@@ -34,7 +34,7 @@ func (p *ProjectPhaseRelation) FindPhaseIDsByProjectIDWithTx(ct context.Context,
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
-		
+
 		phaseIDs = append(phaseIDs, phaseID)
 	}
 
@@ -65,6 +65,30 @@ func (p *ProjectPhaseRelation) DeleteProjectPhaseRelation(ct context.Context, tx
 		DELETE FROM project_phase_relation
 		WHERE project_id = $1 AND phase_id = $2
 	`, projectID, phaseID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationByProjectID(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM project_phase_relation
+		WHERE project_id = $1
+	`, projectID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationByPhaseID(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM project_phase_relation
+		WHERE phase_id = $1
+	`, phaseID)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}

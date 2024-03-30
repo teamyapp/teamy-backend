@@ -166,6 +166,16 @@ func (p *Phase) DeletePhase(ct context.Context, phaseID uint64) (entity.Phase, *
 			return err
 		}
 
+		err = p.projectPhaseRelationDao.DeleteProjectPhaseRelationByPhaseID(ct, tx, phaseID)
+		if err != nil {
+			return err
+		}
+
+		err = p.phaseStoryRelationDao.DeletePhaseStoryRelationByPhaseID(ct, tx, phaseID)
+		if err != nil {
+			return err
+		}
+
 		return p.phaseDao.DeletePhase(ct, tx, phaseID)
 	})
 

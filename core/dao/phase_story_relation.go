@@ -12,4 +12,5 @@ type PhaseStoryRelation interface {
 	FindStoryIDsByPhaseIDWithTx(ct context.Context, tx *transaction.Transaction, phaseID uint64) ([]uint64, *errs.Error)
 	CreatePhaseStoryRelation(ct context.Context, tx *transaction.Transaction, phaseStroyRelation entity.PhaseStoryRelation) *errs.Error
 	DeletePhaseStoryRelation(ct context.Context, tx *transaction.Transaction, phaseID uint64, storyID uint64) *errs.Error
+	DeletePhaseStoryRelationByPhaseID(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error
 }

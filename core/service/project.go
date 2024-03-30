@@ -196,6 +196,26 @@ func (p *Project) DeleteProject(ct context.Context, projectID uint64) (entity.Pr
 			return err
 		}
 
+		phaseIDs, err := p.projectPhaseRelationDao.FindPhaseIDsByProjectIDWithTx(ct, tx, projectID)
+		if err != nil {
+			return err
+		}
+
+		err = p.projectPhaseRelationDao.DeleteProjectPhaseRelationByProjectID(ct, tx, projectID)
+		if err != nil {
+			return err
+		}
+
+		err = p.projectStoryRelationDao.DeleteProjectStoryRelationByProjectID(ct, tx, projectID)
+		if err != nil {
+			return err
+		}
+
+		err = p.phaseDao.DeletePhasesByIDs(ct, tx, phaseIDs)
+		if err != nil {
+			return err
+		}
+
 		return p.projectDao.DeleteProject(ct, tx, projectID)
 	})
 

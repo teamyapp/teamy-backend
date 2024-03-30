@@ -14,4 +14,5 @@ type Phase interface {
 	CreatePhase(ct context.Context, tx *transaction.Transaction, phase entity.Phase) *errs.Error
 	UpdatePhase(ct context.Context, tx *transaction.Transaction, phase entity.Phase) *errs.Error
 	DeletePhase(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error
+	DeletePhasesByIDs(ct context.Context, tx *transaction.Transaction, phaseIDs []uint64) *errs.Error
 }
