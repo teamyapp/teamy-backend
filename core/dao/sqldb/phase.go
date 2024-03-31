@@ -185,6 +185,24 @@ func (p *Phase) DeletePhase(ct context.Context, tx *transaction.Transaction, pha
 	return nil
 }
 
+func (p *Phase) DeletePhasesByIDs(ct context.Context, tx *transaction.Transaction, phaseIDs []uint64) *errs.Error {
+	if len(phaseIDs) == 0 {
+		return nil
+	}
+
+	idsStr := toIDsString(phaseIDs)
+	_, err := tx.SQLTx().ExecContext(ct, fmt.Sprintf(`
+		DELETE FROM phase
+		WHERE id IN (%s);
+	`, idsStr))
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewPhase(transactionFactory transaction.Factory) *Phase {
 	return &Phase{
 		transactionFactory: transactionFactory,

@@ -23,6 +23,10 @@ func (s Story) Name() string {
 	return s.story.Name
 }
 
+func (s Story) IsPlanned() bool {
+	return s.story.IsPlanned
+}
+
 func (s Story) Creator(ct context.Context) (User, error) {
 	user, err := s.deps.userService.FindUserByID(ct, s.story.CreatorID)
 	if err != nil {
@@ -33,14 +37,19 @@ func (s Story) Creator(ct context.Context) (User, error) {
 	return newUser(s.deps, user), nil
 }
 
-func (s Story) Owner(ct context.Context) (User, error) {
-	user, err := s.deps.userService.FindUserByID(ct, s.story.OwnerID)
-	if err != nil {
-		s.deps.logger.ErrorWithContext(ct, err)
-		return User{}, errs.ToResolverErr(err)
+func (s Story) Owner(ct context.Context) (*User, error) {
+	if s.story.OwnerID == nil {
+		return nil, nil
 	}
 
-	return newUser(s.deps, user), nil
+	user, err := s.deps.userService.FindUserByID(ct, *s.story.OwnerID)
+	if err != nil {
+		s.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	gqlUser := newUser(s.deps, user)
+	return &gqlUser, nil
 }
 
 func (s Story) Status() entity.StoryStatus {
@@ -75,7 +84,7 @@ func (m Mutation) CreateStory(ct context.Context, args struct {
 	ProjectID graphql.ID
 	Input     struct {
 		Name     string
-		OwnerID  graphql.ID
+		OwnerID  *graphql.ID
 		Priority *entity.Priority
 	}
 }) (Story, error) {
@@ -89,7 +98,7 @@ func (m Mutation) CreateStory(ct context.Context, args struct {
 		return Story{}, errs.ToResolverErr(internalErr)
 	}
 
-	ownerID, internalErr := fromGraphQLID(args.Input.OwnerID)
+	ownerID, internalErr := fromGraphQLIDPtr(args.Input.OwnerID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
@@ -118,7 +127,7 @@ func (m Mutation) UpdateStory(ct context.Context, args struct {
 	StoryID graphql.ID
 	Input   struct {
 		Name     string
-		OwnerID  graphql.ID
+		OwnerID  *graphql.ID
 		Status   entity.StoryStatus
 		Priority *entity.Priority
 	}
@@ -133,7 +142,7 @@ func (m Mutation) UpdateStory(ct context.Context, args struct {
 		return Story{}, errs.ToResolverErr(internalErr)
 	}
 
-	ownerID, internalErr := fromGraphQLID(args.Input.OwnerID)
+	ownerID, internalErr := fromGraphQLIDPtr(args.Input.OwnerID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,

@@ -19,13 +19,13 @@ import (
 
 type CreateStoryInput struct {
 	Name     string
-	OwnerID  uint64
+	OwnerID  *uint64
 	Priority *entity.Priority
 }
 
 type UpdateStoryInput struct {
 	Name     string
-	OwnerID  uint64
+	OwnerID  *uint64
 	Status   entity.StoryStatus
 	Priority *entity.Priority
 }
@@ -40,6 +40,7 @@ type Story struct {
 	projectDao              dao.Project
 	storyDao                dao.Story
 	projectStoryRelationDao dao.ProjectStoryRelation
+	phaseStoryRelationDao   dao.PhaseStoryRelation
 	storyTaskRelationDao    dao.StoryTaskRelation
 	userDao                 dao.User
 	taskDao                 dao.Task
@@ -93,16 +94,19 @@ func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateSt
 		Priority:  input.Priority,
 		Status:    entity.TodoStoryStatus,
 		CreatorID: userID,
+		IsPlanned: false,
 		CreatedAt: time.Now(),
 	}
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		_, err := s.userDao.FindUserByIDWithTx(ct, tx, input.OwnerID)
-		if err != nil {
-			return err
+		if input.OwnerID != nil {
+			_, err := s.userDao.FindUserByIDWithTx(ct, tx, *input.OwnerID)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = s.storyDao.CreateStory(ct, tx, story)
+		err := s.storyDao.CreateStory(ct, tx, story)
 		if err != nil {
 			return err
 		}
@@ -134,9 +138,11 @@ func (s *Story) UpdateStory(ct context.Context, storyID uint64, input UpdateStor
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		_, err = s.userDao.FindUserByIDWithTx(ct, tx, input.OwnerID)
-		if err != nil {
-			return err
+		if input.OwnerID != nil {
+			_, err = s.userDao.FindUserByIDWithTx(ct, tx, *input.OwnerID)
+			if err != nil {
+				return err
+			}
 		}
 
 		story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
@@ -169,6 +175,21 @@ func (s *Story) DeleteStory(ct context.Context, storyID uint64) (entity.Story, *
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		err = s.projectStoryRelationDao.DeleteProjectStoryRelationsByStoryID(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		err = s.phaseStoryRelationDao.DeletePhaseStoryRelationsByStoryID(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		err = s.storyTaskRelationDao.DeleteStoryTaskRelationsByStoryID(ct, tx, storyID)
 		if err != nil {
 			return err
 		}
@@ -321,6 +342,7 @@ func NewStory(
 	projectDao dao.Project,
 	storyDao dao.Story,
 	projectStoryRelationDao dao.ProjectStoryRelation,
+	phaseStoryRelationDao dao.PhaseStoryRelation,
 	storyTaskRelationDao dao.StoryTaskRelation,
 	userDao dao.User,
 	taskDao dao.Task,
@@ -335,6 +357,7 @@ func NewStory(
 		projectDao:              projectDao,
 		storyDao:                storyDao,
 		projectStoryRelationDao: projectStoryRelationDao,
+		phaseStoryRelationDao:   phaseStoryRelationDao,
 		storyTaskRelationDao:    storyTaskRelationDao,
 		userDao:                 userDao,
 		taskDao:                 taskDao,

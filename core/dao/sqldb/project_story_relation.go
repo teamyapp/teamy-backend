@@ -34,7 +34,7 @@ func (p *ProjectStoryRelation) FindStoryIDsByProjectIDWithTx(ct context.Context,
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
-		
+
 		storyIDs = append(storyIDs, storyID)
 	}
 
@@ -66,6 +66,30 @@ func (p *ProjectStoryRelation) DeleteProjectStoryRelation(ct context.Context, tx
 		WHERE project_id = $1
 		AND story_id = $2
 	`, projectID, storyID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (p *ProjectStoryRelation) DeleteProjectStoryRelationsByProjectID(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM project_story_relation
+		WHERE project_id = $1
+	`, projectID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (p *ProjectStoryRelation) DeleteProjectStoryRelationsByStoryID(ct context.Context, tx *transaction.Transaction, storyID uint64) *errs.Error {
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM project_story_relation
+		WHERE story_id = $1
+	`, storyID)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}

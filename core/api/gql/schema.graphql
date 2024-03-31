@@ -212,7 +212,8 @@ type Phase {
 type Story {
 	id: ID!
 	name: String!
-	owner: User!
+	owner: User
+	isPlanned: Boolean!
 	status: StoryStatus!
 	priority: Priority
 	creator: User!
@@ -619,13 +620,13 @@ input UpdatePhaseInput {
 
 input CreateStoryInput {
 	name: String!
-	ownerId: ID!
+	ownerId: ID
 	priority: Priority
 }
 
 input UpdateStoryInput {
 	name: String!
-	ownerId: ID!
+	ownerId: ID
 	status: StoryStatus!
 	priority: Priority
 }

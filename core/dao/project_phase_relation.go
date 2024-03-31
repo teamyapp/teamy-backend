@@ -12,4 +12,6 @@ type ProjectPhaseRelation interface {
 	FindPhaseIDsByProjectIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) ([]uint64, *errs.Error)
 	CreateProjectPhaseRelation(ct context.Context, tx *transaction.Transaction, projectPhaseRelation entity.ProjectPhaseRelation) *errs.Error
 	DeleteProjectPhaseRelation(ct context.Context, tx *transaction.Transaction, projectID uint64, phaseID uint64) *errs.Error
+	DeleteProjectPhaseRelationsByProjectID(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error
+	DeleteProjectPhaseRelationsByPhaseID(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error
 }

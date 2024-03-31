@@ -273,6 +273,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
+	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
 	taskService := NewTask(
 		logger,
 		cloudClientRegistry,
@@ -287,6 +288,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		taskAwaitForRelationDao,
 		sprintParticipantDao,
 		sprintTaskRelationDao,
+		storyTaskRelationDao,
 	)
 	return TaskTestRef{
 		taskService:  taskService,
