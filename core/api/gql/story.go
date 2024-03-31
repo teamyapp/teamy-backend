@@ -23,7 +23,7 @@ func (s Story) Name() string {
 	return s.story.Name
 }
 
-func (s Story) IsPlanned() *bool {
+func (s Story) IsPlanned() bool {
 	return s.story.IsPlanned
 }
 
