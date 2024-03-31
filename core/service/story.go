@@ -87,7 +87,6 @@ func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateSt
 		ct,
 	)
 
-	isPlanned := false
 	story := entity.Story{
 		ID:        genStoryIDRes.UniqueNumber,
 		Name:      input.Name,
@@ -95,7 +94,7 @@ func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateSt
 		Priority:  input.Priority,
 		Status:    entity.TodoStoryStatus,
 		CreatorID: userID,
-		IsPlanned: &isPlanned,
+		IsPlanned: false,
 		CreatedAt: time.Now(),
 	}
 
