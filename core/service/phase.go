@@ -198,7 +198,15 @@ func (p *Phase) AddStoryToPhase(ct context.Context, phaseID uint64, storyID uint
 			return err
 		}
 
-		_, err = p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+		story, err := p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		story.Status = entity.InProgressStoryStatus
+		story.UpdatedAt = &now
+		err = p.storyDao.UpdateStory(ct, tx, story)
 		if err != nil {
 			return err
 		}
