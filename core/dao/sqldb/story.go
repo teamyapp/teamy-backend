@@ -32,7 +32,8 @@ func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Trans
 		priority,
 		creator_id,
 		created_at,
-		updated_at
+		updated_at,
+		is_planned
 		FROM story
 		WHERE id IN (%s)
 	`, idsStr)
@@ -53,6 +54,7 @@ func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Trans
 			&story.CreatorID,
 			&story.CreatedAt,
 			&story.UpdatedAt,
+			&story.IsPlanned,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -75,7 +77,8 @@ func (s *Story) FindStoryByIDWithTx(ct context.Context, tx *transaction.Transact
 		priority,
 		creator_id,
 		created_at,
-		updated_at
+		updated_at,
+		is_planned
 		FROM story
 		WHERE id = $1
 	`, storyID).Scan(
@@ -87,6 +90,7 @@ func (s *Story) FindStoryByIDWithTx(ct context.Context, tx *transaction.Transact
 		&story.CreatorID,
 		&story.CreatedAt,
 		&story.UpdatedAt,
+		&story.IsPlanned,
 	)
 
 	if err != nil {
@@ -106,9 +110,10 @@ func (s *Story) CreateStory(ct context.Context, tx *transaction.Transaction, sto
 			priority,
 			creator_id,
 			created_at,
-			updated_at
+			updated_at,
+			is_planned
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 	`,
 		story.ID,
 		story.Name,
@@ -118,6 +123,7 @@ func (s *Story) CreateStory(ct context.Context, tx *transaction.Transaction, sto
 		story.CreatorID,
 		story.CreatedAt,
 		story.UpdatedAt,
+		story.IsPlanned,
 	)
 
 	if err != nil {
@@ -137,8 +143,9 @@ func (s *Story) UpdateStory(ct context.Context, tx *transaction.Transaction, sto
 		priority = $4,
 		creator_id = $5,
 		created_at = $6,
-		updated_at = $7
-		WHERE id = $8;
+		updated_at = $7,
+		is_planned = $8
+		WHERE id = $9;
 	`,
 		story.Name,
 		story.OwnerID,
@@ -147,6 +154,7 @@ func (s *Story) UpdateStory(ct context.Context, tx *transaction.Transaction, sto
 		story.CreatorID,
 		story.CreatedAt,
 		story.UpdatedAt,
+		story.IsPlanned,
 		story.ID,
 	)
 

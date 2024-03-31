@@ -23,6 +23,10 @@ func (s Story) Name() string {
 	return s.story.Name
 }
 
+func (s Story) IsPlanned() *bool {
+	return s.story.IsPlanned
+}
+
 func (s Story) Creator(ct context.Context) (User, error) {
 	user, err := s.deps.userService.FindUserByID(ct, s.story.CreatorID)
 	if err != nil {

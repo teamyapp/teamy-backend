@@ -213,6 +213,7 @@ type Story {
 	id: ID!
 	name: String!
 	owner: User
+	isPlanned: Boolean
 	status: StoryStatus!
 	priority: Priority
 	creator: User!

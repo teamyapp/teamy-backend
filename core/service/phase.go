@@ -204,7 +204,8 @@ func (p *Phase) AddStoryToPhase(ct context.Context, phaseID uint64, storyID uint
 		}
 
 		now := time.Now()
-		story.Status = entity.InProgressStoryStatus
+		isPlanned := true
+		story.IsPlanned = &isPlanned
 		story.UpdatedAt = &now
 		err = p.storyDao.UpdateStory(ct, tx, story)
 		if err != nil {
