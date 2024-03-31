@@ -19,13 +19,13 @@ import (
 
 type CreateStoryInput struct {
 	Name     string
-	OwnerID  uint64
+	OwnerID  *uint64
 	Priority *entity.Priority
 }
 
 type UpdateStoryInput struct {
 	Name     string
-	OwnerID  uint64
+	OwnerID  *uint64
 	Status   entity.StoryStatus
 	Priority *entity.Priority
 }
@@ -98,12 +98,14 @@ func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateSt
 	}
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		_, err := s.userDao.FindUserByIDWithTx(ct, tx, input.OwnerID)
-		if err != nil {
-			return err
+		if input.OwnerID != nil {
+			_, err := s.userDao.FindUserByIDWithTx(ct, tx, *input.OwnerID)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = s.storyDao.CreateStory(ct, tx, story)
+		err := s.storyDao.CreateStory(ct, tx, story)
 		if err != nil {
 			return err
 		}
@@ -135,9 +137,11 @@ func (s *Story) UpdateStory(ct context.Context, storyID uint64, input UpdateStor
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		_, err = s.userDao.FindUserByIDWithTx(ct, tx, input.OwnerID)
-		if err != nil {
-			return err
+		if input.OwnerID != nil {
+			_, err = s.userDao.FindUserByIDWithTx(ct, tx, *input.OwnerID)
+			if err != nil {
+				return err
+			}
 		}
 
 		story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
