@@ -239,7 +239,15 @@ func (p *Phase) AddStoriesToPhase(ct context.Context, phaseID uint64, storyIDs [
 		}
 
 		for _, storyID := range storyIDs {
-			_, err = p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			story, err := p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			now := time.Now()
+			story.IsPlanned = true
+			story.UpdatedAt = &now
+			err = p.storyDao.UpdateStory(ct, tx, story)
 			if err != nil {
 				return err
 			}
@@ -272,7 +280,15 @@ func (p *Phase) RemoveStoryFromPhase(ct context.Context, phaseID uint64, storyID
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		_, err = p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+		story, err := p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		story.IsPlanned = false
+		story.UpdatedAt = &now
+		err = p.storyDao.UpdateStory(ct, tx, story)
 		if err != nil {
 			return err
 		}
@@ -305,7 +321,15 @@ func (p *Phase) RemoveStoriesFromPhase(ct context.Context, phaseID uint64, story
 		}
 
 		for _, storyID := range storyIDs {
-			_, err = p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			story, err := p.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			now := time.Now()
+			story.IsPlanned = false
+			story.UpdatedAt = &now
+			err = p.storyDao.UpdateStory(ct, tx, story)
 			if err != nil {
 				return err
 			}
