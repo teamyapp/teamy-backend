@@ -25,15 +25,15 @@ func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Trans
 	idsStr := toIDsString(storyIDs)
 	query := fmt.Sprintf(`
 		SELECT
-		id,
-		name,
-		owner_id,
-		status,
-		priority,
-		creator_id,
-		created_at,
-		updated_at,
-		is_planned
+			id,
+			name,
+			owner_id,
+			status,
+			priority,
+			creator_id,
+			created_at,
+			updated_at,
+			is_planned
 		FROM story
 		WHERE id IN (%s)
 	`, idsStr)
@@ -70,16 +70,16 @@ func (s *Story) FindStoryByIDWithTx(ct context.Context, tx *transaction.Transact
 	story := entity.Story{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
-		id,
-		name,
-		owner_id,
-		status,
-		priority,
-		creator_id,
-		created_at,
-		updated_at,
-		is_planned
-		FROM story
+			id,
+			name,
+			owner_id,
+			status,
+			priority,
+			creator_id,
+			created_at,
+			updated_at,
+			is_planned
+			FROM story
 		WHERE id = $1
 	`, storyID).Scan(
 		&story.ID,
@@ -137,14 +137,14 @@ func (s *Story) UpdateStory(ct context.Context, tx *transaction.Transaction, sto
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE story
 		SET
-		name = $1,
-		owner_id = $2,
-		status = $3,
-		priority = $4,
-		creator_id = $5,
-		created_at = $6,
-		updated_at = $7,
-		is_planned = $8
+			name = $1,
+			owner_id = $2,
+			status = $3,
+			priority = $4,
+			creator_id = $5,
+			created_at = $6,
+			updated_at = $7,
+			is_planned = $8
 		WHERE id = $9;
 	`,
 		story.Name,
