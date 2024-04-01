@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
@@ -156,8 +157,17 @@ func (s *Story) UpdateStory(ct context.Context, storyID uint64, input UpdateStor
 		story.Status = input.Status
 		story.Priority = input.Priority
 		story.UpdatedAt = &now
+		updateStoryMutation := mutation.NewUpdateStory(
+			s.logger,
+			s.stateSyncer,
+			s.storyDao,
+			s.projectDao,
+			s.projectStoryRelationDao,
+			story,
+		)
 
-		return s.storyDao.UpdateStory(ct, tx, story)
+		rtTx.AppendMutation(updateStoryMutation)
+		return updateStoryMutation.Execute(ct, tx)
 	})
 
 	return story, transactionErr
