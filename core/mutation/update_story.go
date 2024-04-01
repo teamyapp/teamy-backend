@@ -16,10 +16,10 @@ type UpdateStory struct {
 	logger                  telemetry.Logger
 	stateSyncer             *realtime.StateSyncer
 	storyDao                dao.Story
-	id                      uint64
-	story                   entity.Story
 	projectDao              dao.Project
 	projectStoryRelationDao dao.ProjectStoryRelation
+	id                      uint64
+	story                   entity.Story
 	clientNotifiers         []*realtime.ClientNotifier
 	notifierPrepared        bool
 }
