@@ -41,6 +41,32 @@ func (p *ProjectStoryRelation) FindStoryIDsByProjectIDWithTx(ct context.Context,
 	return storyIDs, nil
 }
 
+func (p *ProjectStoryRelation) FindProjectIDsByStoryIDWithTx(ct context.Context, tx *transaction.Transaction, storyID uint64) ([]uint64, *errs.Error) {
+	projectIDs := []uint64{}
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			project_id
+		FROM project_story_relation
+		WHERE story_id = $1
+	`, storyID)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var projectID uint64
+		err := rows.Scan(&projectID)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		projectIDs = append(projectIDs, projectID)
+	}
+
+	return projectIDs, nil
+}
+
 func (p *ProjectStoryRelation) CreateProjectStoryRelation(ct context.Context, tx *transaction.Transaction, projectStoryRelation entity.ProjectStoryRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO project_story_relation (

@@ -105,7 +105,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	projectStoryRelation := sqldb.NewProjectStoryRelation(factory)
 	serviceProject := service.NewProject(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, team, phase, story, projectPhaseRelation, projectStoryRelation, user, task)
 	phaseStoryRelation := sqldb.NewPhaseStoryRelation(factory)
-	servicePhase := service.NewPhase(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, phaseStoryRelation)
+	servicePhase := service.NewPhase(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, projectStoryRelation, phaseStoryRelation)
 	serviceStory := service.NewStory(logger, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, story, projectStoryRelation, phaseStoryRelation, storyTaskRelation, user, task)
 	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceApp, serviceInvitation, serviceThread, serviceGroup, serviceRollout, serviceProject, servicePhase, serviceStory)
 	resolver := gql2.NewResolver(dependencies)

@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
@@ -43,6 +44,7 @@ type Phase struct {
 	phaseDao                dao.Phase
 	storyDao                dao.Story
 	projectPhaseRelationDao dao.ProjectPhaseRelation
+	projectStoryRelationDao dao.ProjectStoryRelation
 	phaseStoryRelationDao   dao.PhaseStoryRelation
 }
 
@@ -206,7 +208,18 @@ func (p *Phase) AddStoryToPhase(ct context.Context, phaseID uint64, storyID uint
 		now := time.Now()
 		story.IsPlanned = true
 		story.UpdatedAt = &now
-		err = p.storyDao.UpdateStory(ct, tx, story)
+
+		updateStoryMutation := mutation.NewUpdateStory(
+			p.logger,
+			p.stateSyncer,
+			p.storyDao,
+			p.projectDao,
+			p.projectStoryRelationDao,
+			story,
+		)
+
+		rtTx.AppendMutation(updateStoryMutation)
+		err = updateStoryMutation.Execute(ct, tx)
 		if err != nil {
 			return err
 		}
@@ -247,7 +260,18 @@ func (p *Phase) AddStoriesToPhase(ct context.Context, phaseID uint64, storyIDs [
 			now := time.Now()
 			story.IsPlanned = true
 			story.UpdatedAt = &now
-			err = p.storyDao.UpdateStory(ct, tx, story)
+
+			updateStoryMutation := mutation.NewUpdateStory(
+				p.logger,
+				p.stateSyncer,
+				p.storyDao,
+				p.projectDao,
+				p.projectStoryRelationDao,
+				story,
+			)
+
+			rtTx.AppendMutation(updateStoryMutation)
+			err = updateStoryMutation.Execute(ct, tx)
 			if err != nil {
 				return err
 			}
@@ -288,7 +312,18 @@ func (p *Phase) RemoveStoryFromPhase(ct context.Context, phaseID uint64, storyID
 		now := time.Now()
 		story.IsPlanned = false
 		story.UpdatedAt = &now
-		err = p.storyDao.UpdateStory(ct, tx, story)
+
+		updateStoryMutation := mutation.NewUpdateStory(
+			p.logger,
+			p.stateSyncer,
+			p.storyDao,
+			p.projectDao,
+			p.projectStoryRelationDao,
+			story,
+		)
+
+		rtTx.AppendMutation(updateStoryMutation)
+		err = updateStoryMutation.Execute(ct, tx)
 		if err != nil {
 			return err
 		}
@@ -329,15 +364,22 @@ func (p *Phase) RemoveStoriesFromPhase(ct context.Context, phaseID uint64, story
 			now := time.Now()
 			story.IsPlanned = false
 			story.UpdatedAt = &now
-			err = p.storyDao.UpdateStory(ct, tx, story)
+			updateStoryMutation := mutation.NewUpdateStory(
+				p.logger,
+				p.stateSyncer,
+				p.storyDao,
+				p.projectDao,
+				p.projectStoryRelationDao,
+				story,
+			)
+
+			rtTx.AppendMutation(updateStoryMutation)
+			err = updateStoryMutation.Execute(ct, tx)
 			if err != nil {
 				return err
 			}
 
-			err = p.phaseStoryRelationDao.DeletePhaseStoryRelation(ct, tx, phaseID, storyID)
-			if err != nil {
-				return err
-			}
+			return p.phaseStoryRelationDao.DeletePhaseStoryRelation(ct, tx, phaseID, storyID)
 		}
 
 		return nil
@@ -357,6 +399,7 @@ func NewPhase(
 	phaseDao dao.Phase,
 	storyDao dao.Story,
 	projectPhaseRelationDao dao.ProjectPhaseRelation,
+	projectStoryRelationDao dao.ProjectStoryRelation,
 	phaseStoryRelationDao dao.PhaseStoryRelation,
 ) *Phase {
 	return &Phase{
@@ -370,6 +413,7 @@ func NewPhase(
 		phaseDao:                phaseDao,
 		storyDao:                storyDao,
 		projectPhaseRelationDao: projectPhaseRelationDao,
+		projectStoryRelationDao: projectStoryRelationDao,
 		phaseStoryRelationDao:   phaseStoryRelationDao,
 	}
 }

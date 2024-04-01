@@ -20,4 +20,5 @@ const (
 	ClientCollectionType               CollectionType = "Client"
 	TaskActivityCollectionType         CollectionType = "TaskActivity"
 	SprintParticipantCollectionType    CollectionType = "SprintParticipant"
+	StoryCollectionType                CollectionType = "Story"
 )
