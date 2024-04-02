@@ -640,8 +640,8 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 			return err
 		}
 
-		if !task.IsPlanned {
-			task.IsPlanned = true
+		if !task.IsScheduled {
+			task.IsScheduled = true
 			updateTaskMutation := mutation.NewUpdateTask(
 				s.logger,
 				s.stateSyncer,
@@ -903,7 +903,7 @@ func (s Sprint) copyTaskToSprint(
 		Goal:             task.Goal,
 		Context:          task.Context,
 		Status:           task.Status,
-		IsPlanned:        task.IsPlanned,
+		IsScheduled:      task.IsScheduled,
 		CreatorUserID:    task.CreatorUserID,
 		OwningTeamID:     task.OwningTeamID,
 		Effort:           task.Effort,
@@ -944,8 +944,8 @@ func (s Sprint) copyTaskToSprint(
 		return entity.Task{}, err
 	}
 
-	if !task.IsPlanned {
-		task.IsPlanned = true
+	if !task.IsScheduled {
+		task.IsScheduled = true
 		updateTaskMutation := mutation.NewUpdateTask(
 			s.logger,
 			s.stateSyncer,
@@ -1064,7 +1064,7 @@ func (s Sprint) removeTaskFromSprint(
 
 	//if there is no other sprint that the task can move to,  put it into backlog
 	if len(sprintIDs) <= 1 {
-		task.IsPlanned = false
+		task.IsScheduled = false
 		updateTaskMutation := mutation.NewUpdateTask(
 			s.logger,
 			s.stateSyncer,

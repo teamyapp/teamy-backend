@@ -230,7 +230,7 @@ type Task {
 	owner: User
 	owningTeam: Team!
 	status: TaskStatus!
-	isPlanned: Boolean!
+	isScheduled: Boolean!
 	comments: Thread!
 	createdAt: Time!
 	updatedAt: Time
@@ -563,7 +563,7 @@ input TaskFilter {
 	ownerId: ID
 	goalContains: String
 	status: TaskStatus
-	isPlanned: Boolean
+	IsScheduled: Boolean
 }
 
 input TeamFilter {
@@ -640,7 +640,7 @@ input CreateTaskInput {
 	context: String
 	ownerUserId: ID
 	dueAt: Time
-	isPlanned: Boolean!
+	IsScheduled: Boolean!
 }
 
 input UpdateTaskInput {

@@ -310,7 +310,7 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 			taskInput := CreateTaskInput{
 				Goal:        "Unit test",
 				OwnerUserID: &ownerUserID,
-				IsPlanned:   true,
+				IsScheduled: true,
 				DueAt:       &now,
 			}
 			newTask, internalErr := taskLinkTestRef.taskService.CreateTask(ct, teamID, taskInput)

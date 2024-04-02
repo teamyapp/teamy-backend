@@ -176,7 +176,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 			taskInput := CreateTaskInput{
 				Goal:        "Unit test",
 				OwnerUserID: &ownerUserID,
-				IsPlanned:   true,
+				IsScheduled: true,
 				DueAt:       &now,
 			}
 			newTask, internalErr := taskTestRef.taskService.CreateTask(ct, teamID, taskInput)
@@ -193,7 +193,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 			require.Equal(t, taskInput.OwnerUserID, newTask.OwnerUserID)
 			require.Equal(t, taskInput.DueAt, newTask.DueAt)
 			require.Nil(t, newTask.Effort)
-			require.Equal(t, taskInput.IsPlanned, newTask.IsPlanned)
+			require.Equal(t, taskInput.IsScheduled, newTask.IsScheduled)
 			require.Equal(t, entity.TaskStatusTodo, newTask.Status)
 			require.Equal(t, uint64(1), newTask.CommentsThreadID)
 			require.NotNil(t, newTask.CreatedAt)

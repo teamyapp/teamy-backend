@@ -10,7 +10,7 @@ type TaskFilter struct {
 	OwnerID      *graphql.ID
 	GoalContains *string
 	Status       *entity.TaskStatus
-	IsPlanned    *bool
+	IsScheduled  *bool
 }
 
 type TeamFilter struct {
