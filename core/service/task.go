@@ -32,7 +32,7 @@ type CreateTaskInput struct {
 	Goal        string
 	Context     *string
 	OwnerUserID *uint64
-	IsPlanned   bool
+	IsScheduled bool
 	DueAt       *time.Time
 }
 
@@ -43,7 +43,7 @@ type createTaskInput struct {
 	CreatorUserID uint64
 	OwnerUserID   *uint64
 	Status        entity.TaskStatus
-	IsPlanned     bool
+	IsScheduled   bool
 	Effort        *time.Duration
 	UpdatedAt     *time.Time
 	DeliveredAt   *time.Time
@@ -328,7 +328,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 			Goal:             taskInput.Goal,
 			Context:          taskInput.Context,
 			Status:           taskInput.Status,
-			IsPlanned:        taskInput.IsPlanned,
+			IsScheduled:      taskInput.IsScheduled,
 			CreatorUserID:    taskInput.CreatorUserID,
 			OwningTeamID:     teamID,
 			Effort:           taskInput.Effort,
@@ -392,7 +392,7 @@ func (t Task) CreateTask(ct context.Context, teamID uint64, taskInput CreateTask
 		}
 	}
 	input := createTaskInput{
-		IsPlanned:     taskInput.IsPlanned,
+		IsScheduled:   taskInput.IsScheduled,
 		Goal:          taskInput.Goal,
 		Context:       taskInput.Context,
 		Status:        entity.TaskStatusTodo,
