@@ -493,6 +493,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				CreatorUserID: 1,
 				Status:        entity.TaskStatusTodo,
 				IsScheduled:   true,
+				IsPlanned:     false,
 				OwnerUserID:   &testCase.requesterUserID,
 				Effort:        &effort,
 			}
@@ -525,6 +526,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 			require.Equal(t, deletedSprint.StartAt, sprint.StartAt)
 			require.Equal(t, deletedSprint.EndAt, sprint.EndAt)
 			require.Equal(t, updatedTask.IsScheduled, false)
+			require.Equal(t, updatedTask.IsPlanned, false)
 			require.Equal(t, updatedTask.Status, entity.TaskStatusTodo)
 		})
 	}
