@@ -98,6 +98,10 @@ func (t Task) IsScheduled(ct context.Context) bool {
 	return t.task.IsScheduled
 }
 
+func (t Task) IsPlanned(ct context.Context) bool {
+	return t.task.IsPlanned
+}
+
 func (t Task) Comments(ct context.Context) Thread {
 	return newThread(t.deps, t.task.CommentsThreadID)
 }

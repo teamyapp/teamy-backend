@@ -11,6 +11,7 @@ type TaskFilter struct {
 	GoalContains *string
 	Status       *entity.TaskStatus
 	IsScheduled  *bool
+	IsPlanned    *bool
 }
 
 type TeamFilter struct {

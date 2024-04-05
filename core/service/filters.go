@@ -15,6 +15,7 @@ type TaskFilter struct {
 	GoalContains *string
 	Status       *entity.TaskStatus
 	IsScheduled  *bool
+	IsPlanned    *bool
 }
 
 type SprintFilter struct {
@@ -50,6 +51,10 @@ func filterTasks(tasks []entity.Task, filter TaskFilter) []entity.Task {
 		}
 
 		if filter.IsScheduled != nil && *filter.IsScheduled != task.IsScheduled {
+			return false
+		}
+
+		if filter.IsPlanned != nil && *filter.IsPlanned != task.IsPlanned {
 			return false
 		}
 

@@ -105,6 +105,7 @@ func fromGraphQLTaskFilterPtr(gqlTaskFilter *TaskFilter) (*service.TaskFilter, e
 		GoalContains: gqlTaskFilter.GoalContains,
 		Status:       gqlTaskFilter.Status,
 		IsScheduled:  gqlTaskFilter.IsScheduled,
+		IsPlanned:    gqlTaskFilter.IsPlanned,
 	}, nil
 }
 
