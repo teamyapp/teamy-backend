@@ -226,7 +226,7 @@ func (s *Story) AddTaskToStory(ct context.Context, storyID uint64, taskID uint64
 			return err
 		}
 
-		_, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+		task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			return err
 		}
@@ -236,7 +236,28 @@ func (s *Story) AddTaskToStory(ct context.Context, storyID uint64, taskID uint64
 			TaskID:  taskID,
 		}
 
-		return s.storyTaskRelationDao.CreateStoryTaskRelation(ct, tx, storyTaskRelation)
+		err = s.storyTaskRelationDao.CreateStoryTaskRelation(ct, tx, storyTaskRelation)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		task.UpdatedAt = &now
+		task.IsPlanned = true
+		updateTaskMutation := mutation.NewUpdateTask(
+			s.logger,
+			s.stateSyncer,
+			s.taskDao,
+			task,
+		)
+
+		err = updateTaskMutation.Execute(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		rtTx.AppendMutation(updateTaskMutation)
+		return nil
 	})
 
 	return story, transactionErr
@@ -259,7 +280,7 @@ func (s *Story) AddTasksToStory(ct context.Context, storyID uint64, taskIDs []ui
 		}
 
 		for _, taskID := range taskIDs {
-			_, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+			task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 			if err != nil {
 				return err
 			}
@@ -273,6 +294,23 @@ func (s *Story) AddTasksToStory(ct context.Context, storyID uint64, taskIDs []ui
 			if err != nil {
 				return err
 			}
+
+			now := time.Now()
+			task.UpdatedAt = &now
+			task.IsPlanned = true
+			updateTaskMutation := mutation.NewUpdateTask(
+				s.logger,
+				s.stateSyncer,
+				s.taskDao,
+				task,
+			)
+
+			err = updateTaskMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			rtTx.AppendMutation(updateTaskMutation)
 		}
 
 		return nil
@@ -292,7 +330,7 @@ func (s *Story) RemoveTaskFromStory(ct context.Context, storyID uint64, taskID u
 
 	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
-		_, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+		task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 		if err != nil {
 			return err
 		}
@@ -302,7 +340,28 @@ func (s *Story) RemoveTaskFromStory(ct context.Context, storyID uint64, taskID u
 			return err
 		}
 
-		return s.storyTaskRelationDao.DeleteStoryTaskRelation(ct, tx, storyID, taskID)
+		err = s.storyTaskRelationDao.DeleteStoryTaskRelation(ct, tx, storyID, taskID)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		task.UpdatedAt = &now
+		task.IsPlanned = false
+
+		updateTaskMutation := mutation.NewUpdateTask(
+			s.logger,
+			s.stateSyncer,
+			s.taskDao,
+			task,
+		)
+		err = updateTaskMutation.Execute(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		rtTx.AppendMutation(updateTaskMutation)
+		return nil
 	})
 
 	return story, transactionErr
@@ -325,7 +384,7 @@ func (s *Story) RemoveTasksFromStory(ct context.Context, storyID uint64, taskIDs
 		}
 
 		for _, taskID := range taskIDs {
-			_, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+			task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 			if err != nil {
 				return err
 			}
@@ -334,6 +393,23 @@ func (s *Story) RemoveTasksFromStory(ct context.Context, storyID uint64, taskIDs
 			if err != nil {
 				return err
 			}
+
+			now := time.Now()
+			task.UpdatedAt = &now
+			task.IsPlanned = false
+			updateTaskMutation := mutation.NewUpdateTask(
+				s.logger,
+				s.stateSyncer,
+				s.taskDao,
+				task,
+			)
+
+			err = updateTaskMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			rtTx.AppendMutation(updateTaskMutation)
 		}
 
 		return nil

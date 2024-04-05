@@ -904,6 +904,7 @@ func (s Sprint) copyTaskToSprint(
 		Context:          task.Context,
 		Status:           task.Status,
 		IsScheduled:      task.IsScheduled,
+		IsPlanned:        task.IsPlanned,
 		CreatorUserID:    task.CreatorUserID,
 		OwningTeamID:     task.OwningTeamID,
 		Effort:           task.Effort,
