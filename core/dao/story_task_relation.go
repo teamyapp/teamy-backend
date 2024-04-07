@@ -10,6 +10,7 @@ import (
 
 type StoryTaskRelation interface {
 	FindTaskIDsByStoryIDWithTx(ct context.Context, tx *transaction.Transaction, storyID uint64) ([]uint64, *errs.Error)
+	FindStoryIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error)
 	CreateStoryTaskRelation(ct context.Context, tx *transaction.Transaction, storyTaskRelation entity.StoryTaskRelation) *errs.Error
 	DeleteStoryTaskRelation(ct context.Context, tx *transaction.Transaction, storyID uint64, taskID uint64) *errs.Error
 	DeleteStoryTaskRelationsByStoryID(ct context.Context, tx *transaction.Transaction, storyID uint64) *errs.Error

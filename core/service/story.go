@@ -345,22 +345,30 @@ func (s *Story) RemoveTaskFromStory(ct context.Context, storyID uint64, taskID u
 			return err
 		}
 
-		now := time.Now()
-		task.UpdatedAt = &now
-		task.IsPlanned = false
-
-		updateTaskMutation := mutation.NewUpdateTask(
-			s.logger,
-			s.stateSyncer,
-			s.taskDao,
-			task,
-		)
-		err = updateTaskMutation.Execute(ct, tx)
+		storyIDs, err := s.storyTaskRelationDao.FindStoryIDsByTaskIDWithTx(ct, tx, taskID)
 		if err != nil {
 			return err
 		}
 
-		rtTx.AppendMutation(updateTaskMutation)
+		if len(storyIDs) == 0 {
+			now := time.Now()
+			task.UpdatedAt = &now
+			task.IsPlanned = false
+
+			updateTaskMutation := mutation.NewUpdateTask(
+				s.logger,
+				s.stateSyncer,
+				s.taskDao,
+				task,
+			)
+			err = updateTaskMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			rtTx.AppendMutation(updateTaskMutation)
+		}
+
 		return nil
 	})
 
@@ -394,22 +402,29 @@ func (s *Story) RemoveTasksFromStory(ct context.Context, storyID uint64, taskIDs
 				return err
 			}
 
-			now := time.Now()
-			task.UpdatedAt = &now
-			task.IsPlanned = false
-			updateTaskMutation := mutation.NewUpdateTask(
-				s.logger,
-				s.stateSyncer,
-				s.taskDao,
-				task,
-			)
-
-			err = updateTaskMutation.Execute(ct, tx)
+			storyIDs, err := s.storyTaskRelationDao.FindStoryIDsByTaskIDWithTx(ct, tx, taskID)
 			if err != nil {
 				return err
 			}
 
-			rtTx.AppendMutation(updateTaskMutation)
+			if len(storyIDs) == 0 {
+				now := time.Now()
+				task.UpdatedAt = &now
+				task.IsPlanned = false
+				updateTaskMutation := mutation.NewUpdateTask(
+					s.logger,
+					s.stateSyncer,
+					s.taskDao,
+					task,
+				)
+
+				err = updateTaskMutation.Execute(ct, tx)
+				if err != nil {
+					return err
+				}
+
+				rtTx.AppendMutation(updateTaskMutation)
+			}
 		}
 
 		return nil
