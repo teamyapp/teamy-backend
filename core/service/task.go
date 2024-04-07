@@ -622,11 +622,11 @@ func (t Task) DeleteTask(ct context.Context, taskID uint64) (entity.Task, *errs.
 			if internalErr != nil {
 				return internalErr
 			}
+		}
 
-			internalErr = t.storyTaskRelationDao.DeleteStoryTaskRelationsByTaskID(ct, tx, taskID)
-			if internalErr != nil {
-				return internalErr
-			}
+		internalErr = t.storyTaskRelationDao.DeleteStoryTaskRelationsByTaskID(ct, tx, taskID)
+		if internalErr != nil {
+			return internalErr
 		}
 
 		awaitForTaskIDs, internalErr := t.taskAwaitForRelationDao.FindAwaitForTaskIDsWithTx(ct, tx, taskID)
