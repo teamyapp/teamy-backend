@@ -417,7 +417,6 @@ func (s *Story) RemoveTasksFromStory(ct context.Context, storyID uint64, taskIDs
 					s.taskDao,
 					task,
 				)
-
 				err = updateTaskMutation.Execute(ct, tx)
 				if err != nil {
 					return err
