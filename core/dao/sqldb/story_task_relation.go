@@ -41,6 +41,32 @@ func (s *StoryTaskRelation) FindTaskIDsByStoryIDWithTx(ct context.Context, tx *t
 	return taskIDs, nil
 }
 
+func (s *StoryTaskRelation) FindStoryIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
+	storyIDs := []uint64{}
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			story_id
+		FROM story_task_relation
+		WHERE task_id = $1
+	`, taskID)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var storyID uint64
+		err := rows.Scan(&storyID)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		storyIDs = append(storyIDs, storyID)
+	}
+
+	return storyIDs, nil
+}
+
 func (s *StoryTaskRelation) CreateStoryTaskRelation(ct context.Context, tx *transaction.Transaction, storyTaskRelation entity.StoryTaskRelation) *errs.Error {
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO story_task_relation (

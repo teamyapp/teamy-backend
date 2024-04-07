@@ -36,6 +36,28 @@ func (s StoryTaskRelation) FindTaskIDsByStoryIDWithTx(ct context.Context, tx *tr
 	return taskIDs, err
 }
 
+func (s StoryTaskRelation) FindStoryIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
+	var storyIDs []uint64
+	err := tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := s.db.GetTable(StoryTaskRelationTableName)
+			if err != nil {
+				return err
+			}
+
+			for _, rawRow := range table.Rows {
+				currStoryTaskRelation := rawRow.(entity.StoryTaskRelation)
+				if currStoryTaskRelation.TaskID == taskID {
+					storyIDs = append(storyIDs, currStoryTaskRelation.StoryID)
+				}
+			}
+
+			return nil
+		},
+	})
+	return storyIDs, err
+}
+
 func (s StoryTaskRelation) CreateStoryTaskRelation(ct context.Context, tx *transaction.Transaction, storyTaskRelation entity.StoryTaskRelation) *errs.Error {
 	return tx.ExecuteCommand(transaction.Command{
 		Execute: func() *errs.Error {
@@ -46,8 +68,8 @@ func (s StoryTaskRelation) CreateStoryTaskRelation(ct context.Context, tx *trans
 
 			for _, rawRow := range table.Rows {
 				currStoryTaskRelation := rawRow.(entity.StoryTaskRelation)
-				if currStoryTaskRelation.StoryID == storyTaskRelation.StoryID && 
-				currStoryTaskRelation.TaskID == storyTaskRelation.TaskID {
+				if currStoryTaskRelation.StoryID == storyTaskRelation.StoryID &&
+					currStoryTaskRelation.TaskID == storyTaskRelation.TaskID {
 					return &errs.Error{
 						Code:    errs.AlreadyExists,
 						Message: fmt.Sprintf("row already exist: storyId=%v taskId=%v", storyTaskRelation.StoryID, storyTaskRelation.TaskID),
@@ -66,9 +88,9 @@ func (s StoryTaskRelation) CreateStoryTaskRelation(ct context.Context, tx *trans
 
 			for index, rawRow := range table.Rows {
 				currStoryTaskRelation := rawRow.(entity.StoryTaskRelation)
-				if currStoryTaskRelation.StoryID == storyTaskRelation.StoryID && 
-				currStoryTaskRelation.TaskID == storyTaskRelation.TaskID {
-					table.Rows = append(table.Rows[: index], table.Rows[index+1:]...)
+				if currStoryTaskRelation.StoryID == storyTaskRelation.StoryID &&
+					currStoryTaskRelation.TaskID == storyTaskRelation.TaskID {
+					table.Rows = append(table.Rows[:index], table.Rows[index+1:]...)
 					return nil
 				}
 			}
@@ -91,8 +113,8 @@ func (s StoryTaskRelation) DeleteStoryTaskRelation(ct context.Context, tx *trans
 
 			for index, rawRow := range table.Rows {
 				currStoryTaskRelation := rawRow.(entity.StoryTaskRelation)
-				if currStoryTaskRelation.StoryID == storyID && 
-				currStoryTaskRelation.TaskID == taskID {
+				if currStoryTaskRelation.StoryID == storyID &&
+					currStoryTaskRelation.TaskID == taskID {
 					table.Rows = append(table.Rows[:index], table.Rows[index+1:]...)
 					return nil
 				}
@@ -111,8 +133,8 @@ func (s StoryTaskRelation) DeleteStoryTaskRelation(ct context.Context, tx *trans
 
 			for _, rawRow := range table.Rows {
 				currStoryTaskRelation := rawRow.(entity.StoryTaskRelation)
-				if currStoryTaskRelation.StoryID == storyID && 
-				currStoryTaskRelation.TaskID == taskID {
+				if currStoryTaskRelation.StoryID == storyID &&
+					currStoryTaskRelation.TaskID == taskID {
 					return &errs.Error{
 						Code:    errs.AlreadyExists,
 						Message: fmt.Sprintf("row already exist: storyId=%v taskId=%v", storyID, taskID),
@@ -143,10 +165,10 @@ func (s StoryTaskRelation) DeleteStoryTaskRelationsByStoryID(ct context.Context,
 				if currStoryTaskRelation.StoryID == storyID {
 					continue
 				}
-				
+
 				rows = append(rows, currStoryTaskRelation)
 			}
-			
+
 			table.Rows = rows
 			return nil
 		},
@@ -163,7 +185,7 @@ func (s StoryTaskRelation) DeleteStoryTaskRelationsByStoryID(ct context.Context,
 					rows = append(rows, currStoryTaskRelation)
 				}
 			}
-			
+
 			table.Rows = rows
 			return nil
 		},
@@ -184,10 +206,10 @@ func (s StoryTaskRelation) DeleteStoryTaskRelationsByTaskID(ct context.Context, 
 				if currStoryTaskRelation.TaskID == taskID {
 					continue
 				}
-				
+
 				rows = append(rows, currStoryTaskRelation)
 			}
-			
+
 			table.Rows = rows
 			return nil
 		},
@@ -204,7 +226,7 @@ func (s StoryTaskRelation) DeleteStoryTaskRelationsByTaskID(ct context.Context, 
 					rows = append(rows, currStoryTaskRelation)
 				}
 			}
-			
+
 			table.Rows = rows
 			return nil
 		},
