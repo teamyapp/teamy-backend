@@ -16,6 +16,52 @@ type Project struct {
 
 var _ dao.Project = (*Project)(nil)
 
+func (p *Project) FindProjectsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Project, *errs.Error) {
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			id,
+			name,
+			expected_start_at,
+			actual_start_at,
+			expected_end_at,
+			actual_end_at,
+			creator_id,
+			created_at,
+			updated_at,
+			team_id
+		FROM project;
+	`)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+
+	var projects []entity.Project
+	for rows.Next() {
+		project := entity.Project{}
+		err := rows.Scan(
+			&project.ID,
+			&project.Name,
+			&project.ExpectedStartAt,
+			&project.ActualStartAt,
+			&project.ExpectedEndAt,
+			&project.ActualEndAt,
+			&project.CreatorID,
+			&project.CreatedAt,
+			&project.UpdatedAt,
+			&project.TeamID,
+		)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		projects = append(projects, project)
+	}
+
+	return projects, nil
+}
+
 func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Project, *errs.Error) {
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT

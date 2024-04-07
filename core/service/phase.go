@@ -48,6 +48,31 @@ type Phase struct {
 	phaseStoryRelationDao   dao.PhaseStoryRelation
 }
 
+func (p *Phase) FindPhases(ct context.Context, phaseFilter *PhaseFilter) ([]entity.Phase, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		p.logger,
+		p.transactionFactory,
+		p.stateSyncer,
+		ct,
+	)
+
+	var phases []entity.Phase
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		phases, err := p.phaseDao.FindPhasesWithTx(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		if phaseFilter != nil {
+			phases = filterPhases(phases, *phaseFilter)
+		}
+
+		return nil
+	})
+
+	return phases, transactionErr
+}
+
 func (p *Phase) FindStoriesByPhaseID(ct context.Context, phaseID uint64) ([]entity.Story, *errs.Error) {
 	txCtx := transaction.NewTransactionsContext(
 		p.logger,

@@ -9,6 +9,7 @@ import (
 )
 
 type Project interface {
+	FindProjectsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Project, *errs.Error)
 	FindProjectByIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) (entity.Project, *errs.Error)
 	FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Transaction, projectIDs []uint64) ([]entity.Project, *errs.Error)
 	FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Project, *errs.Error)

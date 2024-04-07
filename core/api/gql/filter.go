@@ -18,6 +18,18 @@ type TeamFilter struct {
 	TeamID *graphql.ID
 }
 
+type ProjectFilter struct {
+	ProjectID *graphql.ID
+}
+
+type PhaseFilter struct {
+	PhaseID *graphql.ID
+}
+
+type StoryFilter struct {
+	StoryID *graphql.ID
+}
+
 type InvitationFilter struct {
 	InvitationID *graphql.ID
 	Code         *string

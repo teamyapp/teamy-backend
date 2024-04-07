@@ -16,6 +16,49 @@ type Story struct {
 
 var _ dao.Story = (*Story)(nil)
 
+func (s *Story) FindStoriesWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Story, *errs.Error) {
+	stories := []entity.Story{}
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			id,
+			name,
+			owner_id,
+			status,
+			priority,
+			creator_id,
+			created_at,
+			updated_at,
+			is_planned
+		FROM story
+	`)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		story := entity.Story{}
+		err := rows.Scan(
+			&story.ID,
+			&story.Name,
+			&story.OwnerID,
+			&story.Status,
+			&story.Priority,
+			&story.CreatorID,
+			&story.CreatedAt,
+			&story.UpdatedAt,
+			&story.IsPlanned,
+		)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		stories = append(stories, story)
+	}
+
+	return stories, nil
+}
+
 func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Transaction, storyIDs []uint64) ([]entity.Story, *errs.Error) {
 	if len(storyIDs) == 0 {
 		return []entity.Story{}, nil

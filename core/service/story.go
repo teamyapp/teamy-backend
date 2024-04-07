@@ -47,6 +47,31 @@ type Story struct {
 	taskDao                 dao.Task
 }
 
+func (s *Story) FindStories(ct context.Context, storyFilter *StoryFilter) ([]entity.Story, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		s.logger,
+		s.transactionFactory,
+		s.stateSyncer,
+		ct,
+	)
+
+	var stories []entity.Story
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		stories, err := s.storyDao.FindStoriesWithTx(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		if storyFilter != nil {
+			stories = filterStories(stories, *storyFilter)
+		}
+
+		return nil
+	})
+
+	return stories, transactionErr
+}
+
 func (s *Story) FindTasksByStoryID(ct context.Context, storyID uint64) ([]entity.Task, *errs.Error) {
 	txCtx := transaction.NewTransactionsContext(
 		s.logger,

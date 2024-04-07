@@ -48,6 +48,32 @@ type Project struct {
 	taskDao                 dao.Task
 }
 
+func (p *Project) FindProjects(ct context.Context, projectFilter *ProjectFilter) ([]entity.Project, *errs.Error) {
+	txCtx := transaction.NewTransactionsContext(
+		p.logger,
+		p.transactionFactory,
+		p.stateSyncer,
+		ct,
+	)
+
+	var projects []entity.Project
+	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var err *errs.Error
+		projects, err = p.projectDao.FindProjectsWithTx(ct, tx)
+		if err != nil {
+			return err
+		}
+
+		if projectFilter != nil {
+			projects = filterProjects(projects, *projectFilter)
+		}
+
+		return err
+	})
+
+	return projects, transactionErr
+}
+
 func (p *Project) FindProjectsByTeamID(ct context.Context, teamID uint64) ([]entity.Project, *errs.Error) {
 	txCtx := transaction.NewTransactionsContext(
 		p.logger,

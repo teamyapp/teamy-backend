@@ -9,6 +9,7 @@ import (
 )
 
 type Phase interface {
+	FindPhasesWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Phase, *errs.Error)
 	FindPhasesByIDsWithTx(ct context.Context, tx *transaction.Transaction, phaseIDs []uint64) ([]entity.Phase, *errs.Error)
 	FindPhaseByIDWithTx(ct context.Context, tx *transaction.Transaction, phaseID uint64) (entity.Phase, *errs.Error)
 	CreatePhase(ct context.Context, tx *transaction.Transaction, phase entity.Phase) *errs.Error

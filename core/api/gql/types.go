@@ -152,6 +152,52 @@ func fromGraphQLTeamFilterPtr(teamFilter *TeamFilter) (*service.TeamFilter, erro
 	}, nil
 }
 
+func fromGraphQLPhaseFilterPtr(phaseFilter *PhaseFilter) (*service.PhaseFilter, error) {
+	if phaseFilter == nil {
+		return nil, nil
+	}
+
+	phaseID, err := fromGraphQLIDPtr(phaseFilter.PhaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.PhaseFilter{
+		PhaseID: phaseID,
+	}, nil
+}
+
+func fromGraphQLStoryFilterPtr(storyFilter *StoryFilter) (*service.StoryFilter, error) {
+	if storyFilter == nil {
+		return nil, nil
+	}
+
+	storyID, err := fromGraphQLIDPtr(storyFilter.StoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.StoryFilter{
+		StoryID: storyID,
+	}, nil
+}
+
+func fromGraphQLProjectFilterPtr(projectFilter *ProjectFilter) (*service.ProjectFilter, error) {
+	if projectFilter == nil {
+		return nil, nil
+	}
+
+	projectID, err := fromGraphQLIDPtr(projectFilter.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.ProjectFilter{
+		ProjectID: projectID,
+	}, nil
+
+}
+
 func fromGraphQLInvitationFilterPtr(filter *InvitationFilter) (*service.InvitationFilter, error) {
 	if filter == nil {
 		return nil, nil
