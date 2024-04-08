@@ -8,6 +8,9 @@ type Query {
 	user(userId: ID!): User!
 	tasks(filter: TaskFilter): [Task!]!
 	teams(filter: TeamFilter): [Team!]!
+	projects(filter: ProjectFilter): [Project!]!
+	phases(filter: PhaseFilter): [Phase!]!
+	stories(filter: StoryFilter): [Story!]!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
 	apps(filter: AppFilter): [App!]!
@@ -570,6 +573,18 @@ input TaskFilter {
 
 input TeamFilter {
 	teamId: ID
+}
+
+input ProjectFilter {
+	projectId: ID
+}
+
+input PhaseFilter {
+	phaseId: ID
+}
+
+input StoryFilter {
+	storyId: ID
 }
 
 input InvitationFilter {

@@ -16,6 +16,51 @@ type Phase struct {
 
 var _ dao.Phase = (*Phase)(nil)
 
+func (p *Phase) FindPhasesWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Phase, *errs.Error) {
+	phases := []entity.Phase{}
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			id,
+			name,
+			status,
+			expected_start_at,
+			actual_start_at,
+			expected_end_at,
+			actual_end_at,
+			creator_id,
+			created_at,
+			updated_at
+		FROM phase
+	`)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var phase entity.Phase
+		err := rows.Scan(
+			&phase.ID,
+			&phase.Name,
+			&phase.Status,
+			&phase.ExpectedStartAt,
+			&phase.ActualStartAt,
+			&phase.ExpectedEndAt,
+			&phase.ActualEndAt,
+			&phase.CreatorID,
+			&phase.CreatedAt,
+			&phase.UpdatedAt,
+		)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		phases = append(phases, phase)
+	}
+
+	return phases, nil
+}
+
 func (p *Phase) FindPhaseByIDWithTx(ct context.Context, tx *transaction.Transaction, phaseID uint64) (entity.Phase, *errs.Error) {
 	phase := entity.Phase{}
 	err := tx.SQLTx().QueryRowContext(ct, `

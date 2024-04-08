@@ -9,6 +9,7 @@ import (
 )
 
 type Story interface {
+	FindStoriesWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Story, *errs.Error)
 	FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Transaction, storyIDs []uint64) ([]entity.Story, *errs.Error)
 	FindStoryByIDWithTx(ct context.Context, tx *transaction.Transaction, storyID uint64) (entity.Story, *errs.Error)
 	CreateStory(ct context.Context, tx *transaction.Transaction, story entity.Story) *errs.Error
