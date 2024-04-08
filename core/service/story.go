@@ -57,7 +57,8 @@ func (s *Story) FindStories(ct context.Context, storyFilter *StoryFilter) ([]ent
 
 	var stories []entity.Story
 	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		stories, err := s.storyDao.FindStoriesWithTx(ct, tx)
+		var err *errs.Error
+		stories, err = s.storyDao.FindStoriesWithTx(ct, tx)
 		if err != nil {
 			return err
 		}

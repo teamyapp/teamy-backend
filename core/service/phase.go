@@ -58,7 +58,8 @@ func (p *Phase) FindPhases(ct context.Context, phaseFilter *PhaseFilter) ([]enti
 
 	var phases []entity.Phase
 	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		phases, err := p.phaseDao.FindPhasesWithTx(ct, tx)
+		var err *errs.Error
+		phases, err = p.phaseDao.FindPhasesWithTx(ct, tx)
 		if err != nil {
 			return err
 		}
