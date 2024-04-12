@@ -24,6 +24,7 @@ import (
 type CreateTaskLinkInput struct {
 	TaskID       uint64
 	Title        string
+	PreviewTitle string
 	URL          string
 	IconURL      *string
 	IconHoverURL *string
@@ -112,6 +113,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		ID:           genTaskLinkIDRes.UniqueNumber,
 		TaskID:       taskLinkEntity.TaskID,
 		Title:        taskLinkEntity.Title,
+		PreviewTitle: taskLinkEntity.PreviewTitle,
 		URL:          taskLinkEntity.URL,
 		IconURL:      taskLinkEntity.IconURL,
 		IconHoverURL: taskLinkEntity.IconHoverURL,
