@@ -880,8 +880,8 @@ func (a AppAPI) createPullRequestTaskRelation(
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       taskID,
-		Title:        "View pull request on Github",
-		PreviewTitle: pullRequestTitle,
+		Title:        pullRequestTitle,
+		PreviewTitle: "View pull request on Github",
 		Url:          pullRequestURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
@@ -1596,8 +1596,8 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       createTaskRes.TaskId,
-		Title:        "View pull request on Github",
-		PreviewTitle: prEvt.PullRequest.Title,
+		Title:        prEvt.PullRequest.Title,
+		PreviewTitle: "View pull request on Github",
 		Url:          prEvt.PullRequest.HtmlURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
