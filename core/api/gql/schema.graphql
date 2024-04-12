@@ -251,6 +251,7 @@ type TaskLink {
 	id: ID!
 	taskId: ID!
 	title: String!
+	previewTitle: String!
 	url: String!
 	iconUrl: String
 	iconHoverUrl: String

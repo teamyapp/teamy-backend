@@ -874,12 +874,14 @@ func (a AppAPI) createPullRequestTaskRelation(
 	automaticTracking bool,
 	pullRequestURL string,
 	pullRequestNodeID string,
+	pullRequestTitle string,
 ) *errs.Error {
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       taskID,
-		Title:        "View pull request on Github",
+		Title:        pullRequestTitle,
+		PreviewTitle: "View pull request on Github",
 		Url:          pullRequestURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
@@ -1072,7 +1074,7 @@ func (a AppAPI) createTasksForPullRequest(ct context.Context, teamID uint64, evt
 			return err
 		}
 
-		err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID)
+		err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID, prEvt.PullRequest.Title)
 		if err != nil {
 			return err
 		}
@@ -1137,7 +1139,9 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 				mentionedTask.TaskId,
 				false,
 				prEvt.PullRequest.HtmlURL,
-				prEvt.PullRequest.NodeID)
+				prEvt.PullRequest.NodeID,
+				prEvt.PullRequest.Title,
+			)
 			if err != nil {
 				return err
 			}
@@ -1257,7 +1261,9 @@ func (a AppAPI) createAutomaticTrackingTask(
 		createTaskRes.TaskId,
 		true,
 		pullRequestURL,
-		pullRequestNodeID)
+		pullRequestNodeID,
+		pullRequestTitle,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -1590,7 +1596,8 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       createTaskRes.TaskId,
-		Title:        "View pull request on Github",
+		Title:        prEvt.PullRequest.Title,
+		PreviewTitle: "View pull request on Github",
 		Url:          prEvt.PullRequest.HtmlURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
