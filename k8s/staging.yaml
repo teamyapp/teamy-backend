@@ -66,6 +66,14 @@ spec:
                 secretKeyRef:
                   name: teamy
                   key: db-name
+            - name: DB_MAX_OPEN_CONNECTIONS
+              value: "150"
+            - name: DB_MAX_IDLE_CONNECTIONS
+              value: "15"
+            - name: DB_CONNECTION_MAX_LIFE_TIME
+              value: "30m"
+            - name: DB_CONNECTION_MAX_IDLE_TIME
+              value: "30m"
             - name: CLOUD_WEB_API_EXTERNAL_BASE_URL
               value: https://cloud.staging.teamyapp.com
             - name: CLOUD_WEB_API_BASE_URL
