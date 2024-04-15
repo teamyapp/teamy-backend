@@ -1,9 +1,10 @@
 package instrumenttest
 
 import (
+	"time"
+
 	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/teamy-backend/core/transaction"
-	"time"
 )
 
 type NoopMetrics struct {

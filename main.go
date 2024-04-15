@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
-	"github.com/teamyapp/teamy-backend/core/instrument"
 	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/teamyapp/teamy-backend/core/instrument"
 
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	cloudClient "github.com/teamyapp/cloud/app/client"

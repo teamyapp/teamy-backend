@@ -4,6 +4,7 @@ package dep
 
 import (
 	"database/sql"
+
 	"github.com/teamyapp/teamy-backend/core/instrument"
 
 	"github.com/google/wire"

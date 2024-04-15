@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	cloudtx "github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
-	"github.com/teamyapp/teamy-backend/core/transaction"
 	"os"
 	"testing"
 	"time"
+
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 
 	"github.com/teamyapp/teamy-backend/core/repository"
 

@@ -8,6 +8,7 @@ package dep
 
 import (
 	"database/sql"
+
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
 	"github.com/teamyapp/cloud/app/client"

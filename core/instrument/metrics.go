@@ -1,12 +1,13 @@
 package instrument
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/metrics"
 	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/teamy-backend/core/transaction"
-	"time"
 )
 
 var durationBuckets = []float64{5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000}

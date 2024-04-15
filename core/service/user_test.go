@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
-	"github.com/teamyapp/teamy-backend/core/transaction"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
