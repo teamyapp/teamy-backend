@@ -18,7 +18,7 @@ steps:
       storage_type: volume
       volume_cache_root_dir: /var/lib/cache
   - name: run unit tests
-    image: golang:1.21
+    image: golang:1.22
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -79,7 +79,7 @@ steps:
       storage_type: volume
       volume_cache_root_dir: /var/lib/cache
   - name: build app
-    image: golang:1.21-alpine
+    image: golang:1.22-alpine
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -161,7 +161,7 @@ steps:
       storage_type: volume
       volume_cache_root_dir: /var/lib/cache
   - name: build app
-    image: golang:1.21-alpine
+    image: golang:1.22-alpine
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
@@ -245,7 +245,7 @@ steps:
       storage_type: volume
       volume_cache_root_dir: /var/lib/cache
   - name: build app
-    image: golang:1.21-alpine
+    image: golang:1.22-alpine
     volumes:
       - name: go-mod-cache
         path: /go/pkg/mod
