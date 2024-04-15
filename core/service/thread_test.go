@@ -7,10 +7,6 @@ import (
 	"testing"
 	"time"
 
-	cloudtx "github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
-	"github.com/teamyapp/teamy-backend/core/transaction"
-
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -22,12 +18,15 @@ import (
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type ThreadTestRef struct {

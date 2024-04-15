@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teamyapp/teamy-backend/core/instrument"
-
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
@@ -35,6 +33,7 @@ import (
 	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 	"github.com/teamyapp/teamy-backend/core/dep"
 	"github.com/teamyapp/teamy-backend/core/inject"
+	"github.com/teamyapp/teamy-backend/core/instrument"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 

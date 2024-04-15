@@ -5,8 +5,6 @@ package dep
 import (
 	"database/sql"
 
-	"github.com/teamyapp/teamy-backend/core/instrument"
-
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
 	"github.com/teamyapp/cloud/app/client"
@@ -22,6 +20,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/instrument"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service"
