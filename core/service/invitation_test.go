@@ -12,28 +12,29 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type InvitationTestRef struct {
 	invitationService  Invitation
 	invitationDao      dao.Invitation
-	transactionFactory transaction.Factory
+	transactionFactory cloudtx.Factory
 	cloudTestKit       testkit.TestKit
 }
 
@@ -66,7 +67,7 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationT
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
 	require.Nil(t, internalErr)
 
-	teamyPrometheus := metricstest.NewNoopMetrics()
+	noopMetrics := instrumenttest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -79,7 +80,7 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationT
 	cloudClientRegistry, err := client.NewRegistry(
 		logger,
 		virtualNetwork,
-		teamyPrometheus,
+		noopMetrics,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
@@ -95,7 +96,7 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationT
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
 
-	transactionFactory := transaction.NewFactory(nil)
+	transactionFactory := cloudtx.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.InvitationTableName)
@@ -105,11 +106,14 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationT
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
+	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+
 	invitationDao := daotest.NewInvitation(teamyBackendDB, transactionFactory)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
 	invitationService := NewInvitation(
 		logger,
+		transactionGroupFactory,
 		cloudClientRegistry,
 		authorizer,
 		toggles,

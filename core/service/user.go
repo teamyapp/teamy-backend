@@ -35,6 +35,7 @@ type UpdateUserInput struct {
 
 type User struct {
 	logger                     telemetry.Logger
+	transactionGroupFactory    transaction.GroupFactory
 	toggles                    feature.Toggles
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *client.Registry
@@ -105,15 +106,12 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 		LastName:   input.LastName,
 		ProfileURL: input.ProfileURL,
 	}
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return u.userDao.CreateUser(ct, tx, user)
-	})
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			return u.userDao.CreateUser(ct, tx, user)
+		})
 	return user, err
 }
 
@@ -138,32 +136,29 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 	}
 
 	var user entity.User
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
-		if err != nil {
-			return err
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
+			if err != nil {
+				return err
+			}
 
-		user.FirstName = input.FirstName
-		user.LastName = input.LastName
-		updatedAt := time.Now().UTC()
-		user.UpdatedAt = &updatedAt
-		userMutation := mutation.NewUpdateUser(
-			u.logger,
-			u.stateSyncer,
-			u.userDao,
-			u.teamMemberDao,
-			user)
-		rtTx.AppendMutation(userMutation)
-		return userMutation.Execute(ct, tx)
-	})
+			user.FirstName = input.FirstName
+			user.LastName = input.LastName
+			updatedAt := time.Now().UTC()
+			user.UpdatedAt = &updatedAt
+			userMutation := mutation.NewUpdateUser(
+				u.logger,
+				u.stateSyncer,
+				u.userDao,
+				u.teamMemberDao,
+				user)
+			rtTx.AppendMutation(userMutation)
+			return userMutation.Execute(ct, tx)
+		})
 
 	return user, err
 }
@@ -201,16 +196,12 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, tx, fileUploadSession)
-	})
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			return u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, tx, fileUploadSession)
+		})
 
 	return res.UploadSessionId, err
 }
@@ -245,54 +236,52 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	}
 
 	var user entity.User
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(
-			ct,
-			tx,
-			userID,
-			entity.ProfileUserFileUploadSessionType,
-			fileUploadSessionID)
-		if err != nil {
-			return err
-		}
-
-		if profileUploadSession.IsCompleted {
-			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(
+				ct,
+				tx,
 				userID,
-				fileUploadSessionID))
-		}
+				entity.ProfileUserFileUploadSessionType,
+				fileUploadSessionID)
+			if err != nil {
+				return err
+			}
 
-		now := time.Now().UTC()
-		profileUploadSession.IsCompleted = true
-		profileUploadSession.UpdatedAt = &now
-		err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
-		if err != nil {
+			if profileUploadSession.IsCompleted {
+				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
+					userID,
+					fileUploadSessionID))
+			}
+
+			now := time.Now().UTC()
+			profileUploadSession.IsCompleted = true
+			profileUploadSession.UpdatedAt = &now
+			err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
+			if err != nil {
+				return err
+			}
+
+			user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
+			if err != nil {
+				return err
+			}
+
+			profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
+			user.ProfileURL = &profileURL
+			user.UpdatedAt = &now
+			err = u.userDao.UpdateUser(ct, tx, user)
 			return err
-		}
-
-		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
-		if err != nil {
-			return err
-		}
-
-		profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
-		user.ProfileURL = &profileURL
-		user.UpdatedAt = &now
-		err = u.userDao.UpdateUser(ct, tx, user)
-		return err
-	})
+		})
 
 	return user, err
 }
 
 func NewUser(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	toggles feature.Toggles,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *client.Registry,
@@ -305,6 +294,7 @@ func NewUser(
 ) User {
 	return User{
 		logger:                     logger,
+		transactionGroupFactory:    transactionGroupFactory,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		toggles:                    toggles,

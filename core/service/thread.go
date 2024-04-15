@@ -27,14 +27,15 @@ type UpdateMessageInput struct {
 }
 
 type Thread struct {
-	logger              telemetry.Logger
-	toggles             feature.Toggles
-	cloudClientRegistry *client.Registry
-	stateSyncer         *realtime.StateSyncer
-	transactionFactory  cloudTransaction.Factory
-	taskDao             dao.Task
-	threadDao           dao.Thread
-	messageDao          dao.Message
+	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
+	toggles                 feature.Toggles
+	cloudClientRegistry     *client.Registry
+	stateSyncer             *realtime.StateSyncer
+	transactionFactory      cloudTransaction.Factory
+	taskDao                 dao.Task
+	threadDao               dao.Thread
+	messageDao              dao.Message
 }
 
 func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
@@ -47,15 +48,12 @@ func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
 	}
 
 	threadID := genThreadIDRes.UniqueNumber
-	txCtx := transaction.NewTransactionsContext(
-		t.logger,
-		t.transactionFactory,
-		t.stateSyncer,
+	err := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return t.threadDao.CreateThread(ct, tx, threadID)
-	})
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			return t.threadDao.CreateThread(ct, tx, threadID)
+		})
 	return threadID, err
 }
 
@@ -85,27 +83,24 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 		AuthorUserID: userID,
 		CreatedAt:    time.Now(),
 	}
-	txCtx := transaction.NewTransactionsContext(
-		t.logger,
-		t.transactionFactory,
-		t.stateSyncer,
+	err := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		createMessageMutation := mutation.NewCreateMessage(
-			t.stateSyncer,
-			t.messageDao,
-			t.taskDao,
-			t.logger,
-			message)
-		err := createMessageMutation.Execute(ct, tx)
-		if err != nil {
-			return err
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			createMessageMutation := mutation.NewCreateMessage(
+				t.stateSyncer,
+				t.messageDao,
+				t.taskDao,
+				t.logger,
+				message)
+			err := createMessageMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
 
-		rtTx.AppendMutation(createMessageMutation)
-		return nil
-	})
+			rtTx.AppendMutation(createMessageMutation)
+			return nil
+		})
 
 	if err != nil {
 		return entity.Message{}, err
@@ -124,27 +119,24 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 	message.Body = input.Body
 	now := time.Now().UTC()
 	message.UpdatedAt = &now
-	txCtx := transaction.NewTransactionsContext(
-		t.logger,
-		t.transactionFactory,
-		t.stateSyncer,
+	err = t.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		updateMessageMutation := mutation.NewUpdateMessage(
-			t.logger,
-			t.stateSyncer,
-			t.messageDao,
-			t.taskDao,
-			message)
-		err = updateMessageMutation.Execute(ct, tx)
-		if err != nil {
-			return err
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			updateMessageMutation := mutation.NewUpdateMessage(
+				t.logger,
+				t.stateSyncer,
+				t.messageDao,
+				t.taskDao,
+				message)
+			err = updateMessageMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
 
-		rtTx.AppendMutation(updateMessageMutation)
-		return nil
-	})
+			rtTx.AppendMutation(updateMessageMutation)
+			return nil
+		})
 
 	if err != nil {
 		return entity.Message{}, err
@@ -160,27 +152,24 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 		return entity.Message{}, err
 	}
 
-	txCtx := transaction.NewTransactionsContext(
-		t.logger,
-		t.transactionFactory,
-		t.stateSyncer,
+	err = t.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		deleteMessageMutation := mutation.NewDeleteMessage(
-			t.logger,
-			t.stateSyncer,
-			t.messageDao,
-			t.taskDao,
-			message)
-		err = deleteMessageMutation.Execute(ct, tx)
-		if err != nil {
-			return err
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			deleteMessageMutation := mutation.NewDeleteMessage(
+				t.logger,
+				t.stateSyncer,
+				t.messageDao,
+				t.taskDao,
+				message)
+			err = deleteMessageMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
 
-		rtTx.AppendMutation(deleteMessageMutation)
-		return nil
-	})
+			rtTx.AppendMutation(deleteMessageMutation)
+			return nil
+		})
 
 	if err != nil {
 		return entity.Message{}, err
@@ -192,6 +181,7 @@ func (t Thread) DeleteMessage(ct context.Context, messageID uint64) (entity.Mess
 
 func NewThread(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	toggles feature.Toggles,
 	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
@@ -201,13 +191,14 @@ func NewThread(
 	messageDao dao.Message,
 ) Thread {
 	return Thread{
-		logger:              logger,
-		toggles:             toggles,
-		cloudClientRegistry: cloudClientRegistry,
-		stateSyncer:         stateSyncer,
-		transactionFactory:  transactionFactory,
-		taskDao:             taskDao,
-		threadDao:           threadDao,
-		messageDao:          messageDao,
+		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
+		toggles:                 toggles,
+		cloudClientRegistry:     cloudClientRegistry,
+		stateSyncer:             stateSyncer,
+		transactionFactory:      transactionFactory,
+		taskDao:                 taskDao,
+		threadDao:               threadDao,
+		messageDao:              messageDao,
 	}
 }

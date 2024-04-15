@@ -43,6 +43,7 @@ type UpdateGroupInput struct {
 
 type Group struct {
 	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
 	cloudClientRegistry     *client.Registry
 	transactionFactory      cloudTransaction.Factory
 	stateSyncer             *realtime.StateSyncer
@@ -80,13 +81,7 @@ func (g *Group) CreateAppStaticGroup(
 		},
 		MemberIDs: input.MemberIDs,
 	}
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := g.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		for _, memberID := range input.MemberIDs {
 			switch input.GroupMemberType {
 			case entity.GroupMemberTypeUser:
@@ -139,15 +134,8 @@ func (g *Group) CreateAppStaticGroup(
 
 func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, input UpdateGroupInput) (entity.GroupUnion, *errs.Error) {
 	var groupUnion entity.GroupUnion
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-
 	now := time.Now().UTC()
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := g.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		group, err := g.groupDao.FindGroupByIDWithTx(ct, tx, groupID)
 		if err != nil {
 			return err
@@ -256,13 +244,7 @@ func (g *Group) UpdateGroup(ct context.Context, appID uint64, groupID uint64, in
 
 func (g *Group) FindUsersByStaticGroupID(ct context.Context, groupID uint64) ([]entity.User, *errs.Error) {
 	var users []entity.User
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := g.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		groupUnion, err := g.groupRepository.FindGroupByIDWithTx(ct, tx, groupID)
 		if err != nil {
 			return err
@@ -280,13 +262,7 @@ func (g *Group) FindUsersByStaticGroupID(ct context.Context, groupID uint64) ([]
 
 func (g *Group) FindTeamsByStaticGroupID(ct context.Context, groupID uint64) ([]entity.Team, *errs.Error) {
 	var teams []entity.Team
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := g.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		groupUnion, err := g.groupRepository.FindGroupByIDWithTx(ct, tx, groupID)
 		if err != nil {
 			return err
@@ -304,13 +280,7 @@ func (g *Group) FindTeamsByStaticGroupID(ct context.Context, groupID uint64) ([]
 
 func (g *Group) FindGroupsByAppID(ct context.Context, appID uint64) ([]entity.GroupUnion, *errs.Error) {
 	var groups []entity.GroupUnion
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := g.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		groupIDs, err := g.appGroupRelationDao.FindGroupIDsByAppIDWithTx(ct, tx, appID)
 		if err != nil {
 			return err
@@ -332,14 +302,7 @@ func (g *Group) FindGroupRolloutRelationsByGroupID(ct context.Context, groupID u
 
 func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.GroupUnion, *errs.Error) {
 	var group entity.GroupUnion
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := g.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		group, err = g.groupRepository.FindGroupByIDWithTx(ct, tx, groupID)
 		return err
@@ -350,13 +313,7 @@ func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.GroupU
 
 func (g *Group) DeleteGroup(ct context.Context, groupID uint64) (entity.GroupUnion, *errs.Error) {
 	var groupUnion entity.GroupUnion
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	transactionErr := g.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		groupUnion, err = g.deleteGroup(ct, tx, groupID, false)
 		return err
@@ -388,13 +345,7 @@ func (g *Group) CreateFilterGroup(
 		},
 		Filter: input.Filter,
 	}
-	txCtx := transaction.NewTransactionsContext(
-		g.logger,
-		g.transactionFactory,
-		g.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := g.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		err := g.groupRepository.CreateFilterGroup(ct, tx, filterGroup)
 		if err != nil {
 			return err
@@ -560,6 +511,7 @@ func (g *Group) deleteGroup(
 
 func NewGroup(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	cloudClientRegistry *client.Registry,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
@@ -574,6 +526,7 @@ func NewGroup(
 ) *Group {
 	return &Group{
 		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
 		cloudClientRegistry:     cloudClientRegistry,
 		transactionFactory:      transactionFactory,
 		stateSyncer:             stateSyncer,

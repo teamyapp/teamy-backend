@@ -61,6 +61,7 @@ const (
 
 type App struct {
 	logger                     telemetry.Logger
+	transactionGroupFactory    transaction.GroupFactory
 	objectStore                storage.ObjectStore
 	cloudClientRegistry        *client.Registry
 	authorizer                 client.Authorizer
@@ -119,15 +120,8 @@ type UpdateAppVersionInput struct {
 }
 
 func (a App) FindApps(ct context.Context, appFilter *AppFilter) ([]entity.App, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-
 	var apps []entity.App
-	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	transactionErr := a.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		if appFilter == nil || len(appFilter.TagValues) == 0 {
 			apps, err = a.appDao.FindAppsWithTx(ct, tx)
@@ -142,7 +136,6 @@ func (a App) FindApps(ct context.Context, appFilter *AppFilter) ([]entity.App, *
 			return err
 		}
 	})
-
 	return apps, transactionErr
 }
 
@@ -151,15 +144,8 @@ func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Er
 }
 
 func (a App) FindAppsByGroupID(ct context.Context, groupID uint64) ([]entity.App, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-
 	var apps []entity.App
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		appIDs, err := a.appGroupRelationDao.FindAppIDsByGroupIDWithTx(ct, tx, groupID)
 		if err != nil {
 			return err
@@ -211,13 +197,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 		AddedAt:       time.Now().UTC(),
 		AddedByUserID: userID,
 	}
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err = a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		return a.appSecretDao.CreateAppSecret(ct, tx, appSecret)
 	})
 	return appSecret, err
@@ -225,13 +205,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 
 func (a App) UpdateAppSecret(ct context.Context, appSecretID uint64, input UpdateAppSecretInput) (entity.AppSecret, *errs.Error) {
 	var appSecret entity.AppSecret
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, appSecretID)
 		if internalErr != nil {
@@ -246,13 +220,7 @@ func (a App) UpdateAppSecret(ct context.Context, appSecretID uint64, input Updat
 
 func (a App) DeleteAppSecret(ct context.Context, appSecretID uint64) (entity.AppSecret, *errs.Error) {
 	var appSecret entity.AppSecret
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		appSecret, internalErr = a.appSecretDao.FindAppSecretByIDWithTx(ct, tx, appSecretID)
 		if internalErr != nil {
@@ -276,14 +244,7 @@ func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (
 		AppID:           appID,
 		InstalledTeamID: teamID,
 	}
-
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		err := a.teamAppInstallationDao.CreateTeamAppInstallation(ct, tx, teamAppInstallation)
 		if err != nil {
 			return err
@@ -304,13 +265,7 @@ func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (
 
 func (a App) UninstallAppFromTeam(ct context.Context, appInstallationID uint64) (entity.TeamAppInstallation, *errs.Error) {
 	var teamAppInstallation entity.TeamAppInstallation
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		teamAppInstallation, internalErr = a.teamAppInstallationDao.FindTeamAppInstallationByIDWithTx(ct, tx, appInstallationID)
 		if internalErr != nil {
@@ -470,14 +425,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		Locked:      true,
 		CreatedAt:   now,
 	}
-
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	internalErr := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		_, err := a.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
 		if err != nil {
 			return err
@@ -616,15 +564,8 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 }
 
 func (a App) FindTagsByAppID(ct context.Context, appID uint64) ([]entity.Tag, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-
 	var tags []entity.Tag
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		tagIDs, err := a.appTagRelationDao.FindTagIDsByAppIDWithTx(ct, tx, appID)
 		if err != nil {
 			return err
@@ -647,13 +588,7 @@ func (a App) FindTagsByAppID(ct context.Context, appID uint64) ([]entity.Tag, *e
 
 func (a App) AddTagToApp(ct context.Context, appID uint64, value string) (entity.Tag, *errs.Error) {
 	var tag entity.Tag
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		tag, internalErr = a.tagDao.FindTagByValueWithTx(ct, tx, value)
 		if internalErr != nil {
@@ -707,13 +642,7 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, value string) (entity
 
 func (a App) RemoveTagFromApp(ct context.Context, appID uint64, tagID uint64) (entity.Tag, *errs.Error) {
 	var tag entity.Tag
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		tag, internalErr = a.tagDao.FindTagByIDWithTx(ct, tx, tagID)
 		if internalErr != nil {
@@ -745,13 +674,7 @@ func (a App) DeleteApp(ct context.Context, appID uint64) (entity.App, *errs.Erro
 	}
 
 	var app entity.App
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	transactionErr := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var err *errs.Error
 		app, err = a.appDao.FindAppByIDWithTx(ct, tx, appID)
 		if err != nil {
@@ -863,13 +786,7 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 		CreatedAt:       time.Now().UTC(),
 		Locked:          false,
 	}
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		maxVersion, err := a.appVersionDao.FindMaxVersionNumberWithTx(ct, tx, appID)
 		if err != nil {
 			if err.Code == errs.NotFound {
@@ -892,15 +809,8 @@ func (a App) CreateAppVersion(ct context.Context, appID uint64) (entity.AppVersi
 }
 
 func (a App) UpdateAppVersion(ct context.Context, appID uint64, versionNumber int, input UpdateAppVersionInput) (entity.AppVersion, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-
 	var av entity.AppVersion
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 		av, internalErr = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if internalErr != nil {
@@ -953,13 +863,7 @@ func (a App) CreateAppPackageFileUploadSession(ct context.Context, appID uint64,
 		IsCompleted:         false,
 		CreatedAt:           time.Now().UTC(),
 	}
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		err := a.appPackageUploadSessionDao.CreateAppPackageUploadSession(ct, tx, fileUploadSession)
 		if err != nil {
 			return err
@@ -1027,14 +931,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		return entity.AppVersion{}, internalErr
 	}
 	var appVersion entity.AppVersion
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		appPackageUploadSession, err := a.appPackageUploadSessionDao.FindAppPackageUploadSessionWithTx(
 			ct,
 			tx,
@@ -1086,20 +983,13 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 	})
 
 	go func() {
-		ct := context.Background()
-		err = a.uploadAppPackageFiles(ct, userID, appID, versionNumber, uploadSession)
+		bgCt := context.Background()
+		err = a.uploadAppPackageFiles(bgCt, userID, appID, versionNumber, uploadSession)
 		if err != nil {
-			a.logger.ErrorWithContext(ct, err)
+			a.logger.ErrorWithContext(bgCt, err)
 			errMessage := err.Message
-			txCtx = transaction.NewTransactionsContext(
-				a.logger,
-				a.transactionFactory,
-				a.stateSyncer,
-				ct,
-			)
-
-			transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-				appVersion, err = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+			transactionErr := a.transactionGroupFactory.WithTransactionGroup(bgCt, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+				appVersion, err = a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(bgCt, tx, appID, versionNumber)
 				if err != nil {
 					return err
 				}
@@ -1116,7 +1006,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 					appVersion,
 				)
 
-				err = updateAppVersionMutation.Execute(ct, tx)
+				err = updateAppVersionMutation.Execute(bgCt, tx)
 				if err != nil {
 					return err
 				}
@@ -1126,7 +1016,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 			})
 
 			if transactionErr != nil {
-				a.logger.ErrorWithContext(ct, transactionErr)
+				a.logger.ErrorWithContext(bgCt, transactionErr)
 			}
 
 			return
@@ -1155,13 +1045,7 @@ func (a App) DeleteAppVersion(ct context.Context, appID uint64, versionNumber in
 	}
 
 	var av entity.AppVersion
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	err := a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		var internalErr *errs.Error
 
 		rolloutIDs, internalErr := a.appRolloutRelation.FindRolloutIDsByAppIDWithTx(ct, tx, appID)
@@ -1237,15 +1121,15 @@ func (a App) uploadAppPackageFiles(
 	versionNumber int,
 	uploadSession *proto.UploadSession,
 ) *errs.Error {
-	fileReader, err := a.objectStore.Get(ct, strconv.FormatInt(int64(uploadSession.FileId), 10))
-	if err != nil {
-		return err
+	fileReader, internalErr := a.objectStore.Get(ct, strconv.FormatInt(int64(uploadSession.FileId), 10))
+	if internalErr != nil {
+		return internalErr
 	}
 
 	buffedFiledReader := bufio.NewReaderSize(fileReader, bufferSize)
-	gzipReader, error := gzip.NewReader(buffedFiledReader)
-	if error != nil {
-		return errs.NewError(errs.IO, error.Error())
+	gzipReader, err := gzip.NewReader(buffedFiledReader)
+	if err != nil {
+		return errs.NewError(errs.IO, err.Error())
 	}
 
 	tarReader := tar.NewReader(gzipReader)
@@ -1351,13 +1235,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		return wgErr
 	}
 
-	txCtx := transaction.NewTransactionsContext(
-		a.logger,
-		a.transactionFactory,
-		a.stateSyncer,
-		ct,
-	)
-	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+	return a.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 		if err != nil {
 			return err
@@ -1377,7 +1255,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 				AppID:         appVersion.AppID,
 				VersionNumber: appVersion.Number,
 			}
-			err := a.appVersionPriceDao.CreateAppVersionPrice(ct, tx, appVersionPrice)
+			err = a.appVersionPriceDao.CreateAppVersionPrice(ct, tx, appVersionPrice)
 			if err != nil {
 				return err
 			}
@@ -1390,7 +1268,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 				return errs.FromGRPCErr(rpcErr)
 			}
 
-			change := entity.AppVersionChange{
+			newChange := entity.AppVersionChange{
 				ID:            genAppSecretIDRes.UniqueNumber,
 				AppID:         appVersion.AppID,
 				VersionNumber: appVersion.Number,
@@ -1400,12 +1278,12 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 			createAppVersionChangeMutation := mutation.NewCreateAppVersionChange(
 				a.logger,
 				a.stateSyncer,
-				change,
+				newChange,
 				a.appVersionChangeDao,
 				a.appDao,
 			)
 
-			err := createAppVersionChangeMutation.Execute(ct, tx)
+			err = createAppVersionChangeMutation.Execute(ct, tx)
 			if err != nil {
 				return err
 			}
@@ -1440,6 +1318,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 
 func NewApp(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	objectStore storage.ObjectStore,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
@@ -1469,6 +1348,7 @@ func NewApp(
 ) App {
 	return App{
 		logger:                     logger,
+		transactionGroupFactory:    transactionGroupFactory,
 		objectStore:                objectStore,
 		cloudClientRegistry:        cloudClientRegistry,
 		authorizer:                 authorizer,

@@ -31,29 +31,27 @@ type CreateTaskLinkInput struct {
 }
 
 type TaskLink struct {
-	logger              telemetry.Logger
-	cloudClientRegistry *client.Registry
-	authorizer          client.Authorizer
-	featureToggles      feature.Toggles
-	transactionFactory  cloudTransaction.Factory
-	stateSyncer         *realtime.StateSyncer
-	taskLinkDao         dao.TaskLink
-	taskDao             dao.Task
+	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
+	cloudClientRegistry     *client.Registry
+	authorizer              client.Authorizer
+	featureToggles          feature.Toggles
+	transactionFactory      cloudTransaction.Factory
+	stateSyncer             *realtime.StateSyncer
+	taskLinkDao             dao.TaskLink
+	taskDao                 dao.Task
 }
 
 func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		t.logger,
-		t.transactionFactory,
-		t.stateSyncer,
-		ct,
-	)
 	var taskLinks []entity.TaskLink
-	internalErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		taskLinks, err = t.taskLinkDao.FindLinksByTaskID(ct, tx, taskID)
-		return err
-	})
+	internalErr := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			taskLinks, err = t.taskLinkDao.FindLinksByTaskID(ct, tx, taskID)
+			return err
+		})
 
 	if internalErr != nil {
 		return nil, internalErr
@@ -119,23 +117,19 @@ func (t TaskLink) CreateTaskLink(ct context.Context, taskLinkEntity CreateTaskLi
 		IconHoverURL: taskLinkEntity.IconHoverURL,
 		CreatedAt:    time.Now().UTC(),
 	}
-
-	txCtx := transaction.NewTransactionsContext(
-		t.logger,
-		t.transactionFactory,
-		t.stateSyncer,
+	internalErr := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		createTaskLinkMutation := mutation.NewCreateTaskLink(t.logger, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
-		internalErr := createTaskLinkMutation.Execute(ct, tx)
-		if internalErr != nil {
-			return internalErr
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			createTaskLinkMutation := mutation.NewCreateTaskLink(t.logger, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
+			internalErr := createTaskLinkMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
 
-		rtTx.AppendMutation(createTaskLinkMutation)
-		return nil
-	})
+			rtTx.AppendMutation(createTaskLinkMutation)
+			return nil
+		})
 
 	if internalErr != nil {
 		return entity.TaskLink{}, internalErr
@@ -176,29 +170,26 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 		}
 	}
 
-	txCtx := transaction.NewTransactionsContext(
-		t.logger,
-		t.transactionFactory,
-		t.stateSyncer,
-		ct,
-	)
 	var taskLink entity.TaskLink
-	internalErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		taskLink, err = t.taskLinkDao.FindTaskLinkByID(ct, tx, taskLinkID)
-		if err != nil {
-			return err
-		}
+	internalErr := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			taskLink, err = t.taskLinkDao.FindTaskLinkByID(ct, tx, taskLinkID)
+			if err != nil {
+				return err
+			}
 
-		deleteTaskLinkMutation := mutation.NewDeleteTaskLink(t.logger, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
-		internalErr := deleteTaskLinkMutation.Execute(ct, tx)
-		if internalErr != nil {
-			return internalErr
-		}
+			deleteTaskLinkMutation := mutation.NewDeleteTaskLink(t.logger, t.stateSyncer, t.taskLinkDao, t.taskDao, taskLink)
+			internalErr := deleteTaskLinkMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
 
-		rtTx.AppendMutation(deleteTaskLinkMutation)
-		return nil
-	})
+			rtTx.AppendMutation(deleteTaskLinkMutation)
+			return nil
+		})
 
 	if internalErr != nil {
 		return entity.TaskLink{}, internalErr
@@ -210,6 +201,7 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, taskLinkID uint64) (entity.
 
 func NewTaskLink(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	cloudClientRegistry *client.Registry,
 	transactionFactory cloudTransaction.Factory,
 	authorizer client.Authorizer,
@@ -219,13 +211,14 @@ func NewTaskLink(
 	taskDao dao.Task,
 ) TaskLink {
 	return TaskLink{
-		logger:              logger,
-		cloudClientRegistry: cloudClientRegistry,
-		transactionFactory:  transactionFactory,
-		authorizer:          authorizer,
-		featureToggles:      featureToggles,
-		stateSyncer:         stateSyncer,
-		taskLinkDao:         taskLinkDao,
-		taskDao:             taskDao,
+		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
+		cloudClientRegistry:     cloudClientRegistry,
+		transactionFactory:      transactionFactory,
+		authorizer:              authorizer,
+		featureToggles:          featureToggles,
+		stateSyncer:             stateSyncer,
+		taskLinkDao:             taskLinkDao,
+		taskDao:                 taskDao,
 	}
 }

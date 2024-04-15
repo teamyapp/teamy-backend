@@ -13,11 +13,12 @@ import (
 )
 
 type ExperimentVersionSelector struct {
-	logger             telemetry.Logger
-	transactionFactory cloudTransaction.Factory
-	stateSyncer        *realtime.StateSyncer
-	rolloutViewerDao   dao.RolloutViewer
-	rolloutID          uint64
+	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
+	transactionFactory      cloudTransaction.Factory
+	stateSyncer             *realtime.StateSyncer
+	rolloutViewerDao        dao.RolloutViewer
+	rolloutID               uint64
 }
 
 var _ rollout.ExperimentVersionSelectorStore = (*ExperimentVersionSelector)(nil)
@@ -28,35 +29,34 @@ func (e *ExperimentVersionSelector) GetViewerVersionNumber(ct context.Context, v
 }
 
 func (e *ExperimentVersionSelector) SetViewerVersionNumber(ct context.Context, viewerID uint64, versionNumber int) *errs.Error {
-	txCtx := transaction.NewTransactionsContext(
-		e.logger,
-		e.transactionFactory,
-		e.stateSyncer,
+	return e.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		viewer, err := e.rolloutViewerDao.FindRolloutViewerByViewerIDAndRolloutID(ct, viewerID, e.rolloutID)
-		if err != nil {
-			return err
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			viewer, err := e.rolloutViewerDao.FindRolloutViewerByViewerIDAndRolloutID(ct, viewerID, e.rolloutID)
+			if err != nil {
+				return err
+			}
 
-		viewer.VersionNumber = versionNumber
-		return e.rolloutViewerDao.UpdateRolloutViewer(ct, tx, viewer)
-	})
+			viewer.VersionNumber = versionNumber
+			return e.rolloutViewerDao.UpdateRolloutViewer(ct, tx, viewer)
+		})
 }
 
 func NewExperimentVersionSelector(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	rolloutViewerDao dao.RolloutViewer,
 	rolloutID uint64,
 ) *ExperimentVersionSelector {
 	return &ExperimentVersionSelector{
-		logger:             logger,
-		transactionFactory: transactionFactory,
-		stateSyncer:        stateSyncer,
-		rolloutViewerDao:   rolloutViewerDao,
-		rolloutID:          rolloutID,
+		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
+		transactionFactory:      transactionFactory,
+		stateSyncer:             stateSyncer,
+		rolloutViewerDao:        rolloutViewerDao,
+		rolloutID:               rolloutID,
 	}
 }

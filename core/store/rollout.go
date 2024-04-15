@@ -13,51 +13,51 @@ import (
 )
 
 type Rollout struct {
-	logger             telemetry.Logger
-	transactionFactory cloudTransaction.Factory
-	stateSyncer        *realtime.StateSyncer
-	rolloutDao         dao.Rollout
-	rolloutID          uint64
+	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
+	transactionFactory      cloudTransaction.Factory
+	stateSyncer             *realtime.StateSyncer
+	rolloutDao              dao.Rollout
+	rolloutID               uint64
 }
 
 var _ rollout.Store = (*Rollout)(nil)
 
 func (r *Rollout) GetIsRolloutEnabled(ct context.Context, defaultIsRolloutEnabled bool) (bool, *errs.Error) {
-	rollout, err := r.rolloutDao.FindRolloutByID(ct, r.rolloutID)
-	return rollout.IsEnabled, err
+	ro, err := r.rolloutDao.FindRolloutByID(ct, r.rolloutID)
+	return ro.IsEnabled, err
 
 }
 
 func (r *Rollout) SetIsRolloutEnabled(ct context.Context, isRolloutEnabled bool) *errs.Error {
-	txCtx := transaction.NewTransactionsContext(
-		r.logger,
-		r.transactionFactory,
-		r.stateSyncer,
+	return r.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	return txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		rollout, err := r.rolloutDao.FindRolloutByID(ct, r.rolloutID)
-		if err != nil {
-			return err
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			ro, err := r.rolloutDao.FindRolloutByID(ct, r.rolloutID)
+			if err != nil {
+				return err
+			}
 
-		rollout.IsEnabled = isRolloutEnabled
-		return r.rolloutDao.UpdateRollout(ct, tx, rollout)
-	})
+			ro.IsEnabled = isRolloutEnabled
+			return r.rolloutDao.UpdateRollout(ct, tx, ro)
+		})
 }
 
 func NewRollout(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
 	rolloutDao dao.Rollout,
 	rolloutID uint64,
 ) *Rollout {
 	return &Rollout{
-		logger:             logger,
-		transactionFactory: transactionFactory,
-		stateSyncer:        stateSyncer,
-		rolloutDao:         rolloutDao,
-		rolloutID:          rolloutID,
+		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
+		transactionFactory:      transactionFactory,
+		stateSyncer:             stateSyncer,
+		rolloutDao:              rolloutDao,
+		rolloutID:               rolloutID,
 	}
 }
