@@ -123,6 +123,8 @@ github.com/teamyapp/cloud v0.0.0-20240304081200-9d96b3861480 h1:RiF9LRCQagNr4vE+
 github.com/teamyapp/cloud v0.0.0-20240304081200-9d96b3861480/go.mod h1:/+0WBbLta00ZJX3xYH2Vf65TUi9HcUtRgNQAay/yXsY=
 github.com/teamyapp/cloud v0.0.0-20240415061530-e2dcd98015d3 h1:y28hARqgncQh798HgN+pqQU1QYBQ3ZMkOEVKoyAhVJo=
 github.com/teamyapp/cloud v0.0.0-20240415061530-e2dcd98015d3/go.mod h1:QjROp1c34hPBKVGMnRWsMlu+nRQCmTXpvBLLKLO3hwE=
+github.com/teamyapp/cloud v0.0.0-20240415062044-646d064e321c h1:fBW/jHWb+EimDyaNhDMNBPSbm3R9ojOib1jN5BZY29Q=
+github.com/teamyapp/cloud v0.0.0-20240415062044-646d064e321c/go.mod h1:QjROp1c34hPBKVGMnRWsMlu+nRQCmTXpvBLLKLO3hwE=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 go.opentelemetry.io/otel v1.6.3/go.mod h1:7BgNga5fNlF/iZjG06hM3yofffp0ofKCDwSXx1GC4dI=
 go.opentelemetry.io/otel v1.16.0 h1:Z7GVAX/UkAXPKsy94IU+i6thsQS4nb7LviLpnaNeW8s=
