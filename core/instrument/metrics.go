@@ -10,8 +10,6 @@ import (
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
-var durationBuckets = []float64{5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000}
-
 type Prometheus struct {
 	metrics.Prometheus
 	transactionBeginCountMetric    *prometheus.CounterVec
@@ -81,7 +79,7 @@ func NewPrometheus(appMame string, serviceName string, environment env.Environme
 			ConstLabels: map[string]string{
 				metrics.EnvironmentLabel: string(environment),
 			},
-			Buckets: durationBuckets,
+			Buckets: prometheus.ExponentialBuckets(1, 2, 20),
 		},
 		[]string{
 			"result",
