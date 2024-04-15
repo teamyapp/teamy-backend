@@ -33,6 +33,7 @@ type UpdateProjectInput struct {
 
 type Project struct {
 	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
 	cloudClientRegistry     *client.Registry
 	authorizer              client.Authorizer
 	featureToggles          feature.Toggles
@@ -49,89 +50,67 @@ type Project struct {
 }
 
 func (p *Project) FindProjects(ct context.Context, projectFilter *ProjectFilter) ([]entity.Project, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		p.logger,
-		p.transactionFactory,
-		p.stateSyncer,
-		ct,
-	)
-
 	var projects []entity.Project
-	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		projects, err = p.projectDao.FindProjectsWithTx(ct, tx)
-		if err != nil {
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			projects, err = p.projectDao.FindProjectsWithTx(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			if projectFilter != nil {
+				projects = filterProjects(projects, *projectFilter)
+			}
+
 			return err
-		}
-
-		if projectFilter != nil {
-			projects = filterProjects(projects, *projectFilter)
-		}
-
-		return err
-	})
+		})
 
 	return projects, transactionErr
 }
 
 func (p *Project) FindProjectsByTeamID(ct context.Context, teamID uint64) ([]entity.Project, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		p.logger,
-		p.transactionFactory,
-		p.stateSyncer,
-		ct,
-	)
-
 	var projects []entity.Project
-	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		projects, err = p.projectDao.FindProjectsByTeamIDWithTx(ct, tx, teamID)
-		return err
-	})
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			projects, err = p.projectDao.FindProjectsByTeamIDWithTx(ct, tx, teamID)
+			return err
+		})
 
 	return projects, transactionErr
 }
 
 func (p *Project) FindStoriesByProjectID(ct context.Context, projectID uint64) ([]entity.Story, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		p.logger,
-		p.transactionFactory,
-		p.stateSyncer,
-		ct,
-	)
-
 	var stories []entity.Story
-	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		storyIDs, err := p.projectStoryRelationDao.FindStoryIDsByProjectIDWithTx(ct, tx, projectID)
-		if err != nil {
-			return err
-		}
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			storyIDs, err := p.projectStoryRelationDao.FindStoryIDsByProjectIDWithTx(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
 
-		stories, err = p.storyDao.FindStoriesByIDsWithTx(ct, tx, storyIDs)
-		return err
-	})
+			stories, err = p.storyDao.FindStoriesByIDsWithTx(ct, tx, storyIDs)
+			return err
+		})
 
 	return stories, transactionErr
 }
 
 func (p *Project) FindPhasesByProjectID(ct context.Context, projectID uint64) ([]entity.Phase, *errs.Error) {
-	txCtx := transaction.NewTransactionsContext(
-		p.logger,
-		p.transactionFactory,
-		p.stateSyncer,
-		ct,
-	)
-
 	var phases []entity.Phase
-	transactionErr := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		phaseIDs, err := p.projectPhaseRelationDao.FindPhaseIDsByProjectIDWithTx(ct, tx, projectID)
-		if err != nil {
-			return err
-		}
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			phaseIDs, err := p.projectPhaseRelationDao.FindPhaseIDsByProjectIDWithTx(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
 
-		phases, err = p.phaseDao.FindPhasesByIDsWithTx(ct, tx, phaseIDs)
-		return err
-	})
+			phases, err = p.phaseDao.FindPhasesByIDsWithTx(ct, tx, phaseIDs)
+			return err
+		})
 
 	return phases, transactionErr
 }
@@ -148,13 +127,6 @@ func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateP
 		return entity.Project{}, errs.FromGRPCErr(rpcErr)
 	}
 
-	txCtx := transaction.NewTransactionsContext(
-		p.logger,
-		p.transactionFactory,
-		p.stateSyncer,
-		ct,
-	)
-
 	project := entity.Project{
 		ID:              genProjectIDRes.UniqueNumber,
 		Name:            input.Name,
@@ -165,91 +137,81 @@ func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateP
 		TeamID:          teamID,
 	}
 
-	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		_, err := p.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
-		if err != nil {
-			return err
-		}
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			_, err := p.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+			if err != nil {
+				return err
+			}
 
-		return p.projectDao.CreateProject(ct, tx, project)
-	})
+			return p.projectDao.CreateProject(ct, tx, project)
+		})
 	return project, transactionErr
 }
 
 func (p *Project) UpdateProject(ct context.Context, projectID uint64, input UpdateProjectInput) (entity.Project, *errs.Error) {
 	var project entity.Project
-	txCtx := transaction.NewTransactionsContext(
-		p.logger,
-		p.transactionFactory,
-		p.stateSyncer,
-		ct,
-	)
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			project, err = p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
 
-	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		project, err = p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
-		if err != nil {
-			return err
-		}
+			now := time.Now()
+			project.Name = input.Name
+			project.ExpectedStartAt = input.ExpectedStartAt
+			project.ActualStartAt = input.ActualStartAt
+			project.ExpectedEndAt = input.ExpectedEndAt
+			project.ActualEndAt = input.ActualEndAt
+			project.UpdatedAt = &now
 
-		now := time.Now()
-		project.Name = input.Name
-		project.ExpectedStartAt = input.ExpectedStartAt
-		project.ActualStartAt = input.ActualStartAt
-		project.ExpectedEndAt = input.ExpectedEndAt
-		project.ActualEndAt = input.ActualEndAt
-		project.UpdatedAt = &now
-
-		return p.projectDao.UpdateProject(ct, tx, project)
-	})
+			return p.projectDao.UpdateProject(ct, tx, project)
+		})
 
 	return project, transactionErr
 }
 
 func (p *Project) DeleteProject(ct context.Context, projectID uint64) (entity.Project, *errs.Error) {
 	var project entity.Project
-	txCtx := transaction.NewTransactionsContext(
-		p.logger,
-		p.transactionFactory,
-		p.stateSyncer,
-		ct,
-	)
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			project, err = p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
 
-	transactionErr := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		project, err = p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
-		if err != nil {
-			return err
-		}
+			phaseIDs, err := p.projectPhaseRelationDao.FindPhaseIDsByProjectIDWithTx(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
 
-		phaseIDs, err := p.projectPhaseRelationDao.FindPhaseIDsByProjectIDWithTx(ct, tx, projectID)
-		if err != nil {
-			return err
-		}
+			err = p.projectPhaseRelationDao.DeleteProjectPhaseRelationsByProjectID(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
 
-		err = p.projectPhaseRelationDao.DeleteProjectPhaseRelationsByProjectID(ct, tx, projectID)
-		if err != nil {
-			return err
-		}
+			err = p.projectStoryRelationDao.DeleteProjectStoryRelationsByProjectID(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
 
-		err = p.projectStoryRelationDao.DeleteProjectStoryRelationsByProjectID(ct, tx, projectID)
-		if err != nil {
-			return err
-		}
+			err = p.phaseDao.DeletePhasesByIDs(ct, tx, phaseIDs)
+			if err != nil {
+				return err
+			}
 
-		err = p.phaseDao.DeletePhasesByIDs(ct, tx, phaseIDs)
-		if err != nil {
-			return err
-		}
-
-		return p.projectDao.DeleteProject(ct, tx, projectID)
-	})
+			return p.projectDao.DeleteProject(ct, tx, projectID)
+		})
 
 	return project, transactionErr
 }
 
 func NewProject(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
@@ -266,6 +228,7 @@ func NewProject(
 ) *Project {
 	return &Project{
 		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
 		cloudClientRegistry:     cloudClientRegistry,
 		authorizer:              authorizer,
 		featureToggles:          featureToggles,

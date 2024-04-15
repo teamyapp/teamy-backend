@@ -4,6 +4,7 @@ package dep
 
 import (
 	"database/sql"
+	"github.com/teamyapp/teamy-backend/core/instrument"
 
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
@@ -13,7 +14,7 @@ import (
 	"github.com/teamyapp/cloud/libs/security"
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
 	"github.com/teamyapp/teamy-backend/core/cache"
@@ -23,6 +24,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type AppMame string
@@ -30,6 +32,11 @@ type JWTSigningKey string
 type ServiceName string
 type CloudWebAPIExternalBaseURL string
 type MapServerURL string
+
+var gqlTracerSet = wire.NewSet(
+	wire.Bind(new(tracer.Tracer), new(cloudGQL.PrometheusTracer)),
+	newPrometheusTracer,
+)
 
 var daoSet = wire.NewSet(
 	wire.Bind(new(dao.Task), new(sqldb.Task)),
@@ -136,6 +143,8 @@ var repositorySet = wire.NewSet(
 var serviceSet = wire.NewSet(
 	wire.Bind(new(storage.ObjectStore), new(*storage.HTTPClient)),
 	newHTTPClient,
+	cloudtx.NewFactory,
+	transaction.NewGroupFactory,
 	service.NewThread,
 	service.NewTask,
 	service.NewTaskLink,
@@ -159,7 +168,7 @@ func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.S
 	wire.Build(
 		daoSet,
 		realtime.NewStateSyncer,
-		transaction.NewFactory,
+		cloudtx.NewFactory,
 	)
 	return nil
 }
@@ -169,6 +178,7 @@ func InitGraphQLAPI(
 	serviceName ServiceName,
 	environment env.Environment,
 	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	mapServerURL MapServerURL,
 	cloudAPIClientRegistry *client.Registry,
@@ -177,11 +187,10 @@ func InitGraphQLAPI(
 	sqlDB *sql.DB,
 ) (cloudGQL.Service[gql.Resolver], error) {
 	wire.Build(
-		wire.Bind(new(tracer.Tracer), new(cloudGQL.PrometheusTracer)),
-		newPrometheusTracer,
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		gqlTracerSet,
 		daoSet,
 		repositorySet,
-		transaction.NewFactory,
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
@@ -206,17 +215,18 @@ func InitRealTimeStateSyncAPI(
 
 func InitTaskRPCAPI(
 	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.TaskRPC {
 	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
 		daoSet,
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
 		cache.NewActivity,
-		transaction.NewFactory,
 		api.NewTaskRPC,
 	)
 	return api.TaskRPC{}
@@ -224,16 +234,17 @@ func InitTaskRPCAPI(
 
 func InitSprintRPCAPI(
 	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.SprintRPC {
 	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
 		daoSet,
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
-		transaction.NewFactory,
 		api.NewSprintRPC,
 	)
 	return api.SprintRPC{}
@@ -241,16 +252,17 @@ func InitSprintRPCAPI(
 
 func InitTaskLinkRPCAPI(
 	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 ) api.TaskLinkRPC {
 	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
 		daoSet,
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
-		transaction.NewFactory,
 		api.NewTaskLinkRPC,
 	)
 	return api.TaskLinkRPC{}
@@ -258,18 +270,19 @@ func InitTaskLinkRPCAPI(
 
 func InitTeamRPCAPI(
 	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	sqlDB *sql.DB,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 ) api.TeamRPC {
 	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
 		daoSet,
 		repositorySet,
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
-		transaction.NewFactory,
 		api.NewTeamRPC,
 	)
 	return api.TeamRPC{}
@@ -283,18 +296,20 @@ func newHTTPClient(
 
 func newUserService(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	toggles feature.Toggles,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudtx.Factory,
 	userDao dao.User,
 	teamMember dao.TeamMember,
 	userFileUploadSessionDao dao.UserFileUploadSession,
 ) service.User {
 	return service.NewUser(
 		logger,
+		transactionGroupFactory,
 		toggles,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
@@ -309,12 +324,13 @@ func newUserService(
 
 func newTeamService(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	toggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory cloudtx.Factory,
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintParticipantDao dao.SprintParticipant,
@@ -327,6 +343,7 @@ func newTeamService(
 ) service.Team {
 	return service.NewTeam(
 		logger,
+		transactionGroupFactory,
 		string(cloudWebAPIExternalBaseURL),
 		cloudClientRegistry,
 		authorizer,

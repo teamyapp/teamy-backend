@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 	"os"
 	"testing"
 	"time"
@@ -11,14 +13,13 @@ import (
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
-	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
@@ -31,7 +32,7 @@ type UserTestRef struct {
 	userService              User
 	userDao                  dao.User
 	userFileUploadSessionDao dao.UserFileUploadSession
-	transactionFactory       transaction.Factory
+	transactionFactory       cloudtx.Factory
 }
 
 func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, bool) {
@@ -57,7 +58,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
 
-	teamyPrometheus := metricstest.NewNoopMetrics()
+	noopMetrics := instrumenttest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -70,7 +71,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 	cloudClientRegistry, err := client.NewRegistry(
 		logger,
 		virtualNetwork,
-		teamyPrometheus,
+		noopMetrics,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
@@ -85,7 +86,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 	require.Nil(t, err)
 
 	authorizor := client.NewAuthorizer(logger, cloudClientRegistry)
-	transactionFactory := transaction.NewFactory(nil)
+	transactionFactory := cloudtx.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.UserTableName)
@@ -97,8 +98,11 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 
 	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 	userFileUploadSessionDao := daotest.NewUserFileUploadSession(teamyBackendDB)
+
+	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
 	userService := NewUser(
 		logger,
+		transactionGroupFactory,
 		toggles,
 		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,

@@ -35,20 +35,21 @@ type CreateSprintInput struct {
 }
 
 type Sprint struct {
-	logger                telemetry.Logger
-	cloudClientRegistry   *client.Registry
-	stateSyncer           *realtime.StateSyncer
-	authorizer            client.Authorizer
-	featureToggles        feature.Toggles
-	transactionFactory    cloudTransaction.Factory
-	taskDao               dao.Task
-	sprintDao             dao.Sprint
-	teamDao               dao.Team
-	sprintTaskRelationDao dao.SprintTaskRelation
-	sprintParticipantDao  dao.SprintParticipant
-	teamMemberDao         dao.TeamMember
-	threadDao             dao.Thread
-	db                    *sql.DB
+	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
+	cloudClientRegistry     *client.Registry
+	stateSyncer             *realtime.StateSyncer
+	authorizer              client.Authorizer
+	featureToggles          feature.Toggles
+	transactionFactory      cloudTransaction.Factory
+	taskDao                 dao.Task
+	sprintDao               dao.Sprint
+	teamDao                 dao.Team
+	sprintTaskRelationDao   dao.SprintTaskRelation
+	sprintParticipantDao    dao.SprintParticipant
+	teamMemberDao           dao.TeamMember
+	threadDao               dao.Thread
+	db                      *sql.DB
 }
 
 func (s Sprint) FindSprintsInTeam(ct context.Context, teamID uint64, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
@@ -172,32 +173,29 @@ func (s Sprint) GetActiveSprint(ct context.Context, teamID uint64) (*entity.Spri
 		}
 	}
 
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
-		ct,
-	)
 	var sprint *entity.Sprint
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		team, err := s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
-		if err != nil {
-			return err
-		}
+	err := s.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			team, err := s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+			if err != nil {
+				return err
+			}
 
-		if team.ActiveSprintID == nil {
+			if team.ActiveSprintID == nil {
+				return nil
+			}
+
+			sprintRes, err := s.sprintDao.FindSprintByID(ct, *team.ActiveSprintID)
+			if err != nil {
+				return err
+			}
+
+			sprint = &sprintRes
 			return nil
-		}
-
-		sprintRes, err := s.sprintDao.FindSprintByID(ct, *team.ActiveSprintID)
-		if err != nil {
-			return err
-		}
-
-		sprint = &sprintRes
-		return nil
-	})
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -243,41 +241,38 @@ func (s Sprint) SetTeamActiveSprint(ct context.Context, teamID uint64, sprintID 
 		}
 	}
 
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
-		ct,
-	)
 	var team entity.Team
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		team, err = s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
-		if err != nil {
-			return err
-		}
+	err := s.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			team, err = s.teamDao.FindTeamByIDWithTx(ct, tx, teamID)
+			if err != nil {
+				return err
+			}
 
-		sprint, err := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
-		if err != nil {
-			return err
-		}
+			sprint, err := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+			if err != nil {
+				return err
+			}
 
-		if sprint.OwningTeamID != teamID {
-			return errs.NewError(errs.InvalidArgument, "Sprint does not belong to team")
-		}
+			if sprint.OwningTeamID != teamID {
+				return errs.NewError(errs.InvalidArgument, "Sprint does not belong to team")
+			}
 
-		team.ActiveSprintID = &sprintID
-		updatedAt := time.Now().UTC()
-		team.UpdatedAt = &updatedAt
-		updateTeamMutation := mutation.NewUpdateTeam(
-			s.logger,
-			s.stateSyncer,
-			s.teamDao,
-			team,
-		)
-		rtTx.AppendMutation(updateTeamMutation)
-		return updateTeamMutation.Execute(ct, tx)
-	})
+			team.ActiveSprintID = &sprintID
+			updatedAt := time.Now().UTC()
+			team.UpdatedAt = &updatedAt
+			updateTeamMutation := mutation.NewUpdateTeam(
+				s.logger,
+				s.stateSyncer,
+				s.teamDao,
+				team,
+			)
+			rtTx.AppendMutation(updateTeamMutation)
+			return updateTeamMutation.Execute(ct, tx)
+		})
 
 	if err != nil {
 		return entity.Team{}, err
@@ -305,29 +300,26 @@ func (s Sprint) FindCurrentAndFutureSprints(ct context.Context, teamID uint64) (
 	}
 
 	var sprints []entity.Sprint
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
+	err := s.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		sprints, err = s.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, teamID)
-		if err != nil {
-			return err
-		}
-
-		now := time.Now().UTC()
-		sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
-			if sprint.EndAt.UTC().Before(now) {
-				return false
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			sprints, err = s.sprintDao.FindSprintsByTeamIDWithTx(ct, tx, teamID)
+			if err != nil {
+				return err
 			}
 
-			return true
+			now := time.Now().UTC()
+			sprints = collect.Filter(sprints, func(sprint entity.Sprint) bool {
+				if sprint.EndAt.UTC().Before(now) {
+					return false
+				}
+
+				return true
+			})
+			return nil
 		})
-		return nil
-	})
 
 	if err != nil {
 		return nil, err
@@ -370,17 +362,14 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 	}
 
 	var sprint entity.Sprint
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
+	err := s.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		sprint, err = s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
-		return err
-	})
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			sprint, err = s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+			return err
+		})
 
 	if err != nil {
 		return entity.Sprint{}, err
@@ -415,66 +404,63 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 	}
 
 	var sprint entity.Sprint
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
+	err := s.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		sprint = entity.Sprint{
-			ID:           genSprintIDRes.UniqueNumber,
-			StartAt:      input.StartAt.UTC(),
-			EndAt:        input.EndAt.UTC(),
-			CreatedAt:    time.Now().UTC(),
-			OwningTeamID: teamID,
-		}
-
-		createSprintMutation := mutation.NewCreateSprintMutation(
-			s.logger,
-			s.stateSyncer,
-			s.sprintDao,
-			sprint)
-
-		rtTx.AppendMutation(createSprintMutation)
-		err := createSprintMutation.Execute(ct, tx)
-		if err != nil {
-			return err
-		}
-
-		teamMembers, err := s.teamMemberDao.FindTeamMembersByTeamIDWithTx(ct, tx, teamID)
-		if err != nil {
-			return err
-		}
-
-		sprintLength := input.EndAt.UTC().Sub(input.StartAt.UTC())
-		numOfWeeks := sprintLength / timePerWeek
-		// TODO: fetch from team settings
-
-		for _, teamMember := range teamMembers {
-			totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
-			participant := entity.SprintParticipant{
-				SprintID:        sprint.ID,
-				UserID:          teamMember.UserID,
-				TotalBandwidth:  totalBandwidth,
-				UnusedBandwidth: totalBandwidth,
-				CreatedAt:       time.Now(),
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			sprint = entity.Sprint{
+				ID:           genSprintIDRes.UniqueNumber,
+				StartAt:      input.StartAt.UTC(),
+				EndAt:        input.EndAt.UTC(),
+				CreatedAt:    time.Now().UTC(),
+				OwningTeamID: teamID,
 			}
-			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
+
+			createSprintMutation := mutation.NewCreateSprintMutation(
 				s.logger,
 				s.stateSyncer,
-				s.sprintParticipantDao,
 				s.sprintDao,
-				participant)
-			rtTx.AppendMutation(createSprintParticipantMutation)
-			err = createSprintParticipantMutation.Execute(ct, tx)
+				sprint)
+
+			rtTx.AppendMutation(createSprintMutation)
+			err := createSprintMutation.Execute(ct, tx)
 			if err != nil {
 				return err
 			}
-		}
 
-		return nil
-	})
+			teamMembers, err := s.teamMemberDao.FindTeamMembersByTeamIDWithTx(ct, tx, teamID)
+			if err != nil {
+				return err
+			}
+
+			sprintLength := input.EndAt.UTC().Sub(input.StartAt.UTC())
+			numOfWeeks := sprintLength / timePerWeek
+			// TODO: fetch from team settings
+
+			for _, teamMember := range teamMembers {
+				totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
+				participant := entity.SprintParticipant{
+					SprintID:        sprint.ID,
+					UserID:          teamMember.UserID,
+					TotalBandwidth:  totalBandwidth,
+					UnusedBandwidth: totalBandwidth,
+					CreatedAt:       time.Now(),
+				}
+				createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
+					s.logger,
+					s.stateSyncer,
+					s.sprintParticipantDao,
+					s.sprintDao,
+					participant)
+				rtTx.AppendMutation(createSprintParticipantMutation)
+				err = createSprintParticipantMutation.Execute(ct, tx)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
 
 	if err != nil {
 		return entity.Sprint{}, err
@@ -516,63 +502,60 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 	}
 
 	var sprint entity.Sprint
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
+	err := s.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		taskIds, err := s.sprintTaskRelationDao.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
-		if err != nil {
-			return err
-		}
-
-		for _, taskId := range taskIds {
-			_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId, false)
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			taskIds, err := s.sprintTaskRelationDao.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
 			if err != nil {
 				return err
 			}
-		}
 
-		participantUserIDs, err := s.sprintParticipantDao.FindParticipantIDsBySprintIDWithTx(ct, tx, sprintID)
-		if err != nil {
-			return err
-		}
+			for _, taskId := range taskIds {
+				_, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskId, false)
+				if err != nil {
+					return err
+				}
+			}
 
-		sprint, err = s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
-		if err != nil {
-			return err
-		}
+			participantUserIDs, err := s.sprintParticipantDao.FindParticipantIDsBySprintIDWithTx(ct, tx, sprintID)
+			if err != nil {
+				return err
+			}
 
-		for _, participantUserID := range participantUserIDs {
-			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
+			sprint, err = s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+			if err != nil {
+				return err
+			}
+
+			for _, participantUserID := range participantUserIDs {
+				deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
+					s.logger,
+					s.stateSyncer,
+					s.sprintParticipantDao,
+					s.sprintDao,
+					participantUserID,
+					sprintID)
+				rtTx.AppendMutation(deleteSprintParticipantMutation)
+				err = deleteSprintParticipantMutation.Execute(ct, tx)
+				if err != nil {
+					return err
+				}
+
+				// we need to prepare notifier in advance since sprint will be actually deleted later
+				deleteSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
+			}
+
+			deleteSprintMutation := mutation.NewDeleteSprint(
 				s.logger,
 				s.stateSyncer,
-				s.sprintParticipantDao,
 				s.sprintDao,
-				participantUserID,
-				sprintID)
-			rtTx.AppendMutation(deleteSprintParticipantMutation)
-			err = deleteSprintParticipantMutation.Execute(ct, tx)
-			if err != nil {
-				return err
-			}
+				sprint,
+			)
 
-			// we need to prepare notifier in advance since sprint will be actually deleted later
-			deleteSprintParticipantMutation.PrepareClientNotifiers(ct, tx)
-		}
-
-		deleteSprintMutation := mutation.NewDeleteSprint(
-			s.logger,
-			s.stateSyncer,
-			s.sprintDao,
-			sprint,
-		)
-
-		rtTx.AppendMutation(deleteSprintMutation)
-		return deleteSprintMutation.Execute(ct, tx)
-	})
+			rtTx.AppendMutation(deleteSprintMutation)
+			return deleteSprintMutation.Execute(ct, tx)
+		})
 
 	if err != nil {
 		return entity.Sprint{}, err
@@ -601,66 +584,61 @@ func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint
 	}
 
 	var task entity.Task
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		task, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
-		if err != nil {
-			return err
-		}
-
-		sprint, err := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
-		if err != nil {
-			return err
-		}
-
-		if sprint.OwningTeamID != task.OwningTeamID {
-			return errs.NewError(errs.InvalidArgument, fmt.Sprintf("sprint and task must belong to the same team: sprintID=%v, taskID=%v", sprintID, taskID))
-		}
-
-		relation := entity.SprintTaskRelation{
-			SprintID:  sprintID,
-			TaskID:    taskID,
-			CreatedAt: time.Now().UTC(),
-		}
-		createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
-			s.logger,
-			s.stateSyncer,
-			s.sprintTaskRelationDao,
-			s.sprintDao,
-			relation)
-		rtTx.AppendMutation(createSprintTaskRelationMutation)
-		err = createSprintTaskRelationMutation.Execute(ct, tx)
-		if err != nil {
-			return err
-		}
-
-		if !task.IsScheduled {
-			task.IsScheduled = true
-			updateTaskMutation := mutation.NewUpdateTask(
-				s.logger,
-				s.stateSyncer,
-				s.taskDao,
-				task)
-			rtTx.AppendMutation(updateTaskMutation)
-			err = updateTaskMutation.Execute(ct, tx)
+	err := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			task, err = s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 			if err != nil {
 				return err
 			}
-		}
 
-		err = s.tryReduceBandwidth(ct, tx, rtTx, sprintID, task)
-		if err != nil {
-			return err
-		}
+			sprint, err := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+			if err != nil {
+				return err
+			}
 
-		return nil
-	})
+			if sprint.OwningTeamID != task.OwningTeamID {
+				return errs.NewError(errs.InvalidArgument, fmt.Sprintf("sprint and task must belong to the same team: sprintID=%v, taskID=%v", sprintID, taskID))
+			}
+
+			relation := entity.SprintTaskRelation{
+				SprintID:  sprintID,
+				TaskID:    taskID,
+				CreatedAt: time.Now().UTC(),
+			}
+			createSprintTaskRelationMutation := mutation.NewCreateSprintTaskRelation(
+				s.logger,
+				s.stateSyncer,
+				s.sprintTaskRelationDao,
+				s.sprintDao,
+				relation)
+			rtTx.AppendMutation(createSprintTaskRelationMutation)
+			err = createSprintTaskRelationMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			if !task.IsScheduled {
+				task.IsScheduled = true
+				updateTaskMutation := mutation.NewUpdateTask(
+					s.logger,
+					s.stateSyncer,
+					s.taskDao,
+					task)
+				rtTx.AppendMutation(updateTaskMutation)
+				err = updateTaskMutation.Execute(ct, tx)
+				if err != nil {
+					return err
+				}
+			}
+
+			err = s.tryReduceBandwidth(ct, tx, rtTx, sprintID, task)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 
 	if err != nil {
 		return entity.Task{}, err
@@ -743,25 +721,20 @@ func (s Sprint) CopyTasksToSprint(
 	}
 
 	var err *errs.Error
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
-		ct,
-	)
-	err = txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		for idx, taskID := range taskIDs {
-			var task entity.Task
-			task, err = s.copyTaskToSprint(ct, tx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx])
-			if err != nil {
-				continue
+	err = s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			for idx, taskID := range taskIDs {
+				var task entity.Task
+				task, err = s.copyTaskToSprint(ct, tx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx])
+				if err != nil {
+					continue
+				}
+
+				tasks = append(tasks, task)
 			}
 
-			tasks = append(tasks, task)
-		}
-
-		return nil
-	})
+			return nil
+		})
 
 	// TODO: update resource relations in authorization service
 	return tasks, nil
@@ -801,25 +774,20 @@ func (s Sprint) MoveTasksToSprint(
 	}
 
 	var tasks []entity.Task
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		for _, taskID := range taskIDs {
-			task, err := s.moveTaskToSprint(ct, tx, rtTx, fromSprintID, toSprintID, taskID)
+	err := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			for _, taskID := range taskIDs {
+				task, err := s.moveTaskToSprint(ct, tx, rtTx, fromSprintID, toSprintID, taskID)
 
-			if err != nil {
-				continue
+				if err != nil {
+					continue
+				}
+
+				tasks = append(tasks, task)
 			}
 
-			tasks = append(tasks, task)
-		}
-
-		return nil
-	})
+			return nil
+		})
 
 	if err != nil {
 		return nil, err
@@ -848,17 +816,12 @@ func (s Sprint) RemoveTaskFromSprint(ct context.Context, sprintID uint64, taskID
 	}
 
 	var task entity.Task
-	txCtx := transaction.NewTransactionsContext(
-		s.logger,
-		s.transactionFactory,
-		s.stateSyncer,
-		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID, true)
-		return err
-	})
+	err := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			task, err = s.removeTaskFromSprint(ct, tx, rtTx, sprintID, taskID, true)
+			return err
+		})
 
 	if err != nil {
 		return entity.Task{}, err
@@ -1161,6 +1124,7 @@ func (s Sprint) tryIncreaseBandwidth(
 
 func NewSprint(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	cloudClientRegistry *client.Registry,
 	stateSyncer *realtime.StateSyncer,
 	authorizer client.Authorizer,
@@ -1175,18 +1139,19 @@ func NewSprint(
 	threadDao dao.Thread,
 ) Sprint {
 	return Sprint{
-		logger:                logger,
-		cloudClientRegistry:   cloudClientRegistry,
-		stateSyncer:           stateSyncer,
-		authorizer:            authorizer,
-		featureToggles:        featureToggles,
-		transactionFactory:    transactionFactory,
-		taskDao:               taskDao,
-		sprintDao:             sprintDao,
-		teamDao:               teamDao,
-		sprintTaskRelationDao: sprintTaskRelationDao,
-		sprintParticipantDao:  sprintParticipantDao,
-		teamMemberDao:         teamMemberDao,
-		threadDao:             threadDao,
+		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
+		cloudClientRegistry:     cloudClientRegistry,
+		stateSyncer:             stateSyncer,
+		authorizer:              authorizer,
+		featureToggles:          featureToggles,
+		transactionFactory:      transactionFactory,
+		taskDao:                 taskDao,
+		sprintDao:               sprintDao,
+		teamDao:                 teamDao,
+		sprintTaskRelationDao:   sprintTaskRelationDao,
+		sprintParticipantDao:    sprintParticipantDao,
+		teamMemberDao:           teamMemberDao,
+		threadDao:               threadDao,
 	}
 }

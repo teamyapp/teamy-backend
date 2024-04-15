@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"github.com/teamyapp/teamy-backend/core/instrument"
 	"math/rand"
 	"net/http"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/metrics"
 	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/cloud/libs/network"
 	"github.com/teamyapp/cloud/libs/retry"
@@ -121,7 +121,7 @@ func startServiceRunner(
 		return internalErr
 	}
 
-	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
+	prom := instrument.NewPrometheus(appName, serviceName, cfg.Environment)
 	nw := network.NewSocket()
 	retryFactory := makeRetryFactory(logger, cfg)
 	cloudClientRegistry, err := cloudClient.NewRegistry(
@@ -202,6 +202,7 @@ func startServiceRunner(
 		serviceName,
 		cfg.Environment,
 		logger,
+		prom,
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
 		mapServerURL,
 		cloudClientRegistry,
@@ -214,22 +215,26 @@ func startServiceRunner(
 
 	taskRPCAPI := dep.InitTaskRPCAPI(
 		logger,
+		prom,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
 	taskLinkRPCAPI := dep.InitTaskLinkRPCAPI(
 		logger,
+		prom,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB,
 	)
 	sprintRPCAPI := dep.InitSprintRPCAPI(
 		logger,
+		prom,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB)
 	teamRPCAPI := dep.InitTeamRPCAPI(
 		logger,
+		prom,
 		cloudClientRegistry,
 		realTimeStateSyncer,
 		sqlDB,
