@@ -23,20 +23,28 @@ func (p Project) Name() string {
 	return p.project.Name
 }
 
-func (p Project) ExpectedStartAt() graphql.Time {
-	return toGraphQLTime(p.project.ExpectedStartAt)
+func (p Project) ExpectedStartAt() *graphql.Time {
+	return toGraphQLTimePtr(p.project.ExpectedStartAt)
 }
 
 func (p Project) ActualStartAt() *graphql.Time {
 	return toGraphQLTimePtr(p.project.ActualStartAt)
 }
 
-func (p Project) ExpectedEndAt() graphql.Time {
-	return toGraphQLTime(p.project.ExpectedEndAt)
+func (p Project) ExpectedEndAt() *graphql.Time {
+	return toGraphQLTimePtr(p.project.ExpectedEndAt)
 }
 
 func (p Project) ActualEndAt() *graphql.Time {
 	return toGraphQLTimePtr(p.project.ActualEndAt)
+}
+
+func (p Project) IconURL() *string {
+	return p.project.IconURL
+}
+
+func (p Project) Color() *string {
+	return p.project.Color
 }
 
 func (p Project) Creator(ct context.Context) (User, error) {
@@ -95,8 +103,10 @@ func (m Mutation) CreateProject(ct context.Context, args struct {
 	TeamID graphql.ID
 	Input  struct {
 		Name            string
-		ExpectedStartAt graphql.Time
-		ExpectedEndAt   graphql.Time
+		ExpectedStartAt *graphql.Time
+		ExpectedEndAt   *graphql.Time
+		IconURL         *string
+		Color           *string
 	}
 }) (Project, error) {
 	teamID, internalErr := fromGraphQLID(args.TeamID)
@@ -111,8 +121,10 @@ func (m Mutation) CreateProject(ct context.Context, args struct {
 
 	createProjectInput := service.CreateProjectInput{
 		Name:            args.Input.Name,
-		ExpectedStartAt: fromGraphQLTime(args.Input.ExpectedStartAt),
-		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
+		ExpectedStartAt: fromGraphQLTimePtr(args.Input.ExpectedStartAt),
+		ExpectedEndAt:   fromGraphQLTimePtr(args.Input.ExpectedEndAt),
+		IconURL:         args.Input.IconURL,
+		Color:           args.Input.Color,
 	}
 
 	project, err := m.deps.projectService.CreateProject(ct, teamID, createProjectInput)
@@ -128,10 +140,12 @@ func (m Mutation) UpdateProject(ct context.Context, args struct {
 	ProjectID graphql.ID
 	Input     struct {
 		Name            string
-		ExpectedStartAt graphql.Time
+		ExpectedStartAt *graphql.Time
 		ActualStartAt   *graphql.Time
-		ExpectedEndAt   graphql.Time
+		ExpectedEndAt   *graphql.Time
 		ActualEndAt     *graphql.Time
+		IconURL         *string
+		Color           *string
 	}
 }) (Project, error) {
 	projectID, internalErr := fromGraphQLID(args.ProjectID)
@@ -146,10 +160,12 @@ func (m Mutation) UpdateProject(ct context.Context, args struct {
 
 	updateProjectInput := service.UpdateProjectInput{
 		Name:            args.Input.Name,
-		ExpectedStartAt: fromGraphQLTime(args.Input.ExpectedStartAt),
+		ExpectedStartAt: fromGraphQLTimePtr(args.Input.ExpectedStartAt),
 		ActualStartAt:   fromGraphQLTimePtr(args.Input.ActualStartAt),
-		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
+		ExpectedEndAt:   fromGraphQLTimePtr(args.Input.ExpectedEndAt),
 		ActualEndAt:     fromGraphQLTimePtr(args.Input.ActualEndAt),
+		IconURL:         args.Input.IconURL,
+		Color:           args.Input.Color,
 	}
 
 	project, err := m.deps.projectService.UpdateProject(ct, projectID, updateProjectInput)
