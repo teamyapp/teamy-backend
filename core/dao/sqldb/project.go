@@ -28,6 +28,8 @@ func (p *Project) FindProjectsWithTx(ct context.Context, tx *transaction.Transac
 			creator_id,
 			created_at,
 			updated_at,
+			icon_url,
+			color,
 			team_id
 		FROM project;
 	`)
@@ -50,6 +52,8 @@ func (p *Project) FindProjectsWithTx(ct context.Context, tx *transaction.Transac
 			&project.CreatorID,
 			&project.CreatedAt,
 			&project.UpdatedAt,
+			&project.IconURL,
+			&project.Color,
 			&project.TeamID,
 		)
 		if err != nil {
@@ -74,6 +78,8 @@ func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction
 			creator_id,
 			created_at,
 			updated_at,
+			icon_url,
+			color,
 			team_id
 			FROM project
 		WHERE team_id = $1;
@@ -97,6 +103,8 @@ func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction
 			&project.CreatorID,
 			&project.CreatedAt,
 			&project.UpdatedAt,
+			&project.IconURL,
+			&project.Color,
 			&project.TeamID,
 		)
 		if err != nil {
@@ -127,6 +135,8 @@ func (p *Project) FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Tr
 			creator_id,
 			created_at,
 			updated_at,
+			icon_url,
+			color,
 			team_id
 		FROM project
 		WHERE id IN (%s)
@@ -149,6 +159,8 @@ func (p *Project) FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Tr
 			&project.CreatorID,
 			&project.CreatedAt,
 			&project.UpdatedAt,
+			&project.IconURL,
+			&project.Color,
 			&project.TeamID,
 		)
 		if err != nil {
@@ -174,6 +186,8 @@ func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Tran
 			creator_id,
 			created_at,
 			updated_at,
+			icon_url,
+			color,
 			team_id
 		FROM project
 		WHERE id = $1
@@ -187,6 +201,8 @@ func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Tran
 		&project.CreatorID,
 		&project.CreatedAt,
 		&project.UpdatedAt,
+		&project.IconURL,
+		&project.Color,
 		&project.TeamID,
 	)
 
@@ -210,9 +226,11 @@ func (p *Project) CreateProject(ct context.Context, tx *transaction.Transaction,
 			creator_id,
 			created_at,
 			updated_at,
+			icon_url,
+			color,
 			team_id
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
 	`,
 		project.ID,
 		project.Name,
@@ -223,6 +241,8 @@ func (p *Project) CreateProject(ct context.Context, tx *transaction.Transaction,
 		project.CreatorID,
 		project.CreatedAt,
 		project.UpdatedAt,
+		project.IconURL,
+		project.Color,
 		project.TeamID,
 	)
 
@@ -245,8 +265,10 @@ func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction,
 			creator_id = $6,
 			created_at = $7,
 			updated_at = $8,
-			team_id = $9
-		WHERE id = $10;
+			icon_url = $9,
+			color = $10,
+			team_id = $11
+		WHERE id = $12;
 	`,
 		project.Name,
 		project.ExpectedStartAt,
@@ -256,6 +278,8 @@ func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction,
 		project.CreatorID,
 		project.CreatedAt,
 		project.UpdatedAt,
+		project.IconURL,
+		project.Color,
 		project.TeamID,
 		project.ID,
 	)
