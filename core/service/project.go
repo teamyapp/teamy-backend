@@ -19,16 +19,20 @@ import (
 
 type CreateProjectInput struct {
 	Name            string
-	ExpectedStartAt time.Time
-	ExpectedEndAt   time.Time
+	ExpectedStartAt *time.Time
+	ExpectedEndAt   *time.Time
+	IconURL         *string
+	Color           *string
 }
 
 type UpdateProjectInput struct {
 	Name            string
-	ExpectedStartAt time.Time
+	ExpectedStartAt *time.Time
 	ActualStartAt   *time.Time
-	ExpectedEndAt   time.Time
+	ExpectedEndAt   *time.Time
 	ActualEndAt     *time.Time
+	IconURL         *string
+	Color           *string
 }
 
 type Project struct {
@@ -135,6 +139,8 @@ func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateP
 		CreatorID:       userID,
 		CreatedAt:       time.Now(),
 		TeamID:          teamID,
+		Color:           input.Color,
+		IconURL:         input.IconURL,
 	}
 
 	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
@@ -166,6 +172,8 @@ func (p *Project) UpdateProject(ct context.Context, projectID uint64, input Upda
 			project.ExpectedEndAt = input.ExpectedEndAt
 			project.ActualEndAt = input.ActualEndAt
 			project.UpdatedAt = &now
+			project.Color = input.Color
+			project.IconURL = input.IconURL
 
 			return p.projectDao.UpdateProject(ct, tx, project)
 		})

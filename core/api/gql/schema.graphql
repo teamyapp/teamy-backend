@@ -186,9 +186,9 @@ type Mutation {
 type Project {
 	id: ID!
 	name: String!
-	expectedStartAt: Time!
+	expectedStartAt: Time
 	actualStartAt: Time
-	expectedEndAt: Time!
+	expectedEndAt: Time
 	actualEndAt: Time
 	creator: User!
 	createdAt: Time!
@@ -196,6 +196,8 @@ type Project {
 	phases: [Phase!]!
 	stories: [Story!]!
 	team: Team!
+	iconUrl: String
+	color: String
 }
 
 type Phase {
@@ -609,16 +611,20 @@ input AppFilter {
 # Inputs
 input CreateProjectInput {
 	name: String!
-	expectedStartAt: Time!
-	expectedEndAt: Time!
+	expectedStartAt: Time
+	expectedEndAt: Time
+	iconUrl: String
+	color: String
 }
 
 input UpdateProjectInput {
 	name: String!
-	expectedStartAt: Time!
+	expectedStartAt: Time
 	actualStartAt: Time
-	expectedEndAt: Time!
+	expectedEndAt: Time
 	actualEndAt: Time
+	iconUrl: String
+	color: String
 }
 
 input CreatePhaseInput {
