@@ -20,8 +20,8 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
@@ -100,7 +100,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
-	activityCache := cache.NewActivity(logger)
+	activityCache := activity.NewActivity(logger)
 
 	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
 	threadDao := daotest.NewThread(teamyBackendDB)
