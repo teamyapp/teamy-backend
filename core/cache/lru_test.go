@@ -2,6 +2,7 @@ package cache
 
 import (
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 )
 
@@ -215,9 +216,16 @@ func BenchmarkLRU_Contains(b *testing.B) {
 	}
 
 	b.ResetTimer()
+	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		lru.Contains("a")
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			lru.Contains("a")
+		}()
 	}
+
+	wg.Wait()
 }
 
 func BenchmarkLRU_Get(b *testing.B) {
@@ -230,9 +238,16 @@ func BenchmarkLRU_Get(b *testing.B) {
 	}
 
 	b.ResetTimer()
+	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		_, _ = lru.Get("a")
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = lru.Get("a")
+		}()
 	}
+
+	wg.Wait()
 }
 
 func BenchmarkLRU_Set(b *testing.B) {
@@ -240,10 +255,17 @@ func BenchmarkLRU_Set(b *testing.B) {
 	require.Nil(b, err)
 
 	b.ResetTimer()
+	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		err := lru.Set(string(rune(i)), string(rune(i)))
-		require.Nil(b, err)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := lru.Set(string(rune(i)), string(rune(i)))
+			require.Nil(b, err)
+		}()
 	}
+
+	wg.Wait()
 }
 
 func BenchmarkLRU_Remove(b *testing.B) {
@@ -256,7 +278,14 @@ func BenchmarkLRU_Remove(b *testing.B) {
 	}
 
 	b.ResetTimer()
+	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		_ = lru.Remove("a")
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = lru.Remove("a")
+		}()
 	}
+
+	wg.Wait()
 }

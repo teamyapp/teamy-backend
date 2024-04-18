@@ -13,7 +13,7 @@ type LRU[Key comparable, Value any] struct {
 	index      map[Key]*Buffer[*KeyValuePair[Key, Value]]
 	bufferHead *Buffer[*KeyValuePair[Key, Value]]
 	bufferTail *Buffer[*KeyValuePair[Key, Value]]
-	mu         sync.Mutex
+	mu         sync.RWMutex
 }
 
 var _ Cache[string, int] = (*LRU[string, int])(nil)
@@ -33,8 +33,8 @@ func (l *LRU[Key, Value]) Get(key Key) (Value, error) {
 }
 
 func (l *LRU[Key, Value]) Contains(key Key) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 
 	_, ok := l.index[key]
 	return ok
@@ -84,8 +84,8 @@ func (l *LRU[Key, Value]) Remove(key Key) error {
 }
 
 func (l *LRU[Key, Value]) Size() int {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.size
 }
 
