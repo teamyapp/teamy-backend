@@ -14,9 +14,9 @@ import (
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudtx "github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
-	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -194,7 +194,7 @@ func InitGraphQLAPI(
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
-		cache.NewActivity,
+		activity.NewActivity,
 		gql.NewDependencies,
 		gql.NewResolver,
 		api.NewGraphQL,
@@ -226,7 +226,7 @@ func InitTaskRPCAPI(
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
-		cache.NewActivity,
+		activity.NewActivity,
 		api.NewTaskRPC,
 	)
 	return api.TaskRPC{}

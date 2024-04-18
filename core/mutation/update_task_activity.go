@@ -6,7 +6,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
-	"github.com/teamyapp/teamy-backend/core/cache"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
@@ -14,7 +14,7 @@ import (
 type UpdateTaskActivity struct {
 	logger           telemetry.Logger
 	stateSyncer      *realtime.StateSyncer
-	activityCache    cache.Activity
+	activityCache    activity.Activity
 	id               uint64
 	taskActivity     entity.TaskActivity
 	clientNotifiers  []*realtime.ClientNotifier
@@ -75,7 +75,7 @@ func (u *UpdateTaskActivity) CleanUp(ct context.Context) *errs.Error {
 func NewUpdateTaskActivity(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
-	activityCache cache.Activity,
+	activityCache activity.Activity,
 	taskActivity entity.TaskActivity,
 ) *UpdateTaskActivity {
 	return &UpdateTaskActivity{

@@ -20,7 +20,7 @@ import (
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/api"
 	gql2 "github.com/teamyapp/teamy-backend/core/api/gql"
-	"github.com/teamyapp/teamy-backend/core/cache"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -46,7 +46,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
-	activity := cache.NewActivity(logger)
+	activity := activity.NewActivity(logger)
 	task := sqldb.NewTask(factory)
 	thread := sqldb.NewThread()
 	sprint := sqldb.NewSprint(factory)
@@ -128,7 +128,7 @@ func InitTaskRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, c
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
-	activity := cache.NewActivity(logger)
+	activity := activity.NewActivity(logger)
 	task := sqldb.NewTask(factory)
 	thread := sqldb.NewThread()
 	sprint := sqldb.NewSprint(factory)

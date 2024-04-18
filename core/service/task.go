@@ -13,8 +13,8 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/authorization"
-	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -69,7 +69,7 @@ type Task struct {
 	featureToggles          feature.Toggles
 	stateSyncer             *realtime.StateSyncer
 	transactionFactory      cloudTransaction.Factory
-	activityCache           cache.Activity
+	activityCache           activity.Activity
 	taskDao                 dao.Task
 	sprintDao               dao.Sprint
 	threadDao               dao.Thread
@@ -1219,7 +1219,7 @@ func NewTask(
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudTransaction.Factory,
-	activityCache cache.Activity,
+	activityCache activity.Activity,
 	taskDao dao.Task,
 	threadDao dao.Thread,
 	sprintDao dao.Sprint,
