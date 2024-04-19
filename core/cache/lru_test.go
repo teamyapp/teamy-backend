@@ -1,8 +1,9 @@
-package cache
+package cache_test
 
 import (
 	"github.com/stretchr/testify/require"
-	"sync"
+	"github.com/teamyapp/teamy-backend/core/cache"
+	"github.com/teamyapp/teamy-backend/core/cache/cachetest"
 	"testing"
 )
 
@@ -34,13 +35,14 @@ func TestNewLRU(t *testing.T) {
 		{
 			name:      "invalid capacity",
 			capacity:  0,
-			expectErr: InvalidCapacityErr{Capacity: 0},
+			expectErr: cache.InvalidCapacityErr{Capacity: 0},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewLRU[string, string](tc.capacity)
+			metrics := cachetest.NewNoopMetrics()
+			_, err := cache.NewLRU[string, string](metrics, tc.capacity)
 			require.Equal(t, tc.expectErr, err)
 		})
 	}
@@ -101,12 +103,12 @@ func TestLRU_Operations(t *testing.T) {
 			},
 			expectedErrs: []error{
 				nil, nil, nil, nil, nil,
-				KeyNotFoundErr[string]{Key: "a"},
-				KeyNotFoundErr[string]{Key: "b"},
+				cache.KeyNotFoundErr[string]{Key: "a"},
+				cache.KeyNotFoundErr[string]{Key: "b"},
 				nil,
-				KeyNotFoundErr[string]{Key: "a"},
-				KeyNotFoundErr[string]{Key: "b"},
-				KeyNotFoundErr[string]{Key: "c"},
+				cache.KeyNotFoundErr[string]{Key: "a"},
+				cache.KeyNotFoundErr[string]{Key: "b"},
+				cache.KeyNotFoundErr[string]{Key: "c"},
 				nil, nil,
 			},
 		},
@@ -133,10 +135,10 @@ func TestLRU_Operations(t *testing.T) {
 			expectedResult: []any{nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "5", "6", "7"},
 			expectedErrs: []error{
 				nil, nil, nil, nil, nil, nil, nil,
-				KeyNotFoundErr[string]{Key: "a"},
-				KeyNotFoundErr[string]{Key: "b"},
-				KeyNotFoundErr[string]{Key: "c"},
-				KeyNotFoundErr[string]{Key: "d"},
+				cache.KeyNotFoundErr[string]{Key: "a"},
+				cache.KeyNotFoundErr[string]{Key: "b"},
+				cache.KeyNotFoundErr[string]{Key: "c"},
+				cache.KeyNotFoundErr[string]{Key: "d"},
 				nil, nil, nil,
 			},
 		},
@@ -164,16 +166,17 @@ func TestLRU_Operations(t *testing.T) {
 			expectedResult: []any{nil, nil, nil, nil, nil, nil, nil, nil, "7", "6", nil, nil, nil, nil, nil},
 			expectedErrs: []error{
 				nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-				KeyNotFoundErr[string]{Key: "h"},
+				cache.KeyNotFoundErr[string]{Key: "h"},
 				nil, nil,
-				KeyNotFoundErr[string]{Key: "f"},
+				cache.KeyNotFoundErr[string]{Key: "f"},
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			lru, err := NewLRU[string, string](tc.capacity)
+			metrics := cachetest.NewNoopMetrics()
+			lru, err := cache.NewLRU[string, string](metrics, tc.capacity)
 			require.Nil(t, err)
 
 			for i, op := range tc.operations {
@@ -207,85 +210,61 @@ func TestLRU_Operations(t *testing.T) {
 }
 
 func BenchmarkLRU_Contains(b *testing.B) {
-	lru, err := NewLRU[string, string](1000)
+	metrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](metrics, 1000)
 	require.Nil(b, err)
 
 	for i := 0; i < 1000; i++ {
-		err := lru.Set(string(rune(i)), string(rune(i)))
+		err = lru.Set(string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			lru.Contains("a")
-		}()
+		lru.Contains("a")
 	}
-
-	wg.Wait()
 }
 
 func BenchmarkLRU_Get(b *testing.B) {
-	lru, err := NewLRU[string, string](100)
+	metrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](metrics, 100)
 	require.Nil(b, err)
 
 	for i := 0; i < 100; i++ {
-		err := lru.Set(string(rune(i)), string(rune(i)))
+		err = lru.Set(string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_, _ = lru.Get("a")
-		}()
+		_, _ = lru.Get("a")
 	}
-
-	wg.Wait()
 }
 
 func BenchmarkLRU_Set(b *testing.B) {
-	lru, err := NewLRU[string, string](100)
+	metrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](metrics, 100)
 	require.Nil(b, err)
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err := lru.Set(string(rune(i)), string(rune(i)))
-			require.Nil(b, err)
-		}()
+		err = lru.Set(string(rune(i)), string(rune(i)))
+		require.Nil(b, err)
 	}
-
-	wg.Wait()
 }
 
 func BenchmarkLRU_Remove(b *testing.B) {
-	lru, err := NewLRU[string, string](100)
+	metrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](metrics, 100)
 	require.Nil(b, err)
 
 	for i := 0; i < 100; i++ {
-		err := lru.Set(string(rune(i)), string(rune(i)))
+		err = lru.Set(string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_ = lru.Remove("a")
-		}()
+		_ = lru.Remove("a")
 	}
-
-	wg.Wait()
 }

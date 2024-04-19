@@ -1,10 +1,8 @@
 package cache
 
-import "sync"
-
 type KeyValuePair[Key comparable, Value any] struct {
-	key   Key
-	value Value
+	Key   Key
+	Value Value
 }
 
 type LRU[Key comparable, Value any] struct {
@@ -13,15 +11,11 @@ type LRU[Key comparable, Value any] struct {
 	index      map[Key]*Buffer[*KeyValuePair[Key, Value]]
 	bufferHead *Buffer[*KeyValuePair[Key, Value]]
 	bufferTail *Buffer[*KeyValuePair[Key, Value]]
-	mu         sync.RWMutex
 }
 
 var _ Cache[string, int] = (*LRU[string, int])(nil)
 
 func (l *LRU[Key, Value]) Get(key Key) (Value, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	buffer, ok := l.index[key]
 	if !ok {
 		return *(new(Value)), KeyNotFoundErr[Key]{Key: key}
@@ -29,25 +23,19 @@ func (l *LRU[Key, Value]) Get(key Key) (Value, error) {
 
 	l.removeBuffer(buffer)
 	l.addBufferToTheTail(buffer)
-	return buffer.data.value, nil
+	return buffer.data.Value, nil
 }
 
 func (l *LRU[Key, Value]) Contains(key Key) bool {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
 	_, ok := l.index[key]
 	return ok
 }
 
 func (l *LRU[Key, Value]) Set(key Key, value Value) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	buffer, ok := l.index[key]
 	if ok {
 		l.removeBuffer(buffer)
-		buffer.data.value = value
+		buffer.data.Value = value
 		l.addBufferToTheTail(buffer)
 		return nil
 	}
@@ -58,8 +46,8 @@ func (l *LRU[Key, Value]) Set(key Key, value Value) error {
 
 	buffer = &Buffer[*KeyValuePair[Key, Value]]{
 		data: &KeyValuePair[Key, Value]{
-			key:   key,
-			value: value,
+			Key:   key,
+			Value: value,
 		},
 	}
 	l.index[key] = buffer
@@ -69,9 +57,6 @@ func (l *LRU[Key, Value]) Set(key Key, value Value) error {
 }
 
 func (l *LRU[Key, Value]) Remove(key Key) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	buffer, ok := l.index[key]
 	if !ok {
 		return KeyNotFoundErr[Key]{Key: key}
@@ -84,9 +69,32 @@ func (l *LRU[Key, Value]) Remove(key Key) error {
 }
 
 func (l *LRU[Key, Value]) Size() int {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
 	return l.size
+}
+
+func (l *LRU[Key, Value]) Keys() []Key {
+	keys := make([]Key, l.size)
+	buffer := l.bufferHead
+	for i := 0; buffer != nil; i++ {
+		keys[i] = buffer.data.Key
+		buffer = buffer.next
+	}
+
+	return keys
+}
+
+func (l *LRU[Key, Value]) Entries() []KeyValuePair[Key, Value] {
+	entries := make([]KeyValuePair[Key, Value], l.size)
+	buffer := l.bufferHead
+	for i := 0; buffer != nil; i++ {
+		entries[i] = KeyValuePair[Key, Value]{
+			Key:   buffer.data.Key,
+			Value: buffer.data.Value,
+		}
+		buffer = buffer.next
+	}
+
+	return entries
 }
 
 func (l *LRU[Key, Value]) removeBuffer(buffer *Buffer[*KeyValuePair[Key, Value]]) {
@@ -116,7 +124,7 @@ func (l *LRU[Key, Value]) addBufferToTheTail(buffer *Buffer[*KeyValuePair[Key, V
 }
 
 func (l *LRU[Key, Value]) evict() {
-	delete(l.index, l.bufferHead.data.key)
+	delete(l.index, l.bufferHead.data.Key)
 	l.bufferHead = l.bufferHead.next
 	if l.bufferHead != nil {
 		l.bufferHead.prev = nil

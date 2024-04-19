@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"time"
 
 	"github.com/teamyapp/cloud/app/api/proto"
@@ -70,6 +73,7 @@ type Task struct {
 	stateSyncer             *realtime.StateSyncer
 	transactionFactory      cloudTransaction.Factory
 	activityCache           activity.Activity
+	cache                   *cache.TimeBasedCache[string, any]
 	taskDao                 dao.Task
 	sprintDao               dao.Sprint
 	threadDao               dao.Thread
@@ -99,10 +103,46 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 		}
 	}
 
-	return t.taskDao.FindTaskByID(ct, taskID)
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(findTaskByIDCacheKey(taskID))
+		if cacheErr == nil {
+			return value.(entity.Task), nil
+		}
+
+		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.Task{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	task, err := t.taskDao.FindTaskByID(ct, taskID)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(findTaskByIDCacheKey(taskID), task)
+		if cacheErr != nil {
+			return entity.Task{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return task, nil
 }
 
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, *errs.Error) {
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(findTasksCacheKey(filter))
+		if cacheErr == nil {
+			return value.([]entity.Task), nil
+		}
+
+		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	tasks, err := t.taskDao.FindAllTasks(ct)
 	if err != nil {
 		return nil, err
@@ -132,10 +172,29 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 		tasks = filterTasks(tasks, *filter)
 	}
 
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(findTasksCacheKey(filter), tasks)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	return tasks, nil
 }
 
 func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, *errs.Error) {
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(findTasksInTeamCacheKey(teamID, filter))
+		if cacheErr == nil {
+			return value.([]entity.Task), nil
+		}
+
+		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	tasks, err := t.taskDao.FindTasksByTeamID(ct, teamID)
 	if err != nil {
 		return nil, err
@@ -165,6 +224,13 @@ func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFil
 		tasks = filterTasks(tasks, *filter)
 	}
 
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(findTasksInTeamCacheKey(teamID, filter), tasks)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	return tasks, nil
 }
 
@@ -173,6 +239,18 @@ func (t Task) FindTasksInSprint(
 	sprintID uint64,
 	filter *TaskFilter,
 ) ([]entity.Task, *errs.Error) {
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(findTasksInSprintCacheKey(sprintID, filter))
+		if cacheErr == nil {
+			return value.([]entity.Task), nil
+		}
+
+		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	var tasks []entity.Task
 	err := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
@@ -215,10 +293,29 @@ func (t Task) FindTasksInSprint(
 		tasks = filterTasks(tasks, *filter)
 	}
 
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(findTasksInSprintCacheKey(sprintID, filter), tasks)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	return tasks, nil
 }
 
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, *errs.Error) {
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(findAwaitForTasksCacheKey(awaitingTaskID))
+		if cacheErr == nil {
+			return value.([]entity.Task), nil
+		}
+
+		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	var tasks []entity.Task
 	err := t.transactionGroupFactory.WithTransactionGroup(
 		ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
@@ -254,6 +351,13 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 		}
 
 		tasks = authorizedTasks
+	}
+
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(findAwaitForTasksCacheKey(awaitingTaskID), tasks)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
 	}
 
 	return tasks, err
@@ -1245,4 +1349,27 @@ func NewTask(
 		sprintTaskRelationDao:   sprintTaskRelationDao,
 		storyTaskRelationDao:    storyTaskRelationDao,
 	}
+}
+
+func findTaskByIDCacheKey(taskID uint64) string {
+	return fmt.Sprintf("FindTaskByID(%v)", taskID)
+}
+
+func findTasksCacheKey(taskFilter *TaskFilter) string {
+	filter, _ := json.Marshal(taskFilter)
+	return fmt.Sprintf("FindTasks(%v)", filter)
+}
+
+func findTasksInTeamCacheKey(teamID uint64, taskFilter *TaskFilter) string {
+	filter, _ := json.Marshal(taskFilter)
+	return fmt.Sprintf("FindTasksInTeam(%v,%v)", teamID, filter)
+}
+
+func findTasksInSprintCacheKey(teamID uint64, taskFilter *TaskFilter) string {
+	filter, _ := json.Marshal(taskFilter)
+	return fmt.Sprintf("FindTasksInSprint(%v,%v)", teamID, filter)
+}
+
+func findAwaitForTasksCacheKey(awaitingTaskID uint64) string {
+	return fmt.Sprintf("FindAwaitForTasks(%v)", awaitingTaskID)
 }

@@ -6,4 +6,6 @@ type Cache[Key comparable, Value any] interface {
 	Set(key Key, value Value) error
 	Remove(key Key) error
 	Size() int
+	Keys() []Key
+	Entries() []KeyValuePair[Key, Value]
 }
