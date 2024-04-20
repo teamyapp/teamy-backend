@@ -3,9 +3,8 @@ package instrumenttest
 import (
 	"time"
 
-	"github.com/teamyapp/teamy-backend/core/cache"
-
 	"github.com/teamyapp/cloud/libs/middleware"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 

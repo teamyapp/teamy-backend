@@ -3,12 +3,11 @@ package mutation
 import (
 	"context"
 
-	daoEntity "github.com/teamyapp/teamy-backend/core/dao/entity"
-
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
+	daoEntity "github.com/teamyapp/teamy-backend/core/dao/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/teamyapp/teamy-backend/core/cache"
 	"os"
 	"testing"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"

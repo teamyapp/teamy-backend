@@ -5,11 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/teamy-backend/core/cache/cachetest"
-
 	"github.com/stretchr/testify/require"
+	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/teamy-backend/core/cache"
+	"github.com/teamyapp/teamy-backend/core/cache/cachetest"
 )
 
 type OperationType string

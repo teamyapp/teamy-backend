@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/teamy-backend/core/cache"
-
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
@@ -16,6 +14,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"

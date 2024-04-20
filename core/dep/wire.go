@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/teamyapp/teamy-backend/core/cache"
-
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
 	"github.com/teamyapp/cloud/app/client"
@@ -20,6 +18,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/api"
 	"github.com/teamyapp/teamy-backend/core/api/gql"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"

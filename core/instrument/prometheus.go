@@ -3,13 +3,12 @@ package instrument
 import (
 	"time"
 
-	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/dao"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/metrics"
 	"github.com/teamyapp/cloud/libs/middleware"
+	"github.com/teamyapp/teamy-backend/core/cache"
+	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 

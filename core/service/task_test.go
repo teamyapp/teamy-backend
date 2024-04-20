@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamyapp/teamy-backend/core/cache"
-
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -24,6 +22,7 @@ import (
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
