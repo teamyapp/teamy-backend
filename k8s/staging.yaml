@@ -46,6 +46,7 @@ spec:
             - containerPort: 9000
             - containerPort: 9001
             - containerPort: 10000
+            - containerPort: 10001
           env:
             - name: ENVIRONMENT
               value: staging
@@ -84,6 +85,12 @@ spec:
               value: "81"
             - name: CLOUD_GRPC_API_SHOULD_ENCRYPT
               value: "false"
+            - name: CACHE_CAPACITY
+              value: "100000"
+            - name: TIME_BASED_CACHE_BUCKET_COUNT
+              value: "1000"
+            - name: TIME_BASED_CACHE_TTL
+              value: "120s"
             - name: REQUEST_RETRY_MAX_COUNT # Temporary set to 1 before error category is implemented
               value: "1"
             - name: SERVICE_RUNNER_WEB_SERVER_PORT
@@ -159,6 +166,8 @@ spec:
       port: 9001
     - name: monitoring
       port: 10000
+    - name: profiling
+      port: 10001
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
