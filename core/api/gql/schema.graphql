@@ -646,6 +646,7 @@ input CreateStoryInput {
 	name: String!
 	ownerId: ID
 	priority: Priority
+	status: StoryStatus!
 }
 
 input UpdateStoryInput {

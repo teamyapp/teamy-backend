@@ -23,6 +23,7 @@ import (
 
 type CreateStoryInput struct {
 	Name     string
+	Status   entity.StoryStatus
 	OwnerID  *uint64
 	Priority *entity.Priority
 }
@@ -132,7 +133,7 @@ func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateSt
 		Name:      input.Name,
 		OwnerID:   input.OwnerID,
 		Priority:  input.Priority,
-		Status:    entity.TodoStoryStatus,
+		Status:    input.Status,
 		CreatorID: userID,
 		IsPlanned: false,
 		CreatedAt: time.Now(),
