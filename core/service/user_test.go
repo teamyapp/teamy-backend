@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"os"
 	"testing"
 	"time"
@@ -95,11 +96,14 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
-
 	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 	userFileUploadSessionDao := daotest.NewUserFileUploadSession(teamyBackendDB)
-
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return UserTestRef{}, false
+	}
 	userService := NewUser(
 		logger,
 		transactionGroupFactory,
@@ -109,6 +113,7 @@ func prepareUserTestRef(t *testing.T, toggles feature.Toggles) (UserTestRef, boo
 		authorizor,
 		stateSyncer,
 		transactionFactory,
+		timeBasedCache,
 		userDao,
 		teamMemberDao,
 		userFileUploadSessionDao,

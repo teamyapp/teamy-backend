@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"os"
 	"testing"
 	"time"
@@ -699,6 +700,12 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
 	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return TeamTestRef{}, false
+	}
+
 	teamService := NewTeam(
 		logger,
 		transactionGroupFactory,
@@ -708,6 +715,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		toggles,
 		stateSyncer,
 		transactionFactory,
+		timeBasedCache,
 		taskDao,
 		sprintDao,
 		sprintParticipantDao,

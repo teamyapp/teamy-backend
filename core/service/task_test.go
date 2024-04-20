@@ -278,10 +278,11 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
-	lru, err := cache.NewLRU[string, any](logger, noopMetrics, 1000)
-	require.Nil(t, err)
-
-	timeBasedCache := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lru, 1000)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return TaskTestRef{}, false
+	}
 
 	taskService := NewTask(
 		logger,

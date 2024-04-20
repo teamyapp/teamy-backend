@@ -117,6 +117,11 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
 	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return TaskLinkTestRef{}, false
+	}
 
 	teamService := NewTeam(
 		logger,
@@ -127,6 +132,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		toggles,
 		stateSyncer,
 		transactionFactory,
+		timeBasedCache,
 		taskDao,
 		sprintDao,
 		sprintParticipantDao,
@@ -137,11 +143,6 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		teamMemberGroupUserRelationDao,
 		teamMemberGroupRepo,
 	)
-	lru, err := cache.NewLRU[string, any](logger, noopMetrics, 1000)
-	require.Nil(t, err)
-
-	timeBasedCache := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lru, 1000)
-
 	taskService := NewTask(
 		logger,
 		transactionGroupFactory,
