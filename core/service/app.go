@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -29,6 +30,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -68,6 +70,7 @@ type App struct {
 	featureToggles             feature.Toggles
 	transactionFactory         cloudTransaction.Factory
 	stateSyncer                *realtime.StateSyncer
+	cache                      *cache.TimeBasedCache[string, any]
 	appDao                     dao.App
 	appVersionDao              dao.AppVersion
 	appVersionPriceDao         dao.AppVersionPrice
@@ -140,7 +143,31 @@ func (a App) FindApps(ct context.Context, appFilter *AppFilter) ([]entity.App, *
 }
 
 func (a App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
-	return a.appDao.FindAppByID(ct, appID)
+	if a.featureToggles.EnableCache {
+		value, cacheErr := a.cache.Get(ct, findAppByIDCacheKey(appID))
+		if cacheErr == nil {
+			return value.(entity.App), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.App{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	app, err := a.appDao.FindAppByID(ct, appID)
+	if err != nil {
+		return entity.App{}, err
+	}
+
+	if a.featureToggles.EnableCache {
+		cacheErr := a.cache.SetIfExpired(ct, findAppByIDCacheKey(appID), app)
+		if cacheErr != nil {
+			return entity.App{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return app, nil
 }
 
 func (a App) FindAppsByGroupID(ct context.Context, groupID uint64) ([]entity.App, *errs.Error) {
@@ -303,7 +330,31 @@ func (a App) FindAppsByManagedByTeamID(ct context.Context, teamID uint64) ([]ent
 }
 
 func (a App) FindAppVersionByAppIDAndNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
-	return a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if a.featureToggles.EnableCache {
+		value, cacheErr := a.cache.Get(ct, findAppVersionByAppIDAndNumberCacheKey(appID, versionNumber))
+		if cacheErr == nil {
+			return value.(entity.AppVersion), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.AppVersion{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	appVersion, err := a.appVersionDao.FindAppVersionByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if err != nil {
+		return entity.AppVersion{}, err
+	}
+
+	if a.featureToggles.EnableCache {
+		cacheErr := a.cache.SetIfExpired(ct, findAppVersionByAppIDAndNumberCacheKey(appID, versionNumber), appVersion)
+		if cacheErr != nil {
+			return entity.AppVersion{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return appVersion, nil
 }
 
 func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateAppInput) (entity.App, *errs.Error) {
@@ -1107,7 +1158,31 @@ func (a App) FindPricesByAppVersionID(ct context.Context, appID uint64, versionN
 }
 
 func (a App) FindAppVersionChangesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]entity.AppVersionChange, *errs.Error) {
-	return a.appVersionChangeDao.FindAppVersionChangesByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if a.featureToggles.EnableCache {
+		cachedChanges, cacheErr := a.cache.Get(ct, findAppVersionChangesByAppIDAndVersionNumberCacheKey(appID, versionNumber))
+		if cacheErr == nil {
+			return cachedChanges.([]entity.AppVersionChange), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	appVersionChanges, err := a.appVersionChangeDao.FindAppVersionChangesByAppIDAndVersionNumber(ct, appID, versionNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if a.featureToggles.EnableCache {
+		cacheErr := a.cache.SetIfExpired(ct, findAppVersionChangesByAppIDAndVersionNumberCacheKey(appID, versionNumber), appVersionChanges)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return appVersionChanges, nil
 }
 
 func (a App) GetAppSecretToken(ct context.Context, generateTokenInput GenerateTokenInput) (string, *errs.Error) {
@@ -1325,6 +1400,7 @@ func NewApp(
 	featureToggles feature.Toggles,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
+	cache *cache.TimeBasedCache[string, any],
 	appDao dao.App,
 	appVersionDao dao.AppVersion,
 	appVersionPriceDao dao.AppVersionPrice,
@@ -1355,6 +1431,7 @@ func NewApp(
 		featureToggles:             featureToggles,
 		transactionFactory:         transactionFactory,
 		stateSyncer:                stateSyncer,
+		cache:                      cache,
 		appDao:                     appDao,
 		appVersionDao:              appVersionDao,
 		appVersionPriceDao:         appVersionPriceDao,
@@ -1376,4 +1453,16 @@ func NewApp(
 		groupService:               groupService,
 		rolloutService:             rolloutService,
 	}
+}
+
+func findAppVersionByAppIDAndNumberCacheKey(appID uint64, versionNumber int) string {
+	return fmt.Sprintf("FindAppVersionByAppIDAndNumber(%v,%v)", appID, versionNumber)
+}
+
+func findAppByIDCacheKey(appID uint64) string {
+	return fmt.Sprintf("FindAppByID(%v)", appID)
+}
+
+func findAppVersionChangesByAppIDAndVersionNumberCacheKey(appID uint64, versionNumber int) string {
+	return fmt.Sprintf("FindAppVersionChangesByAppIDAndVersionNumber(%v,%v)", appID, versionNumber)
 }

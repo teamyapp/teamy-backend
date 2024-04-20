@@ -23,7 +23,7 @@ type Rollout struct {
 
 var _ rollout.Store = (*Rollout)(nil)
 
-func (r *Rollout) GetIsRolloutEnabled(ct context.Context, defaultIsRolloutEnabled bool) (bool, *errs.Error) {
+func (r *Rollout) GetIsRolloutEnabled(ct context.Context, isRolloutEnabled bool) (bool, *errs.Error) {
 	ro, err := r.rolloutDao.FindRolloutByID(ct, r.rolloutID)
 	return ro.IsEnabled, err
 

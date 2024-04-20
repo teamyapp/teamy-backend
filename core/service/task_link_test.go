@@ -22,6 +22,7 @@ import (
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/feature"
 	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
@@ -115,6 +116,11 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
 	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return TaskLinkTestRef{}, false
+	}
 
 	teamService := NewTeam(
 		logger,
@@ -125,6 +131,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		toggles,
 		stateSyncer,
 		transactionFactory,
+		timeBasedCache,
 		taskDao,
 		sprintDao,
 		sprintParticipantDao,
@@ -144,6 +151,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		stateSyncer,
 		transactionFactory,
 		activityCache,
+		timeBasedCache,
 		taskDao,
 		threadDao,
 		sprintDao,
@@ -163,6 +171,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		authorizer,
 		toggles,
 		stateSyncer,
+		timeBasedCache,
 		taskLinkDao,
 		taskDao,
 	)

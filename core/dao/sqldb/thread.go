@@ -8,12 +8,16 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 )
 
+const threadDaoName = "Thread"
+
 type Thread struct {
+	metrics dao.Metrics
 }
 
 var _ dao.Thread = (*Thread)(nil)
 
 func (t Thread) CreateThread(ct context.Context, tx *transaction.Transaction, threadID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(threadDaoName, "CreateThread")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO thread (id)
 		VALUES ($1);
@@ -27,6 +31,7 @@ func (t Thread) CreateThread(ct context.Context, tx *transaction.Transaction, th
 }
 
 func (t Thread) DeleteThread(ct context.Context, tx *transaction.Transaction, threadID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(threadDaoName, "DeleteThread")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM thread
 		WHERE id = $1;
@@ -39,6 +44,8 @@ func (t Thread) DeleteThread(ct context.Context, tx *transaction.Transaction, th
 	return nil
 }
 
-func NewThread() Thread {
-	return Thread{}
+func NewThread(metrics dao.Metrics) Thread {
+	return Thread{
+		metrics: metrics,
+	}
 }

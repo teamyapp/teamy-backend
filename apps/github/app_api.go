@@ -17,8 +17,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	teamyClient "github.com/teamyapp/teamy-backend/core/client"
-
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -33,6 +31,7 @@ import (
 	githubEntity "github.com/teamyapp/teamy-backend/apps/github/entity"
 	appsProto "github.com/teamyapp/teamy-backend/apps/proto"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"

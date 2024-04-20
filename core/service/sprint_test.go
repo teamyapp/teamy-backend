@@ -21,6 +21,7 @@ import (
 	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -71,7 +72,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
 	require.Nil(t, internalErr)
 
-	prometheus := instrumenttest.NewNoopMetrics()
+	noopMetrics := instrumenttest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -84,7 +85,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	cloudClientRegistry, err := client.NewRegistry(
 		logger,
 		virtualNetwork,
-		prometheus,
+		noopMetrics,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
@@ -117,7 +118,13 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	threadDao := daotest.NewThread(teamyBackendDB)
 	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 
-	transactionGroupFactory := transaction.NewGroupFactory(logger, prometheus, transactionFactory, stateSyncer)
+	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return SprintTestRef{}, false
+	}
+
 	sprintService := NewSprint(
 		logger,
 		transactionGroupFactory,
@@ -126,6 +133,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 		authorizer,
 		toggles,
 		transactionFactory,
+		timeBasedCache,
 		taskDao,
 		sprintDao,
 		teamDao,

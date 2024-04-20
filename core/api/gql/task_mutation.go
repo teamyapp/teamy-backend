@@ -3,11 +3,10 @@ package gql
 import (
 	"context"
 
-	"github.com/teamyapp/teamy-backend/core/entity"
-
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 

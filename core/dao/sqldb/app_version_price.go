@@ -11,12 +11,19 @@ import (
 )
 
 type AppVersionPrice struct {
+	metrics            dao.Metrics
 	transactionFactory *transaction.Factory
 }
 
 var _ dao.AppVersionPrice = (*AppVersionPrice)(nil)
 
-func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
+func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumberWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	appID uint64,
+	versionNumber int,
+) ([]entity.Money, *errs.Error) {
+	a.metrics.ReportDaoOperation("AppVersionPrice", "FindAppVersionPricesByAppIDAndVersionNumberWithTx")
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT currency, amount
@@ -48,6 +55,7 @@ func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct c
 }
 
 func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]entity.Money, *errs.Error) {
+	a.metrics.ReportDaoOperation("AppVersionPrice", "FindAppVersionPricesByAppIDAndVersionNumber")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -61,7 +69,8 @@ func (a *AppVersionPrice) FindAppVersionPricesByAppIDAndVersionNumber(ct context
 	return a.FindAppVersionPricesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 }
 
-func (*AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transaction.Transaction, appVersionPrice entity.AppVersionPrice) *errs.Error {
+func (a *AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transaction.Transaction, appVersionPrice entity.AppVersionPrice) *errs.Error {
+	a.metrics.ReportDaoOperation("AppVersionPrice", "CreateAppVersionPrice")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		INSERT INTO app_version_price (
@@ -85,7 +94,8 @@ func (*AppVersionPrice) CreateAppVersionPrice(ct context.Context, tx *transactio
 	return nil
 }
 
-func (*AppVersionPrice) DeleteAppVersionPrice(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) *errs.Error {
+func (a *AppVersionPrice) DeleteAppVersionPrice(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) *errs.Error {
+	a.metrics.ReportDaoOperation("AppVersionPrice", "DeleteAppVersionPrice")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM app_version_price
@@ -102,8 +112,12 @@ func (*AppVersionPrice) DeleteAppVersionPrice(ct context.Context, tx *transactio
 	return nil
 }
 
-func NewAppVersionPrice(transactionFactory transaction.Factory) *AppVersionPrice {
+func NewAppVersionPrice(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppVersionPrice {
 	return &AppVersionPrice{
+		metrics:            metrics,
 		transactionFactory: &transactionFactory,
 	}
 }

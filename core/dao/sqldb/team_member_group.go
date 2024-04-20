@@ -12,11 +12,13 @@ import (
 )
 
 type TeamMemberGroup struct {
+	metrics dao.Metrics
 }
 
 var _ dao.TeamMemberGroup = TeamMemberGroup{}
 
 func (t TeamMemberGroup) FindMemberGroupByID(ct context.Context, tx *transaction.Transaction, id uint64) (entity.TeamMemberGroup, *errs.Error) {
+	t.metrics.ReportDaoOperation("TeamMemberGroup", "FindMemberGroupByID")
 	query := `
 		SELECT
 			id,
@@ -50,6 +52,7 @@ func (t TeamMemberGroup) FindMemberGroupByID(ct context.Context, tx *transaction
 }
 
 func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMemberGroup, *errs.Error) {
+	t.metrics.ReportDaoOperation("TeamMemberGroup", "FindMemberGroupsByTeamID")
 	query := `
 		SELECT
 			id,
@@ -89,6 +92,7 @@ func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transa
 }
 
 func (t TeamMemberGroup) CreateMemberGroup(ct context.Context, tx *transaction.Transaction, memberGroup entity.TeamMemberGroup) *errs.Error {
+	t.metrics.ReportDaoOperation("TeamMemberGroup", "CreateMemberGroup")
 	statement := `
 		INSERT INTO team_member_group
 			(
@@ -117,6 +121,7 @@ func (t TeamMemberGroup) CreateMemberGroup(ct context.Context, tx *transaction.T
 }
 
 func (t TeamMemberGroup) UpdateMemberGroup(ct context.Context, tx *transaction.Transaction, memberGroup entity.TeamMemberGroup) *errs.Error {
+	t.metrics.ReportDaoOperation("TeamMemberGroup", "UpdateMemberGroup")
 	statement := `
 		UPDATE team_member_group
 		SET
@@ -143,6 +148,7 @@ func (t TeamMemberGroup) UpdateMemberGroup(ct context.Context, tx *transaction.T
 }
 
 func (t TeamMemberGroup) DeleteMemberGroup(ct context.Context, tx *transaction.Transaction, id uint64) *errs.Error {
+	t.metrics.ReportDaoOperation("TeamMemberGroup", "DeleteMemberGroup")
 	statement := `
 		DELETE FROM team_member_group
 		WHERE id = $1`
@@ -154,6 +160,8 @@ func (t TeamMemberGroup) DeleteMemberGroup(ct context.Context, tx *transaction.T
 	return nil
 }
 
-func NewTeamMemberGroup() TeamMemberGroup {
-	return TeamMemberGroup{}
+func NewTeamMemberGroup(metrics dao.Metrics) TeamMemberGroup {
+	return TeamMemberGroup{
+		metrics: metrics,
+	}
 }

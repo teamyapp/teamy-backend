@@ -10,14 +10,18 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const phaseDaoName = "Phase"
+
 type Phase struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Phase = (*Phase)(nil)
 
 func (p *Phase) FindPhasesWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Phase, *errs.Error) {
-	phases := []entity.Phase{}
+	p.metrics.ReportDaoOperation(phaseDaoName, "FindPhasesWithTx")
+	var phases []entity.Phase
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			id,
@@ -62,6 +66,7 @@ func (p *Phase) FindPhasesWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (p *Phase) FindPhaseByIDWithTx(ct context.Context, tx *transaction.Transaction, phaseID uint64) (entity.Phase, *errs.Error) {
+	p.metrics.ReportDaoOperation(phaseDaoName, "FindPhaseByIDWithTx")
 	phase := entity.Phase{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
@@ -98,6 +103,7 @@ func (p *Phase) FindPhaseByIDWithTx(ct context.Context, tx *transaction.Transact
 }
 
 func (p *Phase) FindPhasesByIDsWithTx(ct context.Context, tx *transaction.Transaction, phaseIDs []uint64) ([]entity.Phase, *errs.Error) {
+	p.metrics.ReportDaoOperation(phaseDaoName, "FindPhasesByIDsWithTx")
 	if len(phaseIDs) == 0 {
 		return []entity.Phase{}, nil
 	}
@@ -151,6 +157,7 @@ func (p *Phase) FindPhasesByIDsWithTx(ct context.Context, tx *transaction.Transa
 }
 
 func (p *Phase) CreatePhase(ct context.Context, tx *transaction.Transaction, phase entity.Phase) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseDaoName, "CreatePhase")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO phase (
 			id,
@@ -186,6 +193,7 @@ func (p *Phase) CreatePhase(ct context.Context, tx *transaction.Transaction, pha
 }
 
 func (p *Phase) UpdatePhase(ct context.Context, tx *transaction.Transaction, phase entity.Phase) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseDaoName, "UpdatePhase")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE phase
 		SET
@@ -218,6 +226,7 @@ func (p *Phase) UpdatePhase(ct context.Context, tx *transaction.Transaction, pha
 }
 
 func (p *Phase) DeletePhase(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseDaoName, "DeletePhase")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM phase
 		WHERE id = $1;
@@ -231,6 +240,7 @@ func (p *Phase) DeletePhase(ct context.Context, tx *transaction.Transaction, pha
 }
 
 func (p *Phase) DeletePhasesByIDs(ct context.Context, tx *transaction.Transaction, phaseIDs []uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseDaoName, "DeletePhasesByIDs")
 	if len(phaseIDs) == 0 {
 		return nil
 	}
@@ -248,8 +258,12 @@ func (p *Phase) DeletePhasesByIDs(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func NewPhase(transactionFactory transaction.Factory) *Phase {
+func NewPhase(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *Phase {
 	return &Phase{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

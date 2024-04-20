@@ -10,7 +10,10 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const groupRolloutRelationDaoName = "GroupRolloutRelation"
+
 type GroupRolloutRelation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
@@ -21,7 +24,8 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupIDWithTx(
 	tx *transaction.Transaction,
 	groupID uint64,
 ) ([]entity.GroupRolloutRelation, *errs.Error) {
-	groupRolloutRelations := []entity.GroupRolloutRelation{}
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "FindGroupRolloutRelationsByGroupIDWithTx")
+	var groupRolloutRelations []entity.GroupRolloutRelation
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT
@@ -57,6 +61,7 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupIDWithTx(
 }
 
 func (g *GroupRolloutRelation) FindGroupRolloutRelationsByGroupID(ct context.Context, groupID uint64) ([]entity.GroupRolloutRelation, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "FindGroupRolloutRelationsByGroupID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -75,6 +80,7 @@ func (g *GroupRolloutRelation) FindGroupRolloutByGroupIDAndRolloutIDWithTx(
 	groupID,
 	rolloutID uint64,
 ) (*entity.GroupRolloutRelation, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "FindGroupRolloutByGroupIDAndRolloutIDWithTx")
 	groupRolloutRelation := entity.GroupRolloutRelation{}
 	row := tx.SQLTx().QueryRowContext(ct,
 		`
@@ -108,7 +114,8 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByRolloutIDWithTx(
 	tx *transaction.Transaction,
 	rolloutID uint64,
 ) ([]entity.GroupRolloutRelation, *errs.Error) {
-	groupRolloutRelations := []entity.GroupRolloutRelation{}
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "FindGroupRolloutRelationsByRolloutIDWithTx")
+	var groupRolloutRelations []entity.GroupRolloutRelation
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT
@@ -144,6 +151,7 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByRolloutIDWithTx(
 }
 
 func (g *GroupRolloutRelation) FindGroupRolloutRelationsByRolloutID(ct context.Context, rolloutID uint64) ([]entity.GroupRolloutRelation, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "FindGroupRolloutRelationsByRolloutID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -157,13 +165,14 @@ func (g *GroupRolloutRelation) FindGroupRolloutRelationsByRolloutID(ct context.C
 }
 
 func (g *GroupRolloutRelation) CreateGroupRolloutRelation(ct context.Context, tx *transaction.Transaction, groupRolloutRelation entity.GroupRolloutRelation) *errs.Error {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "CreateGroupRolloutRelation")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		INSERT INTO group_rollout_relation (
 			group_id,
 			rollout_id,
 			order_index
-		) 
+		)
 		VALUES (
 			$1,
 			$2,
@@ -181,7 +190,8 @@ func (g *GroupRolloutRelation) CreateGroupRolloutRelation(ct context.Context, tx
 	return nil
 }
 
-func (*GroupRolloutRelation) DeleteGroupRolloutRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+func (g *GroupRolloutRelation) DeleteGroupRolloutRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "DeleteGroupRolloutRelationsByGroupID")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM group_rollout_relation
@@ -196,7 +206,8 @@ func (*GroupRolloutRelation) DeleteGroupRolloutRelationsByGroupID(ct context.Con
 	return nil
 }
 
-func (*GroupRolloutRelation) DeleteGroupRolloutRelationsByGroupIDAndRolloutID(ct context.Context, tx *transaction.Transaction, groupID, rolloutID uint64) *errs.Error {
+func (g *GroupRolloutRelation) DeleteGroupRolloutRelationsByGroupIDAndRolloutID(ct context.Context, tx *transaction.Transaction, groupID, rolloutID uint64) *errs.Error {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "DeleteGroupRolloutRelationsByGroupIDAndRolloutID")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM group_rollout_relation
@@ -216,7 +227,9 @@ func (*GroupRolloutRelation) DeleteGroupRolloutRelationsByGroupIDAndRolloutID(ct
 func (g *GroupRolloutRelation) DeleteGroupRolloutRelationsByRolloutID(
 	ct context.Context,
 	tx *transaction.Transaction,
-	rolloutID uint64) *errs.Error {
+	rolloutID uint64,
+) *errs.Error {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "DeleteGroupRolloutRelationsByRolloutID")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM group_rollout_relation
@@ -231,13 +244,14 @@ func (g *GroupRolloutRelation) DeleteGroupRolloutRelationsByRolloutID(
 	return nil
 }
 
-func (*GroupRolloutRelation) UpdateFromOrderIndexByGroupID(
+func (g *GroupRolloutRelation) UpdateFromOrderIndexByGroupID(
 	ct context.Context,
 	tx *transaction.Transaction,
 	step int,
 	orderIndex int,
 	groupID uint64,
 ) *errs.Error {
+	g.metrics.ReportDaoOperation(groupRolloutRelationDaoName, "UpdateFromOrderIndexByGroupID")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -257,9 +271,11 @@ func (*GroupRolloutRelation) UpdateFromOrderIndexByGroupID(
 }
 
 func NewGroupRolloutRelation(
+	metrics dao.Metrics,
 	transactionFactory transaction.Factory,
 ) *GroupRolloutRelation {
 	return &GroupRolloutRelation{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

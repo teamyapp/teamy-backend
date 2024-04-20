@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	daoEntity "github.com/teamyapp/teamy-backend/core/dao/entity"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -60,6 +62,7 @@ type Team struct {
 	featureToggles                 feature.Toggles
 	stateSyncer                    *realtime.StateSyncer
 	transactionFactory             cloudTransaction.Factory
+	cache                          *cache.TimeBasedCache[string, any]
 	taskDao                        dao.Task
 	sprintDao                      dao.Sprint
 	sprintParticipantDao           dao.SprintParticipant
@@ -89,10 +92,46 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 		}
 	}
 
-	return t.teamDao.FindTeamByID(ct, teamID)
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(ct, findTeamCacheKey(teamID))
+		if cacheErr == nil {
+			return value.(entity.Team), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.Team{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	team, err := t.teamDao.FindTeamByID(ct, teamID)
+	if err != nil {
+		return entity.Team{}, err
+	}
+
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(ct, findTeamCacheKey(teamID), team)
+		if cacheErr != nil {
+			return entity.Team{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return team, nil
 }
 
 func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, *errs.Error) {
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(ct, findTeamsCacheKey(filter))
+		if cacheErr == nil {
+			return value.([]entity.Team), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	teams, err := t.teamDao.FindAllTeams(ct)
 	if err != nil {
 		return nil, err
@@ -120,6 +159,13 @@ func (t Team) FindTeams(ct context.Context, filter *TeamFilter) ([]entity.Team, 
 
 	if filter != nil {
 		teams = filterTeams(teams, *filter)
+	}
+
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(ct, findTeamsCacheKey(filter), teams)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
 	}
 
 	return teams, nil
@@ -1025,6 +1071,7 @@ func NewTeam(
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudTransaction.Factory,
+	cache *cache.TimeBasedCache[string, any],
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintParticipantDao dao.SprintParticipant,
@@ -1044,6 +1091,7 @@ func NewTeam(
 		featureToggles:                 featureToggles,
 		stateSyncer:                    stateSyncer,
 		transactionFactory:             transactionFactory,
+		cache:                          cache,
 		taskDao:                        taskDao,
 		sprintDao:                      sprintDao,
 		sprintParticipantDao:           sprintParticipantDao,
@@ -1054,4 +1102,12 @@ func NewTeam(
 		teamMemberGroupUserRelationDao: teamMemberGroupUserRelationDao,
 		teamMemberGroupRepo:            teamMemberGroupRepo,
 	}
+}
+
+func findTeamCacheKey(teamID uint64) string {
+	return fmt.Sprintf("FindTeamByID(%d)", teamID)
+}
+
+func findTeamsCacheKey(filter *TeamFilter) string {
+	return fmt.Sprintf("FindTeams(%v)", filter)
 }

@@ -1,9 +1,14 @@
-package cache
+package cache_test
 
 import (
-	"github.com/stretchr/testify/require"
-	"sync"
+	"context"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/teamy-backend/core/cache"
+	"github.com/teamyapp/teamy-backend/core/cache/cachetest"
 )
 
 type OperationType string
@@ -34,13 +39,18 @@ func TestNewLRU(t *testing.T) {
 		{
 			name:      "invalid capacity",
 			capacity:  0,
-			expectErr: InvalidCapacityErr{Capacity: 0},
+			expectErr: cache.InvalidCapacityErr{Capacity: 0},
 		},
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewLRU[string, string](tc.capacity)
+			t.Parallel()
+			lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+			logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+			noopMetrics := cachetest.NewNoopMetrics()
+			_, err := cache.NewLRU[string, string](logger, noopMetrics, tc.capacity)
 			require.Equal(t, tc.expectErr, err)
 		})
 	}
@@ -101,12 +111,12 @@ func TestLRU_Operations(t *testing.T) {
 			},
 			expectedErrs: []error{
 				nil, nil, nil, nil, nil,
-				KeyNotFoundErr[string]{Key: "a"},
-				KeyNotFoundErr[string]{Key: "b"},
+				cache.KeyNotFoundErr[string]{Key: "a"},
+				cache.KeyNotFoundErr[string]{Key: "b"},
 				nil,
-				KeyNotFoundErr[string]{Key: "a"},
-				KeyNotFoundErr[string]{Key: "b"},
-				KeyNotFoundErr[string]{Key: "c"},
+				cache.KeyNotFoundErr[string]{Key: "a"},
+				cache.KeyNotFoundErr[string]{Key: "b"},
+				cache.KeyNotFoundErr[string]{Key: "c"},
 				nil, nil,
 			},
 		},
@@ -133,10 +143,10 @@ func TestLRU_Operations(t *testing.T) {
 			expectedResult: []any{nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "5", "6", "7"},
 			expectedErrs: []error{
 				nil, nil, nil, nil, nil, nil, nil,
-				KeyNotFoundErr[string]{Key: "a"},
-				KeyNotFoundErr[string]{Key: "b"},
-				KeyNotFoundErr[string]{Key: "c"},
-				KeyNotFoundErr[string]{Key: "d"},
+				cache.KeyNotFoundErr[string]{Key: "a"},
+				cache.KeyNotFoundErr[string]{Key: "b"},
+				cache.KeyNotFoundErr[string]{Key: "c"},
+				cache.KeyNotFoundErr[string]{Key: "d"},
 				nil, nil, nil,
 			},
 		},
@@ -164,22 +174,28 @@ func TestLRU_Operations(t *testing.T) {
 			expectedResult: []any{nil, nil, nil, nil, nil, nil, nil, nil, "7", "6", nil, nil, nil, nil, nil},
 			expectedErrs: []error{
 				nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-				KeyNotFoundErr[string]{Key: "h"},
+				cache.KeyNotFoundErr[string]{Key: "h"},
 				nil, nil,
-				KeyNotFoundErr[string]{Key: "f"},
+				cache.KeyNotFoundErr[string]{Key: "f"},
 			},
 		},
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			lru, err := NewLRU[string, string](tc.capacity)
+			t.Parallel()
+			lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+			logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+			noopMetrics := cachetest.NewNoopMetrics()
+			lru, err := cache.NewLRU[string, string](logger, noopMetrics, tc.capacity)
 			require.Nil(t, err)
 
 			for i, op := range tc.operations {
+				ct := context.Background()
 				switch op.Type {
 				case Get:
-					value, err := lru.Get(op.Key)
+					value, err := lru.Get(ct, op.Key)
 					require.Equal(t, tc.expectedErrs[i], err)
 					if err != nil {
 						continue
@@ -187,105 +203,96 @@ func TestLRU_Operations(t *testing.T) {
 
 					require.Equal(t, tc.expectedResult[i], value)
 				case Set:
-					err = lru.Set(op.Key, op.Value)
+					err = lru.Set(ct, op.Key, op.Value)
 					require.Equal(t, tc.expectedErrs[i], err)
 					if err != nil {
 						continue
 					}
 				case Remove:
-					err = lru.Remove(op.Key)
+					err = lru.Remove(ct, op.Key)
 					require.Equal(t, tc.expectedErrs[i], err)
 					if err != nil {
 						continue
 					}
 				}
 
-				require.Equal(t, tc.expectedSize[i], lru.Size())
+				require.Equal(t, tc.expectedSize[i], lru.Size(ct))
 			}
 		})
 	}
 }
 
 func BenchmarkLRU_Contains(b *testing.B) {
-	lru, err := NewLRU[string, string](1000)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 1000)
 	require.Nil(b, err)
 
 	for i := 0; i < 1000; i++ {
-		err := lru.Set(string(rune(i)), string(rune(i)))
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			lru.Contains("a")
-		}()
+		ct := context.Background()
+		lru.Contains(ct, "a")
 	}
-
-	wg.Wait()
 }
 
 func BenchmarkLRU_Get(b *testing.B) {
-	lru, err := NewLRU[string, string](100)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 100)
 	require.Nil(b, err)
 
 	for i := 0; i < 100; i++ {
-		err := lru.Set(string(rune(i)), string(rune(i)))
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_, _ = lru.Get("a")
-		}()
+		ct := context.Background()
+		_, _ = lru.Get(ct, "a")
 	}
-
-	wg.Wait()
 }
 
 func BenchmarkLRU_Set(b *testing.B) {
-	lru, err := NewLRU[string, string](100)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 100)
 	require.Nil(b, err)
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err := lru.Set(string(rune(i)), string(rune(i)))
-			require.Nil(b, err)
-		}()
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
+		require.Nil(b, err)
 	}
-
-	wg.Wait()
 }
 
 func BenchmarkLRU_Remove(b *testing.B) {
-	lru, err := NewLRU[string, string](100)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 100)
 	require.Nil(b, err)
 
 	for i := 0; i < 100; i++ {
-		err := lru.Set(string(rune(i)), string(rune(i)))
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
-	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_ = lru.Remove("a")
-		}()
+		ct := context.Background()
+		_ = lru.Remove(ct, "a")
 	}
-
-	wg.Wait()
 }

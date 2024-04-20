@@ -9,12 +9,16 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const taskAwaitForRelationDaoName = "TaskAwaitForRelation"
+
 type TaskAwaitForRelation struct {
+	metrics dao.Metrics
 }
 
 var _ dao.TaskAwaitForRelation = (*TaskAwaitForRelation)(nil)
 
 func (t TaskAwaitForRelation) FindAwaitingTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitForTaskID uint64) ([]uint64, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskAwaitForRelationDaoName, "FindAwaitingTaskIDsWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		awaiting_task_id
@@ -42,6 +46,7 @@ func (t TaskAwaitForRelation) FindAwaitingTaskIDsWithTx(ct context.Context, tx *
 }
 
 func (t TaskAwaitForRelation) FindAwaitForTaskIDsWithTx(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64) ([]uint64, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskAwaitForRelationDaoName, "FindAwaitForTaskIDsWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		await_for_task_id
@@ -69,6 +74,7 @@ func (t TaskAwaitForRelation) FindAwaitForTaskIDsWithTx(ct context.Context, tx *
 }
 
 func (t TaskAwaitForRelation) CreateRelation(ct context.Context, tx *transaction.Transaction, relation entity.TaskAwaitForRelation) *errs.Error {
+	t.metrics.ReportDaoOperation(taskAwaitForRelationDaoName, "CreateRelation")
 	_, err := tx.SQLTx().Exec(`
 	INSERT INTO task_await_for_relation
 	(
@@ -91,6 +97,7 @@ func (t TaskAwaitForRelation) CreateRelation(ct context.Context, tx *transaction
 }
 
 func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, tx *transaction.Transaction, waitingTaskID uint64, awaitForTaskID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(taskAwaitForRelationDaoName, "DeleteRelation")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM task_await_for_relation
 		WHERE awaiting_task_id = $1 AND await_for_task_id = $2;
@@ -105,6 +112,8 @@ func (t TaskAwaitForRelation) DeleteRelation(ct context.Context, tx *transaction
 	return nil
 }
 
-func NewTaskAwaitForRelation() TaskAwaitForRelation {
-	return TaskAwaitForRelation{}
+func NewTaskAwaitForRelation(metrics dao.Metrics) TaskAwaitForRelation {
+	return TaskAwaitForRelation{
+		metrics: metrics,
+	}
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -42,6 +44,7 @@ type User struct {
 	authorizer                 client.Authorizer
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         cloudTransaction.Factory
+	cache                      *cache.TimeBasedCache[string, any]
 	userDao                    dao.User
 	teamMemberDao              dao.TeamMember
 	userFileUploadSessionDao   dao.UserFileUploadSession
@@ -67,7 +70,31 @@ func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 		}
 	}
 
-	return u.userDao.FindUserByID(ct, currUserID)
+	if u.toggles.EnableCache {
+		value, cacheErr := u.cache.Get(ct, meCacheKey(currUserID))
+		if cacheErr == nil {
+			return value.(entity.User), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	user, err := u.userDao.FindUserByID(ct, currUserID)
+	if err != nil {
+		return entity.User{}, err
+	}
+
+	if u.toggles.EnableCache {
+		cacheErr := u.cache.SetIfExpired(ct, meCacheKey(currUserID), user)
+		if cacheErr != nil {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return user, nil
 }
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
@@ -90,7 +117,31 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 		}
 	}
 
-	return u.userDao.FindUserByID(ct, userID)
+	if u.toggles.EnableCache {
+		value, cacheErr := u.cache.Get(ct, findUserCacheKey(userID))
+		if cacheErr == nil {
+			return value.(entity.User), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	user, err := u.userDao.FindUserByID(ct, userID)
+	if err != nil {
+		return entity.User{}, err
+	}
+
+	if u.toggles.EnableCache {
+		cacheErr := u.cache.SetIfExpired(ct, findUserCacheKey(userID), user)
+		if cacheErr != nil {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return user, nil
 }
 
 func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, *errs.Error) {
@@ -288,6 +339,7 @@ func NewUser(
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudTransaction.Factory,
+	cache *cache.TimeBasedCache[string, any],
 	userDao dao.User,
 	teamMemberDao dao.TeamMember,
 	userFileUploadSessionDao dao.UserFileUploadSession,
@@ -301,8 +353,17 @@ func NewUser(
 		authorizer:                 authorizer,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
+		cache:                      cache,
 		userDao:                    userDao,
 		teamMemberDao:              teamMemberDao,
 		userFileUploadSessionDao:   userFileUploadSessionDao,
 	}
+}
+
+func findUserCacheKey(userID uint64) string {
+	return fmt.Sprintf("FindUserByID(%v)", userID)
+}
+
+func meCacheKey(userID uint64) string {
+	return fmt.Sprintf("Me(%v)", userID)
 }

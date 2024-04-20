@@ -10,14 +10,18 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const storyDaoName = "Story"
+
 type Story struct {
 	transactionFactory transaction.Factory
+	metrics            dao.Metrics
 }
 
 var _ dao.Story = (*Story)(nil)
 
 func (s *Story) FindStoriesWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Story, *errs.Error) {
-	stories := []entity.Story{}
+	s.metrics.ReportDaoOperation(storyDaoName, "FindStoriesWithTx")
+	var stories []entity.Story
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			id,
@@ -60,6 +64,7 @@ func (s *Story) FindStoriesWithTx(ct context.Context, tx *transaction.Transactio
 }
 
 func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Transaction, storyIDs []uint64) ([]entity.Story, *errs.Error) {
+	s.metrics.ReportDaoOperation(storyDaoName, "FindStoriesByIDsWithTx")
 	if len(storyIDs) == 0 {
 		return []entity.Story{}, nil
 	}
@@ -110,6 +115,7 @@ func (s *Story) FindStoriesByIDsWithTx(ct context.Context, tx *transaction.Trans
 }
 
 func (s *Story) FindStoryByIDWithTx(ct context.Context, tx *transaction.Transaction, storyID uint64) (entity.Story, *errs.Error) {
+	s.metrics.ReportDaoOperation(storyDaoName, "FindStoryByIDWithTx")
 	story := entity.Story{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
@@ -144,6 +150,7 @@ func (s *Story) FindStoryByIDWithTx(ct context.Context, tx *transaction.Transact
 }
 
 func (s *Story) CreateStory(ct context.Context, tx *transaction.Transaction, story entity.Story) *errs.Error {
+	s.metrics.ReportDaoOperation(storyDaoName, "CreateStory")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO story (
 			id,
@@ -177,6 +184,7 @@ func (s *Story) CreateStory(ct context.Context, tx *transaction.Transaction, sto
 }
 
 func (s *Story) UpdateStory(ct context.Context, tx *transaction.Transaction, story entity.Story) *errs.Error {
+	s.metrics.ReportDaoOperation(storyDaoName, "UpdateStory")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE story
 		SET
@@ -209,6 +217,7 @@ func (s *Story) UpdateStory(ct context.Context, tx *transaction.Transaction, sto
 }
 
 func (s *Story) DeleteStory(ct context.Context, tx *transaction.Transaction, storyID uint64) *errs.Error {
+	s.metrics.ReportDaoOperation(storyDaoName, "DeleteStory")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM story
 		WHERE id = $1;
@@ -221,8 +230,12 @@ func (s *Story) DeleteStory(ct context.Context, tx *transaction.Transaction, sto
 	return nil
 }
 
-func NewStory(transactionFactory transaction.Factory) *Story {
+func NewStory(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *Story {
 	return &Story{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

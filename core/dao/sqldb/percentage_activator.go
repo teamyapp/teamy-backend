@@ -10,17 +10,21 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/entity"
 )
 
+const percentageActivatorDaoName = "PercentageActivator"
+
 type PercentageActivator struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.PercentageActivator = (*PercentageActivator)(nil)
 
-func (*PercentageActivator) FindPercentageActivatorByIDWithTx(
+func (p *PercentageActivator) FindPercentageActivatorByIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 ) (entity.PartialPercentageActivator, *errs.Error) {
+	p.metrics.ReportDaoOperation(percentageActivatorDaoName, "FindPercentageActivatorByIDWithTx")
 	percentageActivator := entity.PartialPercentageActivator{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT percentage
@@ -37,6 +41,7 @@ func (*PercentageActivator) FindPercentageActivatorByIDWithTx(
 }
 
 func (p *PercentageActivator) FindPercentageActivatorByID(ct context.Context, ActivatorID uint64) (entity.PartialPercentageActivator, *errs.Error) {
+	p.metrics.ReportDaoOperation(percentageActivatorDaoName, "FindPercentageActivatorByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -49,12 +54,13 @@ func (p *PercentageActivator) FindPercentageActivatorByID(ct context.Context, Ac
 	return p.FindPercentageActivatorByIDWithTx(ct, tx, ActivatorID)
 }
 
-func (*PercentageActivator) CreatePercentageActivator(
+func (p *PercentageActivator) CreatePercentageActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 	activator entity.PartialPercentageActivator,
 ) *errs.Error {
+	p.metrics.ReportDaoOperation(percentageActivatorDaoName, "CreatePercentageActivator")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO percentage_activator (
 		    activator_id,
@@ -71,12 +77,13 @@ func (*PercentageActivator) CreatePercentageActivator(
 	return nil
 }
 
-func (*PercentageActivator) UpdatePercentageActivator(
+func (p *PercentageActivator) UpdatePercentageActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 	activator entity.PartialPercentageActivator,
 ) *errs.Error {
+	p.metrics.ReportDaoOperation(percentageActivatorDaoName, "UpdatePercentageActivator")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE percentage_activator
 		SET percentage = $2
@@ -91,11 +98,12 @@ func (*PercentageActivator) UpdatePercentageActivator(
 	return nil
 }
 
-func (*PercentageActivator) DeletePercentageActivator(
+func (p *PercentageActivator) DeletePercentageActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 ) *errs.Error {
+	p.metrics.ReportDaoOperation(percentageActivatorDaoName, "DeletePercentageActivator")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM percentage_activator
 		WHERE activator_id = $1
@@ -108,9 +116,11 @@ func (*PercentageActivator) DeletePercentageActivator(
 }
 
 func NewPercentageActivator(
+	metrics dao.Metrics,
 	transactionFactory transaction.Factory,
 ) *PercentageActivator {
 	return &PercentageActivator{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

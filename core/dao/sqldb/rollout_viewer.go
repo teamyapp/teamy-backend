@@ -11,17 +11,19 @@ import (
 )
 
 type RolloutViewer struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.RolloutViewer = (*RolloutViewer)(nil)
 
-func (*RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWithTx(
+func (r *RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	viewerID uint64,
 	rolloutID uint64,
 ) (entity.RolloutViewer, *errs.Error) {
+	r.metrics.ReportDaoOperation("RolloutViewer", "FindRolloutViewerByViewerIDAndRolloutIDWithTx")
 	rolloutViewer := entity.RolloutViewer{}
 	err := tx.SQLTx().QueryRowContext(
 		ct,
@@ -55,6 +57,7 @@ func (*RolloutViewer) FindRolloutViewerByViewerIDAndRolloutIDWithTx(
 }
 
 func (r *RolloutViewer) FindRolloutViewerByViewerIDAndRolloutID(ct context.Context, viewerID uint64, RolloutID uint64) (entity.RolloutViewer, *errs.Error) {
+	r.metrics.ReportDaoOperation("RolloutViewer", "FindRolloutViewerByViewerIDAndRolloutID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -67,11 +70,12 @@ func (r *RolloutViewer) FindRolloutViewerByViewerIDAndRolloutID(ct context.Conte
 	return r.FindRolloutViewerByViewerIDAndRolloutIDWithTx(ct, tx, viewerID, RolloutID)
 }
 
-func (*RolloutViewer) CreateRolloutViewer(
+func (r *RolloutViewer) CreateRolloutViewer(
 	ct context.Context,
 	tx *transaction.Transaction,
 	viewer entity.RolloutViewer,
 ) *errs.Error {
+	r.metrics.ReportDaoOperation("RolloutViewer", "CreateRolloutViewer")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO rollout_viewer (
 			rollout_id,
@@ -80,7 +84,7 @@ func (*RolloutViewer) CreateRolloutViewer(
 			is_activated,
 			created_at,
 			updated_at
-		) 
+		)
 		VALUES (
 			$1,
 			$2,
@@ -105,13 +109,14 @@ func (*RolloutViewer) CreateRolloutViewer(
 	return nil
 }
 
-func (*RolloutViewer) UpdateRolloutViewer(
+func (r *RolloutViewer) UpdateRolloutViewer(
 	ct context.Context,
 	tx *transaction.Transaction,
 	viewer entity.RolloutViewer,
 ) *errs.Error {
+	r.metrics.ReportDaoOperation("RolloutViewer", "UpdateRolloutViewer")
 	_, err := tx.SQLTx().ExecContext(ct, `
-		UPDATE rollout_viewer 
+		UPDATE rollout_viewer
 		SET
 			is_activated = $1,
 			updated_at = $2
@@ -131,6 +136,7 @@ func (*RolloutViewer) UpdateRolloutViewer(
 }
 
 func (r *RolloutViewer) DeleteRolloutViewersByRolloutID(ct context.Context, tx *transaction.Transaction, rolloutID uint64) *errs.Error {
+	r.metrics.ReportDaoOperation("RolloutViewer", "DeleteRolloutViewersByRolloutID")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM rollout_viewer
 		WHERE rollout_id = $1;
@@ -146,9 +152,11 @@ func (r *RolloutViewer) DeleteRolloutViewersByRolloutID(ct context.Context, tx *
 }
 
 func NewRolloutViewer(
+	metrics dao.Metrics,
 	transactionFactory transaction.Factory,
 ) *RolloutViewer {
 	return &RolloutViewer{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/teamyapp/cloud/app/api/proto"
@@ -10,6 +12,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -39,6 +42,7 @@ type Story struct {
 	featureToggles          feature.Toggles
 	transactionFactory      cloudTransaction.Factory
 	stateSyncer             *realtime.StateSyncer
+	cache                   *cache.TimeBasedCache[string, any]
 	projectDao              dao.Project
 	storyDao                dao.Story
 	projectStoryRelationDao dao.ProjectStoryRelation
@@ -71,6 +75,18 @@ func (s *Story) FindStories(ct context.Context, storyFilter *StoryFilter) ([]ent
 }
 
 func (s *Story) FindTasksByStoryID(ct context.Context, storyID uint64) ([]entity.Task, *errs.Error) {
+	if s.featureToggles.EnableCache {
+		value, cacheErr := s.cache.Get(ct, findTasksByStoryIDCacheKey(storyID))
+		if cacheErr == nil {
+			return value.([]entity.Task), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	var tasks []entity.Task
 	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
 		ct,
@@ -84,7 +100,19 @@ func (s *Story) FindTasksByStoryID(ct context.Context, storyID uint64) ([]entity
 			tasks, err = s.taskDao.FindTasksByIDsWithTx(ct, tx, taskIDs)
 			return err
 		})
-	return tasks, transactionErr
+
+	if transactionErr != nil {
+		return nil, transactionErr
+	}
+
+	if s.featureToggles.EnableCache {
+		cacheErr := s.cache.SetIfExpired(ct, findTasksByStoryIDCacheKey(storyID), tasks)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return tasks, nil
 }
 
 func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateStoryInput) (entity.Story, *errs.Error) {
@@ -416,6 +444,7 @@ func NewStory(
 	featureToggles feature.Toggles,
 	transactionFactory cloudTransaction.Factory,
 	stateSyncer *realtime.StateSyncer,
+	cache *cache.TimeBasedCache[string, any],
 	projectDao dao.Project,
 	storyDao dao.Story,
 	projectStoryRelationDao dao.ProjectStoryRelation,
@@ -432,6 +461,7 @@ func NewStory(
 		featureToggles:          featureToggles,
 		transactionFactory:      transactionFactory,
 		stateSyncer:             stateSyncer,
+		cache:                   cache,
 		projectDao:              projectDao,
 		storyDao:                storyDao,
 		projectStoryRelationDao: projectStoryRelationDao,
@@ -440,4 +470,8 @@ func NewStory(
 		userDao:                 userDao,
 		taskDao:                 taskDao,
 	}
+}
+
+func findTasksByStoryIDCacheKey(storyID uint64) string {
+	return fmt.Sprintf("FindTasksByStoryID(%d)", storyID)
 }

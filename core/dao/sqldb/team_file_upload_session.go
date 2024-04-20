@@ -12,7 +12,10 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const teamFileUploadSessionDaoName = "TeamFileUploadSession"
+
 type TeamFileUploadSession struct {
+	metrics dao.Metrics
 }
 
 var _ dao.TeamFileUploadSession = (*TeamFileUploadSession)(nil)
@@ -24,6 +27,7 @@ func (t TeamFileUploadSession) FindTeamFileUploadSessionByTeamIDWithTx(
 	teamFileUploadSessionType entity.TeamFileUploadSessionType,
 	fileUploadSessionID uint64,
 ) (entity.TeamFileUploadSession, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamFileUploadSessionDaoName, "FindTeamFileUploadSessionByTeamIDWithTx")
 	teamFileUploadSession := entity.TeamFileUploadSession{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -62,6 +66,7 @@ func (t TeamFileUploadSession) CreateTeamFileUploadSession(
 	tx *transaction.Transaction,
 	teamFileUploadSession entity.TeamFileUploadSession,
 ) *errs.Error {
+	t.metrics.ReportDaoOperation(teamFileUploadSessionDaoName, "CreateTeamFileUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO team_file_upload_session
 		(
@@ -93,6 +98,7 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 	tx *transaction.Transaction,
 	teamFileUploadSession entity.TeamFileUploadSession,
 ) *errs.Error {
+	t.metrics.ReportDaoOperation(teamFileUploadSessionDaoName, "UpdateTeamFileUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE team_file_upload_session
 		SET
@@ -121,6 +127,8 @@ func (t TeamFileUploadSession) UpdateTeamFileUploadSession(
 	return nil
 }
 
-func NewTeamFileUploadSession() TeamFileUploadSession {
-	return TeamFileUploadSession{}
+func NewTeamFileUploadSession(metrics dao.Metrics) TeamFileUploadSession {
+	return TeamFileUploadSession{
+		metrics: metrics,
+	}
 }

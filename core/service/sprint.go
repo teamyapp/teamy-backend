@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -42,6 +44,7 @@ type Sprint struct {
 	authorizer              client.Authorizer
 	featureToggles          feature.Toggles
 	transactionFactory      cloudTransaction.Factory
+	cache                   *cache.TimeBasedCache[string, any]
 	taskDao                 dao.Task
 	sprintDao               dao.Sprint
 	teamDao                 dao.Team
@@ -119,7 +122,31 @@ func (s Sprint) FindParticipantsInSprint(ct context.Context, sprintID uint64) ([
 		}
 	}
 
-	return s.sprintParticipantDao.FindParticipantsBySprintID(ct, sprintID)
+	if s.featureToggles.EnableCache {
+		value, cacheErr := s.cache.Get(ct, findParticipantsInSprintCacheKey(sprintID))
+		if cacheErr == nil {
+			return value.([]entity.SprintParticipant), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	participants, err := s.sprintParticipantDao.FindParticipantsBySprintID(ct, sprintID)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.featureToggles.EnableCache {
+		cacheErr := s.cache.SetIfExpired(ct, findParticipantsInSprintCacheKey(sprintID), participants)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return participants, nil
 }
 
 func (s Sprint) FindSprints(ct context.Context, filter *SprintFilter) ([]entity.Sprint, *errs.Error) {
@@ -361,6 +388,18 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 		}
 	}
 
+	if s.featureToggles.EnableCache {
+		value, cacheErr := s.cache.Get(ct, findSprintByIDCacheKey(sprintID))
+		if cacheErr == nil {
+			return value.(entity.Sprint), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.Sprint{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	var sprint entity.Sprint
 	err := s.transactionGroupFactory.WithTransactionGroup(
 		ct,
@@ -373,6 +412,13 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 
 	if err != nil {
 		return entity.Sprint{}, err
+	}
+
+	if s.featureToggles.EnableCache {
+		cacheErr := s.cache.SetIfExpired(ct, findSprintByIDCacheKey(sprintID), sprint)
+		if cacheErr != nil {
+			return entity.Sprint{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
 	}
 
 	return sprint, nil
@@ -1130,6 +1176,7 @@ func NewSprint(
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	transactionFactory cloudTransaction.Factory,
+	cache *cache.TimeBasedCache[string, any],
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	teamDao dao.Team,
@@ -1146,6 +1193,7 @@ func NewSprint(
 		authorizer:              authorizer,
 		featureToggles:          featureToggles,
 		transactionFactory:      transactionFactory,
+		cache:                   cache,
 		taskDao:                 taskDao,
 		sprintDao:               sprintDao,
 		teamDao:                 teamDao,
@@ -1154,4 +1202,12 @@ func NewSprint(
 		teamMemberDao:           teamMemberDao,
 		threadDao:               threadDao,
 	}
+}
+
+func findParticipantsInSprintCacheKey(sprintID uint64) string {
+	return fmt.Sprintf("FindParticipantsInSprint(%v)", sprintID)
+}
+
+func findSprintByIDCacheKey(sprintID uint64) string {
+	return fmt.Sprintf("FindSprintByID(%v)", sprintID)
 }

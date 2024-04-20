@@ -11,17 +11,21 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const rolloutDaoName = "Rollout"
+
 type Rollout struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Rollout = (*Rollout)(nil)
 
-func (*Rollout) FindRolloutByIDWithTx(
+func (r *Rollout) FindRolloutByIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	rolloutID uint64,
 ) (entity.Rollout, *errs.Error) {
+	r.metrics.ReportDaoOperation(rolloutDaoName, "FindRolloutByIDWithTx")
 	rollout := entity.Rollout{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
@@ -59,6 +63,7 @@ func (*Rollout) FindRolloutByIDWithTx(
 }
 
 func (r *Rollout) FindRolloutByID(ct context.Context, rolloutIDs uint64) (entity.Rollout, *errs.Error) {
+	r.metrics.ReportDaoOperation(rolloutDaoName, "FindRolloutByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -71,11 +76,12 @@ func (r *Rollout) FindRolloutByID(ct context.Context, rolloutIDs uint64) (entity
 	return r.FindRolloutByIDWithTx(ct, tx, rolloutIDs)
 }
 
-func (*Rollout) FindRolloutsByIDsWithTx(
+func (r *Rollout) FindRolloutsByIDsWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	rolloutIDs []uint64,
 ) ([]entity.Rollout, *errs.Error) {
+	r.metrics.ReportDaoOperation(rolloutDaoName, "FindRolloutsByIDsWithTx")
 	if len(rolloutIDs) == 0 {
 		return nil, nil
 	}
@@ -131,6 +137,7 @@ func (*Rollout) FindRolloutsByIDsWithTx(
 }
 
 func (r *Rollout) FindRolloutsByIDs(ct context.Context, rolloutIDs []uint64) ([]entity.Rollout, *errs.Error) {
+	r.metrics.ReportDaoOperation(rolloutDaoName, "FindRolloutsByIDs")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -144,11 +151,12 @@ func (r *Rollout) FindRolloutsByIDs(ct context.Context, rolloutIDs []uint64) ([]
 	return r.FindRolloutsByIDsWithTx(ct, tx, rolloutIDs)
 }
 
-func (*Rollout) CreateRollout(
+func (r *Rollout) CreateRollout(
 	ct context.Context,
 	tx *transaction.Transaction,
 	rollout entity.Rollout,
 ) *errs.Error {
+	r.metrics.ReportDaoOperation(rolloutDaoName, "CreateRollout")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		INSERT INTO rollout (
@@ -180,11 +188,12 @@ func (*Rollout) CreateRollout(
 	return nil
 }
 
-func (*Rollout) UpdateRollout(
+func (r *Rollout) UpdateRollout(
 	ct context.Context,
 	tx *transaction.Transaction,
 	rollout entity.Rollout,
 ) *errs.Error {
+	r.metrics.ReportDaoOperation(rolloutDaoName, "UpdateRollout")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -218,11 +227,12 @@ func (*Rollout) UpdateRollout(
 	return nil
 }
 
-func (*Rollout) DeleteRollout(
+func (r *Rollout) DeleteRollout(
 	ct context.Context,
 	tx *transaction.Transaction,
 	rolloutID uint64,
 ) *errs.Error {
+	r.metrics.ReportDaoOperation(rolloutDaoName, "DeleteRollout")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM rollout
@@ -239,9 +249,11 @@ func (*Rollout) DeleteRollout(
 }
 
 func NewRollout(
+	metrics dao.Metrics,
 	transactionFactory transaction.Factory,
 ) *Rollout {
 	return &Rollout{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

@@ -11,18 +11,22 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const groupMemberRelationDaoName = "GroupMemberRelation"
+
 type GroupMemberRelation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.GroupMemberRelation = (*GroupMemberRelation)(nil)
 
-func (*GroupMemberRelation) FindMemberIDsByGroupIDWithTx(
+func (g *GroupMemberRelation) FindMemberIDsByGroupIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	groupID uint64,
 ) ([]uint64, *errs.Error) {
-	memberIDs := []uint64{}
+	g.metrics.ReportDaoOperation(groupMemberRelationDaoName, "FindMemberIDsByGroupIDWithTx")
+	var memberIDs []uint64
 	row, err := tx.SQLTx().QueryContext(
 		ct,
 		`
@@ -52,6 +56,7 @@ func (*GroupMemberRelation) FindMemberIDsByGroupIDWithTx(
 }
 
 func (g *GroupMemberRelation) FindMemberIDsByGroupID(ct context.Context, groupID uint64) ([]uint64, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupMemberRelationDaoName, "FindMemberIDsByGroupID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -65,6 +70,7 @@ func (g *GroupMemberRelation) FindMemberIDsByGroupID(ct context.Context, groupID
 }
 
 func (g *GroupMemberRelation) FilterGroupIDsByMemberID(ct context.Context, groupIDs []uint64, memberID uint64) ([]uint64, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupMemberRelationDaoName, "FilterGroupIDsByMemberID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -77,7 +83,8 @@ func (g *GroupMemberRelation) FilterGroupIDsByMemberID(ct context.Context, group
 	return g.FilterGroupIDsByMemberIDWithTx(ct, tx, groupIDs, memberID)
 }
 
-func (*GroupMemberRelation) FilterGroupIDsByMemberIDWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64, memberID uint64) ([]uint64, *errs.Error) {
+func (g *GroupMemberRelation) FilterGroupIDsByMemberIDWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64, memberID uint64) ([]uint64, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupMemberRelationDaoName, "FilterGroupIDsByMemberIDWithTx")
 	groupIDsString := toIDsString(groupIDs)
 	query := fmt.Sprintf(`
 		SELECT group_id
@@ -111,18 +118,19 @@ func (*GroupMemberRelation) FilterGroupIDsByMemberIDWithTx(ct context.Context, t
 	return groupIDs, nil
 }
 
-func (*GroupMemberRelation) CreateGroupMemberRelation(
+func (g *GroupMemberRelation) CreateGroupMemberRelation(
 	ct context.Context,
 	tx *transaction.Transaction,
 	groupMemberRelation entity.GroupMemberRelation,
 ) *errs.Error {
+	g.metrics.ReportDaoOperation(groupMemberRelationDaoName, "CreateGroupMemberRelation")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
 		INSERT INTO group_member_relation (
 			member_id,
 			group_id
-		) 
+		)
 		VALUES ($1, $2);`,
 		groupMemberRelation.MemberID,
 		groupMemberRelation.GroupID,
@@ -135,7 +143,8 @@ func (*GroupMemberRelation) CreateGroupMemberRelation(
 	return nil
 }
 
-func (*GroupMemberRelation) DeleteGroupMemberRelation(ct context.Context, tx *transaction.Transaction, memberID uint64, groupID uint64) *errs.Error {
+func (g *GroupMemberRelation) DeleteGroupMemberRelation(ct context.Context, tx *transaction.Transaction, memberID uint64, groupID uint64) *errs.Error {
+	g.metrics.ReportDaoOperation(groupMemberRelationDaoName, "DeleteGroupMemberRelation")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -152,7 +161,8 @@ func (*GroupMemberRelation) DeleteGroupMemberRelation(ct context.Context, tx *tr
 	return nil
 }
 
-func (*GroupMemberRelation) DeleteGroupMemberRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+func (g *GroupMemberRelation) DeleteGroupMemberRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	g.metrics.ReportDaoOperation(groupMemberRelationDaoName, "DeleteGroupMemberRelationsByGroupID")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -169,9 +179,11 @@ func (*GroupMemberRelation) DeleteGroupMemberRelationsByGroupID(ct context.Conte
 }
 
 func NewGroupMemberRelation(
+	metrics dao.Metrics,
 	transactionFactory transaction.Factory,
 ) *GroupMemberRelation {
 	return &GroupMemberRelation{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }
