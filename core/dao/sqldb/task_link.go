@@ -12,12 +12,16 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const taskLinkDaoName = "TaskLink"
+
 type TaskLink struct {
+	metrics dao.Metrics
 }
 
 var _ dao.TaskLink = (*TaskLink)(nil)
 
 func (t TaskLink) CreateTaskLink(ct context.Context, tx *transaction.Transaction, taskLinkEntity entity.TaskLink) *errs.Error {
+	t.metrics.ReportDaoOperation(taskLinkDaoName, "CreateTaskLink")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO task_link
 		(
@@ -48,6 +52,7 @@ func (t TaskLink) CreateTaskLink(ct context.Context, tx *transaction.Transaction
 }
 
 func (t TaskLink) DeleteTaskLink(ct context.Context, tx *transaction.Transaction, taskLinkID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(taskLinkDaoName, "DeleteTaskLink")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM task_link
 		WHERE id = $1;
@@ -62,6 +67,7 @@ func (t TaskLink) DeleteTaskLink(ct context.Context, tx *transaction.Transaction
 }
 
 func (t TaskLink) FindTaskLinkByID(ct context.Context, tx *transaction.Transaction, taskLinkID uint64) (entity.TaskLink, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskLinkDaoName, "FindTaskLinkByID")
 	taskLink := entity.TaskLink{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -101,6 +107,7 @@ func (t TaskLink) FindTaskLinkByID(ct context.Context, tx *transaction.Transacti
 }
 
 func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]entity.TaskLink, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskLinkDaoName, "FindLinksByTaskID")
 	query := fmt.Sprintf(`
 	SELECT
 		id,
@@ -147,6 +154,8 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, tx *transaction.Transact
 	return taskLinks, nil
 }
 
-func NewTaskLink() TaskLink {
-	return TaskLink{}
+func NewTaskLink(metrics dao.Metrics) TaskLink {
+	return TaskLink{
+		metrics: metrics,
+	}
 }

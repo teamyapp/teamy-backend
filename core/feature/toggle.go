@@ -8,6 +8,6 @@ type Toggles struct {
 func NewStaticToggles() Toggles {
 	return Toggles{
 		EnableAuthorization: false,
-		EnableCache:         false,
+		EnableCache:         true,
 	}
 }

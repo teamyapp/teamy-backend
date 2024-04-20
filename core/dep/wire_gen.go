@@ -8,6 +8,7 @@ package dep
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
@@ -18,9 +19,10 @@ import (
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/api"
 	gql2 "github.com/teamyapp/teamy-backend/core/api/gql"
-	"github.com/teamyapp/teamy-backend/core/activity"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/sqldb"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -33,85 +35,90 @@ import (
 
 // Injectors from wire.go:
 
-func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {
+func InitRealTimeStateSyncer(logger telemetry.Logger, prometheus instrument.Prometheus, sqlDB *sql.DB) *realtime.StateSyncer {
 	factory := transaction.NewFactory(sqlDB)
-	teamMember := sqldb.NewTeamMember(factory)
+	teamMember := sqldb.NewTeamMember(prometheus, factory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMember)
 	return stateSyncer
 }
 
-func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, prometheus instrument.Prometheus, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, mapServerURL MapServerURL, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, jwtSigningKey JWTSigningKey, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
+func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, prometheus instrument.Prometheus, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, mapServerURL MapServerURL, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, jwtSigningKey JWTSigningKey, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
 	prometheusTracer := newPrometheusTracer(appName, serviceName, environment)
 	factory := transaction.NewFactory(sqlDB)
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
-	activity := activity.NewActivity(logger)
-	task := sqldb.NewTask(factory)
-	thread := sqldb.NewThread()
-	sprint := sqldb.NewSprint(factory)
-	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation()
-	sprintParticipant := sqldb.NewSprintParticipant(factory)
-	sprintTaskRelation := sqldb.NewSprintTaskRelation()
-	storyTaskRelation := sqldb.NewStoryTaskRelation(factory)
-	serviceTask := service.NewTask(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, storyTaskRelation)
-	taskLink := sqldb.NewTaskLink()
-	serviceTaskLink := service.NewTaskLink(logger, groupFactory, cloudAPIClientRegistry, factory, authorizer, toggles, realTimeStateSyncer, taskLink, task)
-	team := sqldb.NewTeam(factory)
-	teamMember := sqldb.NewTeamMember(factory)
-	teamFileUploadSession := sqldb.NewTeamFileUploadSession()
-	teamMemberGroup := sqldb.NewTeamMemberGroup()
-	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation()
+	activityActivity := activity.NewActivity(logger)
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return gql.Service[gql2.Resolver]{}, err
+	}
+	task := sqldb.NewTask(prometheus, factory)
+	thread := sqldb.NewThread(prometheus)
+	sprint := sqldb.NewSprint(prometheus, factory)
+	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(prometheus)
+	sprintParticipant := sqldb.NewSprintParticipant(prometheus, factory)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(prometheus)
+	storyTaskRelation := sqldb.NewStoryTaskRelation(prometheus, factory)
+	serviceTask := service.NewTask(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, activityActivity, timeBasedCache, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, storyTaskRelation)
+	taskLink := sqldb.NewTaskLink(prometheus)
+	serviceTaskLink := service.NewTaskLink(logger, groupFactory, cloudAPIClientRegistry, factory, authorizer, toggles, realTimeStateSyncer, timeBasedCache, taskLink, task)
+	team := sqldb.NewTeam(prometheus, factory)
+	teamMember := sqldb.NewTeamMember(prometheus, factory)
+	teamFileUploadSession := sqldb.NewTeamFileUploadSession(prometheus)
+	teamMemberGroup := sqldb.NewTeamMemberGroup(prometheus)
+	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation(prometheus)
 	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
-	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, task, sprint, sprintParticipant, team, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
-	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
-	user := sqldb.NewUser(factory)
-	userFileUploadSession := sqldb.NewUserFileUploadSession()
-	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, user, teamMember, userFileUploadSession)
+	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
+	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, timeBasedCache, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
+	user := sqldb.NewUser(prometheus, factory)
+	userFileUploadSession := sqldb.NewUserFileUploadSession(prometheus)
+	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, timeBasedCache, user, teamMember, userFileUploadSession)
 	httpClient := newHTTPClient(mapServerURL)
-	app := sqldb.NewApp(factory)
-	appVersion := sqldb.NewAppVersion(factory)
-	appVersionPrice := sqldb.NewAppVersionPrice(factory)
-	appVersionChange := sqldb.NewAppVersionChange(factory)
-	appSecret := sqldb.NewAppSecret(factory)
-	appPackageUploadSession := sqldb.NewAppPackageUploadSession(factory)
-	teamAppInstallation := sqldb.NewTeamAppInstallation(factory)
-	tag := sqldb.NewTag(factory)
-	appTagRelation := sqldb.NewAppTagRelation(factory)
-	appGroupRelation := sqldb.NewAppGroupRelation(factory)
-	groupRolloutRelation := sqldb.NewGroupRolloutRelation(factory)
-	appRolloutRelation := sqldb.NewAppRolloutRelation(factory)
-	rollout := sqldb.NewRollout(factory)
-	group := sqldb.NewGroup(factory)
-	filterGroup := sqldb.NewFilterGroup(factory)
-	groupMemberRelation := sqldb.NewGroupMemberRelation(factory)
+	app := sqldb.NewApp(prometheus, factory)
+	appVersion := sqldb.NewAppVersion(prometheus, factory)
+	appVersionPrice := sqldb.NewAppVersionPrice(prometheus, factory)
+	appVersionChange := sqldb.NewAppVersionChange(prometheus, factory)
+	appSecret := sqldb.NewAppSecret(prometheus, factory)
+	appPackageUploadSession := sqldb.NewAppPackageUploadSession(prometheus, factory)
+	teamAppInstallation := sqldb.NewTeamAppInstallation(prometheus, factory)
+	tag := sqldb.NewTag(prometheus, factory)
+	appTagRelation := sqldb.NewAppTagRelation(prometheus, factory)
+	appGroupRelation := sqldb.NewAppGroupRelation(prometheus, factory)
+	groupRolloutRelation := sqldb.NewGroupRolloutRelation(prometheus, factory)
+	appRolloutRelation := sqldb.NewAppRolloutRelation(prometheus, factory)
+	rollout := sqldb.NewRollout(prometheus, factory)
+	group := sqldb.NewGroup(prometheus, factory)
+	filterGroup := sqldb.NewFilterGroup(prometheus, factory)
+	groupMemberRelation := sqldb.NewGroupMemberRelation(prometheus, factory)
 	repositoryGroup := repository.NewGroup(group, filterGroup, groupMemberRelation)
-	activator := sqldb.NewActivator(factory)
-	timeRangeActivator := sqldb.NewTimeRangeActivator(factory)
-	maxViewersActivator := sqldb.NewMaxViewersActivator(factory)
-	percentageActivator := sqldb.NewPercentageActivator(factory)
+	activator := sqldb.NewActivator(prometheus, factory)
+	timeRangeActivator := sqldb.NewTimeRangeActivator(prometheus, factory)
+	maxViewersActivator := sqldb.NewMaxViewersActivator(prometheus, factory)
+	percentageActivator := sqldb.NewPercentageActivator(prometheus, factory)
 	repositoryActivator := repository.NewActivator(activator, timeRangeActivator, maxViewersActivator, percentageActivator)
-	versionSelector := sqldb.NewVersionSelector(factory)
-	versionSelectorVersionRelation := sqldb.NewVersionSelectorVersionRelation(factory)
+	versionSelector := sqldb.NewVersionSelector(prometheus, factory)
+	versionSelectorVersionRelation := sqldb.NewVersionSelectorVersionRelation(prometheus, factory)
 	repositoryVersionSelector := repository.NewVersionSelector(versionSelector, versionSelectorVersionRelation)
 	jwtAuthority := newJWTAuthority(logger, jwtSigningKey)
 	serviceGroup := service.NewGroup(logger, groupFactory, cloudAPIClientRegistry, factory, realTimeStateSyncer, repositoryGroup, appGroupRelation, groupRolloutRelation, user, team, app, group, appRolloutRelation)
-	rolloutViewer := sqldb.NewRolloutViewer(factory)
+	rolloutViewer := sqldb.NewRolloutViewer(prometheus, factory)
 	serviceRollout := service.NewRollout(logger, groupFactory, cloudAPIClientRegistry, factory, realTimeStateSyncer, appGroupRelation, rollout, rolloutViewer, groupRolloutRelation, appRolloutRelation, appVersion, repositoryVersionSelector, repositoryActivator, repositoryGroup, activator, versionSelector, team)
-	serviceApp := service.NewApp(logger, groupFactory, httpClient, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, app, appVersion, appVersionPrice, appVersionChange, appSecret, appPackageUploadSession, teamAppInstallation, team, tag, appTagRelation, appGroupRelation, groupRolloutRelation, appRolloutRelation, rollout, repositoryGroup, repositoryActivator, repositoryVersionSelector, jwtAuthority, serviceGroup, serviceRollout)
-	invitation := sqldb.NewInvitation(factory)
+	serviceApp := service.NewApp(logger, groupFactory, httpClient, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, timeBasedCache, app, appVersion, appVersionPrice, appVersionChange, appSecret, appPackageUploadSession, teamAppInstallation, team, tag, appTagRelation, appGroupRelation, groupRolloutRelation, appRolloutRelation, rollout, repositoryGroup, repositoryActivator, repositoryVersionSelector, jwtAuthority, serviceGroup, serviceRollout)
+	invitation := sqldb.NewInvitation(prometheus, factory)
 	serviceInvitation := service.NewInvitation(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, invitation, teamMember, sprintParticipant, sprint)
-	message := sqldb.NewMessage(factory)
+	message := sqldb.NewMessage(prometheus, factory)
 	serviceThread := service.NewThread(logger, groupFactory, toggles, cloudAPIClientRegistry, realTimeStateSyncer, factory, task, thread, message)
-	project := sqldb.NewProject(factory)
-	phase := sqldb.NewPhase(factory)
-	story := sqldb.NewStory(factory)
-	projectPhaseRelation := sqldb.NewProjectPhaseRelation(factory)
-	projectStoryRelation := sqldb.NewProjectStoryRelation(factory)
+	project := sqldb.NewProject(prometheus, factory)
+	phase := sqldb.NewPhase(prometheus, factory)
+	story := sqldb.NewStory(prometheus, factory)
+	projectPhaseRelation := sqldb.NewProjectPhaseRelation(prometheus, factory)
+	projectStoryRelation := sqldb.NewProjectStoryRelation(prometheus, factory)
 	serviceProject := service.NewProject(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, team, phase, story, projectPhaseRelation, projectStoryRelation, user, task)
-	phaseStoryRelation := sqldb.NewPhaseStoryRelation(factory)
+	phaseStoryRelation := sqldb.NewPhaseStoryRelation(prometheus, factory)
 	servicePhase := service.NewPhase(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, projectStoryRelation, phaseStoryRelation)
-	serviceStory := service.NewStory(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, story, projectStoryRelation, phaseStoryRelation, storyTaskRelation, user, task)
+	serviceStory := service.NewStory(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, timeBasedCache, project, story, projectStoryRelation, phaseStoryRelation, storyTaskRelation, user, task)
 	dependencies := gql2.NewDependencies(logger, serviceTask, serviceTaskLink, serviceTeam, serviceSprint, serviceUser, serviceApp, serviceInvitation, serviceThread, serviceGroup, serviceRollout, serviceProject, servicePhase, serviceStory)
 	resolver := gql2.NewResolver(dependencies)
 	gqlService := api.NewGraphQL(logger, prometheusTracer, resolver)
@@ -123,73 +130,93 @@ func InitRealTimeStateSyncAPI(logger telemetry.Logger, realTimeStateSyncer *real
 	return realTimeStateSync
 }
 
-func InitTaskRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api.TaskRPC {
+func InitTaskRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (api.TaskRPC, error) {
 	factory := transaction.NewFactory(sqlDB)
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
-	activity := activity.NewActivity(logger)
-	task := sqldb.NewTask(factory)
-	thread := sqldb.NewThread()
-	sprint := sqldb.NewSprint(factory)
-	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation()
-	sprintParticipant := sqldb.NewSprintParticipant(factory)
-	sprintTaskRelation := sqldb.NewSprintTaskRelation()
-	storyTaskRelation := sqldb.NewStoryTaskRelation(factory)
-	serviceTask := service.NewTask(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, activity, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, storyTaskRelation)
+	activityActivity := activity.NewActivity(logger)
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return api.TaskRPC{}, err
+	}
+	task := sqldb.NewTask(prometheus, factory)
+	thread := sqldb.NewThread(prometheus)
+	sprint := sqldb.NewSprint(prometheus, factory)
+	taskAwaitForRelation := sqldb.NewTaskAwaitForRelation(prometheus)
+	sprintParticipant := sqldb.NewSprintParticipant(prometheus, factory)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(prometheus)
+	storyTaskRelation := sqldb.NewStoryTaskRelation(prometheus, factory)
+	serviceTask := service.NewTask(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, activityActivity, timeBasedCache, task, thread, sprint, taskAwaitForRelation, sprintParticipant, sprintTaskRelation, storyTaskRelation)
 	taskRPC := api.NewTaskRPC(logger, serviceTask)
-	return taskRPC
+	return taskRPC, nil
 }
 
-func InitSprintRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api.SprintRPC {
+func InitSprintRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (api.SprintRPC, error) {
 	factory := transaction.NewFactory(sqlDB)
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
-	task := sqldb.NewTask(factory)
-	sprint := sqldb.NewSprint(factory)
-	team := sqldb.NewTeam(factory)
-	sprintTaskRelation := sqldb.NewSprintTaskRelation()
-	sprintParticipant := sqldb.NewSprintParticipant(factory)
-	teamMember := sqldb.NewTeamMember(factory)
-	thread := sqldb.NewThread()
-	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return api.SprintRPC{}, err
+	}
+	task := sqldb.NewTask(prometheus, factory)
+	sprint := sqldb.NewSprint(prometheus, factory)
+	team := sqldb.NewTeam(prometheus, factory)
+	sprintTaskRelation := sqldb.NewSprintTaskRelation(prometheus)
+	sprintParticipant := sqldb.NewSprintParticipant(prometheus, factory)
+	teamMember := sqldb.NewTeamMember(prometheus, factory)
+	thread := sqldb.NewThread(prometheus)
+	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, timeBasedCache, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
 	sprintRPC := api.NewSprintRPC(logger, serviceSprint)
-	return sprintRPC
+	return sprintRPC, nil
 }
 
-func InitTaskLinkRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB) api.TaskLinkRPC {
+func InitTaskLinkRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (api.TaskLinkRPC, error) {
 	factory := transaction.NewFactory(sqlDB)
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
-	taskLink := sqldb.NewTaskLink()
-	task := sqldb.NewTask(factory)
-	serviceTaskLink := service.NewTaskLink(logger, groupFactory, cloudAPIClientRegistry, factory, authorizer, toggles, realTimeStateSyncer, taskLink, task)
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return api.TaskLinkRPC{}, err
+	}
+	taskLink := sqldb.NewTaskLink(prometheus)
+	task := sqldb.NewTask(prometheus, factory)
+	serviceTaskLink := service.NewTaskLink(logger, groupFactory, cloudAPIClientRegistry, factory, authorizer, toggles, realTimeStateSyncer, timeBasedCache, taskLink, task)
 	taskLinkRPC := api.NewTaskLinkRPC(logger, serviceTaskLink)
-	return taskLinkRPC
+	return taskLinkRPC, nil
 }
 
-func InitTeamRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, sqlDB *sql.DB, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL) api.TeamRPC {
+func InitTeamRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL) (api.TeamRPC, error) {
 	factory := transaction.NewFactory(sqlDB)
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
 	toggles := feature.NewStaticToggles()
-	task := sqldb.NewTask(factory)
-	sprint := sqldb.NewSprint(factory)
-	sprintParticipant := sqldb.NewSprintParticipant(factory)
-	team := sqldb.NewTeam(factory)
-	teamMember := sqldb.NewTeamMember(factory)
-	teamFileUploadSession := sqldb.NewTeamFileUploadSession()
-	teamMemberGroup := sqldb.NewTeamMemberGroup()
-	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation()
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return api.TeamRPC{}, err
+	}
+	task := sqldb.NewTask(prometheus, factory)
+	sprint := sqldb.NewSprint(prometheus, factory)
+	sprintParticipant := sqldb.NewSprintParticipant(prometheus, factory)
+	team := sqldb.NewTeam(prometheus, factory)
+	teamMember := sqldb.NewTeamMember(prometheus, factory)
+	teamFileUploadSession := sqldb.NewTeamFileUploadSession(prometheus)
+	teamMemberGroup := sqldb.NewTeamMemberGroup(prometheus)
+	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation(prometheus)
 	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
-	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, task, sprint, sprintParticipant, team, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
-	user := sqldb.NewUser(factory)
-	userFileUploadSession := sqldb.NewUserFileUploadSession()
-	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, user, teamMember, userFileUploadSession)
+	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
+	user := sqldb.NewUser(prometheus, factory)
+	userFileUploadSession := sqldb.NewUserFileUploadSession(prometheus)
+	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, timeBasedCache, user, teamMember, userFileUploadSession)
 	teamRPC := api.NewTeamRPC(serviceTeam, serviceUser)
-	return teamRPC
+	return teamRPC, nil
 }
 
 // wire.go:
@@ -204,7 +231,17 @@ type CloudWebAPIExternalBaseURL string
 
 type MapServerURL string
 
+type CacheCapacity int
+
+type TimeBasedCacheBucketCount int
+
+type TimeBasedCacheTTL time.Duration
+
 var gqlTracerSet = wire.NewSet(wire.Bind(new(tracer.Tracer), new(gql.PrometheusTracer)), newPrometheusTracer)
+
+var cacheSet = wire.NewSet(wire.Bind(new(cache.Factory[string, any]), new(*cache.LRUFactory[string, any])), newLRUCacheFactory,
+	newTimeBasedCache,
+)
 
 var daoSet = wire.NewSet(wire.Bind(new(dao.Task), new(sqldb.Task)), wire.Bind(new(dao.TaskLink), new(sqldb.TaskLink)), wire.Bind(new(dao.TaskAwaitForRelation), new(sqldb.TaskAwaitForRelation)), wire.Bind(new(dao.SprintParticipant), new(sqldb.SprintParticipant)), wire.Bind(new(dao.Sprint), new(sqldb.Sprint)), wire.Bind(new(dao.SprintTaskRelation), new(sqldb.SprintTaskRelation)), wire.Bind(new(dao.Thread), new(sqldb.Thread)), wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)), wire.Bind(new(dao.TeamMemberGroup), new(sqldb.TeamMemberGroup)), wire.Bind(new(dao.TeamMemberGroupUserRelation), new(sqldb.TeamMemberGroupUserRelation)), wire.Bind(new(dao.User), new(sqldb.User)), wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)), wire.Bind(new(dao.Team), new(sqldb.Team)), wire.Bind(new(dao.TeamFileUploadSession), new(sqldb.TeamFileUploadSession)), wire.Bind(new(dao.Invitation), new(sqldb.Invitation)), wire.Bind(new(dao.Message), new(sqldb.Message)), wire.Bind(new(dao.AppPackageUploadSession), new(*sqldb.AppPackageUploadSession)), wire.Bind(new(dao.AppVersion), new(*sqldb.AppVersion)), wire.Bind(new(dao.App), new(*sqldb.App)), wire.Bind(new(dao.Tag), new(*sqldb.Tag)), wire.Bind(new(dao.AppTagRelation), new(*sqldb.AppTagRelation)), wire.Bind(new(dao.AppSecret), new(*sqldb.AppSecret)), wire.Bind(new(dao.TeamAppInstallation), new(*sqldb.TeamAppInstallation)), wire.Bind(new(dao.AppGroupRelation), new(*sqldb.AppGroupRelation)), wire.Bind(new(dao.AppRolloutRelation), new(*sqldb.AppRolloutRelation)), wire.Bind(new(dao.AppVersionChange), new(*sqldb.AppVersionChange)), wire.Bind(new(dao.AppVersionPrice), new(*sqldb.AppVersionPrice)), wire.Bind(new(dao.FilterGroup), new(*sqldb.FilterGroup)), wire.Bind(new(dao.GroupRolloutRelation), new(*sqldb.GroupRolloutRelation)), wire.Bind(new(dao.MaxViewersActivator), new(*sqldb.MaxViewersActivator)), wire.Bind(new(dao.PercentageActivator), new(*sqldb.PercentageActivator)), wire.Bind(new(dao.RolloutViewer), new(*sqldb.RolloutViewer)), wire.Bind(new(dao.Rollout), new(*sqldb.Rollout)), wire.Bind(new(dao.Group), new(*sqldb.Group)), wire.Bind(new(dao.TimeRangeActivator), new(*sqldb.TimeRangeActivator)), wire.Bind(new(dao.VersionSelectorVersionRelation), new(*sqldb.VersionSelectorVersionRelation)), wire.Bind(new(dao.VersionSelector), new(*sqldb.VersionSelector)), wire.Bind(new(dao.GroupMemberRelation), new(*sqldb.GroupMemberRelation)), wire.Bind(new(dao.Activator), new(*sqldb.Activator)), wire.Bind(new(dao.Story), new(*sqldb.Story)), wire.Bind(new(dao.Phase), new(*sqldb.Phase)), wire.Bind(new(dao.Project), new(*sqldb.Project)), wire.Bind(new(dao.PhaseStoryRelation), new(*sqldb.PhaseStoryRelation)), wire.Bind(new(dao.StoryTaskRelation), new(*sqldb.StoryTaskRelation)), wire.Bind(new(dao.ProjectPhaseRelation), new(*sqldb.ProjectPhaseRelation)), wire.Bind(new(dao.ProjectStoryRelation), new(*sqldb.ProjectStoryRelation)), sqldb.NewTask, sqldb.NewTaskLink, sqldb.NewTaskAwaitForRelation, sqldb.NewSprintParticipant, sqldb.NewSprint, sqldb.NewSprintTaskRelation, sqldb.NewThread, sqldb.NewTeamMember, sqldb.NewTeamMemberGroup, sqldb.NewTeamMemberGroupUserRelation, sqldb.NewUser, sqldb.NewUserFileUploadSession, sqldb.NewTeam, sqldb.NewTeamFileUploadSession, sqldb.NewInvitation, sqldb.NewMessage, sqldb.NewAppPackageUploadSession, sqldb.NewAppVersion, sqldb.NewApp, sqldb.NewAppSecret, sqldb.NewTeamAppInstallation, sqldb.NewAppGroupRelation, sqldb.NewAppRolloutRelation, sqldb.NewAppVersionChange, sqldb.NewAppVersionPrice, sqldb.NewFilterGroup, sqldb.NewGroupRolloutRelation, sqldb.NewMaxViewersActivator, sqldb.NewPercentageActivator, sqldb.NewRolloutViewer, sqldb.NewRollout, sqldb.NewGroup, sqldb.NewTimeRangeActivator, sqldb.NewVersionSelectorVersionRelation, sqldb.NewVersionSelector, sqldb.NewTag, sqldb.NewAppTagRelation, sqldb.NewGroupMemberRelation, sqldb.NewActivator, sqldb.NewProject, sqldb.NewPhase, sqldb.NewStory, sqldb.NewProjectPhaseRelation, sqldb.NewProjectStoryRelation, sqldb.NewPhaseStoryRelation, sqldb.NewStoryTaskRelation)
 
@@ -230,7 +267,7 @@ func newUserService(
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory transaction.Factory, cache2 *cache.TimeBasedCache[string, any],
 	userDao dao.User,
 	teamMember dao.TeamMember,
 	userFileUploadSessionDao dao.UserFileUploadSession,
@@ -243,8 +280,7 @@ func newUserService(
 		cloudClientRegistry,
 		authorizer,
 		stateSyncer,
-		transactionFactory,
-		userDao,
+		transactionFactory, cache2, userDao,
 		teamMember,
 		userFileUploadSessionDao,
 	)
@@ -258,7 +294,7 @@ func newTeamService(
 	authorizer client.Authorizer,
 	toggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
-	transactionFactory transaction.Factory,
+	transactionFactory transaction.Factory, cache2 *cache.TimeBasedCache[string, any],
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintParticipantDao dao.SprintParticipant,
@@ -277,8 +313,7 @@ func newTeamService(
 		authorizer,
 		toggles,
 		stateSyncer,
-		transactionFactory,
-		taskDao,
+		transactionFactory, cache2, taskDao,
 		sprintDao,
 		sprintParticipantDao,
 		teamDao,
@@ -291,4 +326,18 @@ func newTeamService(
 
 func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) gql.PrometheusTracer {
 	return gql.NewPrometheusTracer(string(appMame), string(serviceName), environment)
+}
+
+func newLRUCacheFactory(logger telemetry.Logger, metrics cache.Metrics, capacity CacheCapacity) *cache.LRUFactory[string, any] {
+	return cache.NewLRUFactory[string, any](logger, metrics, int(capacity))
+}
+
+func newTimeBasedCache(
+	logger telemetry.Logger,
+	metrics cache.Metrics,
+	cacheFactory cache.Factory[string, any],
+	bucketCount TimeBasedCacheBucketCount,
+	ttl TimeBasedCacheTTL,
+) (*cache.TimeBasedCache[string, any], error) {
+	return cache.NewTimeBasedCache[string, any](logger, metrics, cacheFactory, int(bucketCount), time.Duration(ttl))
 }

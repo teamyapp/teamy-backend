@@ -12,13 +12,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const taskDaoName = "Task"
+
 type Task struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Task = (*Task)(nil)
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTaskByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -32,6 +36,7 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 }
 
 func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTasksByTeamID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -45,6 +50,7 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 }
 
 func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindAllTasks")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -58,6 +64,7 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 }
 
 func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTaskByIDWithTx")
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -110,6 +117,7 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTasksByIDsWithTx")
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -175,6 +183,7 @@ func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transacti
 }
 
 func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTaskByCommentsThreadIDWithTx")
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -227,6 +236,7 @@ func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transacti
 }
 
 func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindAllTasksWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -285,6 +295,7 @@ func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTasksByTeamIDWithTx")
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -346,6 +357,7 @@ func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transa
 }
 
 func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	t.metrics.ReportDaoOperation(taskDaoName, "CreateTask")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO task
 		(
@@ -389,6 +401,7 @@ func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task e
 }
 
 func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	t.metrics.ReportDaoOperation(taskDaoName, "UpdateTask")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE task
 		SET
@@ -428,6 +441,7 @@ func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task e
 }
 
 func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(taskDaoName, "DeleteTask")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM task
 		WHERE id = $1;
@@ -440,8 +454,12 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 	return nil
 }
 
-func NewTask(transactionFactory transaction.Factory) Task {
+func NewTask(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) Task {
 	return Task{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

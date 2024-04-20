@@ -10,13 +10,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const projectDaoName = "Project"
+
 type Project struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Project = (*Project)(nil)
 
 func (p *Project) FindProjectsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Project, *errs.Error) {
+	p.metrics.ReportDaoOperation(projectDaoName, "FindProjectsWithTx")
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			id,
@@ -67,6 +71,7 @@ func (p *Project) FindProjectsWithTx(ct context.Context, tx *transaction.Transac
 }
 
 func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Project, *errs.Error) {
+	p.metrics.ReportDaoOperation(projectDaoName, "FindProjectsByTeamIDWithTx")
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			id,
@@ -118,6 +123,7 @@ func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction
 }
 
 func (p *Project) FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Transaction, projectIDs []uint64) ([]entity.Project, *errs.Error) {
+	p.metrics.ReportDaoOperation(projectDaoName, "FindProjectsByIDsWithTx")
 	if len(projectIDs) == 0 {
 		return []entity.Project{}, nil
 	}
@@ -174,6 +180,7 @@ func (p *Project) FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Tr
 }
 
 func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) (entity.Project, *errs.Error) {
+	p.metrics.ReportDaoOperation(projectDaoName, "FindProjectByIDWithTx")
 	project := entity.Project{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
@@ -215,6 +222,7 @@ func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Tran
 }
 
 func (p *Project) CreateProject(ct context.Context, tx *transaction.Transaction, project entity.Project) *errs.Error {
+	p.metrics.ReportDaoOperation(projectDaoName, "CreateProject")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO project (
 			id,
@@ -254,6 +262,7 @@ func (p *Project) CreateProject(ct context.Context, tx *transaction.Transaction,
 }
 
 func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction, project entity.Project) *errs.Error {
+	p.metrics.ReportDaoOperation(projectDaoName, "UpdateProject")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE project
 		SET
@@ -292,6 +301,7 @@ func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction,
 }
 
 func (p *Project) DeleteProject(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(projectDaoName, "DeleteProject")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project
 		WHERE id = $1;
@@ -303,8 +313,12 @@ func (p *Project) DeleteProject(ct context.Context, tx *transaction.Transaction,
 	return nil
 }
 
-func NewProject(transactionFactory transaction.Factory) *Project {
+func NewProject(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *Project {
 	return &Project{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

@@ -11,13 +11,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const groupDaoName = "Group"
+
 type Group struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Group = (*Group)(nil)
 
-func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.Group, *errs.Error) {
+func (g *Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.Group, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupDaoName, "FindGroupByIDWithTx")
 	group := entity.Group{}
 	err := tx.SQLTx().QueryRowContext(
 		ct,
@@ -53,6 +57,7 @@ func (*Group) FindGroupByIDWithTx(ct context.Context, tx *transaction.Transactio
 }
 
 func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.Group, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupDaoName, "FindGroupByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -66,6 +71,7 @@ func (g *Group) FindGroupByID(ct context.Context, groupID uint64) (entity.Group,
 }
 
 func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64) ([]entity.Group, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupDaoName, "FindGroupsByIDsWithTx")
 	if len(groupIDs) == 0 {
 		return []entity.Group{}, nil
 	}
@@ -118,6 +124,7 @@ func (g *Group) FindGroupsByIDsWithTx(ct context.Context, tx *transaction.Transa
 }
 
 func (g *Group) FindGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity.Group, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupDaoName, "FindGroupsByIDs")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -131,6 +138,7 @@ func (g *Group) FindGroupsByIDs(ct context.Context, groupIDs []uint64) ([]entity
 }
 
 func (g *Group) CreateGroup(ct context.Context, tx *transaction.Transaction, group entity.Group) *errs.Error {
+	g.metrics.ReportDaoOperation(groupDaoName, "CreateGroup")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -163,7 +171,8 @@ func (g *Group) CreateGroup(ct context.Context, tx *transaction.Transaction, gro
 	return nil
 }
 
-func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group entity.Group) *errs.Error {
+func (g *Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group entity.Group) *errs.Error {
+	g.metrics.ReportDaoOperation(groupDaoName, "UpdateGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		UPDATE "group"
@@ -195,6 +204,7 @@ func (*Group) UpdateGroup(ct context.Context, tx *transaction.Transaction, Group
 }
 
 func (g *Group) DeleteGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	g.metrics.ReportDaoOperation(groupDaoName, "DeleteGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM "group"
@@ -216,6 +226,7 @@ func (g *Group) FilterGroupIDsByMemberTypeWithTx(
 	groupIDs []uint64,
 	memberType entity.GroupMemberType,
 ) ([]uint64, *errs.Error) {
+	g.metrics.ReportDaoOperation(groupDaoName, "FilterGroupIDsByMemberTypeWithTx")
 	if len(groupIDs) == 0 {
 		return []uint64{}, nil
 	}
@@ -251,8 +262,12 @@ func (g *Group) FilterGroupIDsByMemberTypeWithTx(
 	return result, nil
 }
 
-func NewGroup(transactionFactory transaction.Factory) *Group {
+func NewGroup(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *Group {
 	return &Group{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

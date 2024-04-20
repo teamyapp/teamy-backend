@@ -11,13 +11,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const filterGroupDaoName = "FilterGroup"
+
 type FilterGroup struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.FilterGroup = (*FilterGroup)(nil)
 
 func (f *FilterGroup) FindFilterGroupByIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupByIDWithTx")
 	filterGroup := entity.FilterGroup{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
@@ -40,6 +44,7 @@ func (f *FilterGroup) FindFilterGroupByIDWithTx(ct context.Context, tx *transact
 }
 
 func (f *FilterGroup) FindFilterGroupByID(ct context.Context, groupID uint64) (entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -54,6 +59,7 @@ func (f *FilterGroup) FindFilterGroupByID(ct context.Context, groupID uint64) (e
 }
 
 func (f *FilterGroup) FindFilterGroupsByIDsWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64) ([]entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupsByIDsWithTx")
 	if len(groupIDs) == 0 {
 		return []entity.FilterGroup{}, nil
 	}
@@ -94,6 +100,7 @@ func (f *FilterGroup) FindFilterGroupsByIDsWithTx(ct context.Context, tx *transa
 }
 
 func (f *FilterGroup) FindFilterGroupsByIDs(ct context.Context, groupID []uint64) ([]entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupsByIDs")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -108,6 +115,7 @@ func (f *FilterGroup) FindFilterGroupsByIDs(ct context.Context, groupID []uint64
 }
 
 func (f *FilterGroup) CreateFilterGroup(ct context.Context, tx *transaction.Transaction, group entity.FilterGroup) *errs.Error {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "CreateFilterGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`INSERT INTO filter_group (
 			group_id,
@@ -125,6 +133,7 @@ func (f *FilterGroup) CreateFilterGroup(ct context.Context, tx *transaction.Tran
 }
 
 func (f *FilterGroup) UpdateFilterGroup(ct context.Context, tx *transaction.Transaction, group entity.FilterGroup) *errs.Error {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "UpdateFilterGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`UPDATE filter_group
 			SET filter = $1
@@ -141,6 +150,7 @@ func (f *FilterGroup) UpdateFilterGroup(ct context.Context, tx *transaction.Tran
 }
 
 func (f *FilterGroup) DeleteFilterGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "DeleteFilterGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM filter_group
@@ -155,8 +165,12 @@ func (f *FilterGroup) DeleteFilterGroup(ct context.Context, tx *transaction.Tran
 	return nil
 }
 
-func NewFilterGroup(transactionFactory transaction.Factory) *FilterGroup {
+func NewFilterGroup(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *FilterGroup {
 	return &FilterGroup{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

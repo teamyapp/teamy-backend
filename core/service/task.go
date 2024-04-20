@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/teamyapp/teamy-backend/core/cache"
 	"time"
+
+	"github.com/teamyapp/teamy-backend/core/cache"
 
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
@@ -104,12 +105,12 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 	}
 
 	if t.featureToggles.EnableCache {
-		value, cacheErr := t.cache.Get(findTaskByIDCacheKey(taskID))
+		value, cacheErr := t.cache.Get(ct, findTaskByIDCacheKey(taskID))
 		if cacheErr == nil {
 			return value.(entity.Task), nil
 		}
 
-		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
 		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
 			return entity.Task{}, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -121,7 +122,7 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 	}
 
 	if t.featureToggles.EnableCache {
-		cacheErr := t.cache.SetIfExpired(findTaskByIDCacheKey(taskID), task)
+		cacheErr := t.cache.SetIfExpired(ct, findTaskByIDCacheKey(taskID), task)
 		if cacheErr != nil {
 			return entity.Task{}, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -132,12 +133,12 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 
 func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, *errs.Error) {
 	if t.featureToggles.EnableCache {
-		value, cacheErr := t.cache.Get(findTasksCacheKey(filter))
+		value, cacheErr := t.cache.Get(ct, findTasksCacheKey(filter))
 		if cacheErr == nil {
 			return value.([]entity.Task), nil
 		}
 
-		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
 		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -173,7 +174,7 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 	}
 
 	if t.featureToggles.EnableCache {
-		cacheErr := t.cache.SetIfExpired(findTasksCacheKey(filter), tasks)
+		cacheErr := t.cache.SetIfExpired(ct, findTasksCacheKey(filter), tasks)
 		if cacheErr != nil {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -184,12 +185,12 @@ func (t Task) FindTasks(ct context.Context, filter *TaskFilter) ([]entity.Task, 
 
 func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFilter) ([]entity.Task, *errs.Error) {
 	if t.featureToggles.EnableCache {
-		value, cacheErr := t.cache.Get(findTasksInTeamCacheKey(teamID, filter))
+		value, cacheErr := t.cache.Get(ct, findTasksInTeamCacheKey(teamID, filter))
 		if cacheErr == nil {
 			return value.([]entity.Task), nil
 		}
 
-		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
 		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -225,7 +226,7 @@ func (t Task) FindTasksInTeam(ct context.Context, teamID uint64, filter *TaskFil
 	}
 
 	if t.featureToggles.EnableCache {
-		cacheErr := t.cache.SetIfExpired(findTasksInTeamCacheKey(teamID, filter), tasks)
+		cacheErr := t.cache.SetIfExpired(ct, findTasksInTeamCacheKey(teamID, filter), tasks)
 		if cacheErr != nil {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -240,12 +241,12 @@ func (t Task) FindTasksInSprint(
 	filter *TaskFilter,
 ) ([]entity.Task, *errs.Error) {
 	if t.featureToggles.EnableCache {
-		value, cacheErr := t.cache.Get(findTasksInSprintCacheKey(sprintID, filter))
+		value, cacheErr := t.cache.Get(ct, findTasksInSprintCacheKey(sprintID, filter))
 		if cacheErr == nil {
 			return value.([]entity.Task), nil
 		}
 
-		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
 		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -294,7 +295,7 @@ func (t Task) FindTasksInSprint(
 	}
 
 	if t.featureToggles.EnableCache {
-		cacheErr := t.cache.SetIfExpired(findTasksInSprintCacheKey(sprintID, filter), tasks)
+		cacheErr := t.cache.SetIfExpired(ct, findTasksInSprintCacheKey(sprintID, filter), tasks)
 		if cacheErr != nil {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -305,12 +306,12 @@ func (t Task) FindTasksInSprint(
 
 func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]entity.Task, *errs.Error) {
 	if t.featureToggles.EnableCache {
-		value, cacheErr := t.cache.Get(findAwaitForTasksCacheKey(awaitingTaskID))
+		value, cacheErr := t.cache.Get(ct, findAwaitForTasksCacheKey(awaitingTaskID))
 		if cacheErr == nil {
 			return value.([]entity.Task), nil
 		}
 
-		var cacheKeyNotFoundErr *cache.KeyNotFoundErr[string]
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
 		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -354,7 +355,7 @@ func (t Task) FindAwaitForTasks(ct context.Context, awaitingTaskID uint64) ([]en
 	}
 
 	if t.featureToggles.EnableCache {
-		cacheErr := t.cache.SetIfExpired(findAwaitForTasksCacheKey(awaitingTaskID), tasks)
+		cacheErr := t.cache.SetIfExpired(ct, findAwaitForTasksCacheKey(awaitingTaskID), tasks)
 		if cacheErr != nil {
 			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
 		}
@@ -1324,6 +1325,7 @@ func NewTask(
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudTransaction.Factory,
 	activityCache activity.Activity,
+	cache *cache.TimeBasedCache[string, any],
 	taskDao dao.Task,
 	threadDao dao.Thread,
 	sprintDao dao.Sprint,
@@ -1341,6 +1343,7 @@ func NewTask(
 		stateSyncer:             stateSyncer,
 		transactionFactory:      transactionFactory,
 		activityCache:           activityCache,
+		cache:                   cache,
 		taskDao:                 taskDao,
 		threadDao:               threadDao,
 		sprintDao:               sprintDao,

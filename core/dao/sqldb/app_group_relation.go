@@ -10,13 +10,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appGroupRelationDaoName = "AppGroupRelation"
+
 type AppGroupRelation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.AppGroupRelation = (*AppGroupRelation)(nil)
 
 func (a *AppGroupRelation) FindAppIDsByGroupID(ct context.Context, groupID uint64) ([]uint64, *errs.Error) {
+	a.metrics.ReportDaoOperation(appGroupRelationDaoName, "FindAppIDsByGroupID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -30,7 +34,8 @@ func (a *AppGroupRelation) FindAppIDsByGroupID(ct context.Context, groupID uint6
 	return a.FindAppIDsByGroupIDWithTx(ct, tx, groupID)
 }
 
-func (*AppGroupRelation) FindAppIDsByGroupIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) ([]uint64, *errs.Error) {
+func (a *AppGroupRelation) FindAppIDsByGroupIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) ([]uint64, *errs.Error) {
+	a.metrics.ReportDaoOperation(appGroupRelationDaoName, "FindAppIDsByGroupIDWithTx")
 	var appIDs []uint64
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
@@ -59,7 +64,8 @@ func (*AppGroupRelation) FindAppIDsByGroupIDWithTx(ct context.Context, tx *trans
 	return appIDs, nil
 }
 
-func (*AppGroupRelation) FindGroupIDsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]uint64, *errs.Error) {
+func (a *AppGroupRelation) FindGroupIDsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]uint64, *errs.Error) {
+	a.metrics.ReportDaoOperation(appGroupRelationDaoName, "FindGroupIDsByAppIDWithTx")
 	var groupIDs []uint64
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
@@ -89,6 +95,7 @@ func (*AppGroupRelation) FindGroupIDsByAppIDWithTx(ct context.Context, tx *trans
 }
 
 func (a *AppGroupRelation) FindGroupIDsByAppID(ct context.Context, appID uint64) ([]uint64, *errs.Error) {
+	a.metrics.ReportDaoOperation(appGroupRelationDaoName, "FindGroupIDsByAppID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -101,12 +108,13 @@ func (a *AppGroupRelation) FindGroupIDsByAppID(ct context.Context, appID uint64)
 	return a.FindGroupIDsByAppIDWithTx(ct, tx, appID)
 }
 
-func (*AppGroupRelation) CreateAppGroupRelation(ct context.Context, tx *transaction.Transaction, appGroupRelation entity.AppGroupRelation) *errs.Error {
+func (a *AppGroupRelation) CreateAppGroupRelation(ct context.Context, tx *transaction.Transaction, appGroupRelation entity.AppGroupRelation) *errs.Error {
+	a.metrics.ReportDaoOperation(appGroupRelationDaoName, "CreateAppGroupRelation")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`INSERT INTO app_group_relation (
 			app_id,
 			group_id
-		) 
+		)
 		VALUES (
 			$1,
 			$2
@@ -122,10 +130,11 @@ func (*AppGroupRelation) CreateAppGroupRelation(ct context.Context, tx *transact
 	return nil
 }
 
-func (*AppGroupRelation) DeleteAppGroupRelation(ct context.Context, tx *transaction.Transaction, appID uint64, groupID uint64) *errs.Error {
+func (a *AppGroupRelation) DeleteAppGroupRelation(ct context.Context, tx *transaction.Transaction, appID uint64, groupID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appGroupRelationDaoName, "DeleteAppGroupRelation")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		DELETE FROM app_group_relation 
+		DELETE FROM app_group_relation
 		WHERE app_id = $1 AND group_id = $2`,
 		appID,
 		groupID,
@@ -138,10 +147,11 @@ func (*AppGroupRelation) DeleteAppGroupRelation(ct context.Context, tx *transact
 	return nil
 }
 
-func (*AppGroupRelation) DeleteAppGroupRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+func (a *AppGroupRelation) DeleteAppGroupRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appGroupRelationDaoName, "DeleteAppGroupRelationsByGroupID")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		DELETE FROM app_group_relation 
+		DELETE FROM app_group_relation
 		WHERE group_id = $1`,
 		groupID,
 	)
@@ -153,8 +163,12 @@ func (*AppGroupRelation) DeleteAppGroupRelationsByGroupID(ct context.Context, tx
 	return nil
 }
 
-func NewAppGroupRelation(transactionFactory transaction.Factory) *AppGroupRelation {
+func NewAppGroupRelation(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppGroupRelation {
 	return &AppGroupRelation{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

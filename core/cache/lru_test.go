@@ -1,10 +1,15 @@
 package cache_test
 
 import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/teamy-backend/core/cache/cachetest"
+
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/teamy-backend/core/cache"
-	"github.com/teamyapp/teamy-backend/core/cache/cachetest"
-	"testing"
 )
 
 type OperationType string
@@ -40,9 +45,13 @@ func TestNewLRU(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			metrics := cachetest.NewNoopMetrics()
-			_, err := cache.NewLRU[string, string](metrics, tc.capacity)
+			t.Parallel()
+			lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+			logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+			noopMetrics := cachetest.NewNoopMetrics()
+			_, err := cache.NewLRU[string, string](logger, noopMetrics, tc.capacity)
 			require.Equal(t, tc.expectErr, err)
 		})
 	}
@@ -174,15 +183,20 @@ func TestLRU_Operations(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			metrics := cachetest.NewNoopMetrics()
-			lru, err := cache.NewLRU[string, string](metrics, tc.capacity)
+			t.Parallel()
+			lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+			logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+			noopMetrics := cachetest.NewNoopMetrics()
+			lru, err := cache.NewLRU[string, string](logger, noopMetrics, tc.capacity)
 			require.Nil(t, err)
 
 			for i, op := range tc.operations {
+				ct := context.Background()
 				switch op.Type {
 				case Get:
-					value, err := lru.Get(op.Key)
+					value, err := lru.Get(ct, op.Key)
 					require.Equal(t, tc.expectedErrs[i], err)
 					if err != nil {
 						continue
@@ -190,81 +204,96 @@ func TestLRU_Operations(t *testing.T) {
 
 					require.Equal(t, tc.expectedResult[i], value)
 				case Set:
-					err = lru.Set(op.Key, op.Value)
+					err = lru.Set(ct, op.Key, op.Value)
 					require.Equal(t, tc.expectedErrs[i], err)
 					if err != nil {
 						continue
 					}
 				case Remove:
-					err = lru.Remove(op.Key)
+					err = lru.Remove(ct, op.Key)
 					require.Equal(t, tc.expectedErrs[i], err)
 					if err != nil {
 						continue
 					}
 				}
 
-				require.Equal(t, tc.expectedSize[i], lru.Size())
+				require.Equal(t, tc.expectedSize[i], lru.Size(ct))
 			}
 		})
 	}
 }
 
 func BenchmarkLRU_Contains(b *testing.B) {
-	metrics := cachetest.NewNoopMetrics()
-	lru, err := cache.NewLRU[string, string](metrics, 1000)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 1000)
 	require.Nil(b, err)
 
 	for i := 0; i < 1000; i++ {
-		err = lru.Set(string(rune(i)), string(rune(i)))
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		lru.Contains("a")
+		ct := context.Background()
+		lru.Contains(ct, "a")
 	}
 }
 
 func BenchmarkLRU_Get(b *testing.B) {
-	metrics := cachetest.NewNoopMetrics()
-	lru, err := cache.NewLRU[string, string](metrics, 100)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 100)
 	require.Nil(b, err)
 
 	for i := 0; i < 100; i++ {
-		err = lru.Set(string(rune(i)), string(rune(i)))
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = lru.Get("a")
+		ct := context.Background()
+		_, _ = lru.Get(ct, "a")
 	}
 }
 
 func BenchmarkLRU_Set(b *testing.B) {
-	metrics := cachetest.NewNoopMetrics()
-	lru, err := cache.NewLRU[string, string](metrics, 100)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 100)
 	require.Nil(b, err)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = lru.Set(string(rune(i)), string(rune(i)))
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 }
 
 func BenchmarkLRU_Remove(b *testing.B) {
-	metrics := cachetest.NewNoopMetrics()
-	lru, err := cache.NewLRU[string, string](metrics, 100)
+	lineFormatter := telemetry.NewOrderedColumnLineFormatter([]string{})
+	logger := telemetry.NewLogger(lineFormatter, os.Stdout, telemetry.Off, []telemetry.LogInterceptor{})
+	noopMetrics := cachetest.NewNoopMetrics()
+	lru, err := cache.NewLRU[string, string](logger, noopMetrics, 100)
 	require.Nil(b, err)
 
 	for i := 0; i < 100; i++ {
-		err = lru.Set(string(rune(i)), string(rune(i)))
+		ct := context.Background()
+		err = lru.Set(ct, string(rune(i)), string(rune(i)))
 		require.Nil(b, err)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = lru.Remove("a")
+		ct := context.Background()
+		_ = lru.Remove(ct, "a")
 	}
 }

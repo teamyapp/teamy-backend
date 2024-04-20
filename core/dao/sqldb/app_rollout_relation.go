@@ -10,7 +10,10 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appRolloutRelationDaoName = "AppRolloutRelation"
+
 type AppRolloutRelation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
@@ -22,6 +25,7 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationTypeWithTx(
 	appID uint64,
 	rolloutType entity.AppRolloutRelationType,
 ) ([]uint64, *errs.Error) {
+	a.metrics.ReportDaoOperation(appRolloutRelationDaoName, "FindRolloutIDsByAppIDAndRelationTypeWithTx")
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT
@@ -57,6 +61,7 @@ func (a *AppRolloutRelation) FindAppRolloutByAppIDAndRolloutIDWithTx(
 	tx *transaction.Transaction,
 	appID, rolloutID uint64,
 ) (*entity.AppRolloutRelation, *errs.Error) {
+	a.metrics.ReportDaoOperation(appRolloutRelationDaoName, "FindAppRolloutByAppIDAndRolloutIDWithTx")
 	row := tx.SQLTx().QueryRowContext(ct,
 		`
 		SELECT
@@ -87,6 +92,7 @@ func (a *AppRolloutRelation) FindAppRolloutByAppIDAndRolloutIDWithTx(
 }
 
 func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationType(ct context.Context, appID uint64, rolloutType entity.AppRolloutRelationType) ([]uint64, *errs.Error) {
+	a.metrics.ReportDaoOperation(appRolloutRelationDaoName, "FindRolloutIDsByAppIDAndRelationType")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -101,6 +107,7 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDAndRelationType(ct context.Con
 }
 
 func (a *AppRolloutRelation) FindRolloutIDsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]uint64, *errs.Error) {
+	a.metrics.ReportDaoOperation(appRolloutRelationDaoName, "FindRolloutIDsByAppIDWithTx")
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT
@@ -130,7 +137,8 @@ func (a *AppRolloutRelation) FindRolloutIDsByAppIDWithTx(ct context.Context, tx 
 	return rolloutIDs, nil
 }
 
-func (*AppRolloutRelation) CreateAppRolloutRelation(ct context.Context, tx *transaction.Transaction, appRolloutRelation entity.AppRolloutRelation) *errs.Error {
+func (a *AppRolloutRelation) CreateAppRolloutRelation(ct context.Context, tx *transaction.Transaction, appRolloutRelation entity.AppRolloutRelation) *errs.Error {
+	a.metrics.ReportDaoOperation(appRolloutRelationDaoName, "CreateAppRolloutRelation")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`INSERT INTO app_rollout_relation (
 			app_id,
@@ -158,6 +166,7 @@ func (a *AppRolloutRelation) DeleteAppRolloutRelationsByRolloutID(
 	tx *transaction.Transaction,
 	rolloutID uint64,
 ) *errs.Error {
+	a.metrics.ReportDaoOperation(appRolloutRelationDaoName, "DeleteAppRolloutRelationsByRolloutID")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM app_rollout_relation
@@ -171,8 +180,12 @@ func (a *AppRolloutRelation) DeleteAppRolloutRelationsByRolloutID(
 	return nil
 }
 
-func NewAppRolloutRelation(transactionFactory transaction.Factory) *AppRolloutRelation {
+func NewAppRolloutRelation(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppRolloutRelation {
 	return &AppRolloutRelation{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

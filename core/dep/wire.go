@@ -4,6 +4,9 @@ package dep
 
 import (
 	"database/sql"
+	"time"
+
+	"github.com/teamyapp/teamy-backend/core/cache"
 
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
@@ -32,10 +35,19 @@ type JWTSigningKey string
 type ServiceName string
 type CloudWebAPIExternalBaseURL string
 type MapServerURL string
+type CacheCapacity int
+type TimeBasedCacheBucketCount int
+type TimeBasedCacheTTL time.Duration
 
 var gqlTracerSet = wire.NewSet(
 	wire.Bind(new(tracer.Tracer), new(cloudGQL.PrometheusTracer)),
 	newPrometheusTracer,
+)
+
+var cacheSet = wire.NewSet(
+	wire.Bind(new(cache.Factory[string, any]), new(*cache.LRUFactory[string, any])),
+	newLRUCacheFactory,
+	newTimeBasedCache,
 )
 
 var daoSet = wire.NewSet(
@@ -164,8 +176,13 @@ func newJWTAuthority(logger telemetry.Logger, signingKey JWTSigningKey) security
 	return security.NewJWTAuthority(logger, string(signingKey))
 }
 
-func InitRealTimeStateSyncer(logger telemetry.Logger, sqlDB *sql.DB) *realtime.StateSyncer {
+func InitRealTimeStateSyncer(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	sqlDB *sql.DB,
+) *realtime.StateSyncer {
 	wire.Build(
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
 		daoSet,
 		realtime.NewStateSyncer,
 		cloudtx.NewFactory,
@@ -184,11 +201,17 @@ func InitGraphQLAPI(
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
 	jwtSigningKey JWTSigningKey,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
 	sqlDB *sql.DB,
 ) (cloudGQL.Service[gql.Resolver], error) {
 	wire.Build(
 		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
 		gqlTracerSet,
+		cacheSet,
 		daoSet,
 		repositorySet,
 		serviceSet,
@@ -218,10 +241,16 @@ func InitTaskRPCAPI(
 	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
 	sqlDB *sql.DB,
-) api.TaskRPC {
+) (api.TaskRPC, error) {
 	wire.Build(
 		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		cacheSet,
 		daoSet,
 		serviceSet,
 		client.NewAuthorizer,
@@ -229,7 +258,7 @@ func InitTaskRPCAPI(
 		activity.NewActivity,
 		api.NewTaskRPC,
 	)
-	return api.TaskRPC{}
+	return api.TaskRPC{}, nil
 }
 
 func InitSprintRPCAPI(
@@ -237,17 +266,23 @@ func InitSprintRPCAPI(
 	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
 	sqlDB *sql.DB,
-) api.SprintRPC {
+) (api.SprintRPC, error) {
 	wire.Build(
 		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		cacheSet,
 		daoSet,
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
 		api.NewSprintRPC,
 	)
-	return api.SprintRPC{}
+	return api.SprintRPC{}, nil
 }
 
 func InitTaskLinkRPCAPI(
@@ -255,17 +290,23 @@ func InitTaskLinkRPCAPI(
 	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
 	sqlDB *sql.DB,
-) api.TaskLinkRPC {
+) (api.TaskLinkRPC, error) {
 	wire.Build(
 		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		cacheSet,
 		daoSet,
 		serviceSet,
 		client.NewAuthorizer,
 		feature.NewStaticToggles,
 		api.NewTaskLinkRPC,
 	)
-	return api.TaskLinkRPC{}
+	return api.TaskLinkRPC{}, nil
 }
 
 func InitTeamRPCAPI(
@@ -273,11 +314,17 @@ func InitTeamRPCAPI(
 	prometheus instrument.Prometheus,
 	cloudAPIClientRegistry *client.Registry,
 	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
 	sqlDB *sql.DB,
 	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
-) api.TeamRPC {
+) (api.TeamRPC, error) {
 	wire.Build(
 		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		cacheSet,
 		daoSet,
 		repositorySet,
 		serviceSet,
@@ -285,7 +332,7 @@ func InitTeamRPCAPI(
 		feature.NewStaticToggles,
 		api.NewTeamRPC,
 	)
-	return api.TeamRPC{}
+	return api.TeamRPC{}, nil
 }
 
 func newHTTPClient(
@@ -303,6 +350,7 @@ func newUserService(
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudtx.Factory,
+	cache *cache.TimeBasedCache[string, any],
 	userDao dao.User,
 	teamMember dao.TeamMember,
 	userFileUploadSessionDao dao.UserFileUploadSession,
@@ -316,6 +364,7 @@ func newUserService(
 		authorizer,
 		stateSyncer,
 		transactionFactory,
+		cache,
 		userDao,
 		teamMember,
 		userFileUploadSessionDao,
@@ -331,6 +380,7 @@ func newTeamService(
 	toggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudtx.Factory,
+	cache *cache.TimeBasedCache[string, any],
 	taskDao dao.Task,
 	sprintDao dao.Sprint,
 	sprintParticipantDao dao.SprintParticipant,
@@ -350,6 +400,7 @@ func newTeamService(
 		toggles,
 		stateSyncer,
 		transactionFactory,
+		cache,
 		taskDao,
 		sprintDao,
 		sprintParticipantDao,
@@ -363,4 +414,18 @@ func newTeamService(
 
 func newPrometheusTracer(appMame AppMame, serviceName ServiceName, environment env.Environment) cloudGQL.PrometheusTracer {
 	return cloudGQL.NewPrometheusTracer(string(appMame), string(serviceName), environment)
+}
+
+func newLRUCacheFactory(logger telemetry.Logger, metrics cache.Metrics, capacity CacheCapacity) *cache.LRUFactory[string, any] {
+	return cache.NewLRUFactory[string, any](logger, metrics, int(capacity))
+}
+
+func newTimeBasedCache(
+	logger telemetry.Logger,
+	metrics cache.Metrics,
+	cacheFactory cache.Factory[string, any],
+	bucketCount TimeBasedCacheBucketCount,
+	ttl TimeBasedCacheTTL,
+) (*cache.TimeBasedCache[string, any], error) {
+	return cache.NewTimeBasedCache[string, any](logger, metrics, cacheFactory, int(bucketCount), time.Duration(ttl))
 }

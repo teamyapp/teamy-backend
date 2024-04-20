@@ -12,13 +12,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const invitationDaoName = "Invitation"
+
 type Invitation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Invitation = (*Invitation)(nil)
 
 func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) (entity.Invitation, *errs.Error) {
+	i.metrics.ReportDaoOperation(invitationDaoName, "FindInvitationByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -32,6 +36,7 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 }
 
 func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, *errs.Error) {
+	i.metrics.ReportDaoOperation(invitationDaoName, "FindInvitationsByTeamID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -45,6 +50,7 @@ func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) (
 }
 
 func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation, *errs.Error) {
+	i.metrics.ReportDaoOperation(invitationDaoName, "FindAllInvitations")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -58,6 +64,7 @@ func (i Invitation) FindAllInvitations(ct context.Context) ([]entity.Invitation,
 }
 
 func (i Invitation) FindInvitationByIDWithTx(ct context.Context, tx *transaction.Transaction, invitationID uint64) (entity.Invitation, *errs.Error) {
+	i.metrics.ReportDaoOperation(invitationDaoName, "FindInvitationByIDWithTx")
 	invitation := entity.Invitation{}
 	err := tx.SQLTx().QueryRow(`
 	SELECT
@@ -106,6 +113,7 @@ func (i Invitation) FindInvitationByIDWithTx(ct context.Context, tx *transaction
 }
 
 func (i Invitation) FindInvitationsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Invitation, *errs.Error) {
+	i.metrics.ReportDaoOperation(invitationDaoName, "FindInvitationsByTeamIDWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -158,6 +166,7 @@ func (i Invitation) FindInvitationsByTeamIDWithTx(ct context.Context, tx *transa
 }
 
 func (i Invitation) FindAllInvitationsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Invitation, *errs.Error) {
+	i.metrics.ReportDaoOperation(invitationDaoName, "FindAllInvitationsWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -208,6 +217,7 @@ func (i Invitation) FindAllInvitationsWithTx(ct context.Context, tx *transaction
 }
 
 func (i Invitation) CreateInvitation(ct context.Context, tx *transaction.Transaction, invitation entity.Invitation) *errs.Error {
+	i.metrics.ReportDaoOperation(invitationDaoName, "CreateInvitation")
 	_, err := tx.SQLTx().Exec(`
 	INSERT INTO invitation
 	(
@@ -243,6 +253,7 @@ func (i Invitation) CreateInvitation(ct context.Context, tx *transaction.Transac
 }
 
 func (i Invitation) UpdateInvitation(ct context.Context, tx *transaction.Transaction, invitation entity.Invitation) *errs.Error {
+	i.metrics.ReportDaoOperation(invitationDaoName, "UpdateInvitation")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE invitation
 		SET
@@ -272,6 +283,7 @@ func (i Invitation) UpdateInvitation(ct context.Context, tx *transaction.Transac
 }
 
 func (i Invitation) DeleteInvitation(ct context.Context, tx *transaction.Transaction, invitationID uint64) *errs.Error {
+	i.metrics.ReportDaoOperation(invitationDaoName, "DeleteInvitation")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM invitation
 		WHERE id = $1;
@@ -285,6 +297,12 @@ func (i Invitation) DeleteInvitation(ct context.Context, tx *transaction.Transac
 	return nil
 }
 
-func NewInvitation(transactionFactory transaction.Factory) Invitation {
-	return Invitation{transactionFactory: transactionFactory}
+func NewInvitation(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) Invitation {
+	return Invitation{
+		metrics:            metrics,
+		transactionFactory: transactionFactory,
+	}
 }

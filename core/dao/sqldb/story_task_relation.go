@@ -9,14 +9,18 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const storyTaskRelationDaoName = "StoryTaskRelation"
+
 type StoryTaskRelation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.StoryTaskRelation = (*StoryTaskRelation)(nil)
 
 func (s *StoryTaskRelation) FindTaskIDsByStoryIDWithTx(ct context.Context, tx *transaction.Transaction, storyID uint64) ([]uint64, *errs.Error) {
-	taskIDs := []uint64{}
+	s.metrics.ReportDaoOperation(storyTaskRelationDaoName, "FindTaskIDsByStoryIDWithTx")
+	var taskIDs []uint64
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			task_id
@@ -42,7 +46,8 @@ func (s *StoryTaskRelation) FindTaskIDsByStoryIDWithTx(ct context.Context, tx *t
 }
 
 func (s *StoryTaskRelation) FindStoryIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
-	storyIDs := []uint64{}
+	s.metrics.ReportDaoOperation(storyTaskRelationDaoName, "FindStoryIDsByTaskIDWithTx")
+	var storyIDs []uint64
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			story_id
@@ -68,6 +73,7 @@ func (s *StoryTaskRelation) FindStoryIDsByTaskIDWithTx(ct context.Context, tx *t
 }
 
 func (s *StoryTaskRelation) CreateStoryTaskRelation(ct context.Context, tx *transaction.Transaction, storyTaskRelation entity.StoryTaskRelation) *errs.Error {
+	s.metrics.ReportDaoOperation(storyTaskRelationDaoName, "CreateStoryTaskRelation")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO story_task_relation (
 			story_id,
@@ -87,6 +93,7 @@ func (s *StoryTaskRelation) CreateStoryTaskRelation(ct context.Context, tx *tran
 }
 
 func (s *StoryTaskRelation) DeleteStoryTaskRelation(ct context.Context, tx *transaction.Transaction, storyID uint64, taskID uint64) *errs.Error {
+	s.metrics.ReportDaoOperation(storyTaskRelationDaoName, "DeleteStoryTaskRelation")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM story_task_relation
 		WHERE story_id = $1 AND task_id = $2
@@ -99,6 +106,7 @@ func (s *StoryTaskRelation) DeleteStoryTaskRelation(ct context.Context, tx *tran
 }
 
 func (s *StoryTaskRelation) DeleteStoryTaskRelationsByStoryID(ct context.Context, tx *transaction.Transaction, storyID uint64) *errs.Error {
+	s.metrics.ReportDaoOperation(storyTaskRelationDaoName, "DeleteStoryTaskRelationsByStoryID")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM story_task_relation
 		WHERE story_id = $1
@@ -111,6 +119,7 @@ func (s *StoryTaskRelation) DeleteStoryTaskRelationsByStoryID(ct context.Context
 }
 
 func (s *StoryTaskRelation) DeleteStoryTaskRelationsByTaskID(ct context.Context, tx *transaction.Transaction, taskID uint64) *errs.Error {
+	s.metrics.ReportDaoOperation(storyTaskRelationDaoName, "DeleteStoryTaskRelationsByTaskID")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM story_task_relation
 		WHERE task_id = $1
@@ -122,8 +131,12 @@ func (s *StoryTaskRelation) DeleteStoryTaskRelationsByTaskID(ct context.Context,
 	return nil
 }
 
-func NewStoryTaskRelation(transactionFactory transaction.Factory) *StoryTaskRelation {
+func NewStoryTaskRelation(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *StoryTaskRelation {
 	return &StoryTaskRelation{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

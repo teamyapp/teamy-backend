@@ -12,13 +12,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const sprintDaoName = "Sprint"
+
 type Sprint struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Sprint = (*Sprint)(nil)
 
 func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Sprint, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintDaoName, "FindSprintByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -32,6 +36,7 @@ func (s Sprint) FindSprintByID(ct context.Context, sprintID uint64) (entity.Spri
 }
 
 func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintDaoName, "FindSprintsByTeamID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -45,6 +50,7 @@ func (s Sprint) FindSprintsByTeamID(ct context.Context, teamID uint64) ([]entity
 }
 
 func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintDaoName, "FindAllSprints")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -58,6 +64,7 @@ func (s Sprint) FindAllSprints(ct context.Context) ([]entity.Sprint, *errs.Error
 }
 
 func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) (entity.Sprint, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintDaoName, "FindSprintByIDWithTx")
 	sprint := entity.Sprint{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -92,6 +99,7 @@ func (s Sprint) FindSprintByIDWithTx(ct context.Context, tx *transaction.Transac
 }
 
 func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Transaction, sprintIDs []uint64) ([]entity.Sprint, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintDaoName, "FindSprintsByIDsWithTx")
 	if len(sprintIDs) == 0 {
 		return []entity.Sprint{}, nil
 	}
@@ -135,6 +143,7 @@ func (s Sprint) FindSprintsByIDsWithTx(ct context.Context, tx *transaction.Trans
 }
 
 func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Sprint, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintDaoName, "FindSprintsByTeamIDWithTx")
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -175,6 +184,7 @@ func (s Sprint) FindSprintsByTeamIDWithTx(ct context.Context, tx *transaction.Tr
 }
 
 func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Sprint, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintDaoName, "FindAllSprintsWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -212,6 +222,7 @@ func (s Sprint) FindAllSprintsWithTx(ct context.Context, tx *transaction.Transac
 }
 
 func (s Sprint) CreateSprint(ct context.Context, tx *transaction.Transaction, sprint entity.Sprint) *errs.Error {
+	s.metrics.ReportDaoOperation(sprintDaoName, "CreateSprint")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO sprint
 		(
@@ -237,6 +248,7 @@ func (s Sprint) CreateSprint(ct context.Context, tx *transaction.Transaction, sp
 }
 
 func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sprintID uint64) *errs.Error {
+	s.metrics.ReportDaoOperation(sprintDaoName, "DeleteSprint")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM sprint
 		WHERE id = $1;
@@ -250,8 +262,12 @@ func (s Sprint) DeleteSprint(ct context.Context, tx *transaction.Transaction, sp
 	return nil
 }
 
-func NewSprint(transactionFactory transaction.Factory) Sprint {
+func NewSprint(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) Sprint {
 	return Sprint{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

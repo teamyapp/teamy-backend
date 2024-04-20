@@ -9,7 +9,10 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/entity"
 )
 
+const teamMemberGroupUserRelationDaoName = "TeamMemberGroupUserRelation"
+
 type TeamMemberGroupUserRelation struct {
+	metrics dao.Metrics
 }
 
 var _ dao.TeamMemberGroupUserRelation = TeamMemberGroupUserRelation{}
@@ -19,6 +22,7 @@ func (t TeamMemberGroupUserRelation) FindMemberGroupUserIDsByMemberGroupID(
 	tx *transaction.Transaction,
 	memberGroupID uint64,
 ) ([]uint64, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberGroupUserRelationDaoName, "FindMemberGroupUserIDsByMemberGroupID")
 	query := `
 		SELECT
 			member_user_id
@@ -49,6 +53,7 @@ func (t TeamMemberGroupUserRelation) FindMemberGroupUserIDsByMemberGroupID(
 }
 
 func (t TeamMemberGroupUserRelation) FindMemberGroupIDsByUserID(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberGroupUserRelationDaoName, "FindMemberGroupIDsByUserID")
 	query := `
 		SELECT
 			group_id
@@ -83,6 +88,7 @@ func (t TeamMemberGroupUserRelation) CreateMemberGroupUserRelation(
 	tx *transaction.Transaction,
 	relation entity.TeamMemberGroupUserRelation,
 ) *errs.Error {
+	t.metrics.ReportDaoOperation(teamMemberGroupUserRelationDaoName, "CreateMemberGroupUserRelation")
 	statement := `
 		INSERT INTO team_member_group_user_relation
 			(
@@ -110,6 +116,7 @@ func (t TeamMemberGroupUserRelation) DeleteMemberGroupUserRelation(
 	tx *transaction.Transaction,
 	relation entity.TeamMemberGroupUserRelation,
 ) *errs.Error {
+	t.metrics.ReportDaoOperation(teamMemberGroupUserRelationDaoName, "DeleteMemberGroupUserRelation")
 	statement := `
 		DELETE FROM team_member_group_user_relation
 		WHERE group_id = $1 AND member_user_id = $2;
@@ -126,6 +133,8 @@ func (t TeamMemberGroupUserRelation) DeleteMemberGroupUserRelation(
 	return nil
 }
 
-func NewTeamMemberGroupUserRelation() TeamMemberGroupUserRelation {
-	return TeamMemberGroupUserRelation{}
+func NewTeamMemberGroupUserRelation(metrics dao.Metrics) TeamMemberGroupUserRelation {
+	return TeamMemberGroupUserRelation{
+		metrics: metrics,
+	}
 }

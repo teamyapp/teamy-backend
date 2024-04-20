@@ -3,6 +3,7 @@ package sqldb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
@@ -11,17 +12,21 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/entity"
 )
 
+const timeRangeActivatorDaoName = "TimeRangeActivator"
+
 type TimeRangeActivator struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.TimeRangeActivator = (*TimeRangeActivator)(nil)
 
-func (*TimeRangeActivator) FindTimeRangeActivatorByIDWithTx(
+func (t *TimeRangeActivator) FindTimeRangeActivatorByIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 ) (entity.PartialTimeRangeActivator, *errs.Error) {
+	t.metrics.ReportDaoOperation(timeRangeActivatorDaoName, "FindTimeRangeActivatorByIDWithTx")
 	timeRangeActivator := entity.PartialTimeRangeActivator{}
 	err := tx.SQLTx().QueryRowContext(
 		ct,
@@ -38,7 +43,7 @@ func (*TimeRangeActivator) FindTimeRangeActivatorByIDWithTx(
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return timeRangeActivator, errs.NewError(errs.NotFound, fmt.Sprintf("time range activator not found with id %d", activatorID))
 		}
 
@@ -49,6 +54,7 @@ func (*TimeRangeActivator) FindTimeRangeActivatorByIDWithTx(
 }
 
 func (t *TimeRangeActivator) FindTimeRangeActivatorByID(ct context.Context, activatorID uint64) (entity.PartialTimeRangeActivator, *errs.Error) {
+	t.metrics.ReportDaoOperation(timeRangeActivatorDaoName, "FindTimeRangeActivatorByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -61,19 +67,20 @@ func (t *TimeRangeActivator) FindTimeRangeActivatorByID(ct context.Context, acti
 	return t.FindTimeRangeActivatorByIDWithTx(ct, tx, activatorID)
 }
 
-func (*TimeRangeActivator) CreateTimeRangeActivator(
+func (t *TimeRangeActivator) CreateTimeRangeActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 	activator entity.PartialTimeRangeActivator,
 ) *errs.Error {
+	t.metrics.ReportDaoOperation(timeRangeActivatorDaoName, "CreateTimeRangeActivator")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`INSERT INTO time_range_activator (
 			activator_id,
 			start_time,
 			end_time
-		) 
+		)
 		VALUES (
 			$1,
 			$2,
@@ -91,11 +98,12 @@ func (*TimeRangeActivator) CreateTimeRangeActivator(
 	return nil
 }
 
-func (*TimeRangeActivator) UpdateTimeRangeActivator(
+func (t *TimeRangeActivator) UpdateTimeRangeActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 	activator entity.PartialTimeRangeActivator) *errs.Error {
+	t.metrics.ReportDaoOperation(timeRangeActivatorDaoName, "UpdateTimeRangeActivator")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`UPDATE time_range_activator
@@ -115,11 +123,12 @@ func (*TimeRangeActivator) UpdateTimeRangeActivator(
 	return nil
 }
 
-func (*TimeRangeActivator) DeleteTimeRangeActivator(
+func (t *TimeRangeActivator) DeleteTimeRangeActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 ) *errs.Error {
+	t.metrics.ReportDaoOperation(timeRangeActivatorDaoName, "DeleteTimeRangeActivator")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`DELETE FROM time_range_activator
@@ -135,9 +144,11 @@ func (*TimeRangeActivator) DeleteTimeRangeActivator(
 }
 
 func NewTimeRangeActivator(
+	metrics dao.Metrics,
 	transactionFactory transaction.Factory,
 ) *TimeRangeActivator {
 	return &TimeRangeActivator{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

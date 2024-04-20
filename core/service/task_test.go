@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/teamyapp/teamy-backend/core/cache"
+
 	"github.com/stretchr/testify/require"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -276,6 +278,11 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lru, err := cache.NewLRU[string, any](logger, noopMetrics, 1000)
+	require.Nil(t, err)
+
+	timeBasedCache := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lru, 1000)
+
 	taskService := NewTask(
 		logger,
 		transactionGroupFactory,
@@ -285,6 +292,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		stateSyncer,
 		transactionFactory,
 		activityCache,
+		timeBasedCache,
 		taskDao,
 		threadDao,
 		sprintDao,

@@ -10,13 +10,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appVersionDaoName = "AppVersion"
+
 type AppVersion struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.AppVersion = (*AppVersion)(nil)
 
 func (a *AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionByAppIDAndVersionNumber")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -30,6 +34,7 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, a
 }
 
 func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionsByAppIDWithTx")
 	appVersions := []entity.AppVersion{}
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
@@ -80,6 +85,7 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 }
 
 func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionsByAppID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -105,6 +111,7 @@ func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([
 }
 
 func (a *AppVersion) FindMaxVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (int, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindMaxVersionNumberWithTx")
 	var versionNumber int
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
@@ -123,6 +130,7 @@ func (a *AppVersion) FindMaxVersionNumberWithTx(ct context.Context, tx *transact
 }
 
 func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "CreateAppVersion")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO app_version (
 			app_id,
@@ -168,7 +176,8 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 	return nil
 }
 
-func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
+func (a *AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "UpdateAppVersion")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE app_version
 		SET
@@ -200,6 +209,7 @@ func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transact
 }
 
 func (a *AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) *errs.Error {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "DeleteAppVersion")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM app_version
 		WHERE app_id = $1 AND number = $2;`,
@@ -213,7 +223,13 @@ func (a *AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transa
 	return nil
 }
 
-func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
+func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	appID uint64,
+	versionNumber int,
+) (entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionByAppIDAndVersionNumberWithTx")
 	appVersion := entity.AppVersion{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
@@ -250,8 +266,12 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 	return appVersion, nil
 }
 
-func NewAppVersion(transactionFactory transaction.Factory) *AppVersion {
+func NewAppVersion(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppVersion {
 	return &AppVersion{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

@@ -12,13 +12,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const tagDaoName = "Tag"
+
 type Tag struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Tag = (*Tag)(nil)
 
-func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transaction, tagIDs []uint64) ([]entity.Tag, *errs.Error) {
+func (t *Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transaction, tagIDs []uint64) ([]entity.Tag, *errs.Error) {
+	t.metrics.ReportDaoOperation(tagDaoName, "FindTagsByTagIDsWithTx")
 	idsString := toIDsString(tagIDs)
 	query := fmt.Sprintf(`
 	SELECT
@@ -34,7 +38,7 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 
 	defer rows.Close()
 
-	tags := []entity.Tag{}
+	var tags []entity.Tag
 	for rows.Next() {
 		tag := entity.Tag{}
 		err := rows.Scan(
@@ -51,7 +55,8 @@ func (*Tag) FindTagsByTagIDsWithTx(ct context.Context, tx *transaction.Transacti
 	return tags, nil
 }
 
-func (*Tag) FindTagByValueWithTx(ct context.Context, tx *transaction.Transaction, value string) (entity.Tag, *errs.Error) {
+func (t *Tag) FindTagByValueWithTx(ct context.Context, tx *transaction.Transaction, value string) (entity.Tag, *errs.Error) {
+	t.metrics.ReportDaoOperation(tagDaoName, "FindTagByValueWithTx")
 	tag := entity.Tag{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
@@ -75,7 +80,8 @@ func (*Tag) FindTagByValueWithTx(ct context.Context, tx *transaction.Transaction
 	return tag, nil
 }
 
-func (*Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, tagID uint64) (entity.Tag, *errs.Error) {
+func (t *Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, tagID uint64) (entity.Tag, *errs.Error) {
+	t.metrics.ReportDaoOperation(tagDaoName, "FindTagByIDWithTx")
 	tag := entity.Tag{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 	SELECT
@@ -95,7 +101,8 @@ func (*Tag) FindTagByIDWithTx(ct context.Context, tx *transaction.Transaction, t
 	return tag, nil
 }
 
-func (*Tag) CreateTag(ct context.Context, tx *transaction.Transaction, tag entity.Tag) *errs.Error {
+func (t *Tag) CreateTag(ct context.Context, tx *transaction.Transaction, tag entity.Tag) *errs.Error {
+	t.metrics.ReportDaoOperation(tagDaoName, "CreateTag")
 	_, err := tx.SQLTx().ExecContext(ct, `
 	INSERT INTO tag (
 		id,
@@ -115,6 +122,7 @@ func (*Tag) CreateTag(ct context.Context, tx *transaction.Transaction, tag entit
 }
 
 func (t *Tag) DeleteTag(ct context.Context, tx *transaction.Transaction, tagID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(tagDaoName, "DeleteTag")
 	_, err := tx.SQLTx().ExecContext(ct, `
 	DELETE FROM tag
 	WHERE id = $1;`,
@@ -127,8 +135,12 @@ func (t *Tag) DeleteTag(ct context.Context, tx *transaction.Transaction, tagID u
 	return nil
 }
 
-func NewTag(transactionFactory transaction.Factory) *Tag {
+func NewTag(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *Tag {
 	return &Tag{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

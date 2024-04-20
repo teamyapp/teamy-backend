@@ -12,13 +12,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const userDaoName = "User"
+
 type User struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.User = (*User)(nil)
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
+	u.metrics.ReportDaoOperation(userDaoName, "FindUserByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -32,6 +36,7 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 }
 
 func (u User) FindUserByIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) (entity.User, *errs.Error) {
+	u.metrics.ReportDaoOperation(userDaoName, "FindUserByIDWithTx")
 	statement := `
 	SELECT
 		id,
@@ -65,6 +70,7 @@ func (u User) FindUserByIDWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (u User) FindUsersByIDsWithTx(ct context.Context, tx *transaction.Transaction, userIDs []uint64) ([]entity.User, *errs.Error) {
+	u.metrics.ReportDaoOperation(userDaoName, "FindUsersByIDsWithTx")
 	if len(userIDs) == 0 {
 		return nil, nil
 	}
@@ -115,6 +121,7 @@ func (u User) FindUsersByIDsWithTx(ct context.Context, tx *transaction.Transacti
 }
 
 func (u User) CreateUser(ct context.Context, tx *transaction.Transaction, user entity.User) *errs.Error {
+	u.metrics.ReportDaoOperation(userDaoName, "CreateUser")
 	if tx.SQLTx() == nil {
 		panic("It's nil")
 	}
@@ -144,6 +151,7 @@ func (u User) CreateUser(ct context.Context, tx *transaction.Transaction, user e
 }
 
 func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user entity.User) *errs.Error {
+	u.metrics.ReportDaoOperation(userDaoName, "UpdateUser")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE "user"
 		SET
@@ -166,6 +174,12 @@ func (u User) UpdateUser(ct context.Context, tx *transaction.Transaction, user e
 	return nil
 }
 
-func NewUser(transactionFactory transaction.Factory) User {
-	return User{transactionFactory: transactionFactory}
+func NewUser(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) User {
+	return User{
+		metrics:            metrics,
+		transactionFactory: transactionFactory,
+	}
 }

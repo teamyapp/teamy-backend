@@ -12,13 +12,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const sprintParticipantDaoName = "SprintParticipant"
+
 type SprintParticipant struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.SprintParticipant = (*SprintParticipant)(nil)
 
 func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, sprintID uint64) ([]uint64, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "FindParticipantIDsBySprintID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -32,6 +36,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintID(ct context.Context, spri
 }
 
 func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "FindParticipantsBySprintID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -45,6 +50,7 @@ func (s SprintParticipant) FindParticipantsBySprintID(ct context.Context, sprint
 }
 
 func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "FindParticipant")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -58,6 +64,7 @@ func (s SprintParticipant) FindParticipant(ct context.Context, sprintID uint64, 
 }
 
 func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "FindParticipantIDsBySprintIDWithTx")
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -89,6 +96,7 @@ func (s SprintParticipant) FindParticipantIDsBySprintIDWithTx(ct context.Context
 }
 
 func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]entity.SprintParticipant, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "FindParticipantsBySprintIDWithTx")
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -130,6 +138,7 @@ func (s SprintParticipant) FindParticipantsBySprintIDWithTx(ct context.Context, 
 }
 
 func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64, participantUserID uint64) (entity.SprintParticipant, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "FindParticipantWithTx")
 	participant := entity.SprintParticipant{}
 	err := tx.SQLTx().QueryRow(`
 	SELECT
@@ -166,6 +175,7 @@ func (s SprintParticipant) FindParticipantWithTx(ct context.Context, tx *transac
 }
 
 func (s SprintParticipant) CreateSprintParticipant(ct context.Context, tx *transaction.Transaction, participant entity.SprintParticipant) *errs.Error {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "CreateSprintParticipant")
 	_, err := tx.SQLTx().Exec(`
 	INSERT INTO sprint_participant
 	(
@@ -193,6 +203,7 @@ func (s SprintParticipant) CreateSprintParticipant(ct context.Context, tx *trans
 }
 
 func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, tx *transaction.Transaction, participant entity.SprintParticipant) *errs.Error {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "UpdateSprintParticipant")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE sprint_participant
 		SET
@@ -221,6 +232,7 @@ func (s SprintParticipant) UpdateSprintParticipant(ct context.Context, tx *trans
 }
 
 func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *transaction.Transaction, sprintID uint64, userID uint64) *errs.Error {
+	s.metrics.ReportDaoOperation(sprintParticipantDaoName, "DeleteSprintParticipant")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM sprint_participant
 		WHERE sprint_id = $1 AND user_id = $2;
@@ -234,8 +246,12 @@ func (s SprintParticipant) DeleteSprintParticipant(ct context.Context, tx *trans
 	return nil
 }
 
-func NewSprintParticipant(transactionFactory transaction.Factory) SprintParticipant {
+func NewSprintParticipant(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) SprintParticipant {
 	return SprintParticipant{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

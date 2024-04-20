@@ -11,13 +11,17 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appDaoName = "App"
+
 type App struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.App = (*App)(nil)
 
 func (a *App) FindAppsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.App, *errs.Error) {
+	a.metrics.ReportDaoOperation(appDaoName, "FindAppsWithTx")
 	apps := []entity.App{}
 	rows, err := tx.SQLTx().Query(`
 		SELECT
@@ -51,6 +55,7 @@ func (a *App) FindAppsWithTx(ct context.Context, tx *transaction.Transaction) ([
 }
 
 func (a *App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.Error) {
+	a.metrics.ReportDaoOperation(appDaoName, "FindAppByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -64,6 +69,7 @@ func (a *App) FindAppByID(ct context.Context, appID uint64) (entity.App, *errs.E
 }
 
 func (a *App) FindAppsByAppIDsWithTx(ct context.Context, tx *transaction.Transaction, appIDs []uint64) ([]entity.App, *errs.Error) {
+	a.metrics.ReportDaoOperation(appDaoName, "FindAppsByAppIDsWithTx")
 	apps := []entity.App{}
 	appIdsStr := toIDsString(appIDs)
 	query := fmt.Sprintf(
@@ -103,6 +109,7 @@ func (a *App) FindAppsByAppIDsWithTx(ct context.Context, tx *transaction.Transac
 }
 
 func (a *App) FindAppByIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (entity.App, *errs.Error) {
+	a.metrics.ReportDaoOperation(appDaoName, "FindAppByIDWithTx")
 	app := entity.App{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -129,6 +136,7 @@ func (a *App) FindAppByIDWithTx(ct context.Context, tx *transaction.Transaction,
 }
 
 func (a *App) FindAppsByManagedByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, managedByTeamID uint64) ([]entity.App, *errs.Error) {
+	a.metrics.ReportDaoOperation(appDaoName, "FindAppsByManagedByTeamIDWithTx")
 	apps := []entity.App{}
 	rows, err := tx.SQLTx().Query(`
 		SELECT
@@ -165,6 +173,7 @@ func (a *App) FindAppsByManagedByTeamIDWithTx(ct context.Context, tx *transactio
 }
 
 func (a *App) FindAppsByManagedByTeamID(ct context.Context, managedByTeamID uint64) ([]entity.App, *errs.Error) {
+	a.metrics.ReportDaoOperation(appDaoName, "FindAppsByManagedByTeamID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -178,6 +187,7 @@ func (a *App) FindAppsByManagedByTeamID(ct context.Context, managedByTeamID uint
 }
 
 func (a *App) CreateApp(ct context.Context, tx *transaction.Transaction, app entity.App) *errs.Error {
+	a.metrics.ReportDaoOperation(appDaoName, "CreateApp")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO app (
 			id,
@@ -206,6 +216,7 @@ func (a *App) CreateApp(ct context.Context, tx *transaction.Transaction, app ent
 }
 
 func (a *App) UpdateApp(ct context.Context, tx *transaction.Transaction, app entity.App) *errs.Error {
+	a.metrics.ReportDaoOperation(appDaoName, "UpdateApp")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE app
 		SET
@@ -226,6 +237,7 @@ func (a *App) UpdateApp(ct context.Context, tx *transaction.Transaction, app ent
 }
 
 func (a *App) DeleteApp(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appDaoName, "DeleteApp")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM app
 		WHERE id = $1;`,
@@ -238,8 +250,12 @@ func (a *App) DeleteApp(ct context.Context, tx *transaction.Transaction, appID u
 	return nil
 }
 
-func NewApp(transactionFactory transaction.Factory) *App {
+func NewApp(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *App {
 	return &App{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

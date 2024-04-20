@@ -12,7 +12,10 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appPackageUploadSessionDaoName = "AppPackageUploadSession"
+
 type AppPackageUploadSession struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
@@ -25,6 +28,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 	versionNumber int,
 	fileUploadSessionID uint64,
 ) (entity.AppPackageUploadSession, *errs.Error) {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "FindAppPackageUploadSessionWithTx")
 	appPackageUploadSession := entity.AppPackageUploadSession{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -65,7 +69,9 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 func (a *AppPackageUploadSession) CreateAppPackageUploadSession(
 	ct context.Context,
 	tx *transaction.Transaction,
-	session entity.AppPackageUploadSession) *errs.Error {
+	session entity.AppPackageUploadSession,
+) *errs.Error {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "CreateAppPackageUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO app_package_upload_session
 		(
@@ -96,6 +102,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 	tx *transaction.Transaction,
 	session entity.AppPackageUploadSession,
 ) *errs.Error {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "UpdateAppPackageFileUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE app_package_upload_session
 		SET
@@ -117,6 +124,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 }
 
 func (a *AppPackageUploadSession) DeleteAppPackageUploadSessionsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "DeleteAppPackageUploadSessionsByAppID")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM app_package_upload_session
 		WHERE app_id = $1;`,
@@ -130,8 +138,12 @@ func (a *AppPackageUploadSession) DeleteAppPackageUploadSessionsByAppID(ct conte
 	return nil
 }
 
-func NewAppPackageUploadSession(transactionFactory transaction.Factory) *AppPackageUploadSession {
+func NewAppPackageUploadSession(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppPackageUploadSession {
 	return &AppPackageUploadSession{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

@@ -10,11 +10,15 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appSecretDaoName = "AppSecret"
+
 type AppSecret struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
-func (*AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Transaction, appSecretID uint64) (entity.AppSecret, *errs.Error) {
+func (a *AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Transaction, appSecretID uint64) (entity.AppSecret, *errs.Error) {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "FindAppSecretByIDWithTx")
 	appSecret := entity.AppSecret{}
 	err := tx.SQLTx().QueryRowContext(
 		ct,
@@ -46,6 +50,7 @@ func (*AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Tr
 }
 
 func (a *AppSecret) FindAppSecretsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppSecret, *errs.Error) {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "FindAppSecretsByAppIDWithTx")
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT
@@ -88,6 +93,7 @@ func (a *AppSecret) FindAppSecretsByAppIDWithTx(ct context.Context, tx *transact
 }
 
 func (a *AppSecret) FindSecretsByAppID(ct context.Context, appID uint64) ([]entity.AppSecret, *errs.Error) {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "FindSecretsByAppID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -100,7 +106,8 @@ func (a *AppSecret) FindSecretsByAppID(ct context.Context, appID uint64) ([]enti
 	return a.FindAppSecretsByAppIDWithTx(ct, tx, appID)
 }
 
-func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transaction, appSecret entity.AppSecret) *errs.Error {
+func (a *AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transaction, appSecret entity.AppSecret) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "CreateAppSecret")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		INSERT INTO app_secret (
@@ -111,7 +118,7 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 			added_at,
 			added_by_user_id,
 			last_used_at
-		) 
+		)
 		VALUES (
 			$1,
 			$2,
@@ -137,7 +144,8 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error {
+func (a *AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "UpdateAppSecret")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		UPDATE app_secret SET
@@ -164,7 +172,8 @@ func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func (*AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error {
+func (a *AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "DeleteAppSecret")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM app_secret
@@ -179,7 +188,8 @@ func (*AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func (*AppSecret) DeleteAppSecretsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+func (a *AppSecret) DeleteAppSecretsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "DeleteAppSecretsByAppID")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM app_secret
@@ -196,8 +206,12 @@ func (*AppSecret) DeleteAppSecretsByAppID(ct context.Context, tx *transaction.Tr
 
 var _ dao.AppSecret = (*AppSecret)(nil)
 
-func NewAppSecret(transactionFactory transaction.Factory) *AppSecret {
+func NewAppSecret(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppSecret {
 	return &AppSecret{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

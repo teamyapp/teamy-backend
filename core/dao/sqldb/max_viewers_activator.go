@@ -10,17 +10,21 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao/entity"
 )
 
+const maxViewersActivatorDaoName = "MaxViewersActivator"
+
 type MaxViewersActivator struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.MaxViewersActivator = (*MaxViewersActivator)(nil)
 
-func (*MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
+func (m *MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 ) (entity.PartialMaxViewersActivator, *errs.Error) {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "FindMaxViewersActivatorByIDWithTx")
 	maxViewersActivator := entity.PartialMaxViewersActivator{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
@@ -42,6 +46,7 @@ func (*MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
 }
 
 func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, ActivatorID uint64) (entity.PartialMaxViewersActivator, *errs.Error) {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "FindMaxViewersActivatorByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -54,12 +59,13 @@ func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, Ac
 	return m.FindMaxViewersActivatorByIDWithTx(ct, tx, ActivatorID)
 }
 
-func (*MaxViewersActivator) CreateMaxViewersActivator(
+func (m *MaxViewersActivator) CreateMaxViewersActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 	activator entity.PartialMaxViewersActivator,
 ) *errs.Error {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "CreateMaxViewersActivator")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -83,12 +89,13 @@ func (*MaxViewersActivator) CreateMaxViewersActivator(
 	return nil
 }
 
-func (*MaxViewersActivator) UpdateMaxViewersActivator(
+func (m *MaxViewersActivator) UpdateMaxViewersActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 	activator entity.PartialMaxViewersActivator,
 ) *errs.Error {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "UpdateMaxViewersActivator")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -107,11 +114,12 @@ func (*MaxViewersActivator) UpdateMaxViewersActivator(
 	return nil
 }
 
-func (*MaxViewersActivator) DeleteMaxViewersActivator(
+func (m *MaxViewersActivator) DeleteMaxViewersActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
 ) *errs.Error {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "DeleteMaxViewersActivator")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -128,8 +136,12 @@ func (*MaxViewersActivator) DeleteMaxViewersActivator(
 	return nil
 }
 
-func NewMaxViewersActivator(transactionFactory transaction.Factory) *MaxViewersActivator {
+func NewMaxViewersActivator(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *MaxViewersActivator {
 	return &MaxViewersActivator{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

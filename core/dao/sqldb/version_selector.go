@@ -10,21 +10,25 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const versionSelectorDaoName = "VersionSelector"
+
 type VersionSelector struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.VersionSelector = (*VersionSelector)(nil)
 
-func (*VersionSelector) FindVersionSelectorByIDWithTx(ct context.Context, tx *transaction.Transaction, selectorID uint64) (entity.VersionSelector, *errs.Error) {
+func (v *VersionSelector) FindVersionSelectorByIDWithTx(ct context.Context, tx *transaction.Transaction, selectorID uint64) (entity.VersionSelector, *errs.Error) {
+	v.metrics.ReportDaoOperation(versionSelectorDaoName, "FindVersionSelectorByIDWithTx")
 	versionSelector := entity.VersionSelector{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
-		SELECT 
-			id, 
-			type, 
+		SELECT
+			id,
+			type,
 			locked,
-			created_at, 
+			created_at,
 			updated_at
 		FROM version_selector
 		WHERE id = $1
@@ -46,6 +50,7 @@ func (*VersionSelector) FindVersionSelectorByIDWithTx(ct context.Context, tx *tr
 }
 
 func (v *VersionSelector) FindVersionSelectorByID(ct context.Context, selectorID uint64) (entity.VersionSelector, *errs.Error) {
+	v.metrics.ReportDaoOperation(versionSelectorDaoName, "FindVersionSelectorByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -59,11 +64,12 @@ func (v *VersionSelector) FindVersionSelectorByID(ct context.Context, selectorID
 	return v.FindVersionSelectorByIDWithTx(ct, tx, selectorID)
 }
 
-func (*VersionSelector) CreateVersionSelector(
+func (v *VersionSelector) CreateVersionSelector(
 	ct context.Context,
 	tx *transaction.Transaction,
 	versionSelector entity.VersionSelector,
 ) *errs.Error {
+	v.metrics.ReportDaoOperation(versionSelectorDaoName, "CreateVersionSelector")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		INSERT INTO version_selector (
@@ -91,11 +97,12 @@ func (*VersionSelector) CreateVersionSelector(
 	return nil
 }
 
-func (*VersionSelector) UpdateVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelector entity.VersionSelector) *errs.Error {
+func (v *VersionSelector) UpdateVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelector entity.VersionSelector) *errs.Error {
+	v.metrics.ReportDaoOperation(versionSelectorDaoName, "UpdateVersionSelector")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		UPDATE version_selector
-		SET 
+		SET
 			type = $1,
 			locked = $2,
 			updated_at = $3
@@ -114,7 +121,8 @@ func (*VersionSelector) UpdateVersionSelector(ct context.Context, tx *transactio
 	return nil
 }
 
-func (*VersionSelector) DeleteVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelectorID uint64) *errs.Error {
+func (v *VersionSelector) DeleteVersionSelector(ct context.Context, tx *transaction.Transaction, versionSelectorID uint64) *errs.Error {
+	v.metrics.ReportDaoOperation(versionSelectorDaoName, "DeleteVersionSelector")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM version_selector
@@ -131,9 +139,11 @@ func (*VersionSelector) DeleteVersionSelector(ct context.Context, tx *transactio
 }
 
 func NewVersionSelector(
+	metrics dao.Metrics,
 	transactionFactory transaction.Factory,
 ) *VersionSelector {
 	return &VersionSelector{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

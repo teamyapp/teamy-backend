@@ -9,14 +9,18 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const projectStoryRelationDaoName = "ProjectStoryRelation"
+
 type ProjectStoryRelation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.ProjectStoryRelation = (*ProjectStoryRelation)(nil)
 
 func (p *ProjectStoryRelation) FindStoryIDsByProjectIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) ([]uint64, *errs.Error) {
-	storyIDs := []uint64{}
+	p.metrics.ReportDaoOperation(projectStoryRelationDaoName, "FindStoryIDsByProjectIDWithTx")
+	var storyIDs []uint64
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			story_id
@@ -42,7 +46,8 @@ func (p *ProjectStoryRelation) FindStoryIDsByProjectIDWithTx(ct context.Context,
 }
 
 func (p *ProjectStoryRelation) FindProjectIDsByStoryIDWithTx(ct context.Context, tx *transaction.Transaction, storyID uint64) ([]uint64, *errs.Error) {
-	projectIDs := []uint64{}
+	p.metrics.ReportDaoOperation(projectStoryRelationDaoName, "FindProjectIDsByStoryIDWithTx")
+	var projectIDs []uint64
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			project_id
@@ -68,6 +73,7 @@ func (p *ProjectStoryRelation) FindProjectIDsByStoryIDWithTx(ct context.Context,
 }
 
 func (p *ProjectStoryRelation) CreateProjectStoryRelation(ct context.Context, tx *transaction.Transaction, projectStoryRelation entity.ProjectStoryRelation) *errs.Error {
+	p.metrics.ReportDaoOperation(projectStoryRelationDaoName, "CreateProjectStoryRelation")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO project_story_relation (
 			project_id,
@@ -87,6 +93,7 @@ func (p *ProjectStoryRelation) CreateProjectStoryRelation(ct context.Context, tx
 }
 
 func (p *ProjectStoryRelation) DeleteProjectStoryRelation(ct context.Context, tx *transaction.Transaction, projectID uint64, storyID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(projectStoryRelationDaoName, "DeleteProjectStoryRelation")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project_story_relation
 		WHERE project_id = $1
@@ -100,6 +107,7 @@ func (p *ProjectStoryRelation) DeleteProjectStoryRelation(ct context.Context, tx
 }
 
 func (p *ProjectStoryRelation) DeleteProjectStoryRelationsByProjectID(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(projectStoryRelationDaoName, "DeleteProjectStoryRelationsByProjectID")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project_story_relation
 		WHERE project_id = $1
@@ -112,6 +120,7 @@ func (p *ProjectStoryRelation) DeleteProjectStoryRelationsByProjectID(ct context
 }
 
 func (p *ProjectStoryRelation) DeleteProjectStoryRelationsByStoryID(ct context.Context, tx *transaction.Transaction, storyID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(projectStoryRelationDaoName, "DeleteProjectStoryRelationsByStoryID")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project_story_relation
 		WHERE story_id = $1
@@ -123,8 +132,12 @@ func (p *ProjectStoryRelation) DeleteProjectStoryRelationsByStoryID(ct context.C
 	return nil
 }
 
-func NewProjectStoryRelation(transactionFactory transaction.Factory) *ProjectStoryRelation {
+func NewProjectStoryRelation(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *ProjectStoryRelation {
 	return &ProjectStoryRelation{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

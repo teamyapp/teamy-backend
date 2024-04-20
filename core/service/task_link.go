@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/teamyapp/teamy-backend/core/cache"
 
 	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
@@ -38,11 +41,24 @@ type TaskLink struct {
 	featureToggles          feature.Toggles
 	transactionFactory      cloudTransaction.Factory
 	stateSyncer             *realtime.StateSyncer
+	cache                   *cache.TimeBasedCache[string, any]
 	taskLinkDao             dao.TaskLink
 	taskDao                 dao.Task
 }
 
 func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity.TaskLink, *errs.Error) {
+	if t.featureToggles.EnableCache {
+		value, cacheErr := t.cache.Get(ct, findLinksByTaskIDCacheKey(taskID))
+		if cacheErr == nil {
+			return value.([]entity.TaskLink), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
 	var taskLinks []entity.TaskLink
 	internalErr := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
@@ -75,6 +91,13 @@ func (t TaskLink) FindLinksByTaskID(ct context.Context, taskID uint64) ([]entity
 		}
 
 		taskLinks = authorizedLinks
+	}
+
+	if t.featureToggles.EnableCache {
+		cacheErr := t.cache.SetIfExpired(ct, findLinksByTaskIDCacheKey(taskID), taskLinks)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
 	}
 
 	return taskLinks, nil
@@ -207,6 +230,7 @@ func NewTaskLink(
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
 	stateSyncer *realtime.StateSyncer,
+	cache *cache.TimeBasedCache[string, any],
 	taskLinkDao dao.TaskLink,
 	taskDao dao.Task,
 ) TaskLink {
@@ -218,7 +242,12 @@ func NewTaskLink(
 		authorizer:              authorizer,
 		featureToggles:          featureToggles,
 		stateSyncer:             stateSyncer,
+		cache:                   cache,
 		taskLinkDao:             taskLinkDao,
 		taskDao:                 taskDao,
 	}
+}
+
+func findLinksByTaskIDCacheKey(taskID uint64) string {
+	return fmt.Sprintf("FindLinksByTaskID(%d)", taskID)
 }

@@ -9,14 +9,18 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const projectPhaseRelationDaoName = "ProjectPhaseRelation"
+
 type ProjectPhaseRelation struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.ProjectPhaseRelation = (*ProjectPhaseRelation)(nil)
 
 func (p *ProjectPhaseRelation) FindPhaseIDsByProjectIDWithTx(ct context.Context, tx *transaction.Transaction, projectID uint64) ([]uint64, *errs.Error) {
-	phaseIDs := []uint64{}
+	p.metrics.ReportDaoOperation(projectPhaseRelationDaoName, "FindPhaseIDsByProjectIDWithTx")
+	var phaseIDs []uint64
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
 			phase_id
@@ -42,6 +46,7 @@ func (p *ProjectPhaseRelation) FindPhaseIDsByProjectIDWithTx(ct context.Context,
 }
 
 func (p *ProjectPhaseRelation) CreateProjectPhaseRelation(ct context.Context, tx *transaction.Transaction, projectPhaseRelation entity.ProjectPhaseRelation) *errs.Error {
+	p.metrics.ReportDaoOperation(projectPhaseRelationDaoName, "CreateProjectPhaseRelation")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO project_phase_relation (
 			project_id,
@@ -61,6 +66,7 @@ func (p *ProjectPhaseRelation) CreateProjectPhaseRelation(ct context.Context, tx
 }
 
 func (p *ProjectPhaseRelation) DeleteProjectPhaseRelation(ct context.Context, tx *transaction.Transaction, projectID uint64, phaseID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(projectPhaseRelationDaoName, "DeleteProjectPhaseRelation")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project_phase_relation
 		WHERE project_id = $1 AND phase_id = $2
@@ -73,6 +79,7 @@ func (p *ProjectPhaseRelation) DeleteProjectPhaseRelation(ct context.Context, tx
 }
 
 func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationsByProjectID(ct context.Context, tx *transaction.Transaction, projectID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(projectPhaseRelationDaoName, "DeleteProjectPhaseRelationsByProjectID")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM project_phase_relation
 		WHERE project_id = $1
@@ -96,8 +103,12 @@ func (p *ProjectPhaseRelation) DeleteProjectPhaseRelationsByPhaseID(ct context.C
 	return nil
 }
 
-func NewProjectPhaseRelation(transactionFactory transaction.Factory) *ProjectPhaseRelation {
+func NewProjectPhaseRelation(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *ProjectPhaseRelation {
 	return &ProjectPhaseRelation{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }
