@@ -84,6 +84,7 @@ func (m Mutation) CreateStory(ct context.Context, args struct {
 	ProjectID graphql.ID
 	Input     struct {
 		Name     string
+		Status   entity.StoryStatus
 		OwnerID  *graphql.ID
 		Priority *entity.Priority
 	}
@@ -112,6 +113,7 @@ func (m Mutation) CreateStory(ct context.Context, args struct {
 		Name:     args.Input.Name,
 		OwnerID:  ownerID,
 		Priority: args.Input.Priority,
+		Status:   args.Input.Status,
 	}
 
 	story, err := m.deps.storyService.CreateStory(ct, projectID, createStoryInput)
