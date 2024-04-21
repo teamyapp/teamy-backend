@@ -11,27 +11,29 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const filterGroupDaoName = "FilterGroup"
+
 type FilterGroup struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.FilterGroup = (*FilterGroup)(nil)
 
 func (f *FilterGroup) FindFilterGroupByIDWithTx(ct context.Context, tx *transaction.Transaction, groupID uint64) (entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupByIDWithTx")
 	filterGroup := entity.FilterGroup{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
 		SELECT
 			group_id,
-			filter,
-			count
+			filter
 		FROM filter_group
 		WHERE group_id = $1;`,
 		groupID,
 	).Scan(
 		&filterGroup.Group.ID,
 		&filterGroup.Filter,
-		&filterGroup.Count,
 	)
 
 	if err != nil {
@@ -42,6 +44,7 @@ func (f *FilterGroup) FindFilterGroupByIDWithTx(ct context.Context, tx *transact
 }
 
 func (f *FilterGroup) FindFilterGroupByID(ct context.Context, groupID uint64) (entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -56,6 +59,7 @@ func (f *FilterGroup) FindFilterGroupByID(ct context.Context, groupID uint64) (e
 }
 
 func (f *FilterGroup) FindFilterGroupsByIDsWithTx(ct context.Context, tx *transaction.Transaction, groupIDs []uint64) ([]entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupsByIDsWithTx")
 	if len(groupIDs) == 0 {
 		return []entity.FilterGroup{}, nil
 	}
@@ -84,7 +88,6 @@ func (f *FilterGroup) FindFilterGroupsByIDsWithTx(ct context.Context, tx *transa
 		err := rows.Scan(
 			&filterGroup.Group.ID,
 			&filterGroup.Filter,
-			&filterGroup.Count,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -97,6 +100,7 @@ func (f *FilterGroup) FindFilterGroupsByIDsWithTx(ct context.Context, tx *transa
 }
 
 func (f *FilterGroup) FindFilterGroupsByIDs(ct context.Context, groupID []uint64) ([]entity.FilterGroup, *errs.Error) {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "FindFilterGroupsByIDs")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -111,15 +115,14 @@ func (f *FilterGroup) FindFilterGroupsByIDs(ct context.Context, groupID []uint64
 }
 
 func (f *FilterGroup) CreateFilterGroup(ct context.Context, tx *transaction.Transaction, group entity.FilterGroup) *errs.Error {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "CreateFilterGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`INSERT INTO filter_group (
 			group_id,
-			filter,
-			count
-		) VALUES ($1, $2, $3)`,
+			filter
+		) VALUES ($1, $2)`,
 		group.Group.ID,
 		group.Filter,
-		group.Count,
 	)
 
 	if err != nil {
@@ -130,13 +133,13 @@ func (f *FilterGroup) CreateFilterGroup(ct context.Context, tx *transaction.Tran
 }
 
 func (f *FilterGroup) UpdateFilterGroup(ct context.Context, tx *transaction.Transaction, group entity.FilterGroup) *errs.Error {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "UpdateFilterGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`UPDATE filter_group
-			SET count = $1
-			WHERE group_id = $2 AND filter = $3`,
-		group.Count,
-		group.Group.ID,
+			SET filter = $1
+			WHERE group_id = $2`,
 		group.Filter,
+		group.Group.ID,
 	)
 
 	if err != nil {
@@ -147,6 +150,7 @@ func (f *FilterGroup) UpdateFilterGroup(ct context.Context, tx *transaction.Tran
 }
 
 func (f *FilterGroup) DeleteFilterGroup(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	f.metrics.ReportDaoOperation(filterGroupDaoName, "DeleteFilterGroup")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
 		DELETE FROM filter_group
@@ -161,8 +165,12 @@ func (f *FilterGroup) DeleteFilterGroup(ct context.Context, tx *transaction.Tran
 	return nil
 }
 
-func NewFilterGroup(transactionFactory transaction.Factory) *FilterGroup {
+func NewFilterGroup(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *FilterGroup {
 	return &FilterGroup{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

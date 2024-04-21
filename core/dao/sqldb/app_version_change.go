@@ -10,21 +10,32 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appVersionChangeDaoName = "AppVersionChange"
+
 type AppVersionChange struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.AppVersionChange = (*AppVersionChange)(nil)
 
-func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) ([]string, *errs.Error) {
+func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	appID uint64,
+	versionNumber int,
+) ([]entity.AppVersionChange, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionChangeDaoName, "FindAppVersionChangesByAppIDAndVersionNumberWithTx")
 	rows, err := tx.SQLTx().QueryContext(
 		ct,
 		`
-		SELECT change 
-		FROM app_version_change 
-		WHERE app_id = $1 AND version_number = $2",
+		SELECT
+			app_id,
+			version_number,
+			change
+		FROM app_version_change
+		WHERE app_id = $1 AND version_number = $2`,
 		appID,
-		`,
 		versionNumber,
 	)
 
@@ -34,10 +45,15 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 
 	defer rows.Close()
 
-	var changes []string
+	var changes []entity.AppVersionChange
 	for rows.Next() {
-		var change string
-		err := rows.Scan(&change)
+		change := entity.AppVersionChange{}
+		err := rows.Scan(
+			&change.AppID,
+			&change.VersionNumber,
+			&change.Change,
+		)
+
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
@@ -48,7 +64,8 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct
 	return changes, nil
 }
 
-func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]string, *errs.Error) {
+func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) ([]entity.AppVersionChange, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionChangeDaoName, "FindAppVersionChangesByAppIDAndVersionNumber")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -59,24 +76,25 @@ func (a *AppVersionChange) FindAppVersionChangesByAppIDAndVersionNumber(ct conte
 	}
 
 	defer tx.Rollback()
-	return NewAppVersionChange().FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
+	return a.FindAppVersionChangesByAppIDAndVersionNumberWithTx(ct, tx, appID, versionNumber)
 }
 
-func (*AppVersionChange) CreateAppVersionChange(ct context.Context, tx *transaction.Transaction, appVersionChange entity.AppVersionChange) *errs.Error {
+func (a *AppVersionChange) CreateAppVersionChange(ct context.Context, tx *transaction.Transaction, appVersionChange entity.AppVersionChange) *errs.Error {
+	a.metrics.ReportDaoOperation(appVersionChangeDaoName, "CreateAppVersionChange")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
 		INSERT INTO app_version_change (
-		  app_id, 
+		  id,
+		  app_id,
 		  version_number,
-		  change_id, 
 		  change
-		) 
+		)
 		VALUES ($1, $2, $3, $4)
 		`,
+		appVersionChange.ID,
 		appVersionChange.AppID,
 		appVersionChange.VersionNumber,
-		appVersionChange.ChangeID,
 		appVersionChange.Change,
 	)
 
@@ -87,6 +105,12 @@ func (*AppVersionChange) CreateAppVersionChange(ct context.Context, tx *transact
 	return nil
 }
 
-func NewAppVersionChange() *AppVersionChange {
-	return &AppVersionChange{}
+func NewAppVersionChange(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppVersionChange {
+	return &AppVersionChange{
+		metrics:            metrics,
+		transactionFactory: transactionFactory,
+	}
 }

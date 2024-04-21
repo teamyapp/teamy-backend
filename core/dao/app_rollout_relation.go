@@ -10,6 +10,9 @@ import (
 
 type AppRolloutRelation interface {
 	FindRolloutIDsByAppIDAndRelationTypeWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, rolloutType entity.AppRolloutRelationType) ([]uint64, *errs.Error)
+	FindAppRolloutByAppIDAndRolloutIDWithTx(ct context.Context, tx *transaction.Transaction, appID, rolloutID uint64) (*entity.AppRolloutRelation, *errs.Error)
 	FindRolloutIDsByAppIDAndRelationType(ct context.Context, appID uint64, rolloutType entity.AppRolloutRelationType) ([]uint64, *errs.Error)
+	FindRolloutIDsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]uint64, *errs.Error)
 	CreateAppRolloutRelation(ct context.Context, tx *transaction.Transaction, appRolloutRelation entity.AppRolloutRelation) *errs.Error
+	DeleteAppRolloutRelationsByRolloutID(ct context.Context, tx *transaction.Transaction, rolloutID uint64) *errs.Error
 }

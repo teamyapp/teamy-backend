@@ -12,22 +12,24 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type TaskTestRef struct {
@@ -176,7 +178,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 			taskInput := CreateTaskInput{
 				Goal:        "Unit test",
 				OwnerUserID: &ownerUserID,
-				IsPlanned:   true,
+				IsScheduled: true,
 				DueAt:       &now,
 			}
 			newTask, internalErr := taskTestRef.taskService.CreateTask(ct, teamID, taskInput)
@@ -193,7 +195,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 			require.Equal(t, taskInput.OwnerUserID, newTask.OwnerUserID)
 			require.Equal(t, taskInput.DueAt, newTask.DueAt)
 			require.Nil(t, newTask.Effort)
-			require.Equal(t, taskInput.IsPlanned, newTask.IsPlanned)
+			require.Equal(t, taskInput.IsScheduled, newTask.IsScheduled)
 			require.Equal(t, entity.TaskStatusTodo, newTask.Status)
 			require.Equal(t, uint64(1), newTask.CommentsThreadID)
 			require.NotNil(t, newTask.CreatedAt)
@@ -229,7 +231,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	require.Nil(t, internalErr)
 
 	testkit.StartServiceInstance(cloudTestKitConfig, virtualNetwork, cloudTestKit.ServiceInstanceRunner)
-	noopMetrics := metricstest.NewNoopMetrics()
+	noopMetrics := instrumenttest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -257,7 +259,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
-	transactionFactory := transaction.NewFactory(nil)
+	transactionFactory := cloudtx.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.ThreadTableName)
@@ -265,7 +267,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
-	activityCache := cache.NewActivity(logger)
+	activityCache := activity.NewActivity(logger)
 
 	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
 	threadDao := daotest.NewThread(teamyBackendDB)
@@ -273,20 +275,31 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
+	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
+	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return TaskTestRef{}, false
+	}
+
 	taskService := NewTask(
 		logger,
+		transactionGroupFactory,
 		cloudClientRegistry,
 		authorizer,
 		toggles,
 		stateSyncer,
 		transactionFactory,
 		activityCache,
+		timeBasedCache,
 		taskDao,
 		threadDao,
 		sprintDao,
 		taskAwaitForRelationDao,
 		sprintParticipantDao,
 		sprintTaskRelationDao,
+		storyTaskRelationDao,
 	)
 	return TaskTestRef{
 		taskService:  taskService,

@@ -7,14 +7,15 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appPackageUploadSessionDaoName = "AppPackageUploadSession"
+
 type AppPackageUploadSession struct {
-	logger             telemetry.Logger
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
@@ -27,6 +28,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 	versionNumber int,
 	fileUploadSessionID uint64,
 ) (entity.AppPackageUploadSession, *errs.Error) {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "FindAppPackageUploadSessionWithTx")
 	appPackageUploadSession := entity.AppPackageUploadSession{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -37,7 +39,7 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 			created_at,
 			updated_at
 		FROM app_package_upload_session
-		WHERE app_id = $1 
+		WHERE app_id = $1
 		    AND version_number = $2
 		    AND file_upload_session_id = $3;`,
 		appID,
@@ -67,7 +69,9 @@ func (a *AppPackageUploadSession) FindAppPackageUploadSessionWithTx(
 func (a *AppPackageUploadSession) CreateAppPackageUploadSession(
 	ct context.Context,
 	tx *transaction.Transaction,
-	session entity.AppPackageUploadSession) *errs.Error {
+	session entity.AppPackageUploadSession,
+) *errs.Error {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "CreateAppPackageUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO app_package_upload_session
 		(
@@ -98,6 +102,7 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 	tx *transaction.Transaction,
 	session entity.AppPackageUploadSession,
 ) *errs.Error {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "UpdateAppPackageFileUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE app_package_upload_session
 		SET
@@ -118,9 +123,27 @@ func (a *AppPackageUploadSession) UpdateAppPackageFileUploadSession(
 	return nil
 }
 
-func NewAppPackageUploadSession(logger telemetry.Logger, transactionFactory transaction.Factory) *AppPackageUploadSession {
+func (a *AppPackageUploadSession) DeleteAppPackageUploadSessionsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appPackageUploadSessionDaoName, "DeleteAppPackageUploadSessionsByAppID")
+	_, err := tx.SQLTx().Exec(`
+		DELETE FROM app_package_upload_session
+		WHERE app_id = $1;`,
+		appID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func NewAppPackageUploadSession(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppPackageUploadSession {
 	return &AppPackageUploadSession{
-		logger:             logger,
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

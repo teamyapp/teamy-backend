@@ -7,20 +7,22 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const messageDaoName = "Message"
+
 type Message struct {
-	logger             telemetry.Logger
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Message = (*Message)(nil)
 
 func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.Message, *errs.Error) {
+	m.metrics.ReportDaoOperation(messageDaoName, "FindMessageByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -34,6 +36,7 @@ func (m Message) FindMessageByID(ct context.Context, messageID uint64) (entity.M
 }
 
 func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]entity.Message, *errs.Error) {
+	m.metrics.ReportDaoOperation(messageDaoName, "FindMessagesByThreadID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -47,6 +50,7 @@ func (m Message) FindMessagesByThreadID(ct context.Context, threadID uint64) ([]
 }
 
 func (m Message) FindMessageByIDWithTx(ct context.Context, tx *transaction.Transaction, messageID uint64) (entity.Message, *errs.Error) {
+	m.metrics.ReportDaoOperation(messageDaoName, "FindMessageByIDWithTx")
 	message := entity.Message{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -80,6 +84,7 @@ func (m Message) FindMessageByIDWithTx(ct context.Context, tx *transaction.Trans
 }
 
 func (m Message) FindMessagesByThreadIDWithTx(ct context.Context, tx *transaction.Transaction, threadID uint64) ([]entity.Message, *errs.Error) {
+	m.metrics.ReportDaoOperation(messageDaoName, "FindMessagesByThreadIDWithTx")
 	statement := `
 	SELECT
 		id,
@@ -120,6 +125,7 @@ func (m Message) FindMessagesByThreadIDWithTx(ct context.Context, tx *transactio
 }
 
 func (m Message) CreateMessage(ct context.Context, tx *transaction.Transaction, message entity.Message) *errs.Error {
+	m.metrics.ReportDaoOperation(messageDaoName, "CreateMessage")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO message
 		(
@@ -145,6 +151,7 @@ func (m Message) CreateMessage(ct context.Context, tx *transaction.Transaction, 
 }
 
 func (m Message) UpdateMessage(ct context.Context, tx *transaction.Transaction, message entity.Message) *errs.Error {
+	m.metrics.ReportDaoOperation(messageDaoName, "UpdateMessage")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE message
 		SET
@@ -164,6 +171,7 @@ func (m Message) UpdateMessage(ct context.Context, tx *transaction.Transaction, 
 }
 
 func (m Message) DeleteMessage(ct context.Context, tx *transaction.Transaction, messageID uint64) *errs.Error {
+	m.metrics.ReportDaoOperation(messageDaoName, "DeleteMessage")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM message
 		WHERE id = $1;
@@ -177,6 +185,12 @@ func (m Message) DeleteMessage(ct context.Context, tx *transaction.Transaction, 
 	return nil
 }
 
-func NewMessage(logger telemetry.Logger, transactionFactory transaction.Factory) Message {
-	return Message{logger: logger, transactionFactory: transactionFactory}
+func NewMessage(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) Message {
+	return Message{
+		metrics:            metrics,
+		transactionFactory: transactionFactory,
+	}
 }

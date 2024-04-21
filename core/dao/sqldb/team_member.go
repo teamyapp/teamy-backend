@@ -7,20 +7,22 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const teamMemberDaoName = "TeamMember"
+
 type TeamMember struct {
-	logger             telemetry.Logger
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.TeamMember = (*TeamMember)(nil)
 
 func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]uint64, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "FindTeamIDsByUserID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -34,6 +36,7 @@ func (t TeamMember) FindTeamIDsByUserID(ct context.Context, userID uint64) ([]ui
 }
 
 func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) ([]entity.TeamMember, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "FindTeamMembersByTeamID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -47,6 +50,7 @@ func (t TeamMember) FindTeamMembersByTeamID(ct context.Context, teamID uint64) (
 }
 
 func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transaction.Transaction, userID uint64) ([]uint64, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "FindTeamIDsByUserIDWithTx")
 	statement := `
 	SELECT
 		team_id
@@ -77,6 +81,7 @@ func (t TeamMember) FindTeamIDsByUserIDWithTx(ct context.Context, tx *transactio
 }
 
 func (t TeamMember) FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]uint64, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "FindTeamMemberIDsByTeamIDWithTx")
 	statement := `
 	SELECT
 		user_id
@@ -107,6 +112,7 @@ func (t TeamMember) FindTeamMemberIDsByTeamIDWithTx(ct context.Context, tx *tran
 }
 
 func (t TeamMember) FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMember, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "FindTeamMembersByTeamIDWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		team_id,
@@ -143,6 +149,7 @@ func (t TeamMember) FindTeamMembersByTeamIDWithTx(ct context.Context, tx *transa
 }
 
 func (t TeamMember) FindTeamMemberWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "FindTeamMemberWithTx")
 	teamMember := entity.TeamMember{}
 	err := tx.SQLTx().QueryRow(
 		`
@@ -178,6 +185,7 @@ func (t TeamMember) FindTeamMemberWithTx(ct context.Context, tx *transaction.Tra
 }
 
 func (t TeamMember) CreateTeamMember(ct context.Context, tx *transaction.Transaction, teamMember entity.TeamMember) *errs.Error {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "CreateTeamMember")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO team_member
 		(
@@ -203,6 +211,7 @@ func (t TeamMember) CreateTeamMember(ct context.Context, tx *transaction.Transac
 }
 
 func (t TeamMember) UpdateTeamMember(ct context.Context, tx *transaction.Transaction, teamMember entity.TeamMember) *errs.Error {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "UpdateTeamMember")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE team_member
 		SET
@@ -223,6 +232,7 @@ func (t TeamMember) UpdateTeamMember(ct context.Context, tx *transaction.Transac
 }
 
 func (t TeamMember) DeleteTeamMember(ct context.Context, tx *transaction.Transaction, teamID uint64, userID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(teamMemberDaoName, "DeleteTeamMember")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM team_member
 		WHERE team_id = $1 AND user_id = $2;
@@ -236,6 +246,12 @@ func (t TeamMember) DeleteTeamMember(ct context.Context, tx *transaction.Transac
 	return nil
 }
 
-func NewTeamMember(logger telemetry.Logger, transactionFactory transaction.Factory) TeamMember {
-	return TeamMember{logger: logger, transactionFactory: transactionFactory}
+func NewTeamMember(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) TeamMember {
+	return TeamMember{
+		metrics:            metrics,
+		transactionFactory: transactionFactory,
+	}
 }

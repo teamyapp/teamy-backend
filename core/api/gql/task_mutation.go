@@ -2,11 +2,11 @@ package gql
 
 import (
 	"context"
-	"github.com/teamyapp/teamy-backend/core/entity"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/api/gql/scalar"
+	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 )
 
@@ -17,6 +17,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		Context     *string
 		OwnerUserID *graphql.ID
 		DueAt       *graphql.Time
+		IsScheduled bool
 		IsPlanned   bool
 	}
 }) (Task, error) {
@@ -45,6 +46,7 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 		Context:     args.Task.Context,
 		OwnerUserID: ownerUserID,
 		DueAt:       fromGraphQLTimePtr(args.Task.DueAt),
+		IsScheduled: args.Task.IsScheduled,
 		IsPlanned:   args.Task.IsPlanned,
 	})
 	if err != nil {

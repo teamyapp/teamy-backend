@@ -7,20 +7,22 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const teamDaoName = "Team"
+
 type Team struct {
-	logger             telemetry.Logger
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Team = (*Team)(nil)
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamDaoName, "FindTeamByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -34,6 +36,7 @@ func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *err
 }
 
 func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamDaoName, "FindAllTeams")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -47,6 +50,7 @@ func (t Team) FindAllTeams(ct context.Context) ([]entity.Team, *errs.Error) {
 }
 
 func (t Team) FindAllTeamsWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Team, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamDaoName, "FindAllTeamsWithTx")
 	statement := `
 	SELECT
 		id,
@@ -88,6 +92,7 @@ func (t Team) FindAllTeamsWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) (entity.Team, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamDaoName, "FindTeamByIDWithTx")
 	statement := `
 	SELECT
 		id,
@@ -126,6 +131,7 @@ func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Team) FindTeamsByIDsWithTx(ct context.Context, tx *transaction.Transaction, teamIDs []uint64) ([]entity.Team, *errs.Error) {
+	t.metrics.ReportDaoOperation(teamDaoName, "FindTeamsByIDsWithTx")
 	if len(teamIDs) == 0 {
 		return []entity.Team{}, nil
 	}
@@ -173,6 +179,7 @@ func (t Team) FindTeamsByIDsWithTx(ct context.Context, tx *transaction.Transacti
 }
 
 func (t Team) CreateTeam(ct context.Context, tx *transaction.Transaction, team entity.Team) *errs.Error {
+	t.metrics.ReportDaoOperation(teamDaoName, "CreateTeam")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO team
 		    (
@@ -197,6 +204,7 @@ func (t Team) CreateTeam(ct context.Context, tx *transaction.Transaction, team e
 }
 
 func (t Team) UpdateTeam(ct context.Context, tx *transaction.Transaction, team entity.Team) *errs.Error {
+	t.metrics.ReportDaoOperation(teamDaoName, "UpdateTeam")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE team
 		SET
@@ -221,6 +229,7 @@ func (t Team) UpdateTeam(ct context.Context, tx *transaction.Transaction, team e
 }
 
 func (t Team) DeleteTeam(ct context.Context, tx *transaction.Transaction, teamID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(teamDaoName, "DeleteTeam")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM team
 		WHERE id = $1;`,
@@ -233,6 +242,12 @@ func (t Team) DeleteTeam(ct context.Context, tx *transaction.Transaction, teamID
 	return nil
 }
 
-func NewTeam(logger telemetry.Logger, transactionFactory transaction.Factory) Team {
-	return Team{logger: logger, transactionFactory: transactionFactory}
+func NewTeam(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) Team {
+	return Team{
+		metrics:            metrics,
+		transactionFactory: transactionFactory,
+	}
 }

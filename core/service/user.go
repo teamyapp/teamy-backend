@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -35,12 +37,14 @@ type UpdateUserInput struct {
 
 type User struct {
 	logger                     telemetry.Logger
+	transactionGroupFactory    transaction.GroupFactory
 	toggles                    feature.Toggles
 	cloudWebAPIExternalBaseURL string
 	cloudClientRegistry        *client.Registry
 	authorizer                 client.Authorizer
 	stateSyncer                *realtime.StateSyncer
 	transactionFactory         cloudTransaction.Factory
+	cache                      *cache.TimeBasedCache[string, any]
 	userDao                    dao.User
 	teamMemberDao              dao.TeamMember
 	userFileUploadSessionDao   dao.UserFileUploadSession
@@ -66,7 +70,31 @@ func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 		}
 	}
 
-	return u.userDao.FindUserByID(ct, currUserID)
+	if u.toggles.EnableCache {
+		value, cacheErr := u.cache.Get(ct, meCacheKey(currUserID))
+		if cacheErr == nil {
+			return value.(entity.User), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	user, err := u.userDao.FindUserByID(ct, currUserID)
+	if err != nil {
+		return entity.User{}, err
+	}
+
+	if u.toggles.EnableCache {
+		cacheErr := u.cache.SetIfExpired(ct, meCacheKey(currUserID), user)
+		if cacheErr != nil {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return user, nil
 }
 
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
@@ -89,7 +117,31 @@ func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *err
 		}
 	}
 
-	return u.userDao.FindUserByID(ct, userID)
+	if u.toggles.EnableCache {
+		value, cacheErr := u.cache.Get(ct, findUserCacheKey(userID))
+		if cacheErr == nil {
+			return value.(entity.User), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	user, err := u.userDao.FindUserByID(ct, userID)
+	if err != nil {
+		return entity.User{}, err
+	}
+
+	if u.toggles.EnableCache {
+		cacheErr := u.cache.SetIfExpired(ct, findUserCacheKey(userID), user)
+		if cacheErr != nil {
+			return entity.User{}, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return user, nil
 }
 
 func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User, *errs.Error) {
@@ -105,15 +157,12 @@ func (u User) CreateUser(ct context.Context, input CreateUserInput) (entity.User
 		LastName:   input.LastName,
 		ProfileURL: input.ProfileURL,
 	}
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return u.userDao.CreateUser(ct, tx, user)
-	})
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			return u.userDao.CreateUser(ct, tx, user)
+		})
 	return user, err
 }
 
@@ -138,32 +187,29 @@ func (u User) UpdateUser(ct context.Context, userID uint64, input UpdateUserInpu
 	}
 
 	var user entity.User
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		var err *errs.Error
-		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
-		if err != nil {
-			return err
-		}
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
+			if err != nil {
+				return err
+			}
 
-		user.FirstName = input.FirstName
-		user.LastName = input.LastName
-		updatedAt := time.Now().UTC()
-		user.UpdatedAt = &updatedAt
-		userMutation := mutation.NewUpdateUser(
-			u.logger,
-			u.stateSyncer,
-			u.userDao,
-			u.teamMemberDao,
-			user)
-		rtTx.AppendMutation(userMutation)
-		return userMutation.Execute(ct, tx)
-	})
+			user.FirstName = input.FirstName
+			user.LastName = input.LastName
+			updatedAt := time.Now().UTC()
+			user.UpdatedAt = &updatedAt
+			userMutation := mutation.NewUpdateUser(
+				u.logger,
+				u.stateSyncer,
+				u.userDao,
+				u.teamMemberDao,
+				user)
+			rtTx.AppendMutation(userMutation)
+			return userMutation.Execute(ct, tx)
+		})
 
 	return user, err
 }
@@ -201,16 +247,12 @@ func (u User) CreateUserProfileUploadSession(ct context.Context) (uint64, *errs.
 		IsCompleted:         false,
 		CreatedAt:           time.Now(),
 	}
-
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		return u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, tx, fileUploadSession)
-	})
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			return u.userFileUploadSessionDao.CreateUserFileUploadSession(ct, tx, fileUploadSession)
+		})
 
 	return res.UploadSessionId, err
 }
@@ -245,74 +287,83 @@ func (u User) FinishUserProfileUploadSession(ct context.Context, fileUploadSessi
 	}
 
 	var user entity.User
-	txCtx := transaction.NewTransactionsContext(
-		u.logger,
-		u.transactionFactory,
-		u.stateSyncer,
+	err := u.transactionGroupFactory.WithTransactionGroup(
 		ct,
-	)
-	err := txCtx.WithTransactions(false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(
-			ct,
-			tx,
-			userID,
-			entity.ProfileUserFileUploadSessionType,
-			fileUploadSessionID)
-		if err != nil {
-			return err
-		}
-
-		if profileUploadSession.IsCompleted {
-			return errs.NewError(errs.InvalidOperation, fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			profileUploadSession, err := u.userFileUploadSessionDao.FindUserFileUploadSessionByUserIDWithTx(
+				ct,
+				tx,
 				userID,
-				fileUploadSessionID))
-		}
+				entity.ProfileUserFileUploadSessionType,
+				fileUploadSessionID)
+			if err != nil {
+				return err
+			}
 
-		now := time.Now().UTC()
-		profileUploadSession.IsCompleted = true
-		profileUploadSession.UpdatedAt = &now
-		err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
-		if err != nil {
+			if profileUploadSession.IsCompleted {
+				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("profile upload session is already completed: userID=%v, fileUploadSessionID=%v",
+					userID,
+					fileUploadSessionID))
+			}
+
+			now := time.Now().UTC()
+			profileUploadSession.IsCompleted = true
+			profileUploadSession.UpdatedAt = &now
+			err = u.userFileUploadSessionDao.UpdateUserFileUploadSession(ct, tx, profileUploadSession)
+			if err != nil {
+				return err
+			}
+
+			user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
+			if err != nil {
+				return err
+			}
+
+			profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
+			user.ProfileURL = &profileURL
+			user.UpdatedAt = &now
+			err = u.userDao.UpdateUser(ct, tx, user)
 			return err
-		}
-
-		user, err = u.userDao.FindUserByIDWithTx(ct, tx, userID)
-		if err != nil {
-			return err
-		}
-
-		profileURL := io.GetFileURL(u.cloudWebAPIExternalBaseURL, uploadSession.FileId)
-		user.ProfileURL = &profileURL
-		user.UpdatedAt = &now
-		err = u.userDao.UpdateUser(ct, tx, user)
-		return err
-	})
+		})
 
 	return user, err
 }
 
 func NewUser(
 	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
 	toggles feature.Toggles,
 	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudTransaction.Factory,
+	cache *cache.TimeBasedCache[string, any],
 	userDao dao.User,
 	teamMemberDao dao.TeamMember,
 	userFileUploadSessionDao dao.UserFileUploadSession,
 ) User {
 	return User{
 		logger:                     logger,
+		transactionGroupFactory:    transactionGroupFactory,
 		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
 		cloudClientRegistry:        cloudClientRegistry,
 		toggles:                    toggles,
 		authorizer:                 authorizer,
 		stateSyncer:                stateSyncer,
 		transactionFactory:         transactionFactory,
+		cache:                      cache,
 		userDao:                    userDao,
 		teamMemberDao:              teamMemberDao,
 		userFileUploadSessionDao:   userFileUploadSessionDao,
 	}
+}
+
+func findUserCacheKey(userID uint64) string {
+	return fmt.Sprintf("FindUserByID(%v)", userID)
+}
+
+func meCacheKey(userID uint64) string {
+	return fmt.Sprintf("Me(%v)", userID)
 }

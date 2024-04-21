@@ -10,21 +10,32 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const activatorDaoName = "Activator"
+
 type Activator struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
-func (*Activator) CreateActivator(ct context.Context, tx *transaction.Transaction, activator entity.Activator) *errs.Error {
+func (a *Activator) CreateActivator(ct context.Context, tx *transaction.Transaction, activator entity.Activator) *errs.Error {
+	a.metrics.ReportDaoOperation(activatorDaoName, "CreateActivator")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO activator (
 			id,
-			created_at,
-			updated_at
-		) 
+			type,
+			locked,
+			created_at
+		)
 		VALUES (
-			$1
+			$1,
+			$2,
+			$3,
+			$4
 		)`,
 		activator.ID,
+		activator.Type,
+		activator.Locked,
+		activator.CreatedAt,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
@@ -33,11 +44,14 @@ func (*Activator) CreateActivator(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.Activator, *errs.Error) {
+func (a *Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Transaction, activatorID uint64) (entity.Activator, *errs.Error) {
+	a.metrics.ReportDaoOperation(activatorDaoName, "FindActivatorByIDWithTx")
 	activator := entity.Activator{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
 			id,
+			type,
+			locked,
 			created_at,
 			updated_at
 		FROM activator
@@ -45,6 +59,8 @@ func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Tr
 		activatorID,
 	).Scan(
 		&activator.ID,
+		&activator.Type,
+		&activator.Locked,
 		&activator.CreatedAt,
 		&activator.UpdatedAt,
 	)
@@ -57,6 +73,7 @@ func (*Activator) FindActivatorByIDWithTx(ct context.Context, tx *transaction.Tr
 }
 
 func (a *Activator) FindActivatorByID(ct context.Context, activatorID uint64) (entity.Activator, *errs.Error) {
+	a.metrics.ReportDaoOperation(activatorDaoName, "FindActivatorByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -69,14 +86,33 @@ func (a *Activator) FindActivatorByID(ct context.Context, activatorID uint64) (e
 	return a.FindActivatorByIDWithTx(ct, tx, activatorID)
 }
 
-func (*Activator) UpdateActivator(ct context.Context, tx *transaction.Transaction, activator entity.Activator) *errs.Error {
+func (a *Activator) UpdateActivator(ct context.Context, tx *transaction.Transaction, activator entity.Activator) *errs.Error {
+	a.metrics.ReportDaoOperation(activatorDaoName, "UpdateActivator")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE activator
 		SET
-			updated_at = $2
-		WHERE id = $1`,
-		activator.ID,
+			type = $1,
+			locked = $2,
+			updated_at = $3
+		WHERE id = $4`,
+		activator.Type,
+		activator.Locked,
 		activator.UpdatedAt,
+		activator.ID,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (a *Activator) DeleteActivator(ct context.Context, tx *transaction.Transaction, activatorID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(activatorDaoName, "DeleteActivator")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM activator
+		WHERE id = $1`,
+		activatorID,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
@@ -87,8 +123,12 @@ func (*Activator) UpdateActivator(ct context.Context, tx *transaction.Transactio
 
 var _ dao.Activator = (*Activator)(nil)
 
-func NewActivator(transactionFactory transaction.Factory) *Activator {
+func NewActivator(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *Activator {
 	return &Activator{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

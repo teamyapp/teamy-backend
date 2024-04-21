@@ -24,6 +24,10 @@ func (t TaskLink) Title() string {
 	return t.taskLink.Title
 }
 
+func (t TaskLink) PreviewTitle() string {
+	return t.taskLink.PreviewTitle
+}
+
 func (t TaskLink) URL() string {
 	return t.taskLink.URL
 }

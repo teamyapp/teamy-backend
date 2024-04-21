@@ -7,14 +7,15 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const userFileUploadSessionDaoName = "UserFileUploadSession"
+
 type UserFileUploadSession struct {
-	logger telemetry.Logger
+	metrics dao.Metrics
 }
 
 var _ dao.UserFileUploadSession = (*UserFileUploadSession)(nil)
@@ -26,6 +27,7 @@ func (u UserFileUploadSession) FindUserFileUploadSessionByUserIDWithTx(
 	userFileUploadSessionType entity.UserFileUploadSessionType,
 	fileUploadSessionID uint64,
 ) (entity.UserFileUploadSession, *errs.Error) {
+	u.metrics.ReportDaoOperation(userFileUploadSessionDaoName, "FindUserFileUploadSessionByUserIDWithTx")
 	userFileUploadSession := entity.UserFileUploadSession{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -67,6 +69,7 @@ func (u UserFileUploadSession) CreateUserFileUploadSession(
 	tx *transaction.Transaction,
 	userFileUploadSession entity.UserFileUploadSession,
 ) *errs.Error {
+	u.metrics.ReportDaoOperation(userFileUploadSessionDaoName, "CreateUserFileUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO user_file_upload_session
 		(
@@ -98,6 +101,7 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 	tx *transaction.Transaction,
 	userFileUploadSession entity.UserFileUploadSession,
 ) *errs.Error {
+	u.metrics.ReportDaoOperation(userFileUploadSessionDaoName, "UpdateUserFileUploadSession")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE user_file_upload_session
 		SET
@@ -126,6 +130,8 @@ func (u UserFileUploadSession) UpdateUserFileUploadSession(
 	return nil
 }
 
-func NewUserFileUploadSession(logger telemetry.Logger) UserFileUploadSession {
-	return UserFileUploadSession{logger: logger}
+func NewUserFileUploadSession(metrics dao.Metrics) UserFileUploadSession {
+	return UserFileUploadSession{
+		metrics: metrics,
+	}
 }

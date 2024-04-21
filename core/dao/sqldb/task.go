@@ -7,20 +7,22 @@ import (
 	"fmt"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const taskDaoName = "Task"
+
 type Task struct {
-	logger             telemetry.Logger
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.Task = (*Task)(nil)
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTaskByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -34,6 +36,7 @@ func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *err
 }
 
 func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTasksByTeamID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -47,6 +50,7 @@ func (t Task) FindTasksByTeamID(ct context.Context, teamID uint64) ([]entity.Tas
 }
 
 func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindAllTasks")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -60,6 +64,7 @@ func (t Task) FindAllTasks(ct context.Context) ([]entity.Task, *errs.Error) {
 }
 
 func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) (entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTaskByIDWithTx")
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -70,6 +75,7 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 			owner_user_id,
 			owning_team_id,
 			status,
+			is_scheduled,
 			is_planned,
 			effort,
 			priority,
@@ -89,6 +95,7 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsScheduled,
 			&task.IsPlanned,
 			&task.Effort,
 			&task.Priority,
@@ -110,6 +117,7 @@ func (t Task) FindTaskByIDWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transaction, taskIDs []uint64) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTasksByIDsWithTx")
 	if len(taskIDs) == 0 {
 		return []entity.Task{}, nil
 	}
@@ -124,6 +132,7 @@ func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transacti
 		owner_user_id,
 		owning_team_id,
 		status,
+		is_scheduled,
 		is_planned,
 		effort,
 		priority,
@@ -153,6 +162,7 @@ func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transacti
 				&task.OwnerUserID,
 				&task.OwningTeamID,
 				&task.Status,
+				&task.IsScheduled,
 				&task.IsPlanned,
 				&task.Effort,
 				&task.Priority,
@@ -173,6 +183,7 @@ func (t Task) FindTasksByIDsWithTx(ct context.Context, tx *transaction.Transacti
 }
 
 func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transaction.Transaction, commentThreadID uint64) (entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTaskByCommentsThreadIDWithTx")
 	task := entity.Task{}
 	err := tx.SQLTx().QueryRow(`
 		SELECT
@@ -183,6 +194,7 @@ func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transacti
 			owner_user_id,
 			owning_team_id,
 			status,
+			is_scheduled,
 			is_planned,
 			effort,
 			priority,
@@ -202,6 +214,7 @@ func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transacti
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsScheduled,
 			&task.IsPlanned,
 			&task.Effort,
 			&task.Priority,
@@ -223,6 +236,7 @@ func (t Task) FindTaskByCommentsThreadIDWithTx(ct context.Context, tx *transacti
 }
 
 func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindAllTasksWithTx")
 	rows, err := tx.SQLTx().Query(`
 	SELECT
 		id,
@@ -232,6 +246,7 @@ func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction
 		owner_user_id,
 		owning_team_id,
 		status,
+		is_scheduled,
 		is_planned,
 		effort,
 		priority,
@@ -259,6 +274,7 @@ func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsScheduled,
 			&task.IsPlanned,
 			&task.Effort,
 			&task.Priority,
@@ -279,6 +295,7 @@ func (t Task) FindAllTasksWithTx(ct context.Context, tx *transaction.Transaction
 }
 
 func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.Task, *errs.Error) {
+	t.metrics.ReportDaoOperation(taskDaoName, "FindTasksByTeamIDWithTx")
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -289,6 +306,7 @@ func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transa
 		owner_user_id,
 		owning_team_id,
 		status,
+		is_scheduled,
 		is_planned,
 		effort,
 		priority,
@@ -318,6 +336,7 @@ func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transa
 			&task.OwnerUserID,
 			&task.OwningTeamID,
 			&task.Status,
+			&task.IsScheduled,
 			&task.IsPlanned,
 			&task.Effort,
 			&task.Priority,
@@ -338,6 +357,7 @@ func (t Task) FindTasksByTeamIDWithTx(ct context.Context, tx *transaction.Transa
 }
 
 func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	t.metrics.ReportDaoOperation(taskDaoName, "CreateTask")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO task
 		(
@@ -348,14 +368,15 @@ func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task e
 			owner_user_id,
 			owning_team_id,
 			status,
-		 	is_planned,
+		 	is_scheduled,
+			is_planned,
 			effort,
 		 	priority,
 			comments_thread_id,
 			due_at,
 			created_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`,
 		task.ID,
 		task.Goal,
 		task.Context,
@@ -363,6 +384,7 @@ func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task e
 		task.OwnerUserID,
 		task.OwningTeamID,
 		task.Status,
+		task.IsScheduled,
 		task.IsPlanned,
 		task.Effort,
 		task.Priority,
@@ -379,6 +401,7 @@ func (t Task) CreateTask(ct context.Context, tx *transaction.Transaction, task e
 }
 
 func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task entity.Task) *errs.Error {
+	t.metrics.ReportDaoOperation(taskDaoName, "UpdateTask")
 	_, err := tx.SQLTx().Exec(`
 		UPDATE task
 		SET
@@ -387,18 +410,20 @@ func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task e
 			owner_user_id = $3,
 			owning_team_id = $4,
 			status = $5,
-			is_planned = $6,
-			effort = $7,
-			priority = $8,
-			due_at = $9,
-			updated_at = $10,
-			delivered_at = $11
-		WHERE id = $12;`,
+			is_scheduled = $6,
+			is_planned = $7,
+			effort = $8,
+			priority = $9,
+			due_at = $10,
+			updated_at = $11,
+			delivered_at = $12
+		WHERE id = $13;`,
 		task.Goal,
 		task.Context,
 		task.OwnerUserID,
 		task.OwningTeamID,
 		task.Status,
+		task.IsScheduled,
 		task.IsPlanned,
 		task.Effort,
 		task.Priority,
@@ -416,6 +441,7 @@ func (t Task) UpdateTask(ct context.Context, tx *transaction.Transaction, task e
 }
 
 func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID uint64) *errs.Error {
+	t.metrics.ReportDaoOperation(taskDaoName, "DeleteTask")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM task
 		WHERE id = $1;
@@ -428,9 +454,12 @@ func (t Task) DeleteTask(ct context.Context, tx *transaction.Transaction, taskID
 	return nil
 }
 
-func NewTask(logger telemetry.Logger, transactionFactory transaction.Factory) Task {
+func NewTask(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) Task {
 	return Task{
-		logger:             logger,
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

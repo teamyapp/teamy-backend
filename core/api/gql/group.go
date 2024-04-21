@@ -13,10 +13,17 @@ import (
 type Group interface {
 	ID(ctx context.Context) graphql.ID
 	Type(ctx context.Context) entity.GroupType
+	MemberType(ctx context.Context) entity.GroupMemberType
+	MaxRolloutIndex(ctx context.Context) int32
 	Name(ctx context.Context) string
+	Locked(ctx context.Context) bool
 	CreatedAt(ctx context.Context) graphql.Time
 	UpdatedAt(ctx context.Context) *graphql.Time
-	Rollouts(ctx context.Context) ([]Rollout, error)
+	GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error)
+	Apps(ctx context.Context) ([]App, error)
+	ToStaticUserGroup() (*StaticUserGroup, bool)
+	ToStaticTeamGroup() (*StaticTeamGroup, bool)
+	ToFilterGroup() (*FilterGroup, bool)
 }
 
 type FilterGroup struct {
@@ -34,16 +41,24 @@ func (f FilterGroup) Type(ctx context.Context) entity.GroupType {
 	return f.filterGroup.Type
 }
 
+func (f FilterGroup) Locked(ctx context.Context) bool {
+	return f.filterGroup.Locked
+}
+
+func (f FilterGroup) MemberType(ctx context.Context) entity.GroupMemberType {
+	return f.filterGroup.MemberType
+}
+
+func (f FilterGroup) MaxRolloutIndex(ctx context.Context) int32 {
+	return int32(f.filterGroup.MaxRolloutIndex)
+}
+
 func (f FilterGroup) Name(ctx context.Context) string {
 	return f.filterGroup.Name
 }
 
 func (f FilterGroup) Filter(ctx context.Context) string {
 	return f.filterGroup.Filter
-}
-
-func (f FilterGroup) MemberCount(ctx context.Context) int32 {
-	return int32(f.filterGroup.Count)
 }
 
 func (f FilterGroup) CreatedAt(ctx context.Context) graphql.Time {
@@ -54,26 +69,40 @@ func (f FilterGroup) UpdatedAt(ctx context.Context) *graphql.Time {
 	return toGraphQLTimePtr(f.filterGroup.UpdatedAt)
 }
 
-func (f FilterGroup) Rollouts(ctx context.Context) ([]Rollout, error) {
-	rollouts, err := f.deps.rolloutService.FindRolloutsByGroupID(ctx, f.filterGroup.ID)
+func (f FilterGroup) GroupRolloutRelations(ctx context.Context) ([]GroupRolloutRelation, error) {
+	relations, err := f.deps.groupService.FindGroupRolloutRelationsByGroupID(ctx, f.filterGroup.ID)
 	if err != nil {
 		f.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	return collect.Map(rollouts, func(rollout entity.Rollout, index int) Rollout {
-		return newRollout(f.deps, rollout)
+	return collect.Map(relations, func(relation entity.GroupRolloutRelation, index int) GroupRolloutRelation {
+		return newGroupRolloutRelation(f.deps, relation)
 	}), nil
 }
 
-func (f FilterGroup) App(ctx context.Context) (App, error) {
-	app, err := f.deps.appService.FindAppByID(ctx, f.filterGroup.ID)
+func (f FilterGroup) Apps(ctx context.Context) ([]App, error) {
+	apps, err := f.deps.appService.FindAppsByGroupID(ctx, f.filterGroup.ID)
 	if err != nil {
 		f.deps.logger.ErrorWithContext(ctx, err)
-		return App{}, errs.ToResolverErr(err)
+		return nil, errs.ToResolverErr(err)
 	}
 
-	return newApp(f.deps, app), nil
+	return collect.Map(apps, func(app entity.App, index int) App {
+		return newApp(f.deps, app)
+	}), nil
+}
+
+func (f FilterGroup) ToStaticUserGroup() (*StaticUserGroup, bool) {
+	return nil, false
+}
+
+func (f FilterGroup) ToStaticTeamGroup() (*StaticTeamGroup, bool) {
+	return nil, false
+}
+
+func (f FilterGroup) ToFilterGroup() (*FilterGroup, bool) {
+	return &f, true
 }
 
 func newFilterGroup(deps *Dependencies, filterGroup entity.FilterGroup) FilterGroup {
@@ -83,17 +112,19 @@ func newFilterGroup(deps *Dependencies, filterGroup entity.FilterGroup) FilterGr
 	}
 }
 
-func (m Mutation) UpdateFilterGroup(
+func (m Mutation) CreateFilterGroup(
 	ctx context.Context,
 	args struct {
-		GroupID graphql.ID
-		Input   struct {
-			Name   string
-			Filter string
+		AppID graphql.ID
+		Input struct {
+			Name            string
+			Filter          string
+			GroupMemberType entity.GroupMemberType
+			RolloutIDs      []graphql.ID
 		}
 	},
 ) (FilterGroup, error) {
-	groupID, internalErr := fromGraphQLID(args.GroupID)
+	appID, internalErr := fromGraphQLID(args.AppID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
@@ -103,12 +134,29 @@ func (m Mutation) UpdateFilterGroup(
 		return FilterGroup{}, errs.ToResolverErr(internalErr)
 	}
 
-	updateFilterGroupInput := service.UpdateFilterGroupInput{
-		Name:   args.Input.Name,
-		Filter: args.Input.Filter,
+	rolloutIDs := make([]uint64, len(args.Input.RolloutIDs))
+	for index, id := range args.Input.RolloutIDs {
+		rolloutID, err := fromGraphQLID(id)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return FilterGroup{}, errs.ToResolverErr(internalErr)
+		}
+
+		rolloutIDs[index] = rolloutID
 	}
 
-	filterGroup, err := m.deps.groupService.UpdateFilterGroup(ctx, groupID, updateFilterGroupInput)
+	createFilterGroupInput := service.CreateFilterGroupInput{
+		Name:            args.Input.Name,
+		Filter:          args.Input.Filter,
+		GroupMemberType: args.Input.GroupMemberType,
+		RolloutIDs:      rolloutIDs,
+	}
+
+	filterGroup, err := m.deps.groupService.CreateFilterGroup(ctx, appID, createFilterGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return FilterGroup{}, errs.ToResolverErr(err)
@@ -117,11 +165,19 @@ func (m Mutation) UpdateFilterGroup(
 	return newFilterGroup(m.deps, filterGroup), nil
 }
 
-func (m Mutation) DeleteAppGroup(
+func (m Mutation) UpdateGroup(
 	ctx context.Context,
 	args struct {
 		AppID   graphql.ID
 		GroupID graphql.ID
+		Input   struct {
+			Name            string
+			Type            entity.GroupType
+			GroupMemberType entity.GroupMemberType
+			Filter          *string
+			RolloutIDs      []graphql.ID
+			MemberIDs       []graphql.ID
+		}
 	},
 ) (Group, error) {
 	appID, internalErr := fromGraphQLID(args.AppID)
@@ -144,31 +200,75 @@ func (m Mutation) DeleteAppGroup(
 		return nil, errs.ToResolverErr(internalErr)
 	}
 
-	group, err := m.deps.groupService.DeleteAppGroup(ctx, appID, groupID)
+	rolloutIDs := make([]uint64, len(args.Input.RolloutIDs))
+	for index, id := range args.Input.RolloutIDs {
+		rolloutID, err := fromGraphQLID(id)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return nil, errs.ToResolverErr(internalErr)
+		}
+
+		rolloutIDs[index] = rolloutID
+	}
+
+	memberIDs := make([]uint64, len(args.Input.MemberIDs))
+	for index, id := range args.Input.MemberIDs {
+		memberID, err := fromGraphQLID(id)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ctx, internalErr)
+			return nil, errs.ToResolverErr(internalErr)
+		}
+
+		memberIDs[index] = memberID
+	}
+
+	updateGroupInput := service.UpdateGroupInput{
+		Name:            args.Input.Name,
+		Filter:          args.Input.Filter,
+		RolloutIDs:      rolloutIDs,
+		MemberIDs:       memberIDs,
+		GroupMemberType: args.Input.GroupMemberType,
+		Type:            args.Input.Type,
+	}
+
+	group, err := m.deps.groupService.UpdateGroup(ctx, appID, groupID, updateGroupInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	switch group.Type {
-	case entity.GroupTypeStatic:
-		appGroupRelationType, err := m.deps.groupService.FindAppGroupRelationType(ctx, appID, groupID)
-		if err != nil {
-			m.deps.logger.ErrorWithContext(ctx, err)
-			return nil, errs.ToResolverErr(err)
-		}
+	return getGroupFromGroupUnion(m.deps, group)
+}
 
-		switch appGroupRelationType {
-		case entity.AppGroupRelationTypeUser:
-			return newStaticUserGroup(m.deps, group.StaticGroup), nil
-		case entity.AppGroupRelationTypeTeam:
-			return newStaticTeamGroup(m.deps, group.StaticGroup), nil
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown app group relation type"))
-		}
-	case entity.GroupTypeFilter:
-		return newFilterGroup(m.deps, group.FilterGroup), nil
-	default:
-		return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, "unknown group type"))
+func (m Mutation) DeleteGroup(
+	ctx context.Context,
+	args struct {
+		GroupID graphql.ID
+	},
+) (Group, error) {
+	groupID, internalErr := fromGraphQLID(args.GroupID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
 	}
+
+	group, err := m.deps.groupService.DeleteGroup(ctx, groupID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return getGroupFromGroupUnion(m.deps, group)
 }

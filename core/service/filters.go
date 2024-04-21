@@ -14,6 +14,7 @@ type TaskFilter struct {
 	OwnerID      *uint64
 	GoalContains *string
 	Status       *entity.TaskStatus
+	IsScheduled  *bool
 	IsPlanned    *bool
 }
 
@@ -26,6 +27,18 @@ type SprintFilter struct {
 
 type TeamFilter struct {
 	TeamID *uint64
+}
+
+type ProjectFilter struct {
+	ProjectID *uint64
+}
+
+type PhaseFilter struct {
+	PhaseID *uint64
+}
+
+type StoryFilter struct {
+	StoryID *uint64
 }
 
 type InvitationFilter struct {
@@ -46,6 +59,10 @@ func filterTasks(tasks []entity.Task, filter TaskFilter) []entity.Task {
 		}
 
 		if filter.Status != nil && *filter.Status != task.Status {
+			return false
+		}
+
+		if filter.IsScheduled != nil && *filter.IsScheduled != task.IsScheduled {
 			return false
 		}
 
@@ -97,6 +114,36 @@ func filterSprints(sprints []entity.Sprint, filter SprintFilter) []entity.Sprint
 func filterTeams(teams []entity.Team, filter TeamFilter) []entity.Team {
 	return collect.Filter(teams, func(team entity.Team) bool {
 		if filter.TeamID != nil && *filter.TeamID != team.ID {
+			return false
+		}
+
+		return true
+	})
+}
+
+func filterProjects(projects []entity.Project, filter ProjectFilter) []entity.Project {
+	return collect.Filter(projects, func(project entity.Project) bool {
+		if filter.ProjectID != nil && *filter.ProjectID != project.ID {
+			return false
+		}
+
+		return true
+	})
+}
+
+func filterPhases(phases []entity.Phase, filter PhaseFilter) []entity.Phase {
+	return collect.Filter(phases, func(phase entity.Phase) bool {
+		if filter.PhaseID != nil && *filter.PhaseID != phase.ID {
+			return false
+		}
+
+		return true
+	})
+}
+
+func filterStories(stories []entity.Story, filter StoryFilter) []entity.Story {
+	return collect.Filter(stories, func(story entity.Story) bool {
+		if filter.StoryID != nil && *filter.StoryID != story.ID {
 			return false
 		}
 

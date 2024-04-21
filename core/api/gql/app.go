@@ -2,12 +2,12 @@ package gql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type App struct {
@@ -27,7 +27,7 @@ func (a App) Secrets(ctx context.Context) ([]AppSecret, error) {
 	}
 
 	return collect.Map(secrets, func(appSecret entity.AppSecret, index int) AppSecret {
-		return newAppSecret(a.deps, appSecret)
+		return newAppSecret(a.deps, appSecret, false)
 	}), nil
 }
 
@@ -59,48 +59,24 @@ func (a App) Versions(ctx context.Context) ([]AppVersion, error) {
 	}), nil
 }
 
-func (a App) UserGroups(ctx context.Context) ([]Group, error) {
-	groups, err := a.deps.groupService.FindUserGroupsByAppID(ctx, a.app.ID)
+func (a App) Groups(ctx context.Context) ([]Group, error) {
+	groupUnions, err := a.deps.groupService.FindGroupsByAppID(ctx, a.app.ID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	userGroups := make([]Group, 0)
-	for _, group := range groups {
-		switch group.Type {
-		case entity.GroupTypeStatic:
-			userGroups = append(userGroups, newStaticUserGroup(a.deps, group.StaticGroup))
-		case entity.GroupTypeFilter:
-			userGroups = append(userGroups, newFilterGroup(a.deps, group.FilterGroup))
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
+	groups := make([]Group, 0)
+	for _, groupUnion := range groupUnions {
+		group, err := getGroupFromGroupUnion(a.deps, groupUnion)
+		if err != nil {
+			return nil, err
 		}
+
+		groups = append(groups, group)
 	}
 
-	return userGroups, nil
-}
-
-func (a App) TeamGroups(ctx context.Context) ([]Group, error) {
-	groups, err := a.deps.groupService.FindTeamGroupsByAppID(ctx, a.app.ID)
-	if err != nil {
-		a.deps.logger.ErrorWithContext(ctx, err)
-		return nil, errs.ToResolverErr(err)
-	}
-
-	teamGroups := make([]Group, 0)
-	for _, group := range groups {
-		switch group.Type {
-		case entity.GroupTypeStatic:
-			teamGroups = append(teamGroups, newStaticTeamGroup(a.deps, group.StaticGroup))
-		case entity.GroupTypeFilter:
-			teamGroups = append(teamGroups, newFilterGroup(a.deps, group.FilterGroup))
-		default:
-			return nil, errs.ToResolverErr(errs.NewError(errs.Unknown, fmt.Sprintf("unknown group type %s", group.Type)))
-		}
-	}
-
-	return teamGroups, nil
+	return groups, nil
 }
 
 func (a App) UserRollouts(ctx context.Context) ([]Rollout, error) {
@@ -138,11 +114,58 @@ func (a App) ManagedByTeam(ctx context.Context) (Team, error) {
 	return newTeam(a.deps, team), nil
 }
 
+func (a App) LatestVersionForTeam(
+	ctx context.Context,
+	args struct {
+		TeamID graphql.ID
+	}) (*AppVersion, error) {
+	teamID, internalErr := fromGraphQLID(args.TeamID)
+	if internalErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			internalErr.Error(),
+		)
+		a.deps.logger.ErrorWithContext(ctx, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	appVersionNumber, err := a.deps.rolloutService.GetActiveAppVersionNumberForTeam(ctx, a.app.ID, teamID)
+	if err != nil {
+		return nil, errs.ToResolverErr(err)
+	}
+
+	if appVersionNumber == nil {
+		return nil, nil
+	}
+
+	appVersion, err := a.deps.appService.FindAppVersionByAppIDAndNumber(ctx, a.app.ID, *appVersionNumber)
+	if err != nil {
+		return nil, errs.ToResolverErr(err)
+	}
+
+	gqlAppVersion := newAppVersion(a.deps, appVersion)
+	return &gqlAppVersion, nil
+}
+
+func (a App) Tags(ctx context.Context) ([]Tag, error) {
+	tags, err := a.deps.appService.FindTagsByAppID(ctx, a.app.ID)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(tags, func(tag entity.Tag, index int) Tag {
+		return newTag(a.deps, tag)
+	}), nil
+}
+
 func (m Mutation) CreateApp(
 	ctx context.Context,
 	args struct {
 		TeamID graphql.ID
-		Name   string
+		Input  struct {
+			Name string
+		}
 	}) (App, error) {
 	teamID, internalErr := fromGraphQLID(args.TeamID)
 	if internalErr != nil {
@@ -154,7 +177,10 @@ func (m Mutation) CreateApp(
 		return App{}, errs.ToResolverErr(internalErr)
 	}
 
-	app, err := m.deps.appService.CreateApp(ctx, args.Name, teamID)
+	createAppInput := service.CreateAppInput{
+		Name: args.Input.Name,
+	}
+	app, err := m.deps.appService.CreateApp(ctx, teamID, createAppInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return App{}, errs.ToResolverErr(err)

@@ -17,8 +17,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	teamyClient "github.com/teamyapp/teamy-backend/core/client"
-
 	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -33,6 +31,7 @@ import (
 	githubEntity "github.com/teamyapp/teamy-backend/apps/github/entity"
 	appsProto "github.com/teamyapp/teamy-backend/apps/proto"
 	"github.com/teamyapp/teamy-backend/core/api/proto"
+	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -40,6 +39,7 @@ import (
 
 const githubAppPathPrefix = "/apps/github"
 const teamIDParam = "teamId"
+const userIDParam = "userId"
 
 const codeReviewMaxWait = 24 * time.Hour
 const authProvider = "github"
@@ -74,6 +74,11 @@ func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
 			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "status"),
+			HandlerFunc: a.webGetTeamStatus,
+		},
+		{
+			Method:      http.MethodGet,
 			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "install"),
 			HandlerFunc: a.webInstall,
 		},
@@ -93,15 +98,64 @@ func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 			HandlerFunc: a.webListRequiredActionsForCurrentUser,
 		},
 		{
+			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "required-actions", "users", runner.Param(userIDParam)),
+			HandlerFunc: a.webListRequiredActionsForUser,
+		},
+		{
 			Method:      http.MethodPost,
 			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "required-actions", "create"),
-			HandlerFunc: a.webCreateRequiredAction,
+			HandlerFunc: a.webCreateRequiredActions,
+		},
+		{
+			Method:      http.MethodPost,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "required-actions", "delete"),
+			HandlerFunc: a.webDeleteRequiredActions,
+		},
+		{
+			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "members"),
+			HandlerFunc: a.webListTeamMembers,
+		},
+		{
+			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "member-groups"),
+			HandlerFunc: a.webListTeamMemberGroups,
 		},
 	})
 	rn.WithGRPCServer(func(server *grpc.Server) {
 		appsProto.RegisterGithubServer(server, a)
 	})
 	return nil
+}
+
+func (a AppAPI) webGetTeamStatus(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
+	if err != nil {
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	isGithubAppInstalled := true
+	_, internalErr := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
+	if internalErr != nil {
+		if internalErr.Code != errs.NotFound {
+			a.logger.ErrorWithContext(ct, internalErr)
+			errs.SetHTTPErr(internalErr, writer)
+			return
+		}
+
+		isGithubAppInstalled = false
+	}
+
+	teamStatus := entity.TeamStatus{
+		IsGithubAppInstalled: isGithubAppInstalled,
+	}
+	web.WriteJSONToResponse(writer, teamStatus)
 }
 
 func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
@@ -316,12 +370,161 @@ func (a AppAPI) webListRequiredActionsForCurrentUser(writer http.ResponseWriter,
 	}
 
 	requiredUserActions = collect.Filter(requiredUserActions, func(action entity.GithubRequiredUserAction) bool {
-		return action.IsCompleted == false
+		return !action.IsCompleted
 	})
+
+	requiredActionMap := make(map[entity.GithubUserActionType]entity.GithubRequiredUserAction)
+	for _, action := range requiredUserActions {
+		requiredActionMap[action.UserActionType] = action
+	}
+
 	web.WriteJSONToResponse(writer, requiredUserActions)
 }
 
-func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *http.Request) {
+func (a AppAPI) webListRequiredActionsForUser(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
+	_, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
+	if err != nil {
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	userIDRaw := chi.URLParam(request, userIDParam)
+	userID, err := strconv.ParseUint(userIDRaw, 10, 64)
+	if err != nil {
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide userId")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	requiredUserActions, internalErr := a.githubRequiredUserActionDao.
+		FindRequiredUserActionsByActionUserID(ct, teamID, userID)
+	if internalErr != nil {
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	// TODO: receive notification from cloud and update required action status
+	requiredUserActions, internalErr = a.refreshRequiredActionsStatus(ct, userID, requiredUserActions)
+	if err != nil {
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	requiredActionMap := make(map[entity.GithubUserActionType]entity.GithubRequiredUserAction)
+	for _, action := range requiredUserActions {
+		requiredActionMap[action.UserActionType] = action
+	}
+
+	web.WriteJSONToResponse(writer, requiredActionMap)
+}
+
+func (a AppAPI) webListTeamMembers(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
+	_, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
+	if err != nil {
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	listTeamMembersReq := &proto.ListTeamMembersRequest{TeamId: teamID}
+	listTeamMembersRes, err := a.teamyClientRegistry.TeamClient().ListTeamMembers(ct, listTeamMembersReq)
+	if err != nil {
+		internalErr := errs.FromGRPCErr(err)
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	teamMembers := make([]entity.TeamMember, 0)
+	for _, member := range listTeamMembersRes.TeamMembers {
+		userLinks, internalErr := a.listUserLinks(ct, member.UserId)
+		if internalErr != nil {
+			a.logger.ErrorWithContext(ct, internalErr)
+			errs.SetHTTPErr(internalErr, writer)
+			return
+		}
+
+		githubUserLinks := collect.Filter(userLinks, func(userLink *cloudProto.UserLink) bool {
+			return userLink.AuthProvider == authProvider
+		})
+
+		teamMembers = append(teamMembers, entity.TeamMember{
+			UserID:           member.UserId,
+			FirstName:        member.FirstName,
+			LastName:         member.LastName,
+			ProfileURL:       member.ProfileUrl,
+			HasGithubAccount: len(githubUserLinks) > 0,
+		})
+	}
+
+	web.WriteJSONToResponse(writer, teamMembers)
+}
+
+func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
+	_, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
+	if err != nil {
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	listTeamMemberGroupsReq := &proto.ListMemberGroupsRequest{TeamId: teamID}
+	listTeamMemberGroupsRes, err := a.teamyClientRegistry.TeamClient().ListMemberGroups(ct, listTeamMemberGroupsReq)
+	if err != nil {
+		internalErr := errs.FromGRPCErr(err)
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	teamMemberGroups := collect.Map(listTeamMemberGroupsRes.Groups, func(group *proto.TeamMemberGroup, _ int) entity.TeamMemberGroup {
+		return entity.TeamMemberGroup{
+			ID:            group.GroupId,
+			Name:          group.Name,
+			MemberUserIDs: group.MemberUserIds,
+		}
+	})
+	web.WriteJSONToResponse(writer, teamMemberGroups)
+}
+
+func (a AppAPI) webCreateRequiredActions(writer http.ResponseWriter, request *http.Request) {
 	ct := request.Context()
 	requestSenderID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
@@ -342,7 +545,7 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 
 	body := struct {
 		UserActionType entity.GithubUserActionType `json:"userActionType"`
-		ActionUserID   uint64                      `json:"actionUserId"`
+		ActionUserIDs  []uint64                    `json:"actionUserIds"`
 	}{}
 	buf, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -360,30 +563,79 @@ func (a AppAPI) webCreateRequiredAction(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	genActionIDReq := &cloudProto.GenerateUniqueNumberRequest{SequenceName: "githubRequiredActionID"}
-	genActionIDRes, err := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActionIDReq)
+	for _, actionUserID := range body.ActionUserIDs {
+		action := entity.GithubRequiredUserAction{
+			TeamID:            teamID,
+			ActionUserID:      actionUserID,
+			UserActionType:    body.UserActionType,
+			IsCompleted:       false,
+			RequestedAt:       time.Now().UTC(),
+			RequestedByUserID: requestSenderID,
+		}
+
+		_, internalErr := a.githubRequiredUserActionDao.FindRequiredUserActionByActionTypeAndUserID(
+			ct,
+			teamID,
+			body.UserActionType,
+			actionUserID)
+		if internalErr == nil {
+			continue
+		}
+
+		if internalErr.Code != errs.NotFound {
+			a.logger.ErrorWithContext(ct, internalErr)
+			errs.SetHTTPErr(internalErr, writer)
+			return
+		}
+
+		internalErr = a.githubRequiredUserActionDao.CreateRequiredUserAction(ct, action)
+		if internalErr != nil {
+			a.logger.ErrorWithContext(ct, internalErr)
+			errs.SetHTTPErr(internalErr, writer)
+			return
+		}
+	}
+
+	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (a AppAPI) webDeleteRequiredActions(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
+	_, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		internalErr := errs.NewError(errs.Unauthenticated, "user id not found")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	body := struct {
+		UserActionType entity.GithubUserActionType `json:"userActionType"`
+		ActionUserIDs  []uint64                    `json:"actionUserIds"`
+	}{}
+	buf, err := io.ReadAll(request.Body)
 	if err != nil {
-		internalErr := errs.FromGRPCErr(err)
+		internalErr := errs.NewError(errs.IO, err.Error())
 		a.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
 	}
 
-	action := entity.GithubRequiredUserAction{
-		ID:                genActionIDRes.UniqueNumber,
-		TeamID:            teamID,
-		ActionUserID:      body.ActionUserID,
-		UserActionType:    body.UserActionType,
-		IsCompleted:       false,
-		RequestedAt:       time.Now().UTC(),
-		RequestedByUserID: requestSenderID,
-	}
-
-	internalErr := a.githubRequiredUserActionDao.CreateRequiredUserAction(ct, action)
-	if internalErr != nil {
+	err = json.Unmarshal(buf, &body)
+	if err != nil {
+		internalErr := errs.NewError(errs.Deserialization, err.Error())
 		a.logger.ErrorWithContext(ct, internalErr)
 		errs.SetHTTPErr(internalErr, writer)
 		return
+	}
+
+	for _, requiredActionID := range body.ActionUserIDs {
+		internalErr := a.githubRequiredUserActionDao.DeleteRequiredUserActionsByActionTypeAndUserID(ct, body.UserActionType, requiredActionID)
+		if internalErr != nil {
+			a.logger.ErrorWithContext(ct, internalErr)
+			errs.SetHTTPErr(internalErr, writer)
+			return
+		}
 	}
 
 	writer.WriteHeader(http.StatusNoContent)
@@ -419,28 +671,37 @@ func (a AppAPI) refreshRequiredActionStatus(
 ) (entity.GithubRequiredUserAction, *errs.Error) {
 	switch requiredAction.UserActionType {
 	case entity.LinkGithubAccountGithubUserActionType:
-		listUserLinksReq := &cloudProto.ListUserLinksRequest{InternalUserId: userID}
-		listUserLinksRes, err := a.cloudClientRegistry.IdentityClient().ListUserLinks(ct, listUserLinksReq)
-		if err != nil {
-			internalErr := errs.FromGRPCErr(err)
+		userLinks, internalErr := a.listUserLinks(ct, userID)
+		if internalErr != nil {
 			return entity.GithubRequiredUserAction{}, internalErr
 		}
 
-		userLinks := collect.Filter(listUserLinksRes.UserLinks, func(userLink *cloudProto.UserLink) bool {
+		githubUserLinks := collect.Filter(userLinks, func(userLink *cloudProto.UserLink) bool {
 			return userLink.AuthProvider == authProvider
 		})
-		if len(userLinks) == 0 {
+		if len(githubUserLinks) == 0 {
 			return requiredAction, nil
 		}
 
 		requiredAction.IsCompleted = true
-		internalErr := a.githubRequiredUserActionDao.UpdateRequiredUserAction(ct, requiredAction)
+		internalErr = a.githubRequiredUserActionDao.UpdateRequiredUserAction(ct, requiredAction)
 		if internalErr != nil {
 			return entity.GithubRequiredUserAction{}, internalErr
 		}
 	}
 
 	return requiredAction, nil
+}
+
+func (a AppAPI) listUserLinks(ct context.Context, userID uint64) ([]*cloudProto.UserLink, *errs.Error) {
+	listUserLinksReq := &cloudProto.ListUserLinksRequest{InternalUserId: userID}
+	listUserLinksRes, err := a.cloudClientRegistry.IdentityClient().ListUserLinks(ct, listUserLinksReq)
+	if err != nil {
+		internalErr := errs.FromGRPCErr(err)
+		return nil, internalErr
+	}
+
+	return listUserLinksRes.UserLinks, nil
 }
 
 func (a AppAPI) processEvent(ct context.Context, evtType githubEntity.EventType, payload []byte) *errs.Error {
@@ -646,12 +907,14 @@ func (a AppAPI) createPullRequestTaskRelation(
 	automaticTracking bool,
 	pullRequestURL string,
 	pullRequestNodeID string,
+	pullRequestTitle string,
 ) *errs.Error {
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       taskID,
-		Title:        "View pull request on Github",
+		Title:        pullRequestTitle,
+		PreviewTitle: "View pull request on Github",
 		Url:          pullRequestURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,
@@ -844,7 +1107,7 @@ func (a AppAPI) createTasksForPullRequest(ct context.Context, teamID uint64, evt
 			return err
 		}
 
-		err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID)
+		err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID, prEvt.PullRequest.Title)
 		if err != nil {
 			return err
 		}
@@ -909,7 +1172,9 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 				mentionedTask.TaskId,
 				false,
 				prEvt.PullRequest.HtmlURL,
-				prEvt.PullRequest.NodeID)
+				prEvt.PullRequest.NodeID,
+				prEvt.PullRequest.Title,
+			)
 			if err != nil {
 				return err
 			}
@@ -1029,7 +1294,9 @@ func (a AppAPI) createAutomaticTrackingTask(
 		createTaskRes.TaskId,
 		true,
 		pullRequestURL,
-		pullRequestNodeID)
+		pullRequestNodeID,
+		pullRequestTitle,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -1362,7 +1629,8 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &proto.CreateTaskLinkRequest{
 		TaskId:       createTaskRes.TaskId,
-		Title:        "View pull request on Github",
+		Title:        prEvt.PullRequest.Title,
+		PreviewTitle: "View pull request on Github",
 		Url:          prEvt.PullRequest.HtmlURL,
 		IconUrl:      &iconURL,
 		IconHoverUrl: &iconHoverURL,

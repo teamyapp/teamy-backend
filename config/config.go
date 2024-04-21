@@ -25,6 +25,10 @@ type App struct {
 	RequestTimeout              time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10s"`
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
 	TeamyWebUIBaseURL           string        `envconfig:"TEAMY_WEB_UI_BASE_URL" default:"http://localhost:3000"`
+	JWTSigningKey               string        `envconfig:"JWT_SIGNING_KEY" default:""`
+	CacheCapacity               int           `envconfig:"CACHE_CAPACITY" default:"100000"`
+	TimeBasedCacheBucketCount   int           `envconfig:"TIME_BASED_CACHE_BUCKET_COUNT" default:"1000"`
+	TimeBasedCacheTTL           time.Duration `envconfig:"TIME_BASED_CACHE_TTL" default:"5s"`
 }
 
 func AppFromEnv() (App, *errs.Error) {

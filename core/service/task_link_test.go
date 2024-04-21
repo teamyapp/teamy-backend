@@ -12,21 +12,24 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
+	"github.com/teamyapp/teamy-backend/core/activity"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type TaskLinkTestRef struct {
@@ -62,7 +65,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
 	require.Nil(t, internalErr)
 
-	noopMetrics := metricstest.NewNoopMetrics()
+	noopMetrics := instrumenttest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -90,7 +93,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
-	transactionFactory := transaction.NewFactory(nil)
+	transactionFactory := cloudtx.NewFactory(nil)
 
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.ThreadTableName)
@@ -98,7 +101,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
-	activityCache := cache.NewActivity(logger)
+	activityCache := activity.NewActivity(logger)
 
 	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
 	threadDao := daotest.NewThread(teamyBackendDB)
@@ -106,50 +109,69 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	taskAwaitForRelationDao := daotest.NewTaskAwaitForRelation(teamyBackendDB)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
+	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
 	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
-	teamGroupDao := daotest.NewTeamGroup(teamyBackendDB, transactionFactory)
+	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
+	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
+	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
+	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return TaskLinkTestRef{}, false
+	}
+
 	teamService := NewTeam(
 		logger,
+		transactionGroupFactory,
 		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
 		authorizer,
 		toggles,
 		stateSyncer,
 		transactionFactory,
+		timeBasedCache,
 		taskDao,
 		sprintDao,
 		sprintParticipantDao,
 		teamDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
-		teamGroupDao,
+		teamMemberGroupDao,
+		teamMemberGroupUserRelationDao,
+		teamMemberGroupRepo,
 	)
 	taskService := NewTask(
 		logger,
+		transactionGroupFactory,
 		cloudClientRegistry,
 		authorizer,
 		toggles,
 		stateSyncer,
 		transactionFactory,
 		activityCache,
+		timeBasedCache,
 		taskDao,
 		threadDao,
 		sprintDao,
 		taskAwaitForRelationDao,
 		sprintParticipantDao,
 		sprintTaskRelationDao,
+		storyTaskRelationDao,
 	)
 
 	teamyBackendDB.CreateTable(daotest.TaskLinkTableName)
 	taskLinkDao := daotest.NewTaskLink(teamyBackendDB)
 	taskLinkService := NewTaskLink(
 		logger,
+		transactionGroupFactory,
 		cloudClientRegistry,
 		transactionFactory,
 		authorizer,
 		toggles,
 		stateSyncer,
+		timeBasedCache,
 		taskLinkDao,
 		taskDao,
 	)
@@ -302,7 +324,7 @@ func TestTaskLinkService_CreateTaskLink(t *testing.T) {
 			taskInput := CreateTaskInput{
 				Goal:        "Unit test",
 				OwnerUserID: &ownerUserID,
-				IsPlanned:   true,
+				IsScheduled: true,
 				DueAt:       &now,
 			}
 			newTask, internalErr := taskLinkTestRef.taskService.CreateTask(ct, teamID, taskInput)

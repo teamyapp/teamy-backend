@@ -10,11 +10,15 @@ import (
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appSecretDaoName = "AppSecret"
+
 type AppSecret struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
-func (*AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Transaction, appSecretID uint64) (entity.AppSecret, *errs.Error) {
+func (a *AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Transaction, appSecretID uint64) (entity.AppSecret, *errs.Error) {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "FindAppSecretByIDWithTx")
 	appSecret := entity.AppSecret{}
 	err := tx.SQLTx().QueryRowContext(
 		ct,
@@ -26,7 +30,7 @@ func (*AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Tr
 			added_at,
 			added_by_user_id,
 			last_used_at
-		FROM app_secrets
+		FROM app_secret
 		WHERE id = $1`,
 		appSecretID,
 	).Scan(
@@ -46,6 +50,7 @@ func (*AppSecret) FindAppSecretByIDWithTx(ct context.Context, tx *transaction.Tr
 }
 
 func (a *AppSecret) FindAppSecretsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppSecret, *errs.Error) {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "FindAppSecretsByAppIDWithTx")
 	rows, err := tx.SQLTx().QueryContext(ct,
 		`
 		SELECT
@@ -55,7 +60,7 @@ func (a *AppSecret) FindAppSecretsByAppIDWithTx(ct context.Context, tx *transact
 			added_at,
 			added_by_user_id,
 			last_used_at
-		FROM app_secrets
+		FROM app_secret
 		WHERE app_id = $1`,
 		appID,
 	)
@@ -88,6 +93,7 @@ func (a *AppSecret) FindAppSecretsByAppIDWithTx(ct context.Context, tx *transact
 }
 
 func (a *AppSecret) FindSecretsByAppID(ct context.Context, appID uint64) ([]entity.AppSecret, *errs.Error) {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "FindSecretsByAppID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -100,25 +106,32 @@ func (a *AppSecret) FindSecretsByAppID(ct context.Context, appID uint64) ([]enti
 	return a.FindAppSecretsByAppIDWithTx(ct, tx, appID)
 }
 
-func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transaction, appSecret entity.AppSecret) *errs.Error {
+func (a *AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transaction, appSecret entity.AppSecret) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "CreateAppSecret")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		INSERT INTO app_secrets (
+		INSERT INTO app_secret (
+			id,
 			app_id,
 			name,
+			secret,
 			added_at,
 			added_by_user_id,
 			last_used_at
-		) 
+		)
 		VALUES (
 			$1,
 			$2,
 			$3,
 			$4,
-			$5
+			$5,
+			$6,
+			$7
 		)`,
+		appSecret.ID,
 		appSecret.AppID,
 		appSecret.Name,
+		appSecret.Secret,
 		appSecret.AddedAt,
 		appSecret.AddedByUserID,
 		appSecret.LastUsedAt,
@@ -131,17 +144,20 @@ func (*AppSecret) CreateAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error {
+func (a *AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64, appSecret entity.AppSecret) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "UpdateAppSecret")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		UPDATE app_secrets SET
+		UPDATE app_secret SET
 			name = $1,
-			added_at = $2,
-			added_by_user_id = $3,
-			last_used_at = $4,
-			app_id = $5
-		WHERE id = $6`,
+			secret = $2,
+			added_at = $3,
+			added_by_user_id = $4,
+			last_used_at = $5,
+			app_id = $6
+		WHERE id = $7`,
 		appSecret.Name,
+		appSecret.Secret,
 		appSecret.AddedAt,
 		appSecret.AddedByUserID,
 		appSecret.LastUsedAt,
@@ -156,10 +172,11 @@ func (*AppSecret) UpdateAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
-func (*AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error {
+func (a *AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transaction, appSecretID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "DeleteAppSecret")
 	_, err := tx.SQLTx().ExecContext(ct,
 		`
-		DELETE FROM app_secrets
+		DELETE FROM app_secret
 		WHERE id = $1`,
 		appSecretID,
 	)
@@ -171,10 +188,30 @@ func (*AppSecret) DeleteAppSecret(ct context.Context, tx *transaction.Transactio
 	return nil
 }
 
+func (a *AppSecret) DeleteAppSecretsByAppID(ct context.Context, tx *transaction.Transaction, appID uint64) *errs.Error {
+	a.metrics.ReportDaoOperation(appSecretDaoName, "DeleteAppSecretsByAppID")
+	_, err := tx.SQLTx().ExecContext(ct,
+		`
+		DELETE FROM app_secret
+		WHERE app_id = $1`,
+		appID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 var _ dao.AppSecret = (*AppSecret)(nil)
 
-func NewAppSecret(transactionFactory transaction.Factory) *AppSecret {
+func NewAppSecret(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppSecret {
 	return &AppSecret{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

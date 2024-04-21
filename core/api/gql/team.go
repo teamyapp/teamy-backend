@@ -84,6 +84,18 @@ func (t Team) TaskActivities(ct context.Context) ([]TaskActivity, error) {
 	}), nil
 }
 
+func (t Team) Projects(ct context.Context) ([]Project, error) {
+	projects, err := t.deps.projectService.FindProjectsByTeamID(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(projects, func(project entity.Project, _ int) Project {
+		return newProject(t.deps, project)
+	}), nil
+}
+
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
 }) ([]Task, error) {
@@ -157,11 +169,27 @@ func (t Team) Sprints(ct context.Context, args struct {
 }
 
 func (t Team) AppInstallations(ct context.Context) ([]TeamAppInstallation, error) {
-	panic("not implemented")
+	teamAppInstallations, err := t.deps.appService.FindTeamAppInstallationsByTeamID(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(teamAppInstallations, func(teamAppInstallation entity.TeamAppInstallation, index int) TeamAppInstallation {
+		return newTeamAppInstallation(t.deps, teamAppInstallation)
+	}), nil
 }
 
 func (t Team) ManagedApps(ct context.Context) ([]App, error) {
-	panic("not implemented")
+	apps, err := t.deps.appService.FindAppsByManagedByTeamID(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(apps, func(app entity.App, index int) App {
+		return newApp(t.deps, app)
+	}), nil
 }
 
 func newTeam(deps *Dependencies, team entity.Team) Team {

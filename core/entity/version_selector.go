@@ -1,5 +1,7 @@
 package entity
 
+import "time"
+
 type VersionSelectorType string
 
 const (
@@ -14,8 +16,11 @@ type VersionSelectorUnion struct {
 }
 
 type VersionSelector struct {
-	ID   uint64
-	Type VersionSelectorType
+	ID        uint64
+	Type      VersionSelectorType
+	Locked    bool
+	CreatedAt time.Time
+	UpdatedAt *time.Time
 }
 
 type StaticVersionSelector struct {

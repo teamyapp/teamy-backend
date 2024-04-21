@@ -3,12 +3,14 @@ package realtime
 type CollectionType string
 
 const (
+	AppVersionCollectionType           CollectionType = "AppVersion"
+	AppVersionChangeCollectionType     CollectionType = "AppVersionChange"
 	TaskCollectionType                 CollectionType = "Task"
 	TaskLinkCollectionType             CollectionType = "TaskLink"
 	InvitationCollectionType           CollectionType = "Invitation"
 	MessageCollectionType              CollectionType = "Message"
 	TeamCollectionType                 CollectionType = "Team"
-	TeamGroupCollectionType            CollectionType = "TeamGroup"
+	TeamMemberGroupCollectionType      CollectionType = "TeamMemberGroup"
 	UserCollectionType                 CollectionType = "User"
 	ThreadCollectionType               CollectionType = "Thread"
 	TeamMemberCollectionType           CollectionType = "TeamMember"
@@ -18,4 +20,5 @@ const (
 	ClientCollectionType               CollectionType = "Client"
 	TaskActivityCollectionType         CollectionType = "TaskActivity"
 	SprintParticipantCollectionType    CollectionType = "SprintParticipant"
+	StoryCollectionType                CollectionType = "Story"
 )

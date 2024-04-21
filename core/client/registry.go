@@ -13,9 +13,26 @@ import (
 
 type Registry struct {
 	conn           *grpc.ClientConn
+	teamClient     proto.TeamClient
+	sprintClient   proto.SprintClient
 	taskClient     proto.TaskClient
 	taskLinkClient proto.TaskLinkClient
-	sprintClient   proto.SprintClient
+}
+
+func (r *Registry) TeamClient() proto.TeamClient {
+	if r.teamClient == nil {
+		r.teamClient = proto.NewTeamClient(r.conn)
+	}
+
+	return r.teamClient
+}
+
+func (r *Registry) SprintClient() proto.SprintClient {
+	if r.sprintClient == nil {
+		r.sprintClient = proto.NewSprintClient(r.conn)
+	}
+
+	return r.sprintClient
 }
 
 func (r *Registry) TaskClient() proto.TaskClient {
@@ -32,14 +49,6 @@ func (r *Registry) TaskLinkClient() proto.TaskLinkClient {
 	}
 
 	return r.taskLinkClient
-}
-
-func (r *Registry) SprintClient() proto.SprintClient {
-	if r.sprintClient == nil {
-		r.sprintClient = proto.NewSprintClient(r.conn)
-	}
-
-	return r.sprintClient
 }
 
 func NewRegistry(

@@ -7,60 +7,65 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
-	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/dao/entity"
 )
 
+const maxViewersActivatorDaoName = "MaxViewersActivator"
+
 type MaxViewersActivator struct {
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.MaxViewersActivator = (*MaxViewersActivator)(nil)
 
-func (*MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
+func (m *MaxViewersActivator) FindMaxViewersActivatorByIDWithTx(
 	ct context.Context,
 	tx *transaction.Transaction,
 	activatorID uint64,
-) (entity.MaxViewersActivator, *errs.Error) {
-	maxViewersActivator := entity.MaxViewersActivator{}
+) (entity.PartialMaxViewersActivator, *errs.Error) {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "FindMaxViewersActivatorByIDWithTx")
+	maxViewersActivator := entity.PartialMaxViewersActivator{}
 	err := tx.SQLTx().QueryRowContext(ct,
 		`
 			SELECT
-				activator_id,
 				max_viewers
 			FROM max_viewers_activator
 			WHERE activator_id = $1
 		`,
 		activatorID,
 	).Scan(
-		&maxViewersActivator.Activator.ID,
 		&maxViewersActivator.MaxViewers,
 	)
 
 	if err != nil {
-		return entity.MaxViewersActivator{}, errs.NewError(errs.Unknown, err.Error())
+		return entity.PartialMaxViewersActivator{}, errs.NewError(errs.Unknown, err.Error())
 	}
 
 	return maxViewersActivator, nil
 }
 
-func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, ActivatorID uint64) (entity.MaxViewersActivator, *errs.Error) {
+func (m *MaxViewersActivator) FindMaxViewersActivatorByID(ct context.Context, ActivatorID uint64) (entity.PartialMaxViewersActivator, *errs.Error) {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "FindMaxViewersActivatorByID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
 	tx, err := m.transactionFactory.BeginTx(ct, &opt)
 	if err != nil {
-		return entity.MaxViewersActivator{}, err
+		return entity.PartialMaxViewersActivator{}, err
 	}
 
 	defer tx.Rollback()
 	return m.FindMaxViewersActivatorByIDWithTx(ct, tx, ActivatorID)
 }
 
-func (*MaxViewersActivator) CreateMaxViewersActivator(
+func (m *MaxViewersActivator) CreateMaxViewersActivator(
 	ct context.Context,
 	tx *transaction.Transaction,
-	activator entity.MaxViewersActivator,
+	activatorID uint64,
+	activator entity.PartialMaxViewersActivator,
 ) *errs.Error {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "CreateMaxViewersActivator")
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
@@ -73,7 +78,7 @@ func (*MaxViewersActivator) CreateMaxViewersActivator(
 				$2
 			)
 		`,
-		activator.Activator.ID,
+		activatorID,
 		activator.MaxViewers,
 	)
 
@@ -84,8 +89,59 @@ func (*MaxViewersActivator) CreateMaxViewersActivator(
 	return nil
 }
 
-func NewMaxViewersActivator(transactionFactory transaction.Factory) *MaxViewersActivator {
+func (m *MaxViewersActivator) UpdateMaxViewersActivator(
+	ct context.Context,
+	tx *transaction.Transaction,
+	activatorID uint64,
+	activator entity.PartialMaxViewersActivator,
+) *errs.Error {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "UpdateMaxViewersActivator")
+	_, err := tx.SQLTx().ExecContext(
+		ct,
+		`
+			UPDATE max_viewers_activator
+			SET max_viewers = $1
+			WHERE activator_id = $2
+		`,
+		activator.MaxViewers,
+		activatorID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (m *MaxViewersActivator) DeleteMaxViewersActivator(
+	ct context.Context,
+	tx *transaction.Transaction,
+	activatorID uint64,
+) *errs.Error {
+	m.metrics.ReportDaoOperation(maxViewersActivatorDaoName, "DeleteMaxViewersActivator")
+	_, err := tx.SQLTx().ExecContext(
+		ct,
+		`
+			DELETE FROM max_viewers_activator
+			WHERE activator_id = $1
+		`,
+		activatorID,
+	)
+
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func NewMaxViewersActivator(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *MaxViewersActivator {
 	return &MaxViewersActivator{
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

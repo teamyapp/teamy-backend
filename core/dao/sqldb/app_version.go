@@ -5,20 +5,22 @@ import (
 	"database/sql"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const appVersionDaoName = "AppVersion"
+
 type AppVersion struct {
-	logger             telemetry.Logger
+	metrics            dao.Metrics
 	transactionFactory transaction.Factory
 }
 
 var _ dao.AppVersion = (*AppVersion)(nil)
 
 func (a *AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionByAppIDAndVersionNumber")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -32,6 +34,7 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumber(ct context.Context, a
 }
 
 func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) ([]entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionsByAppIDWithTx")
 	appVersions := []entity.AppVersion{}
 	rows, err := tx.SQLTx().QueryContext(ct, `
 		SELECT
@@ -41,8 +44,11 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 			has_ui_extension,
 			description,
 			created_at,
+			updated_at,
 			created_by_user_id,
-			is_ready
+			status,
+	        locked,
+			error_message
 		FROM app_version
 		WHERE app_id = $1;`,
 		appID,
@@ -62,8 +68,11 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 			&appVersion.HasUiExtension,
 			&appVersion.Description,
 			&appVersion.CreatedAt,
+			&appVersion.UpdatedAt,
 			&appVersion.CreatedByUserID,
-			&appVersion.IsReady,
+			&appVersion.Status,
+			&appVersion.Locked,
+			&appVersion.ErrorMessage,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -76,6 +85,7 @@ func (a *AppVersion) FindAppVersionsByAppIDWithTx(ct context.Context, tx *transa
 }
 
 func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([]entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionsByAppID")
 	opt := sql.TxOptions{
 		ReadOnly: true,
 	}
@@ -101,6 +111,7 @@ func (a *AppVersion) FindAppVersionsByAppID(ct context.Context, appID uint64) ([
 }
 
 func (a *AppVersion) FindMaxVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64) (int, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindMaxVersionNumberWithTx")
 	var versionNumber int
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
@@ -119,6 +130,7 @@ func (a *AppVersion) FindMaxVersionNumberWithTx(ct context.Context, tx *transact
 }
 
 func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "CreateAppVersion")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		INSERT INTO app_version (
 			app_id,
@@ -127,8 +139,11 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			has_ui_extension,
 			description,
 			created_at,
+			updated_at,
 			created_by_user_id,
-			is_ready
+			status,
+			locked,
+			error_message
 		) VALUES (
 			$1,
 			$2,
@@ -137,7 +152,10 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 			$5,
 			$6,
 			$7,
-			$8
+			$8,
+			$9,
+			$10,
+			$11
 		);`,
 		appVersion.AppID,
 		appVersion.Number,
@@ -145,8 +163,11 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 		appVersion.HasUiExtension,
 		appVersion.Description,
 		appVersion.CreatedAt,
+		appVersion.UpdatedAt,
 		appVersion.CreatedByUserID,
-		appVersion.IsReady,
+		appVersion.Status,
+		appVersion.Locked,
+		appVersion.ErrorMessage,
 	)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
@@ -155,19 +176,28 @@ func (a *AppVersion) CreateAppVersion(ct context.Context, tx *transaction.Transa
 	return nil
 }
 
-func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
+func (a *AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transaction, appVersion entity.AppVersion) *errs.Error {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "UpdateAppVersion")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		UPDATE app_version
 		SET
 			app_name = $1,
 			has_ui_extension = $2,
 			description = $3,
-			is_ready = $4
-		WHERE app_id = $5 AND number = $6;`,
+			status = $4,
+			locked = $5,
+			created_at = $6,
+			updated_at = $7,
+			error_message = $8
+		WHERE app_id = $9 AND number = $10;`,
 		appVersion.AppName,
 		appVersion.HasUiExtension,
 		appVersion.Description,
-		appVersion.IsReady,
+		appVersion.Status,
+		appVersion.Locked,
+		appVersion.CreatedAt,
+		appVersion.UpdatedAt,
+		appVersion.ErrorMessage,
 		appVersion.AppID,
 		appVersion.Number,
 	)
@@ -179,6 +209,7 @@ func (*AppVersion) UpdateAppVersion(ct context.Context, tx *transaction.Transact
 }
 
 func (a *AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) *errs.Error {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "DeleteAppVersion")
 	_, err := tx.SQLTx().ExecContext(ct, `
 		DELETE FROM app_version
 		WHERE app_id = $1 AND number = $2;`,
@@ -192,7 +223,13 @@ func (a *AppVersion) DeleteAppVersion(ct context.Context, tx *transaction.Transa
 	return nil
 }
 
-func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Context, tx *transaction.Transaction, appID uint64, versionNumber int) (entity.AppVersion, *errs.Error) {
+func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	appID uint64,
+	versionNumber int,
+) (entity.AppVersion, *errs.Error) {
+	a.metrics.ReportDaoOperation(appVersionDaoName, "FindAppVersionByAppIDAndVersionNumberWithTx")
 	appVersion := entity.AppVersion{}
 	err := tx.SQLTx().QueryRowContext(ct, `
 		SELECT
@@ -202,8 +239,10 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 			has_ui_extension,
 			description,
 			created_at,
+			updated_at,
 			created_by_user_id,
-			is_ready
+			status,
+			locked
 		FROM app_version
 		WHERE app_id = $1 AND number = $2;`,
 		appID,
@@ -215,8 +254,10 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 		&appVersion.HasUiExtension,
 		&appVersion.Description,
 		&appVersion.CreatedAt,
+		&appVersion.UpdatedAt,
 		&appVersion.CreatedByUserID,
-		&appVersion.IsReady,
+		&appVersion.Status,
+		&appVersion.Locked,
 	)
 	if err != nil {
 		return entity.AppVersion{}, errs.NewError(errs.Unknown, err.Error())
@@ -225,9 +266,12 @@ func (a *AppVersion) FindAppVersionByAppIDAndVersionNumberWithTx(ct context.Cont
 	return appVersion, nil
 }
 
-func NewAppVersion(logger telemetry.Logger, transactionFactory transaction.Factory) *AppVersion {
+func NewAppVersion(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *AppVersion {
 	return &AppVersion{
-		logger:             logger,
+		metrics:            metrics,
 		transactionFactory: transactionFactory,
 	}
 }

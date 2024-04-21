@@ -4,19 +4,21 @@ import (
 	"context"
 
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 )
 
+const sprintTaskRelationDaoName = "SprintTaskRelation"
+
 type SprintTaskRelation struct {
-	logger telemetry.Logger
+	metrics dao.Metrics
 }
 
 var _ dao.SprintTaskRelation = (*SprintTaskRelation)(nil)
 
 func (s SprintTaskRelation) FindTaskIDsBySprintIDWithTx(ct context.Context, tx *transaction.Transaction, sprintID uint64) ([]uint64, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintTaskRelationDaoName, "FindTaskIDsBySprintIDWithTx")
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -48,6 +50,7 @@ func (s SprintTaskRelation) FindTaskIDsBySprintIDWithTx(ct context.Context, tx *
 }
 
 func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *transaction.Transaction, taskID uint64) ([]uint64, *errs.Error) {
+	s.metrics.ReportDaoOperation(sprintTaskRelationDaoName, "FindSprintIDsByTaskIDWithTx")
 	rows, err := tx.SQLTx().Query(
 		`
 	SELECT
@@ -79,6 +82,7 @@ func (s SprintTaskRelation) FindSprintIDsByTaskIDWithTx(ct context.Context, tx *
 }
 
 func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *transaction.Transaction, relation entity.SprintTaskRelation) *errs.Error {
+	s.metrics.ReportDaoOperation(sprintTaskRelationDaoName, "CreateSprintTaskRelation")
 	_, err := tx.SQLTx().Exec(`
 		INSERT INTO sprint_task_relation
 		(
@@ -100,6 +104,7 @@ func (s SprintTaskRelation) CreateSprintTaskRelation(ct context.Context, tx *tra
 }
 
 func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, tx *transaction.Transaction, sprintID uint64, taskID uint64) *errs.Error {
+	s.metrics.ReportDaoOperation(sprintTaskRelationDaoName, "DeleteSprintTaskRelation")
 	_, err := tx.SQLTx().Exec(`
 		DELETE FROM sprint_task_relation
 		WHERE sprint_id = $1 AND task_id = $2;
@@ -114,6 +119,8 @@ func (s SprintTaskRelation) DeleteSprintTaskRelation(ct context.Context, tx *tra
 	return nil
 }
 
-func NewSprintTaskRelation(logger telemetry.Logger) SprintTaskRelation {
-	return SprintTaskRelation{logger: logger}
+func NewSprintTaskRelation(metrics dao.Metrics) SprintTaskRelation {
+	return SprintTaskRelation{
+		metrics: metrics,
+	}
 }

@@ -10,11 +10,24 @@ type TaskFilter struct {
 	OwnerID      *graphql.ID
 	GoalContains *string
 	Status       *entity.TaskStatus
+	IsScheduled  *bool
 	IsPlanned    *bool
 }
 
 type TeamFilter struct {
 	TeamID *graphql.ID
+}
+
+type ProjectFilter struct {
+	ProjectID *graphql.ID
+}
+
+type PhaseFilter struct {
+	PhaseID *graphql.ID
+}
+
+type StoryFilter struct {
+	StoryID *graphql.ID
 }
 
 type InvitationFilter struct {
@@ -31,6 +44,6 @@ type SprintFilter struct {
 
 type AppFilter struct {
 	Query         *string
-	Tag           *string
+	TagValues     []string
 	IsOnPromotion *bool
 }

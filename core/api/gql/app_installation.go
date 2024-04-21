@@ -28,9 +28,16 @@ func (t TeamAppInstallation) InstalledTeam(ctx context.Context) (Team, error) {
 }
 
 func (t TeamAppInstallation) ActiveAppVersion(ctx context.Context) (*AppVersion, error) {
-	appVersionNumber, err := t.deps.rolloutService.GetActiveAppVersionNumberForTeam(ctx, t.teamAppInstallation)
+	appVersionNumber, err := t.deps.rolloutService.GetActiveAppVersionNumberForTeam(
+		ctx,
+		t.teamAppInstallation.AppID,
+		t.teamAppInstallation.InstalledTeamID)
 	if err != nil {
 		return nil, errs.ToResolverErr(err)
+	}
+
+	if appVersionNumber == nil {
+		return nil, nil
 	}
 
 	appVersion, err := t.deps.appService.FindAppVersionByAppIDAndNumber(ctx, t.teamAppInstallation.AppID, *appVersionNumber)

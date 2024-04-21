@@ -1,0 +1,117 @@
+package sqldb
+
+import (
+	"context"
+
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
+)
+
+const phaseStoryRelationDaoName = "PhaseStoryRelation"
+
+type PhaseStoryRelation struct {
+	metrics            dao.Metrics
+	transactionFactory transaction.Factory
+}
+
+var _ dao.PhaseStoryRelation = (*PhaseStoryRelation)(nil)
+
+func (p *PhaseStoryRelation) FindStoryIDsByPhaseIDWithTx(ct context.Context, tx *transaction.Transaction, phaseID uint64) ([]uint64, *errs.Error) {
+	p.metrics.ReportDaoOperation(phaseStoryRelationDaoName, "FindStoryIDsByPhaseIDWithTx")
+	var storyIDs []uint64
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			story_id
+		FROM phase_story_relation
+		WHERE phase_id = $1
+	`, phaseID)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var storyID uint64
+		err := rows.Scan(&storyID)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		storyIDs = append(storyIDs, storyID)
+	}
+
+	return storyIDs, nil
+}
+
+func (p *PhaseStoryRelation) CreatePhaseStoryRelation(ct context.Context, tx *transaction.Transaction, phaseStoryRelation entity.PhaseStoryRelation) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseStoryRelationDaoName, "CreatePhaseStoryRelation")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		INSERT INTO phase_story_relation (
+			phase_id,
+			story_id
+		) VALUES (
+			$1,
+			$2
+		)
+	`,
+		phaseStoryRelation.PhaseID,
+		phaseStoryRelation.StoryID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (p *PhaseStoryRelation) DeletePhaseStoryRelation(ct context.Context, tx *transaction.Transaction, phaseID uint64, storyID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseStoryRelationDaoName, "DeletePhaseStoryRelation")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM phase_story_relation
+		WHERE phase_id = $1 AND story_id = $2
+	`,
+		phaseID,
+		storyID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (p *PhaseStoryRelation) DeletePhaseStoryRelationsByPhaseID(ct context.Context, tx *transaction.Transaction, phaseID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseStoryRelationDaoName, "DeletePhaseStoryRelationsByPhaseID")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM phase_story_relation
+		WHERE phase_id = $1
+	`, phaseID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func (p *PhaseStoryRelation) DeletePhaseStoryRelationsByStoryID(ct context.Context, tx *transaction.Transaction, storyID uint64) *errs.Error {
+	p.metrics.ReportDaoOperation(phaseStoryRelationDaoName, "DeletePhaseStoryRelationsByStoryID")
+	_, err := tx.SQLTx().ExecContext(ct, `
+		DELETE FROM phase_story_relation
+		WHERE story_id = $1
+	`, storyID)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func NewPhaseStoryRelation(
+	metrics dao.Metrics,
+	transactionFactory transaction.Factory,
+) *PhaseStoryRelation {
+	return &PhaseStoryRelation{
+		metrics:            metrics,
+		transactionFactory: transactionFactory,
+	}
+}

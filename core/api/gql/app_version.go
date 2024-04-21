@@ -7,6 +7,7 @@ import (
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type AppVersion struct {
@@ -26,14 +27,20 @@ func (a AppVersion) Description(ctx context.Context) string {
 	return a.appVersion.Description
 }
 
-func (a AppVersion) Changes(ctx context.Context) ([]string, error) {
-	changes, err := a.deps.appService.FindAppVersionChangesByAppVersionID(ctx, a.appVersion.AppID, a.appVersion.Number)
+func (a AppVersion) Changes(ctx context.Context) ([]AppVersionChange, error) {
+	changes, err := a.deps.appService.FindAppVersionChangesByAppIDAndVersionNumber(ctx, a.appVersion.AppID, a.appVersion.Number)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ctx, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	return changes, nil
+	return collect.Map(changes, func(change entity.AppVersionChange, index int) AppVersionChange {
+		return newAppVersionChange(a.deps, change)
+	}), nil
+}
+
+func (a AppVersion) HasUiExtension(ctx context.Context) bool {
+	return a.appVersion.HasUiExtension
 }
 
 func (a AppVersion) CreatedAt(ctx context.Context) graphql.Time {
@@ -62,8 +69,12 @@ func (a AppVersion) Prices(ctx context.Context) ([]Money, error) {
 	}), nil
 }
 
-func (a AppVersion) IsReady(ctx context.Context) bool {
-	return a.appVersion.IsReady
+func (a AppVersion) Status(ctx context.Context) entity.AppVersionStatus {
+	return a.appVersion.Status
+}
+
+func (a AppVersion) Locked(ctx context.Context) bool {
+	return a.appVersion.Locked
 }
 
 func (a AppVersion) App(ctx context.Context) (App, error) {
@@ -76,6 +87,10 @@ func (a AppVersion) App(ctx context.Context) (App, error) {
 	return newApp(a.deps, app), nil
 }
 
+func (a AppVersion) ErrorMessage(ctx context.Context) *string {
+	return a.appVersion.ErrorMessage
+}
+
 func newAppVersion(deps *Dependencies, appVersion entity.AppVersion) AppVersion {
 	return AppVersion{deps: deps, appVersion: appVersion}
 }
@@ -83,9 +98,7 @@ func newAppVersion(deps *Dependencies, appVersion entity.AppVersion) AppVersion 
 func (m Mutation) CreateAppVersion(
 	ctx context.Context,
 	args struct {
-		AppID       graphql.ID
-		AppName     string
-		Description string
+		AppID graphql.ID
 	},
 ) (AppVersion, error) {
 	appID, argErr := fromGraphQLID(args.AppID)
@@ -98,7 +111,40 @@ func (m Mutation) CreateAppVersion(
 		return AppVersion{}, errs.ToResolverErr(internalErr)
 	}
 
-	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID, args.AppName, args.Description)
+	appVersion, err := m.deps.appService.CreateAppVersion(ctx, appID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return AppVersion{}, errs.ToResolverErr(err)
+	}
+
+	return newAppVersion(m.deps, appVersion), nil
+}
+
+func (m Mutation) UpdateAppVersion(
+	ctx context.Context,
+	args struct {
+		AppID         graphql.ID
+		VersionNumber int32
+		Input         struct {
+			Status entity.AppVersionStatus
+		}
+	},
+) (AppVersion, error) {
+	appID, argErr := fromGraphQLID(args.AppID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return AppVersion{}, errs.ToResolverErr(internalErr)
+	}
+
+	updateAppVersionInput := service.UpdateAppVersionInput{
+		Status: args.Input.Status,
+	}
+
+	appVersion, err := m.deps.appService.UpdateAppVersion(ctx, appID, int(args.VersionNumber), updateAppVersionInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppVersion{}, errs.ToResolverErr(err)

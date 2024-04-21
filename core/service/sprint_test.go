@@ -12,22 +12,24 @@ import (
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/dbtest"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/metrics/metricstest"
 	"github.com/teamyapp/cloud/libs/network/networktest"
 	"github.com/teamyapp/cloud/libs/retry"
 	"github.com/teamyapp/cloud/libs/retry/backoff"
 	"github.com/teamyapp/cloud/libs/rpc"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/cloud/libs/transaction"
+	cloudtx "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/cloud/testkit"
 	"github.com/teamyapp/teamy-backend/core/authorization"
+	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/dao/daotest"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/instrument/instrumenttest"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/service/servicetest"
+	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
 type SprintTestRef struct {
@@ -39,7 +41,7 @@ type SprintTestRef struct {
 	sprintTaskRelationDao dao.SprintTaskRelation
 	sprintParticipantDao  dao.SprintParticipant
 	cloudTestKit          testkit.TestKit
-	transactionFactory    transaction.Factory
+	transactionFactory    cloudtx.Factory
 }
 
 func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef, bool) {
@@ -70,7 +72,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	apiToken, internalErr := servicetest.GetServiceAccountAPIToken(cloudTestKit.IdentityService)
 	require.Nil(t, internalErr)
 
-	teamyPrometheus := metricstest.NewNoopMetrics()
+	noopMetrics := instrumenttest.NewNoopMetrics()
 	cloudClientCfg := rpc.ConnectionConfig{
 		Host:          testkit.GRPCServerHost,
 		Port:          testkit.GRPCServerPort,
@@ -83,7 +85,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	cloudClientRegistry, err := client.NewRegistry(
 		logger,
 		virtualNetwork,
-		teamyPrometheus,
+		noopMetrics,
 		cloudClientCfg,
 		func() retry.Retry {
 			exponentialBackOff := backoff.NewExponentialBuilder().Build()
@@ -98,7 +100,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	require.Nil(t, err)
 
 	authorizer := client.NewAuthorizer(logger, cloudClientRegistry)
-	transactionFactory := transaction.NewFactory(nil)
+	transactionFactory := cloudtx.NewFactory(nil)
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.TeamTableName)
 	teamyBackendDB.CreateTable(daotest.SprintTableName)
@@ -116,13 +118,22 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	threadDao := daotest.NewThread(teamyBackendDB)
 	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 
+	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
+	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
+	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
+	if err != nil {
+		return SprintTestRef{}, false
+	}
+
 	sprintService := NewSprint(
 		logger,
+		transactionGroupFactory,
 		cloudClientRegistry,
 		stateSyncer,
 		authorizer,
 		toggles,
 		transactionFactory,
+		timeBasedCache,
 		taskDao,
 		sprintDao,
 		teamDao,
@@ -492,7 +503,8 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 				Goal:          "test task",
 				CreatorUserID: 1,
 				Status:        entity.TaskStatusTodo,
-				IsPlanned:     true,
+				IsScheduled:   true,
+				IsPlanned:     false,
 				OwnerUserID:   &testCase.requesterUserID,
 				Effort:        &effort,
 			}
@@ -524,6 +536,7 @@ func TestSprintService_DeleteSprint(t *testing.T) {
 			require.Equal(t, deletedSprint.OwningTeamID, teamID)
 			require.Equal(t, deletedSprint.StartAt, sprint.StartAt)
 			require.Equal(t, deletedSprint.EndAt, sprint.EndAt)
+			require.Equal(t, updatedTask.IsScheduled, false)
 			require.Equal(t, updatedTask.IsPlanned, false)
 			require.Equal(t, updatedTask.Status, entity.TaskStatusTodo)
 		})

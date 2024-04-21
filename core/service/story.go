@@ -1,0 +1,478 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/teamyapp/cloud/app/api/proto"
+	"github.com/teamyapp/cloud/app/client"
+	"github.com/teamyapp/cloud/libs/ctx"
+	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/telemetry"
+	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	"github.com/teamyapp/teamy-backend/core/cache"
+	"github.com/teamyapp/teamy-backend/core/dao"
+	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/feature"
+	"github.com/teamyapp/teamy-backend/core/mutation"
+	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/transaction"
+)
+
+type CreateStoryInput struct {
+	Name     string
+	Status   entity.StoryStatus
+	OwnerID  *uint64
+	Priority *entity.Priority
+}
+
+type UpdateStoryInput struct {
+	Name     string
+	OwnerID  *uint64
+	Status   entity.StoryStatus
+	Priority *entity.Priority
+}
+
+type Story struct {
+	logger                  telemetry.Logger
+	transactionGroupFactory transaction.GroupFactory
+	cloudClientRegistry     *client.Registry
+	authorizer              client.Authorizer
+	featureToggles          feature.Toggles
+	transactionFactory      cloudTransaction.Factory
+	stateSyncer             *realtime.StateSyncer
+	cache                   *cache.TimeBasedCache[string, any]
+	projectDao              dao.Project
+	storyDao                dao.Story
+	projectStoryRelationDao dao.ProjectStoryRelation
+	phaseStoryRelationDao   dao.PhaseStoryRelation
+	storyTaskRelationDao    dao.StoryTaskRelation
+	userDao                 dao.User
+	taskDao                 dao.Task
+}
+
+func (s *Story) FindStories(ct context.Context, storyFilter *StoryFilter) ([]entity.Story, *errs.Error) {
+	var stories []entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			stories, err = s.storyDao.FindStoriesWithTx(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			if storyFilter != nil {
+				stories = filterStories(stories, *storyFilter)
+			}
+
+			return nil
+		})
+
+	return stories, transactionErr
+}
+
+func (s *Story) FindTasksByStoryID(ct context.Context, storyID uint64) ([]entity.Task, *errs.Error) {
+	if s.featureToggles.EnableCache {
+		value, cacheErr := s.cache.Get(ct, findTasksByStoryIDCacheKey(storyID))
+		if cacheErr == nil {
+			return value.([]entity.Task), nil
+		}
+
+		var cacheKeyNotFoundErr cache.KeyNotFoundErr[string]
+		if !errors.As(cacheErr, &cacheKeyNotFoundErr) {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	var tasks []entity.Task
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			taskIDs, err := s.storyTaskRelationDao.FindTaskIDsByStoryIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			tasks, err = s.taskDao.FindTasksByIDsWithTx(ct, tx, taskIDs)
+			return err
+		})
+
+	if transactionErr != nil {
+		return nil, transactionErr
+	}
+
+	if s.featureToggles.EnableCache {
+		cacheErr := s.cache.SetIfExpired(ct, findTasksByStoryIDCacheKey(storyID), tasks)
+		if cacheErr != nil {
+			return nil, errs.NewError(errs.Unknown, cacheErr.Error())
+		}
+	}
+
+	return tasks, nil
+}
+
+func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateStoryInput) (entity.Story, *errs.Error) {
+	userID, ok := ctx.UserIDFromContext(ct)
+	if !ok {
+		return entity.Story{}, errs.NewError(errs.Unauthenticated, "user ID not found")
+	}
+
+	genStoryIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "storyID"}
+	genStoryIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genStoryIDReq)
+	if rpcErr != nil {
+		return entity.Story{}, errs.FromGRPCErr(rpcErr)
+	}
+
+	story := entity.Story{
+		ID:        genStoryIDRes.UniqueNumber,
+		Name:      input.Name,
+		OwnerID:   input.OwnerID,
+		Priority:  input.Priority,
+		Status:    input.Status,
+		CreatorID: userID,
+		IsPlanned: false,
+		CreatedAt: time.Now(),
+	}
+
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			if input.OwnerID != nil {
+				_, err := s.userDao.FindUserByIDWithTx(ct, tx, *input.OwnerID)
+				if err != nil {
+					return err
+				}
+			}
+
+			err := s.storyDao.CreateStory(ct, tx, story)
+			if err != nil {
+				return err
+			}
+
+			_, err = s.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
+			if err != nil {
+				return err
+			}
+
+			projectStoryRelation := entity.ProjectStoryRelation{
+				ProjectID: projectID,
+				StoryID:   story.ID,
+			}
+
+			return s.projectStoryRelationDao.CreateProjectStoryRelation(ct, tx, projectStoryRelation)
+		})
+
+	return story, transactionErr
+}
+
+func (s *Story) UpdateStory(ct context.Context, storyID uint64, input UpdateStoryInput) (entity.Story, *errs.Error) {
+	var story entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			if input.OwnerID != nil {
+				_, err = s.userDao.FindUserByIDWithTx(ct, tx, *input.OwnerID)
+				if err != nil {
+					return err
+				}
+			}
+
+			story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			now := time.Now()
+			story.Name = input.Name
+			story.OwnerID = input.OwnerID
+			story.Status = input.Status
+			story.Priority = input.Priority
+			story.UpdatedAt = &now
+			updateStoryMutation := mutation.NewUpdateStory(
+				s.logger,
+				s.stateSyncer,
+				s.storyDao,
+				s.projectDao,
+				s.projectStoryRelationDao,
+				story,
+			)
+
+			rtTx.AppendMutation(updateStoryMutation)
+			return updateStoryMutation.Execute(ct, tx)
+		})
+
+	return story, transactionErr
+}
+
+func (s *Story) DeleteStory(ct context.Context, storyID uint64) (entity.Story, *errs.Error) {
+	var story entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			err = s.projectStoryRelationDao.DeleteProjectStoryRelationsByStoryID(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			err = s.phaseStoryRelationDao.DeletePhaseStoryRelationsByStoryID(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			err = s.storyTaskRelationDao.DeleteStoryTaskRelationsByStoryID(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			return s.storyDao.DeleteStory(ct, tx, storyID)
+		})
+
+	return story, transactionErr
+}
+
+func (s *Story) AddTaskToStory(ct context.Context, storyID uint64, taskID uint64) (entity.Story, *errs.Error) {
+	var story entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+			if err != nil {
+				return err
+			}
+
+			storyTaskRelation := entity.StoryTaskRelation{
+				StoryID: storyID,
+				TaskID:  taskID,
+			}
+
+			err = s.storyTaskRelationDao.CreateStoryTaskRelation(ct, tx, storyTaskRelation)
+			if err != nil {
+				return err
+			}
+
+			now := time.Now()
+			task.UpdatedAt = &now
+			task.IsPlanned = true
+			updateTaskMutation := mutation.NewUpdateTask(
+				s.logger,
+				s.stateSyncer,
+				s.taskDao,
+				task,
+			)
+
+			err = updateTaskMutation.Execute(ct, tx)
+			if err != nil {
+				return err
+			}
+
+			rtTx.AppendMutation(updateTaskMutation)
+			return nil
+		})
+
+	return story, transactionErr
+}
+
+func (s *Story) AddTasksToStory(ct context.Context, storyID uint64, taskIDs []uint64) (entity.Story, *errs.Error) {
+	var story entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			for _, taskID := range taskIDs {
+				task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+				if err != nil {
+					return err
+				}
+
+				storyTaskRelation := entity.StoryTaskRelation{
+					StoryID: storyID,
+					TaskID:  taskID,
+				}
+
+				err = s.storyTaskRelationDao.CreateStoryTaskRelation(ct, tx, storyTaskRelation)
+				if err != nil {
+					return err
+				}
+
+				now := time.Now()
+				task.UpdatedAt = &now
+				task.IsPlanned = true
+				updateTaskMutation := mutation.NewUpdateTask(
+					s.logger,
+					s.stateSyncer,
+					s.taskDao,
+					task,
+				)
+
+				err = updateTaskMutation.Execute(ct, tx)
+				if err != nil {
+					return err
+				}
+
+				rtTx.AppendMutation(updateTaskMutation)
+			}
+
+			return nil
+		})
+
+	return story, transactionErr
+}
+
+func (s *Story) RemoveTaskFromStory(ct context.Context, storyID uint64, taskID uint64) (entity.Story, *errs.Error) {
+	var story entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+			if err != nil {
+				return err
+			}
+
+			story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			err = s.storyTaskRelationDao.DeleteStoryTaskRelation(ct, tx, storyID, taskID)
+			if err != nil {
+				return err
+			}
+
+			storyIDs, err := s.storyTaskRelationDao.FindStoryIDsByTaskIDWithTx(ct, tx, taskID)
+			if err != nil {
+				return err
+			}
+
+			if len(storyIDs) == 0 {
+				now := time.Now()
+				task.UpdatedAt = &now
+				task.IsPlanned = false
+
+				updateTaskMutation := mutation.NewUpdateTask(
+					s.logger,
+					s.stateSyncer,
+					s.taskDao,
+					task,
+				)
+				err = updateTaskMutation.Execute(ct, tx)
+				if err != nil {
+					return err
+				}
+
+				rtTx.AppendMutation(updateTaskMutation)
+			}
+
+			return nil
+		})
+
+	return story, transactionErr
+}
+
+func (s *Story) RemoveTasksFromStory(ct context.Context, storyID uint64, taskIDs []uint64) (entity.Story, *errs.Error) {
+	var story entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			for _, taskID := range taskIDs {
+				task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+				if err != nil {
+					return err
+				}
+
+				err = s.storyTaskRelationDao.DeleteStoryTaskRelation(ct, tx, storyID, taskID)
+				if err != nil {
+					return err
+				}
+
+				storyIDs, err := s.storyTaskRelationDao.FindStoryIDsByTaskIDWithTx(ct, tx, taskID)
+				if err != nil {
+					return err
+				}
+
+				if len(storyIDs) == 0 {
+					now := time.Now()
+					task.UpdatedAt = &now
+					task.IsPlanned = false
+					updateTaskMutation := mutation.NewUpdateTask(
+						s.logger,
+						s.stateSyncer,
+						s.taskDao,
+						task,
+					)
+					err = updateTaskMutation.Execute(ct, tx)
+					if err != nil {
+						return err
+					}
+
+					rtTx.AppendMutation(updateTaskMutation)
+				}
+			}
+
+			return nil
+		})
+
+	return story, transactionErr
+}
+
+func NewStory(
+	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
+	featureToggles feature.Toggles,
+	transactionFactory cloudTransaction.Factory,
+	stateSyncer *realtime.StateSyncer,
+	cache *cache.TimeBasedCache[string, any],
+	projectDao dao.Project,
+	storyDao dao.Story,
+	projectStoryRelationDao dao.ProjectStoryRelation,
+	phaseStoryRelationDao dao.PhaseStoryRelation,
+	storyTaskRelationDao dao.StoryTaskRelation,
+	userDao dao.User,
+	taskDao dao.Task,
+) *Story {
+	return &Story{
+		logger:                  logger,
+		transactionGroupFactory: transactionGroupFactory,
+		cloudClientRegistry:     cloudClientRegistry,
+		authorizer:              authorizer,
+		featureToggles:          featureToggles,
+		transactionFactory:      transactionFactory,
+		stateSyncer:             stateSyncer,
+		cache:                   cache,
+		projectDao:              projectDao,
+		storyDao:                storyDao,
+		projectStoryRelationDao: projectStoryRelationDao,
+		phaseStoryRelationDao:   phaseStoryRelationDao,
+		storyTaskRelationDao:    storyTaskRelationDao,
+		userDao:                 userDao,
+		taskDao:                 taskDao,
+	}
+}
+
+func findTasksByStoryIDCacheKey(storyID uint64) string {
+	return fmt.Sprintf("FindTasksByStoryID(%d)", storyID)
+}

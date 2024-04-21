@@ -10,8 +10,9 @@ import (
 )
 
 type AppSecret struct {
-	deps      *Dependencies
-	appSecret entity.AppSecret
+	deps         *Dependencies
+	appSecret    entity.AppSecret
+	includeToken bool
 }
 
 func (a AppSecret) ID(ctx context.Context) graphql.ID {
@@ -24,6 +25,25 @@ func (a AppSecret) Name(ctx context.Context) string {
 
 func (a AppSecret) AddedAt(ctx context.Context) graphql.Time {
 	return toGraphQLTime(a.appSecret.AddedAt)
+}
+
+func (a AppSecret) Token(ctx context.Context) (*string, error) {
+	if !a.includeToken {
+		return nil, nil
+	}
+
+	generateTokenInput := service.GenerateTokenInput{
+		SecretID: a.appSecret.ID,
+		Secret:   a.appSecret.Secret,
+	}
+
+	token, err := a.deps.appService.GetAppSecretToken(ctx, generateTokenInput)
+	if err != nil {
+		a.deps.logger.ErrorWithContext(ctx, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return &token, nil
 }
 
 func (a AppSecret) AddedBy(ctx context.Context) (User, error) {
@@ -78,7 +98,7 @@ func (m Mutation) CreateAppSecret(
 		return AppSecret{}, errs.ToResolverErr(err)
 	}
 
-	return newAppSecret(m.deps, appSecret), nil
+	return newAppSecret(m.deps, appSecret, true), nil
 }
 
 func (m Mutation) UpdateAppSecret(
@@ -90,16 +110,6 @@ func (m Mutation) UpdateAppSecret(
 		}
 	},
 ) (AppSecret, error) {
-	appID, internalErr := fromGraphQLID(args.SecretID)
-	if internalErr != nil {
-		internalErr := errs.NewError(
-			errs.InvalidArgument,
-			internalErr.Error(),
-		)
-		m.deps.logger.ErrorWithContext(ctx, internalErr)
-		return AppSecret{}, errs.ToResolverErr(internalErr)
-	}
-
 	secretID, internalErr := fromGraphQLID(args.SecretID)
 	if internalErr != nil {
 		internalErr := errs.NewError(
@@ -111,16 +121,15 @@ func (m Mutation) UpdateAppSecret(
 	}
 
 	updateAppSecretInput := service.UpdateAppSecretInput{
-		AppSecretID: secretID,
-		Name:        args.Input.Name,
+		Name: args.Input.Name,
 	}
-	appSecret, err := m.deps.appService.UpdateAppSecret(ctx, appID, updateAppSecretInput)
+	appSecret, err := m.deps.appService.UpdateAppSecret(ctx, secretID, updateAppSecretInput)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ctx, err)
 		return AppSecret{}, errs.ToResolverErr(err)
 	}
 
-	return newAppSecret(m.deps, appSecret), nil
+	return newAppSecret(m.deps, appSecret, false), nil
 }
 
 func (m Mutation) DeleteAppSecret(
@@ -145,9 +154,9 @@ func (m Mutation) DeleteAppSecret(
 		return AppSecret{}, errs.ToResolverErr(err)
 	}
 
-	return newAppSecret(m.deps, appSecret), nil
+	return newAppSecret(m.deps, appSecret, false), nil
 }
 
-func newAppSecret(deps *Dependencies, appSecret entity.AppSecret) AppSecret {
-	return AppSecret{deps: deps, appSecret: appSecret}
+func newAppSecret(deps *Dependencies, appSecret entity.AppSecret, includeToken bool) AppSecret {
+	return AppSecret{deps: deps, appSecret: appSecret, includeToken: includeToken}
 }

@@ -37,6 +37,10 @@ func fromGraphQLTimePtr(tm *graphql.Time) *time.Time {
 	return &tm.Time
 }
 
+func fromGraphQLTime(tm graphql.Time) time.Time {
+	return tm.Time
+}
+
 func toGraphQLDurationPtr(du *time.Duration) *scalar.Duration {
 	if du == nil {
 		return nil
@@ -58,7 +62,7 @@ func fromGraphQLIDPtr(graphqlID *graphql.ID) (*uint64, error) {
 	return &id, err
 }
 
-func intPtrFromIntPtr(num *int32) *int {
+func intPtrFromInt32Ptr(num *int32) *int {
 	if num == nil {
 		return nil
 	}
@@ -100,6 +104,7 @@ func fromGraphQLTaskFilterPtr(gqlTaskFilter *TaskFilter) (*service.TaskFilter, e
 		OwnerID:      ownerID,
 		GoalContains: gqlTaskFilter.GoalContains,
 		Status:       gqlTaskFilter.Status,
+		IsScheduled:  gqlTaskFilter.IsScheduled,
 		IsPlanned:    gqlTaskFilter.IsPlanned,
 	}, nil
 }
@@ -118,7 +123,17 @@ func fromGraphQLSprintFilterPtr(gqlSprintFilter *SprintFilter) (*service.SprintF
 		SprintID:        sprintID,
 		StartAtAndAfter: fromGraphQLTimePtr(gqlSprintFilter.StartAtAndAfter),
 		SortByStartAt:   gqlSprintFilter.SortByStartAt,
-		CountLimit:      intPtrFromIntPtr(gqlSprintFilter.CountLimit),
+		CountLimit:      intPtrFromInt32Ptr(gqlSprintFilter.CountLimit),
+	}, nil
+}
+
+func fromGraphQLAppFilterPtr(gqlAppFilter *AppFilter) (*service.AppFilter, error) {
+	if gqlAppFilter == nil {
+		return nil, nil
+	}
+
+	return &service.AppFilter{
+		TagValues: gqlAppFilter.TagValues,
 	}, nil
 }
 
@@ -135,6 +150,52 @@ func fromGraphQLTeamFilterPtr(teamFilter *TeamFilter) (*service.TeamFilter, erro
 	return &service.TeamFilter{
 		TeamID: teamID,
 	}, nil
+}
+
+func fromGraphQLPhaseFilterPtr(phaseFilter *PhaseFilter) (*service.PhaseFilter, error) {
+	if phaseFilter == nil {
+		return nil, nil
+	}
+
+	phaseID, err := fromGraphQLIDPtr(phaseFilter.PhaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.PhaseFilter{
+		PhaseID: phaseID,
+	}, nil
+}
+
+func fromGraphQLStoryFilterPtr(storyFilter *StoryFilter) (*service.StoryFilter, error) {
+	if storyFilter == nil {
+		return nil, nil
+	}
+
+	storyID, err := fromGraphQLIDPtr(storyFilter.StoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.StoryFilter{
+		StoryID: storyID,
+	}, nil
+}
+
+func fromGraphQLProjectFilterPtr(projectFilter *ProjectFilter) (*service.ProjectFilter, error) {
+	if projectFilter == nil {
+		return nil, nil
+	}
+
+	projectID, err := fromGraphQLIDPtr(projectFilter.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.ProjectFilter{
+		ProjectID: projectID,
+	}, nil
+
 }
 
 func fromGraphQLInvitationFilterPtr(filter *InvitationFilter) (*service.InvitationFilter, error) {

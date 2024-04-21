@@ -17,7 +17,6 @@ import (
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/env"
 	"github.com/teamyapp/cloud/libs/errs"
-	"github.com/teamyapp/cloud/libs/metrics"
 	"github.com/teamyapp/cloud/libs/middleware"
 	"github.com/teamyapp/cloud/libs/network"
 	"github.com/teamyapp/cloud/libs/retry"
@@ -34,6 +33,7 @@ import (
 	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 	"github.com/teamyapp/teamy-backend/core/dep"
 	"github.com/teamyapp/teamy-backend/core/inject"
+	"github.com/teamyapp/teamy-backend/core/instrument"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
@@ -90,14 +90,15 @@ func main() {
 		cfg.GitRepoName,
 		cfg.GitLongCommitHash)
 	logger.Info(gitCommitLink)
+	prom := instrument.NewPrometheus(appName, serviceName, cfg.Environment)
 	err = sqldb.Use(logger, cfg.Config, func(sqlDB *sql.DB) *errs.Error {
 		internalErr := sqldb.MigrateUp(logger, sqlDB, "migrations", 0)
 		if internalErr != nil {
 			return internalErr
 		}
 
-		realTimeStateSyncer := dep.InitRealTimeStateSyncer(logger, sqlDB)
-		return startServiceRunner(logger, cfg, sqlDB, realTimeStateSyncer)
+		realTimeStateSyncer := dep.InitRealTimeStateSyncer(logger, prom, sqlDB)
+		return startServiceRunner(logger, prom, cfg, sqlDB, realTimeStateSyncer)
 	})
 	if err != nil {
 		logger.Error(err)
@@ -107,6 +108,7 @@ func main() {
 
 func startServiceRunner(
 	logger telemetry.Logger,
+	prom instrument.Prometheus,
 	cfg config.App,
 	sqlDB *sql.DB,
 	realTimeStateSyncer *realtime.StateSyncer,
@@ -121,7 +123,6 @@ func startServiceRunner(
 		return internalErr
 	}
 
-	prom := metrics.NewPrometheus(appName, serviceName, cfg.Environment)
 	nw := network.NewSocket()
 	retryFactory := makeRetryFactory(logger, cfg)
 	cloudClientRegistry, err := cloudClient.NewRegistry(
@@ -202,31 +203,74 @@ func startServiceRunner(
 		serviceName,
 		cfg.Environment,
 		logger,
+		prom,
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
 		mapServerURL,
 		cloudClientRegistry,
 		realTimeStateSyncer,
+		dep.JWTSigningKey(cfg.JWTSigningKey),
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
 		sqlDB)
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	taskRPCAPI := dep.InitTaskRPCAPI(
+	taskRPCAPI, err := dep.InitTaskRPCAPI(
 		logger,
+		prom,
 		cloudClientRegistry,
 		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
 		sqlDB)
-	taskLinkRPCAPI := dep.InitTaskLinkRPCAPI(
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	taskLinkRPCAPI, err := dep.InitTaskLinkRPCAPI(
 		logger,
+		prom,
 		cloudClientRegistry,
 		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
 		sqlDB,
 	)
-	sprintRPCAPI := dep.InitSprintRPCAPI(
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	sprintRPCAPI, err := dep.InitSprintRPCAPI(
 		logger,
+		prom,
 		cloudClientRegistry,
 		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
 		sqlDB)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	teamRPCAPI, err := dep.InitTeamRPCAPI(
+		logger,
+		prom,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
+		sqlDB,
+		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL))
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
 	rn := runner.NewServiceRunnerBuilder(
 		logger,
 		nw,
@@ -240,6 +284,7 @@ func startServiceRunner(
 			taskRPCAPI,
 			taskLinkRPCAPI,
 			sprintRPCAPI,
+			teamRPCAPI,
 		}).
 		Build()
 	rn.Start(nil)
