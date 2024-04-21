@@ -74,6 +74,11 @@ func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 	rn.RegisterWebRoutes([]runner.WebRoute{
 		{
 			Method:      http.MethodGet,
+			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "status"),
+			HandlerFunc: a.webGetTeamStatus,
+		},
+		{
+			Method:      http.MethodGet,
 			Pattern:     path.Join(githubAppPathPrefix, "teams", runner.Param(teamIDParam), "install"),
 			HandlerFunc: a.webInstall,
 		},
@@ -122,6 +127,35 @@ func (a AppAPI) Start(rn *runner.ServiceRunner) *errs.Error {
 		appsProto.RegisterGithubServer(server, a)
 	})
 	return nil
+}
+
+func (a AppAPI) webGetTeamStatus(writer http.ResponseWriter, request *http.Request) {
+	ct := request.Context()
+	teamIDRaw := chi.URLParam(request, teamIDParam)
+	teamID, err := strconv.ParseUint(teamIDRaw, 10, 64)
+	if err != nil {
+		internalErr := errs.NewError(errs.InvalidArgument, "must provide teamId")
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	isGithubAppInstalled := true
+	_, internalErr := a.githubAppInstallationDao.FindInstallationByTeamID(ct, teamID)
+	if internalErr != nil {
+		if internalErr.Code != errs.NotFound {
+			a.logger.ErrorWithContext(ct, internalErr)
+			errs.SetHTTPErr(internalErr, writer)
+			return
+		}
+
+		isGithubAppInstalled = false
+	}
+
+	teamStatus := entity.TeamStatus{
+		IsGithubAppInstalled: isGithubAppInstalled,
+	}
+	web.WriteJSONToResponse(writer, teamStatus)
 }
 
 func (a AppAPI) webInstall(writer http.ResponseWriter, request *http.Request) {
