@@ -611,6 +611,79 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 	return sprint, nil
 }
 
+func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
+	var teamMember entity.TeamMember
+	err := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			teamMember, internalErr = s.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, userID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			sprint, internalErr := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			sprintLength := sprint.EndAt.UTC().Sub(sprint.StartAt.UTC())
+			numOfWeeks := sprintLength / timePerWeek
+
+			totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
+			participant := entity.SprintParticipant{
+				SprintID:        sprint.ID,
+				UserID:          teamMember.UserID,
+				TotalBandwidth:  totalBandwidth,
+				UnusedBandwidth: totalBandwidth,
+				CreatedAt:       time.Now(),
+			}
+			createSprintParticipantMutation := mutation.NewCreateSprintParticipant(
+				s.logger,
+				s.stateSyncer,
+				s.sprintParticipantDao,
+				s.sprintDao,
+				participant)
+			rtTx.AppendMutation(createSprintParticipantMutation)
+			return createSprintParticipantMutation.Execute(ct, tx)
+		})
+
+	return teamMember, err
+}
+
+func (s Sprint) RemoveTeamMemberFromSprint(ct context.Context, sprintID uint64, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
+	var teamMember entity.TeamMember
+	err := s.transactionGroupFactory.WithTransactionGroup(
+		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			teamMember, internalErr = s.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, userID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			sprint, internalErr := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			participant, internalErr := s.sprintParticipantDao.FindParticipantWithTx(ct, tx, sprint.ID, userID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
+				s.logger,
+				s.stateSyncer,
+				s.sprintParticipantDao,
+				s.sprintDao,
+				participant.UserID,
+				sprintID)
+			rtTx.AppendMutation(deleteSprintParticipantMutation)
+			return deleteSprintParticipantMutation.Execute(ct, tx)
+		})
+
+	return teamMember, err
+}
+
 func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {
 	if s.featureToggles.EnableAuthorization {
 		userID, ok := ctx.UserIDFromContext(ct)
