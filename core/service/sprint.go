@@ -660,22 +660,12 @@ func (s Sprint) RemoveTeamMemberFromSprint(ct context.Context, sprintID uint64, 
 				return internalErr
 			}
 
-			sprint, internalErr := s.sprintDao.FindSprintByIDWithTx(ct, tx, sprintID)
-			if internalErr != nil {
-				return internalErr
-			}
-
-			participant, internalErr := s.sprintParticipantDao.FindParticipantWithTx(ct, tx, sprint.ID, userID)
-			if internalErr != nil {
-				return internalErr
-			}
-
 			deleteSprintParticipantMutation := mutation.NewDeleteSprintParticipant(
 				s.logger,
 				s.stateSyncer,
 				s.sprintParticipantDao,
 				s.sprintDao,
-				participant.UserID,
+				userID,
 				sprintID)
 			rtTx.AppendMutation(deleteSprintParticipantMutation)
 			return deleteSprintParticipantMutation.Execute(ct, tx)
