@@ -128,6 +128,92 @@ func (m Mutation) RemoveTaskFromSprint(ct context.Context, args struct {
 	return newTask(m.deps, task), nil
 }
 
+func (m Mutation) AddTeamMemberToSprint(ct context.Context, args struct {
+	SprintID graphql.ID
+	TeamID   graphql.ID
+	UserID   graphql.ID
+}) (SprintParticipant, error) {
+	sprintID, argErr := fromGraphQLID(args.SprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return SprintParticipant{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return SprintParticipant{}, errs.ToResolverErr(internalErr)
+	}
+
+	userID, argErr := fromGraphQLID(args.UserID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return SprintParticipant{}, errs.ToResolverErr(internalErr)
+	}
+
+	sprintParticipant, err := m.deps.sprintService.AddTeamMemberToSprint(ct, sprintID, teamID, userID)
+	if err != nil {
+		return SprintParticipant{}, errs.ToResolverErr(err)
+	}
+
+	return newSprintParticipant(m.deps, sprintParticipant), nil
+}
+
+func (m Mutation) RemoveTeamMemberFromSprint(ct context.Context, args struct {
+	SprintID graphql.ID
+	TeamID   graphql.ID
+	UserID   graphql.ID
+}) (SprintParticipant, error) {
+	sprintID, argErr := fromGraphQLID(args.SprintID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return SprintParticipant{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return SprintParticipant{}, errs.ToResolverErr(internalErr)
+	}
+
+	userID, argErr := fromGraphQLID(args.UserID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return SprintParticipant{}, errs.ToResolverErr(internalErr)
+	}
+
+	sprintParticipant, err := m.deps.sprintService.RemoveTeamMemberFromSprint(ct, sprintID, teamID, userID)
+	if err != nil {
+		return SprintParticipant{}, errs.ToResolverErr(err)
+	}
+
+	return newSprintParticipant(m.deps, sprintParticipant), nil
+}
+
 func (m Mutation) CopyTasksToSprint(ct context.Context, args struct {
 	ToSprintID graphql.ID
 	TaskIDs    []graphql.ID
