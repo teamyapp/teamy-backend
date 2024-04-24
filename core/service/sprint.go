@@ -650,8 +650,8 @@ func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamI
 
 			totalBandwidth := teamMember.WeeklyBandwidth*numOfWeeks - subtractedBandwidth
 			participant := entity.SprintParticipant{
-				SprintID:        sprint.ID,
-				UserID:          teamMember.UserID,
+				SprintID:        sprintID,
+				UserID:          userID,
 				TotalBandwidth:  totalBandwidth,
 				UnusedBandwidth: totalBandwidth,
 				CreatedAt:       time.Now(),
