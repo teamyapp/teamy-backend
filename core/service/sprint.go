@@ -638,17 +638,17 @@ func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamI
 				return internalErr
 			}
 
-			var subtractedBandwidth time.Duration = 0
+			var usedBandwidth time.Duration = 0
 			for _, task := range tasks {
 				if task.OwnerUserID != &userID {
 					continue
 				}
 
-				subtractedBandwidth += *task.Effort
+				usedBandwidth += *task.Effort
 			}
 
 			totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
-			unusedBandwidth := totalBandwidth - subtractedBandwidth
+			unusedBandwidth := totalBandwidth - usedBandwidth
 			participant := entity.SprintParticipant{
 				SprintID:        sprintID,
 				UserID:          userID,
