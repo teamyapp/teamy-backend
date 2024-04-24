@@ -640,7 +640,11 @@ func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamI
 
 			var usedBandwidth time.Duration = 0
 			for _, task := range tasks {
-				if task.OwnerUserID != &userID {
+				if task.OwnerUserID == nil || *task.OwnerUserID != userID {
+					continue
+				}
+
+				if task.Effort == nil {
 					continue
 				}
 
