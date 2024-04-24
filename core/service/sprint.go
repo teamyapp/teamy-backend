@@ -611,12 +611,11 @@ func (s Sprint) DeleteSprint(ct context.Context, sprintID uint64) (entity.Sprint
 	return sprint, nil
 }
 
-func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
-	var teamMember entity.TeamMember
+func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamID uint64, userID uint64) (entity.SprintParticipant, *errs.Error) {
+	var participant entity.SprintParticipant
 	err := s.transactionGroupFactory.WithTransactionGroup(
 		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-			var internalErr *errs.Error
-			teamMember, internalErr = s.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, userID)
+			teamMember, internalErr := s.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, userID)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -666,15 +665,15 @@ func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamI
 			return createSprintParticipantMutation.Execute(ct, tx)
 		})
 
-	return teamMember, err
+	return participant, err
 }
 
-func (s Sprint) RemoveTeamMemberFromSprint(ct context.Context, sprintID uint64, teamID uint64, userID uint64) (entity.TeamMember, *errs.Error) {
-	var teamMember entity.TeamMember
+func (s Sprint) RemoveTeamMemberFromSprint(ct context.Context, sprintID uint64, teamID uint64, userID uint64) (entity.SprintParticipant, *errs.Error) {
+	var sprintParticipant entity.SprintParticipant
 	err := s.transactionGroupFactory.WithTransactionGroup(
 		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 			var internalErr *errs.Error
-			teamMember, internalErr = s.teamMemberDao.FindTeamMemberWithTx(ct, tx, teamID, userID)
+			sprintParticipant, internalErr = s.sprintParticipantDao.FindParticipantWithTx(ct, tx, sprintID, userID)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -690,7 +689,7 @@ func (s Sprint) RemoveTeamMemberFromSprint(ct context.Context, sprintID uint64, 
 			return deleteSprintParticipantMutation.Execute(ct, tx)
 		})
 
-	return teamMember, err
+	return sprintParticipant, err
 }
 
 func (s Sprint) AddTaskToSprint(ct context.Context, sprintID uint64, taskID uint64) (entity.Task, *errs.Error) {

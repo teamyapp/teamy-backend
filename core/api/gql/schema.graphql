@@ -70,8 +70,8 @@ type Mutation {
 	deleteSprint(sprintId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
 	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
-	addTeamMemberToSprint(sprintId: ID!, teamId: ID!, userId: ID!): TeamMember!
-	removeTeamMemberFromSprint(sprintId: ID!, teamId: ID!, userId: ID!): TeamMember!
+	addTeamMemberToSprint(sprintId: ID!, teamId: ID!, userId: ID!): SprintParticipant!
+	removeTeamMemberFromSprint(sprintId: ID!, teamId: ID!, userId: ID!): SprintParticipant!
 	moveTasksToSprint(
 		fromSprintId: ID!
 		toSprintId: ID!
