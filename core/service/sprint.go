@@ -629,7 +629,26 @@ func (s Sprint) AddTeamMemberToSprint(ct context.Context, sprintID uint64, teamI
 			sprintLength := sprint.EndAt.UTC().Sub(sprint.StartAt.UTC())
 			numOfWeeks := sprintLength / timePerWeek
 
-			totalBandwidth := teamMember.WeeklyBandwidth * numOfWeeks
+			taskIDs, internalErr := s.sprintTaskRelationDao.FindTaskIDsBySprintIDWithTx(ct, tx, sprintID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			tasks, internalErr := s.taskDao.FindTasksByIDsWithTx(ct, tx, taskIDs)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			var subtractedBandwidth time.Duration = 0
+			for _, task := range tasks {
+				if task.OwnerUserID != &userID {
+					continue
+				}
+
+				subtractedBandwidth += *task.Effort
+			}
+
+			totalBandwidth := teamMember.WeeklyBandwidth*numOfWeeks - subtractedBandwidth
 			participant := entity.SprintParticipant{
 				SprintID:        sprint.ID,
 				UserID:          teamMember.UserID,
