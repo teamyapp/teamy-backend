@@ -90,7 +90,7 @@ spec:
             - name: TIME_BASED_CACHE_BUCKET_COUNT
               value: "1000"
             - name: TIME_BASED_CACHE_TTL
-              value: "120s"
+              value: "0s"
             - name: REQUEST_RETRY_MAX_COUNT # Temporary set to 1 before error category is implemented
               value: "1"
             - name: SERVICE_RUNNER_WEB_SERVER_PORT
