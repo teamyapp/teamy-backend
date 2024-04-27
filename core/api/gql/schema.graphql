@@ -14,7 +14,6 @@ type Query {
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
 	apps(filter: AppFilter): [App!]!
-	teamMemberGroups(teamId: ID!): [MemberGroup!]!
 }
 
 type Mutation {
@@ -48,10 +47,10 @@ type Mutation {
 	deleteTeam(teamId: ID!): Team!
 
 	# Team Member Group
-	createTeamMemberGroup(teamId: ID!, input: CreateTeamMemberGroup): TeamMemberGroup!
+	createTeamMemberGroup(teamId: ID!, input: CreateTeamMemberGroupInput!): TeamMemberGroup!
 	updateTeamMemberGroup(
 		id: ID!
-		input: UpdateTeamMemberGroup
+		input: UpdateTeamMemberGroupInput!
 	): TeamMemberGroup!
 	deleteTeamMemberGroup(id: ID!): TeamMemberGroup!
 	addUserToTeamMemberGroup(id: ID!, userId: ID!): User!
@@ -331,6 +330,7 @@ type Team {
 	taskActivities: [TaskActivity!]!
 	activeSprint: Sprint
 	projects: [Project!]!
+	memberGroups: [TeamMemberGroup!]!
 }
 
 type TeamMember {
@@ -731,11 +731,11 @@ input UpdateTeamMemberInput {
 	weeklyBandwidth: Duration!
 }
 
-input CreateTeamMemberGroup {
+input CreateTeamMemberGroupInput {
 	name: String!
 }
 
-input UpdateTeamMemberGroup {
+input UpdateTeamMemberGroupInput {
 	name: String!
 }
 

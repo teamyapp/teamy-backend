@@ -15,8 +15,8 @@ type TeamMemberGroup struct {
 	memberGroup entity.TeamMemberGroup
 }
 
-func (m TeamMemberGroup) ID() uint64 {
-	return m.memberGroup.ID
+func (m TeamMemberGroup) ID() graphql.ID {
+	return toGraphQLID(m.memberGroup.ID)
 }
 
 func (m TeamMemberGroup) Name() string {

@@ -192,6 +192,18 @@ func (t Team) ManagedApps(ct context.Context) ([]App, error) {
 	}), nil
 }
 
+func (t Team) MemberGroups(ct context.Context) ([]TeamMemberGroup, error) {
+	teamMemberGroups, err := t.deps.teamService.FindTeamMemberGroups(ct, t.team.ID)
+	if err != nil {
+		t.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(teamMemberGroups, func(teamMemberGroup entity.TeamMemberGroup, index int) TeamMemberGroup {
+		return newTeamMemberGroup(t.deps, teamMemberGroup)
+	}), nil
+}
+
 func newTeam(deps *Dependencies, team entity.Team) Team {
 	return Team{
 		deps: deps,
