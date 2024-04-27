@@ -87,6 +87,18 @@ func (q Query) Teams(ct context.Context, args struct {
 	}), nil
 }
 
+func (q Query) TeamMemberGroups(ct context.Context, teamId uint64) ([]TeamMemberGroup, error) {
+	memberGroups, err := q.deps.teamService.FindTeamMemberGroups(ct, teamId)
+	if err != nil {
+		q.deps.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(memberGroups, func(memberGroup entity.TeamMemberGroup, _ int) TeamMemberGroup {
+		return newTeamMemberGroup(q.deps, memberGroup)
+	}), nil
+}
+
 func (q Query) Projects(ct context.Context, args struct {
 	Filter *ProjectFilter
 }) ([]Project, error) {

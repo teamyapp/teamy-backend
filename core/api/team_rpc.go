@@ -128,12 +128,12 @@ func (t TeamRPC) DeleteMemberGroup(ctx context.Context, request *proto.DeleteTea
 }
 
 func (t TeamRPC) AddMemberToGroup(ctx context.Context, request *proto.AddTeamMemberToGroupRequest) (*emptypb.Empty, error) {
-	err := t.teamService.AddUserToTeamMemberGroup(ctx, request.GroupId, request.MemberUserId)
+	_, err := t.teamService.AddUserToTeamMemberGroup(ctx, request.GroupId, request.MemberUserId)
 	return &emptypb.Empty{}, errs.ToGRPCErr(err)
 }
 
 func (t TeamRPC) RemoveMemberFromGroup(ctx context.Context, request *proto.RemoveTeamMemberFromGroupRequest) (*emptypb.Empty, error) {
-	err := t.teamService.RemoveUserFromTeamMemberGroup(ctx, request.GroupId, request.MemberUserId)
+	_, err := t.teamService.RemoveUserFromTeamMemberGroup(ctx, request.GroupId, request.MemberUserId)
 	return &emptypb.Empty{}, errs.ToGRPCErr(err)
 }
 
