@@ -80,7 +80,6 @@ func (m Mutation) CreateTeamMemberGroup(ct context.Context, args struct {
 		TeamID: teamID,
 		Name:   args.Input.Name,
 	}
-
 	teamMemberGroup, err := m.deps.teamService.CreateTeamMemberGroup(ct, createTeamGroupInput)
 	if err != nil {
 		m.deps.logger.Error(err)
