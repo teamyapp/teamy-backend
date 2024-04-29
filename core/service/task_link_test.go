@@ -111,6 +111,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
 	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
+	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
 	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
 	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
@@ -136,6 +137,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		sprintDao,
 		sprintParticipantDao,
 		teamDao,
+		userDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,

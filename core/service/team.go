@@ -50,7 +50,6 @@ type CreateTeamMemberGroupInput struct {
 type UpdateTeamMemberGroupInput struct {
 	GroupID uint64
 	Name    string
-	TeamID  uint64
 }
 
 type Team struct {
@@ -67,6 +66,7 @@ type Team struct {
 	sprintDao                      dao.Sprint
 	sprintParticipantDao           dao.SprintParticipant
 	teamDao                        dao.Team
+	userDao                        dao.User
 	teamMemberDao                  dao.TeamMember
 	teamFileUploadSessionDao       dao.TeamFileUploadSession
 	teamMemberGroupDao             dao.TeamMemberGroup
@@ -1038,28 +1038,46 @@ func (t Team) DeleteTeamMemberGroup(ct context.Context, id uint64) (entity.TeamM
 	return teamMemberGroup, internalErr
 }
 
-func (t Team) AddUserToTeamMemberGroup(ct context.Context, memberGroupID uint64, userID uint64) *errs.Error {
-	return t.transactionGroupFactory.WithTransactionGroup(
+func (t Team) AddUserToTeamMemberGroup(ct context.Context, memberGroupID uint64, userID uint64) (entity.User, *errs.Error) {
+	var user entity.User
+	err := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
 		false,
 		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			user, internalErr = t.userDao.FindUserByIDWithTx(ct, tx, userID)
+			if internalErr != nil {
+				return internalErr
+			}
+
 			return t.teamMemberGroupUserRelationDao.CreateMemberGroupUserRelation(ct, tx, daoEntity.TeamMemberGroupUserRelation{
 				GroupID: memberGroupID,
 				UserID:  userID,
 			})
 		})
+
+	return user, err
 }
 
-func (t Team) RemoveUserFromTeamMemberGroup(ct context.Context, memberGroupID uint64, userID uint64) *errs.Error {
-	return t.transactionGroupFactory.WithTransactionGroup(
+func (t Team) RemoveUserFromTeamMemberGroup(ct context.Context, memberGroupID uint64, userID uint64) (entity.User, *errs.Error) {
+	var user entity.User
+	err := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
 		false,
 		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			user, internalErr = t.userDao.FindUserByIDWithTx(ct, tx, userID)
+			if internalErr != nil {
+				return internalErr
+			}
+
 			return t.teamMemberGroupUserRelationDao.DeleteMemberGroupUserRelation(ct, tx, daoEntity.TeamMemberGroupUserRelation{
 				GroupID: memberGroupID,
 				UserID:  userID,
 			})
 		})
+
+	return user, err
 }
 
 func NewTeam(
@@ -1076,6 +1094,7 @@ func NewTeam(
 	sprintDao dao.Sprint,
 	sprintParticipantDao dao.SprintParticipant,
 	teamDao dao.Team,
+	userDao dao.User,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberGroupDao dao.TeamMemberGroup,
@@ -1097,6 +1116,7 @@ func NewTeam(
 		sprintParticipantDao:           sprintParticipantDao,
 		teamMemberDao:                  teamMemberDao,
 		teamDao:                        teamDao,
+		userDao:                        userDao,
 		teamFileUploadSessionDao:       teamFileUploadSessionDao,
 		teamMemberGroupDao:             teamMemberGroupDao,
 		teamMemberGroupUserRelationDao: teamMemberGroupUserRelationDao,

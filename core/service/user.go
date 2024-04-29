@@ -97,6 +97,20 @@ func (u User) Me(ct context.Context) (entity.User, *errs.Error) {
 	return user, nil
 }
 
+func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.User, *errs.Error) {
+	var users []entity.User
+	err := u.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			users, err = u.userDao.FindUsersByIDsWithTx(ct, tx, userIDs)
+			return err
+		})
+
+	return users, err
+}
+
 func (u User) FindUserByID(ct context.Context, userID uint64) (entity.User, *errs.Error) {
 	currUserID, ok := ctx.UserIDFromContext(ct)
 	if !ok {

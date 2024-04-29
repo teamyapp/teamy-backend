@@ -8,8 +8,6 @@ package dep
 
 import (
 	"database/sql"
-	"time"
-
 	"github.com/google/wire"
 	"github.com/graph-gophers/graphql-go/trace/tracer"
 	"github.com/teamyapp/cloud/app/client"
@@ -31,6 +29,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/service"
 	transaction2 "github.com/teamyapp/teamy-backend/core/transaction"
+	"time"
 )
 
 // Injectors from wire.go:
@@ -65,14 +64,14 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	taskLink := sqldb.NewTaskLink(prometheus)
 	serviceTaskLink := service.NewTaskLink(logger, groupFactory, cloudAPIClientRegistry, factory, authorizer, toggles, realTimeStateSyncer, timeBasedCache, taskLink, task)
 	team := sqldb.NewTeam(prometheus, factory)
+	user := sqldb.NewUser(prometheus, factory)
 	teamMember := sqldb.NewTeamMember(prometheus, factory)
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(prometheus)
 	teamMemberGroup := sqldb.NewTeamMemberGroup(prometheus)
 	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation(prometheus)
 	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
-	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
+	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, user, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
 	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, timeBasedCache, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
-	user := sqldb.NewUser(prometheus, factory)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(prometheus)
 	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, timeBasedCache, user, teamMember, userFileUploadSession)
 	httpClient := newHTTPClient(mapServerURL)
@@ -206,13 +205,13 @@ func InitTeamRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, c
 	sprint := sqldb.NewSprint(prometheus, factory)
 	sprintParticipant := sqldb.NewSprintParticipant(prometheus, factory)
 	team := sqldb.NewTeam(prometheus, factory)
+	user := sqldb.NewUser(prometheus, factory)
 	teamMember := sqldb.NewTeamMember(prometheus, factory)
 	teamFileUploadSession := sqldb.NewTeamFileUploadSession(prometheus)
 	teamMemberGroup := sqldb.NewTeamMemberGroup(prometheus)
 	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation(prometheus)
 	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
-	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
-	user := sqldb.NewUser(prometheus, factory)
+	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, user, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, repositoryTeamMemberGroup)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(prometheus)
 	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, timeBasedCache, user, teamMember, userFileUploadSession)
 	teamRPC := api.NewTeamRPC(serviceTeam, serviceUser)
@@ -299,6 +298,7 @@ func newTeamService(
 	sprintDao dao.Sprint,
 	sprintParticipantDao dao.SprintParticipant,
 	teamDao dao.Team,
+	userDao dao.User,
 	teamMemberDao dao.TeamMember,
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberGroupDao dao.TeamMemberGroup,
@@ -317,6 +317,7 @@ func newTeamService(
 		sprintDao,
 		sprintParticipantDao,
 		teamDao,
+		userDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,

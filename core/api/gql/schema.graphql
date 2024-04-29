@@ -46,6 +46,16 @@ type Mutation {
 	removeMemberFromTeam(teamId: ID!, memberUserId: ID!): TeamMember!
 	deleteTeam(teamId: ID!): Team!
 
+	# Team Member Group
+	createTeamMemberGroup(teamId: ID!, input: CreateTeamMemberGroupInput!): TeamMemberGroup!
+	updateTeamMemberGroup(
+		id: ID!
+		input: UpdateTeamMemberGroupInput!
+	): TeamMemberGroup!
+	deleteTeamMemberGroup(id: ID!): TeamMemberGroup!
+	addUserToTeamMemberGroup(id: ID!, userId: ID!): User!
+	removeUserFromTeamMemberGroup(id: ID!, userId: ID!): User!
+
 	# User
 	createUser(user: CreateUserInput!): User!
 	updateUser(userId: ID!, input: UpdateUserInput!): User!
@@ -70,8 +80,16 @@ type Mutation {
 	deleteSprint(sprintId: ID!): Sprint!
 	addTaskToSprint(sprintId: ID!, taskId: ID!): Task!
 	removeTaskFromSprint(sprintId: ID!, taskId: ID!): Task!
-	addTeamMemberToSprint(sprintId: ID!, teamId: ID!, userId: ID!): SprintParticipant!
-	removeTeamMemberFromSprint(sprintId: ID!, teamId: ID!, userId: ID!): SprintParticipant!
+	addTeamMemberToSprint(
+		sprintId: ID!
+		teamId: ID!
+		userId: ID!
+	): SprintParticipant!
+	removeTeamMemberFromSprint(
+		sprintId: ID!
+		teamId: ID!
+		userId: ID!
+	): SprintParticipant!
 	moveTasksToSprint(
 		fromSprintId: ID!
 		toSprintId: ID!
@@ -312,12 +330,22 @@ type Team {
 	taskActivities: [TaskActivity!]!
 	activeSprint: Sprint
 	projects: [Project!]!
+	memberGroups: [TeamMemberGroup!]!
 }
 
 type TeamMember {
 	team: Team!
 	user: User!
 	weeklyBandwidth: Duration!
+	createdAt: Time!
+	updatedAt: Time
+}
+
+type TeamMemberGroup {
+	id: ID!
+	name: String!
+	team: Team!
+	members: [User!]!
 	createdAt: Time!
 	updatedAt: Time
 }
@@ -701,6 +729,14 @@ input UpdateTeamInput {
 input UpdateTeamMemberInput {
 	userId: ID!
 	weeklyBandwidth: Duration!
+}
+
+input CreateTeamMemberGroupInput {
+	name: String!
+}
+
+input UpdateTeamMemberGroupInput {
+	name: String!
 }
 
 input CreateUserInput {
