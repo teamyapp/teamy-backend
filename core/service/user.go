@@ -104,7 +104,7 @@ func (u User) FindUsersByIDs(ct context.Context, userIDs []uint64) ([]entity.Use
 		true,
 		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 			var err *errs.Error
-			users, err = u.userDao.FindUsersByIDsWithTx(ct, nil, userIDs)
+			users, err = u.userDao.FindUsersByIDsWithTx(ct, tx, userIDs)
 			return err
 		})
 

@@ -692,6 +692,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
 	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
+	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
@@ -720,6 +721,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		sprintDao,
 		sprintParticipantDao,
 		teamDao,
+		userDao,
 		teamMemberDao,
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,
