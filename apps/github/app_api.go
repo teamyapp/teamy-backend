@@ -1572,13 +1572,23 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 		codeReview.InternalCodeReviewTaskID = createdTaskID
 		codeReview.InternalAddressFeedbackTaskID = nil
 		codeReview.Round++
+		err = a.githubCodeReviewDao.UpdateCodeReview(ct, codeReview)
+		if err != nil {
+			return err
+		}
+
+		err = a.tryAddTaskToActiveSprint(ct, teamID, createdTaskID)
+		if err != nil {
+			return err
+		}
+
 		_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)
 			return internalErr
 		}
 
-		return a.githubCodeReviewDao.UpdateCodeReview(ct, codeReview)
+		return nil
 	}
 
 	createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerNodeID, 1, evt, prEvt)
