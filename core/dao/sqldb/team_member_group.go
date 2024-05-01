@@ -38,7 +38,6 @@ func (t TeamMemberGroup) FindMemberGroupByID(ct context.Context, tx *transaction
 			&teamMemberGroup.AuthorizationUserGroupID,
 			&teamMemberGroup.CreatedAt,
 			&teamMemberGroup.UpdatedAt,
-			teamMemberGroup.ID,
 		)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
