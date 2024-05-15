@@ -22,7 +22,7 @@ type App struct {
 	TeamyAPIHost                string        `envconfig:"TEAMY_API_HOST" default:"localhost"`
 	TeamyAPIPort                int           `envconfig:"TEAMY_API_PORT" default:"9001"`
 	TeamyAPIShouldEncrypt       bool          `envconfig:"TEAMY_API_SHOULD_ENCRYPT" default:"false"`
-	RequestTimeout              time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10h"`
+	RequestTimeout              time.Duration `envconfig:"REQUEST_TIMEOUT" default:"10s"`
 	RequestRetryMaxCount        int           `envconfig:"REQUEST_RETRY_MAX_COUNT" default:"10"`
 	TeamyWebUIBaseURL           string        `envconfig:"TEAMY_WEB_UI_BASE_URL" default:"http://localhost:3000"`
 	JWTSigningKey               string        `envconfig:"JWT_SIGNING_KEY" default:""`
