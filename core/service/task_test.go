@@ -276,6 +276,9 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
+	taskFileUploadDao := daotest.NewTaskFileUploadSession(teamyBackendDB)
+	attachmentListDao := daotest.NewAttachmentList(teamyBackendDB)
+	imageDao := daotest.NewImage(teamyBackendDB)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
 	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
 	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
@@ -286,6 +289,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	taskService := NewTask(
 		logger,
 		transactionGroupFactory,
+		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
 		authorizer,
 		toggles,
@@ -300,6 +304,9 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		sprintParticipantDao,
 		sprintTaskRelationDao,
 		storyTaskRelationDao,
+		taskFileUploadDao,
+		attachmentListDao,
+		imageDao,
 	)
 	return TaskTestRef{
 		taskService:  taskService,

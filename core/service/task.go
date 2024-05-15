@@ -13,6 +13,7 @@ import (
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
+	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
 	"github.com/teamyapp/teamy-backend/core/activity"
@@ -24,6 +25,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/mutation"
 	"github.com/teamyapp/teamy-backend/core/realtime"
 	"github.com/teamyapp/teamy-backend/core/transaction"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var awaitableTaskStatuses = map[entity.TaskStatus]bool{
@@ -65,22 +67,26 @@ type UpdateTaskInput struct {
 }
 
 type Task struct {
-	logger                  telemetry.Logger
-	transactionGroupFactory transaction.GroupFactory
-	cloudClientRegistry     *client.Registry
-	authorizer              client.Authorizer
-	featureToggles          feature.Toggles
-	stateSyncer             *realtime.StateSyncer
-	transactionFactory      cloudTransaction.Factory
-	activityCache           activity.Activity
-	cache                   *cache.TimeBasedCache[string, any]
-	taskDao                 dao.Task
-	sprintDao               dao.Sprint
-	threadDao               dao.Thread
-	taskAwaitForRelationDao dao.TaskAwaitForRelation
-	sprintParticipantDao    dao.SprintParticipant
-	sprintTaskRelationDao   dao.SprintTaskRelation
-	storyTaskRelationDao    dao.StoryTaskRelation
+	logger                     telemetry.Logger
+	transactionGroupFactory    transaction.GroupFactory
+	cloudWebAPIExternalBaseURL string
+	cloudClientRegistry        *client.Registry
+	authorizer                 client.Authorizer
+	featureToggles             feature.Toggles
+	stateSyncer                *realtime.StateSyncer
+	transactionFactory         cloudTransaction.Factory
+	activityCache              activity.Activity
+	cache                      *cache.TimeBasedCache[string, any]
+	taskDao                    dao.Task
+	sprintDao                  dao.Sprint
+	threadDao                  dao.Thread
+	taskAwaitForRelationDao    dao.TaskAwaitForRelation
+	sprintParticipantDao       dao.SprintParticipant
+	sprintTaskRelationDao      dao.SprintTaskRelation
+	storyTaskRelationDao       dao.StoryTaskRelation
+	taskFileUploadSessionDao   dao.TaskFileUploadSession
+	attachmentListDao          dao.AttachmentList
+	imageDao                   dao.Image
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
@@ -1315,9 +1321,147 @@ func (t Task) StopDraggingTask(ct context.Context, taskID uint64, clientID uint6
 	return err
 }
 
+func (t Task) CreateTaskContextFileUploadSession(ct context.Context, taskID uint64) (uint64, *errs.Error) {
+	res, rpcErr := t.cloudClientRegistry.FileClient().CreateUploadSession(ct, &emptypb.Empty{})
+	if rpcErr != nil {
+		return 0, errs.FromGRPCErr(rpcErr)
+	}
+
+	fileUploadSession := entity.TaskFileUploadSession{
+		TaskID:              taskID,
+		Type:                entity.TaskFileUploadSessionTypeContext,
+		FileUploadSessionID: res.UploadSessionId,
+		IsCompleted:         false,
+		CreatedAt:           time.Now(),
+	}
+	err := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			return t.taskFileUploadSessionDao.CreateTaskFileUploadSession(ct, tx, fileUploadSession)
+		})
+
+	return res.UploadSessionId, err
+}
+
+func (t Task) FinishTaskContextFileUploadSession(
+	ct context.Context,
+	taskID uint64,
+	fileUploadSessionID uint64,
+	attachmentListID *uint64,
+) (entity.Task, *errs.Error) {
+	findUploadSessionReq := proto.FindUploadSessionRequest{
+		UploadSessionId: fileUploadSessionID,
+	}
+	uploadSession, rpcErr := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.Task{}, internalErr
+	}
+
+	var taskContextFileUploadSession entity.TaskFileUploadSession
+	var task entity.Task
+	err := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			taskContextFileUploadSession, internalErr = t.taskFileUploadSessionDao.FindTaskFileUploadSessionByTaskIDWithTx(
+				ct,
+				tx,
+				taskID,
+				entity.TaskFileUploadSessionTypeContext,
+				fileUploadSessionID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			if taskContextFileUploadSession.IsCompleted {
+				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("task context file upload session is already completed: taskID=%v, fileUploadSessionID=%v",
+					taskID,
+					fileUploadSessionID))
+			}
+
+			now := time.Now().UTC()
+			taskContextFileUploadSession.IsCompleted = true
+			taskContextFileUploadSession.UpdatedAt = &now
+			internalErr = t.taskFileUploadSessionDao.UpdateTaskFileUploadSession(ct, tx, taskContextFileUploadSession)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			task, internalErr = t.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			if attachmentListID == nil {
+				genAttachmentIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "attachmentID"}
+				genAttachmentIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAttachmentIDReq)
+				if rpcErr != nil {
+					internalErr := errs.FromGRPCErr(rpcErr)
+					return internalErr
+				}
+
+				attachmentList := entity.AttachmentList{
+					OwnerType: entity.AttachmentListOwnerTypeTask,
+					OwnerID:   taskID,
+					ListLabel: "context",
+					CreatedAt: now,
+					ListID:    genAttachmentIDRes.UniqueNumber,
+				}
+
+				createAttachmentListMutation := mutation.NewCreateAttachmentList(
+					t.logger,
+					t.stateSyncer,
+					t.attachmentListDao,
+					t.taskDao,
+					attachmentList,
+				)
+
+				internalErr = createAttachmentListMutation.Execute(ct, tx)
+				if internalErr != nil {
+					return internalErr
+				}
+
+				rtTx.AppendMutation(createAttachmentListMutation)
+				attachmentListID = &attachmentList.ListID
+			}
+
+			imageURL := io.GetFileURL(t.cloudWebAPIExternalBaseURL, uploadSession.FileId)
+			image := entity.Image{
+				ID:               uploadSession.FileId,
+				URL:              imageURL,
+				Size:             uploadSession.TotalSizeInBytes,
+				AttachmentListID: *attachmentListID,
+				CreatedAt:        now,
+			}
+
+			createImageMutation := mutation.NewCreateImage(
+				t.logger,
+				t.stateSyncer,
+				t.attachmentListDao,
+				t.imageDao,
+				t.taskDao,
+				image,
+			)
+
+			internalErr = createImageMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(createImageMutation)
+			return nil
+		})
+
+	return task, err
+}
+
 func NewTask(
 	logger telemetry.Logger,
 	transactionGroupFactory transaction.GroupFactory,
+	cloudWebAPIExternalBaseURL string,
 	cloudClientRegistry *client.Registry,
 	authorizer client.Authorizer,
 	featureToggles feature.Toggles,
@@ -1332,24 +1476,31 @@ func NewTask(
 	sprintParticipantDao dao.SprintParticipant,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	storyTaskRelationDao dao.StoryTaskRelation,
+	taskFileUploadSessionDao dao.TaskFileUploadSession,
+	attachmentListDao dao.AttachmentList,
+	imageDao dao.Image,
 ) Task {
 	return Task{
-		logger:                  logger,
-		transactionGroupFactory: transactionGroupFactory,
-		cloudClientRegistry:     cloudClientRegistry,
-		authorizer:              authorizer,
-		featureToggles:          featureToggles,
-		stateSyncer:             stateSyncer,
-		transactionFactory:      transactionFactory,
-		activityCache:           activityCache,
-		cache:                   cache,
-		taskDao:                 taskDao,
-		threadDao:               threadDao,
-		sprintDao:               sprintDao,
-		taskAwaitForRelationDao: taskAwaitForRelationDao,
-		sprintParticipantDao:    sprintParticipantDao,
-		sprintTaskRelationDao:   sprintTaskRelationDao,
-		storyTaskRelationDao:    storyTaskRelationDao,
+		logger:                     logger,
+		transactionGroupFactory:    transactionGroupFactory,
+		cloudWebAPIExternalBaseURL: cloudWebAPIExternalBaseURL,
+		cloudClientRegistry:        cloudClientRegistry,
+		authorizer:                 authorizer,
+		featureToggles:             featureToggles,
+		stateSyncer:                stateSyncer,
+		transactionFactory:         transactionFactory,
+		activityCache:              activityCache,
+		cache:                      cache,
+		taskDao:                    taskDao,
+		threadDao:                  threadDao,
+		sprintDao:                  sprintDao,
+		taskAwaitForRelationDao:    taskAwaitForRelationDao,
+		sprintParticipantDao:       sprintParticipantDao,
+		sprintTaskRelationDao:      sprintTaskRelationDao,
+		storyTaskRelationDao:       storyTaskRelationDao,
+		taskFileUploadSessionDao:   taskFileUploadSessionDao,
+		attachmentListDao:          attachmentListDao,
+		imageDao:                   imageDao,
 	}
 }
 

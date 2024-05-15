@@ -21,4 +21,6 @@ const (
 	TaskActivityCollectionType         CollectionType = "TaskActivity"
 	SprintParticipantCollectionType    CollectionType = "SprintParticipant"
 	StoryCollectionType                CollectionType = "Story"
+	AttachmentListCollectionType       CollectionType = "AttachmentList"
+	ImageCollectionType                CollectionType = "Image"
 )

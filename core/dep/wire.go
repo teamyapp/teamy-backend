@@ -96,6 +96,9 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.StoryTaskRelation), new(*sqldb.StoryTaskRelation)),
 	wire.Bind(new(dao.ProjectPhaseRelation), new(*sqldb.ProjectPhaseRelation)),
 	wire.Bind(new(dao.ProjectStoryRelation), new(*sqldb.ProjectStoryRelation)),
+	wire.Bind(new(dao.TaskFileUploadSession), new(*sqldb.TaskFileUploadSession)),
+	wire.Bind(new(dao.AttachmentList), new(*sqldb.AttachmentList)),
+	wire.Bind(new(dao.Image), new(*sqldb.Image)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -142,6 +145,9 @@ var daoSet = wire.NewSet(
 	sqldb.NewProjectStoryRelation,
 	sqldb.NewPhaseStoryRelation,
 	sqldb.NewStoryTaskRelation,
+	sqldb.NewTaskFileUploadSession,
+	sqldb.NewAttachmentList,
+	sqldb.NewImage,
 )
 
 var repositorySet = wire.NewSet(
@@ -157,7 +163,7 @@ var serviceSet = wire.NewSet(
 	cloudtx.NewFactory,
 	transaction.NewGroupFactory,
 	service.NewThread,
-	service.NewTask,
+	newTaskService,
 	service.NewTaskLink,
 	service.NewInvitation,
 	newTeamService,
@@ -169,6 +175,7 @@ var serviceSet = wire.NewSet(
 	service.NewStory,
 	service.NewGroup,
 	service.NewRollout,
+	service.NewAttachment,
 )
 
 func newJWTAuthority(logger telemetry.Logger, signingKey JWTSigningKey) security.JWTAuthority {
@@ -244,6 +251,7 @@ func InitTaskRPCAPI(
 	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
 	timeBasedCacheTTL TimeBasedCacheTTL,
 	sqlDB *sql.DB,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 ) (api.TaskRPC, error) {
 	wire.Build(
 		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
@@ -367,6 +375,52 @@ func newUserService(
 		userDao,
 		teamMember,
 		userFileUploadSessionDao,
+	)
+}
+
+func newTaskService(
+	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	cloudClientRegistry *client.Registry,
+	authorizer client.Authorizer,
+	toggles feature.Toggles,
+	stateSyncer *realtime.StateSyncer,
+	transactionFactory cloudtx.Factory,
+	activityCache activity.Activity,
+	cache *cache.TimeBasedCache[string, any],
+	taskDao dao.Task,
+	threadDao dao.Thread,
+	sprintDao dao.Sprint,
+	taskAwaitForRelationDao dao.TaskAwaitForRelation,
+	sprintParticipantDao dao.SprintParticipant,
+	sprintTaskRelationDao dao.SprintTaskRelation,
+	storyTaskRelationDao dao.StoryTaskRelation,
+	taskFileUploadDao dao.TaskFileUploadSession,
+	attachmentListDao dao.AttachmentList,
+	imageDao dao.Image,
+) service.Task {
+	return service.NewTask(
+		logger,
+		transactionGroupFactory,
+		string(cloudWebAPIExternalBaseURL),
+		cloudClientRegistry,
+		authorizer,
+		toggles,
+		stateSyncer,
+		transactionFactory,
+		activityCache,
+		cache,
+		taskDao,
+		threadDao,
+		sprintDao,
+		taskAwaitForRelationDao,
+		sprintParticipantDao,
+		sprintTaskRelationDao,
+		storyTaskRelationDao,
+		taskFileUploadDao,
+		attachmentListDao,
+		imageDao,
 	)
 }
 

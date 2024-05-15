@@ -29,6 +29,8 @@ type Mutation {
 	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 	startDraggingTask(taskId: ID!, clientId: ID!): ID!
 	stopDraggingTask(taskId: ID!, clientId: ID!): ID!
+	createTaskContextFileUploadSession(taskId: ID!): ID!
+	finishTaskContextFileUploadSession(taskId: ID!, fileUploadSessionId: ID!, attachmentListId: ID): Task!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
@@ -267,6 +269,26 @@ type Task {
 	availableActions: [TaskAction!]!
 	awaitForTasks: [Task!]!
 	links: [TaskLink!]!
+	contextAttachmentList: AttachmentList
+}
+
+
+type AttachmentList {
+	ownerType: AttachmentListOwnerType!
+	ownerId: ID!
+	listLabel: String!
+	listId: ID!
+	createdAt: Time!
+	updatedAt: Time
+	images: [Image!]!
+}
+
+type Image {
+	id: ID!
+	url: String!
+	size: Int!
+	createdAt: Time!
+	attachmentList: AttachmentList!
 }
 
 type TaskLink {
@@ -945,6 +967,10 @@ enum ActivatorType {
 enum VersionSelectorType {
 	STATIC
 	EXPERIMENT
+}
+
+enum AttachmentListOwnerType {
+	TASK
 }
 
 scalar Duration
