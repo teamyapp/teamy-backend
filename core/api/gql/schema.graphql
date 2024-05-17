@@ -29,8 +29,8 @@ type Mutation {
 	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 	startDraggingTask(taskId: ID!, clientId: ID!): ID!
 	stopDraggingTask(taskId: ID!, clientId: ID!): ID!
-	createTaskContextFileUploadSession(taskId: ID!): ID!
-	finishTaskContextFileUploadSession(taskId: ID!, fileUploadSessionId: ID!, attachmentListId: ID): Task!
+	createAttachmentListFileUploadSession(attachmentListId: ID!): ID!
+	finishAttachmentListUploadSession(fileUploadSessionId: ID!, attachmentListId: ID): AttachmentList!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
