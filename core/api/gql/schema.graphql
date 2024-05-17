@@ -279,7 +279,7 @@ type AttachmentList {
 	listId: ID!
 	createdAt: Time!
 	updatedAt: Time
-	images: [Image!]!
+	attachments: [Attachment!]!
 }
 
 type Image {
