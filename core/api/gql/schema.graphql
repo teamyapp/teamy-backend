@@ -284,6 +284,7 @@ type AttachmentList {
 
 type Attachment {
 	id: ID!
+    type: AttachmentType!
 	url: String!
 	size: Int!
 	createdAt: Time!
