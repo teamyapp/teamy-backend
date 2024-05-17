@@ -8,8 +8,9 @@ CREATE TABLE attachment_list (
     updated_at TIMESTAMP
 );
 
-CREATE TABLE image (
+CREATE TABLE attachment (
     id BIGINT NOT NULL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,
     url VARCHAR(255) NOT NULL,
     size BIGINT NOT NULL,
     attachment_list_id BIGINT NOT NULL REFERENCES attachment_list (list_id),
@@ -17,18 +18,16 @@ CREATE TABLE image (
     updated_at TIMESTAMP
 );
 
-CREATE TABLE task_file_upload_session (
-    task_id BIGINT NOT NULL REFERENCES task (id),
-    type VARCHAR(255) NOT NULL,
+CREATE TABLE attachment_file_upload_session (
+    attachment_list_id BIGINT NOT NULL REFERENCES attachment_list (list_id),
     file_upload_session_id BIGINT NOT NULL,
     is_completed BOOLEAN NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
-    PRIMARY KEY (task_id, type, file_upload_session_id)
+    PRIMARY KEY (attachment_list_id, file_upload_session_id)
 );
 
 -- +migrate Down
-
-DROP TABLE task_file_upload_session;
-DROP TABLE image;
+DROP TABLE attachment_file_upload_session;
+DROP TABLE attachment;
 DROP TABLE attachment_list;

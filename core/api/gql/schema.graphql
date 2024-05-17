@@ -29,8 +29,6 @@ type Mutation {
 	removeAwaitForTask(taskId: ID!, awaitForTaskId: ID!): Task!
 	startDraggingTask(taskId: ID!, clientId: ID!): ID!
 	stopDraggingTask(taskId: ID!, clientId: ID!): ID!
-	createAttachmentListFileUploadSession(attachmentListId: ID!): ID!
-	finishAttachmentListUploadSession(fileUploadSessionId: ID!, attachmentListId: ID): AttachmentList!
 
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
@@ -203,6 +201,9 @@ type Mutation {
 	removeStoryFromPhase(phaseId: ID!, storyId: ID!): Phase!
 	removeStoriesFromPhase(phaseId: ID!, storyIds: [ID!]!): Phase!
 	deletePhase(phaseId: ID!): Phase!
+
+	createAttachmentListFileUploadSession(attachmentListId: ID!): ID!
+	finishAttachmentListFileUploadSession(attachmentListId: ID!, fileUploadSessionId: ID!): AttachmentList!
 }
 
 type Project {
@@ -288,6 +289,7 @@ type Attachment {
 	url: String!
 	size: Int!
 	createdAt: Time!
+	updatedAt: Time
 	attachmentList: AttachmentList!
 }
 
@@ -971,6 +973,10 @@ enum VersionSelectorType {
 
 enum AttachmentListOwnerType {
 	TASK
+}
+
+enum AttachmentType {
+	IMAGE
 }
 
 scalar Duration

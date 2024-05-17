@@ -110,9 +110,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
-	taskFileUploadDao := daotest.NewTaskFileUploadSession(teamyBackendDB)
 	attachmentListDao := daotest.NewAttachmentList(teamyBackendDB)
-	imageDao := daotest.NewImage(teamyBackendDB)
 	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
 	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
@@ -150,7 +148,6 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	taskService := NewTask(
 		logger,
 		transactionGroupFactory,
-		cloudTestKitConfig.WebAPIBaseURL,
 		cloudClientRegistry,
 		authorizer,
 		toggles,
@@ -165,9 +162,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		sprintParticipantDao,
 		sprintTaskRelationDao,
 		storyTaskRelationDao,
-		taskFileUploadDao,
 		attachmentListDao,
-		imageDao,
 	)
 
 	teamyBackendDB.CreateTable(daotest.TaskLinkTableName)

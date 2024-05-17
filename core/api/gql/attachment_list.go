@@ -38,15 +38,15 @@ func (a AttachmentList) UpdatedAt() *graphql.Time {
 	return toGraphQLTimePtr(a.attachmentList.UpdatedAt)
 }
 
-func (a AttachmentList) Images(ct context.Context) ([]Image, error) {
-	images, err := a.deps.attachmentService.FindImagesByAttachmentListID(ct, a.attachmentList.ListID)
+func (a AttachmentList) Attachments(ct context.Context) ([]Attachment, error) {
+	attachments, err := a.deps.attachmentService.FindAttachmentsByAttachmentListID(ct, a.attachmentList.ListID)
 	if err != nil {
 		a.deps.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToResolverErr(err)
 	}
 
-	return collect.Map(images, func(image entity.Image, _ int) Image {
-		return newImage(a.deps, image)
+	return collect.Map(attachments, func(attachment entity.Attachment, _ int) Attachment {
+		return newAttachment(a.deps, attachment)
 	}), nil
 }
 
@@ -55,4 +55,62 @@ func newAttachmentList(deps *Dependencies, attachmentList entity.AttachmentList)
 		deps:           deps,
 		attachmentList: attachmentList,
 	}
+}
+
+func (m Mutation) CreateAttachmentListFileUploadSession(
+	ct context.Context,
+	args struct {
+		AttachmentListID graphql.ID
+	},
+) (graphql.ID, error) {
+	attachmentListID, argErr := fromGraphQLID(args.AttachmentListID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return "", errs.ToResolverErr(internalErr)
+	}
+
+	sessionID, err := m.deps.attachmentService.CreateAttachmentListFileUploadSession(ct, attachmentListID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return "", errs.ToResolverErr(err)
+	}
+
+	return toGraphQLID(sessionID), nil
+}
+
+func (m Mutation) FinishAttachmentListFileUploadSession(ct context.Context, args struct {
+	AttachmentListID    graphql.ID
+	FileUploadSessionID graphql.ID
+}) (AttachmentList, error) {
+	attachmentListID, argErr := fromGraphQLID(args.AttachmentListID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return AttachmentList{}, errs.ToResolverErr(internalErr)
+	}
+
+	fileUploadSessionID, argErr := fromGraphQLID(args.FileUploadSessionID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return AttachmentList{}, errs.ToResolverErr(internalErr)
+	}
+
+	attachmentList, err := m.deps.attachmentService.FinishAttachmentListFileUploadSession(ct, attachmentListID, fileUploadSessionID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return AttachmentList{}, errs.ToResolverErr(err)
+	}
+
+	return newAttachmentList(m.deps, attachmentList), nil
 }

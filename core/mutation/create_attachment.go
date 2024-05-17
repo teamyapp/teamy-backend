@@ -11,35 +11,35 @@ import (
 	"github.com/teamyapp/teamy-backend/core/realtime"
 )
 
-type CreateImage struct {
+type CreateAttachment struct {
 	logger            telemetry.Logger
 	stateSyncer       *realtime.StateSyncer
 	attachmentListDao dao.AttachmentList
-	imageDao          dao.Image
+	attachmentDao     dao.Attachment
 	taskDao           dao.Task
 	id                uint64
-	image             entity.Image
+	attachment        entity.Attachment
 	clientNotifiers   []*realtime.ClientNotifier
 	notifiersPrepared bool
 }
 
-var _ realtime.Mutation = (*CreateImage)(nil)
+var _ realtime.Mutation = (*CreateAttachment)(nil)
 
-func (c *CreateImage) GetID() uint64 {
+func (c *CreateAttachment) GetID() uint64 {
 	return c.id
 }
 
-func (c *CreateImage) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	internalErr := c.imageDao.CreateImage(ct, tx, c.image)
+func (c *CreateAttachment) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
+	internalErr := c.attachmentDao.CreateAttachment(ct, tx, c.attachment)
 	return internalErr
 }
 
-func (c *CreateImage) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
+func (c *CreateAttachment) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {
 	if c.notifiersPrepared {
 		return nil
 	}
 
-	attachmentList, internalErr := c.attachmentListDao.FindAttachmentListByIDWithTx(ct, tx, c.image.AttachmentListID)
+	attachmentList, internalErr := c.attachmentListDao.FindAttachmentListByIDWithTx(ct, tx, c.attachment.AttachmentListID)
 	if internalErr != nil {
 		return internalErr
 	}
@@ -62,41 +62,41 @@ func (c *CreateImage) PrepareClientNotifiers(ct context.Context, tx *transaction
 	return nil
 }
 
-func (c *CreateImage) Undo() *errs.Error {
+func (c *CreateAttachment) Undo() *errs.Error {
 	return nil
 }
 
-func (c *CreateImage) GetClientNotifiers() []*realtime.ClientNotifier {
+func (c *CreateAttachment) GetClientNotifiers() []*realtime.ClientNotifier {
 	return c.clientNotifiers
 }
 
-func (c *CreateImage) ToMessage() realtime.MutationMessage {
+func (c *CreateAttachment) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
 		CollectionType: realtime.ImageCollectionType,
 		MutationType:   realtime.CreateMutationType,
-		Payload:        c.image,
+		Payload:        c.attachment,
 	}
 }
 
-func (c *CreateImage) CleanUp(ct context.Context) *errs.Error {
+func (c *CreateAttachment) CleanUp(ct context.Context) *errs.Error {
 	return nil
 }
 
-func NewCreateImage(
+func NewCreateAttachment(
 	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	attachmentListDao dao.AttachmentList,
-	imageDao dao.Image,
+	attachmentDao dao.Attachment,
 	taskDao dao.Task,
-	image entity.Image,
-) *CreateImage {
-	return &CreateImage{
+	attachment entity.Attachment,
+) *CreateAttachment {
+	return &CreateAttachment{
 		logger:            logger,
 		stateSyncer:       stateSyncer,
 		attachmentListDao: attachmentListDao,
-		imageDao:          imageDao,
+		attachmentDao:     attachmentDao,
 		taskDao:           taskDao,
-		image:             image,
+		attachment:        attachment,
 	}
 }
