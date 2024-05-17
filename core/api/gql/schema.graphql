@@ -282,7 +282,7 @@ type AttachmentList {
 	attachments: [Attachment!]!
 }
 
-type Image {
+type Attachment {
 	id: ID!
 	url: String!
 	size: Int!
