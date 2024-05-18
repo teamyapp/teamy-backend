@@ -48,7 +48,12 @@ func (a *AttachmentList) FindAttachmentListByIDWithTx(ct context.Context, tx *tr
 	return attachmentList, nil
 }
 
-func (a *AttachmentList) FindAttachmentListsByOwnerIDAndOwnerTypeWithTx(ct context.Context, tx *transaction.Transaction, ownerID uint64, ownerType entity.AttachmentListOwnerType) ([]entity.AttachmentList, *errs.Error) {
+func (a *AttachmentList) FindAttachmentListsByOwnerIDAndOwnerTypeWithTx(
+    ct context.Context, 
+    tx *transaction.Transaction, 
+    ownerType entity.AttachmentListOwnerType,
+    ownerID uint64,
+) ([]entity.AttachmentList, *errs.Error) {
 	var attachmentLists []entity.AttachmentList
 	rows, err := tx.SQLTx().QueryContext(
 		ct,

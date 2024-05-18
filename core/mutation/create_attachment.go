@@ -30,8 +30,7 @@ func (c *CreateAttachment) GetID() uint64 {
 }
 
 func (c *CreateAttachment) Execute(ct context.Context, tx *transaction.Transaction) *errs.Error {
-	internalErr := c.attachmentDao.CreateAttachment(ct, tx, c.attachment)
-	return internalErr
+	return c.attachmentDao.CreateAttachment(ct, tx, c.attachment)
 }
 
 func (c *CreateAttachment) PrepareClientNotifiers(ct context.Context, tx *transaction.Transaction) *errs.Error {

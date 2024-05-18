@@ -9,6 +9,10 @@ import (
 )
 
 type Attachment interface {
-	FindAttachmentsByAttachmentListIDWithTx(ct context.Context, tx *transaction.Transaction, attachmentListID uint64) ([]entity.Attachment, *errs.Error)
+	FindAttachmentsByAttachmentListIDWithTx(
+	    ct context.Context, 
+	    tx *transaction.Transaction, 
+	    attachmentListID uint64,
+	) ([]entity.Attachment, *errs.Error)
 	CreateAttachment(ct context.Context, tx *transaction.Transaction, attachment entity.Attachment) *errs.Error
 }

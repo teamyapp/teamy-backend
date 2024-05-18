@@ -465,7 +465,6 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 				ListLabel: "context",
 				CreatedAt: now,
 			}
-
 			createAttachmentListMutation := mutation.NewCreateAttachmentList(
 				t.logger,
 				t.stateSyncer,

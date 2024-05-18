@@ -20,10 +20,10 @@ import (
 )
 
 type Attachment struct {
+	logger                         telemetry.Logger
 	cloudClientRegistry            *client.Registry
 	transactionGroupFactory        transaction.GroupFactory
 	cloudWebAPIExternalBaseURL     string
-	logger                         telemetry.Logger
 	stateSyncer                    *realtime.StateSyncer
 	attachmentListDao              dao.AttachmentList
 	attachmentDao                  dao.Attachment
@@ -42,7 +42,12 @@ func (a *Attachment) FindAttachmentListByID(ct context.Context, listID uint64) (
 	return attachmentList, err
 }
 
-func (a *Attachment) FindAttachmentList(ct context.Context, ownerID uint64, ownerType entity.AttachmentListOwnerType, listLabel string) (*entity.AttachmentList, *errs.Error) {
+func (a *Attachment) FindAttachmentList(
+    ct context.Context,
+    ownerType entity.AttachmentListOwnerType,
+    ownerID uint64,  
+    listLabel string,
+) (*entity.AttachmentList, *errs.Error) {
 	var attachmentList *entity.AttachmentList
 	err := a.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		attachmentLists, internalErr := a.attachmentListDao.FindAttachmentListsWithTx(ct, tx, ownerID, ownerType, listLabel)
@@ -72,7 +77,6 @@ func (a *Attachment) FindAttachmentsByAttachmentListID(ct context.Context, attac
 		attachments, internalErr = a.attachmentDao.FindAttachmentsByAttachmentListIDWithTx(ct, tx, attachmentListID)
 		return internalErr
 	})
-
 	return attachments, err
 }
 
@@ -143,7 +147,6 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 			}
 
 			attachmentURL := io.GetFileURL(a.cloudWebAPIExternalBaseURL, uploadSession.FileId)
-
 			var attachmentType entity.AttachmentType
 			switch uploadSession.MimeType {
 			case "image/jpeg", "image/png", "image/gif":
@@ -160,7 +163,6 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 				AttachmentListID: attachmentListID,
 				CreatedAt:        now,
 			}
-
 			createImageMutation := mutation.NewCreateAttachment(
 				a.logger,
 				a.stateSyncer,
@@ -183,10 +185,10 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 }
 
 func NewAttachment(
+	logger telemetry.Logger,
 	cloudClientRegistry *client.Registry,
 	transactionGroupFactory transaction.GroupFactory,
 	cloudWebAPIExternalBaseURL string,
-	logger telemetry.Logger,
 	stateSyncer *realtime.StateSyncer,
 	attachmentListDao dao.AttachmentList,
 	attachmentDao dao.Attachment,

@@ -18,7 +18,6 @@ var _ dao.Attachment = (*Attachment)(nil)
 
 func (i *Attachment) FindAttachmentsByAttachmentListIDWithTx(ct context.Context, tx *transaction.Transaction, attachmentListID uint64) ([]entity.Attachment, *errs.Error) {
 	var attachments []entity.Attachment
-
 	rows, err := tx.SQLTx().QueryContext(
 		ct,
 		`
