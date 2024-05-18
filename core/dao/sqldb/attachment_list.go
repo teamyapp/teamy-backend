@@ -16,7 +16,11 @@ type AttachmentList struct {
 
 var _ dao.AttachmentList = (*AttachmentList)(nil)
 
-func (a *AttachmentList) FindAttachmentListByIDWithTx(ct context.Context, tx *transaction.Transaction, attachmentListID uint64) (entity.AttachmentList, *errs.Error) {
+func (a *AttachmentList) FindAttachmentListByIDWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	attachmentListID uint64,
+) (entity.AttachmentList, *errs.Error) {
 	var attachmentList entity.AttachmentList
 	err := tx.SQLTx().QueryRowContext(
 		ct,
@@ -49,10 +53,10 @@ func (a *AttachmentList) FindAttachmentListByIDWithTx(ct context.Context, tx *tr
 }
 
 func (a *AttachmentList) FindAttachmentListsByOwnerIDAndOwnerTypeWithTx(
-    ct context.Context, 
-    tx *transaction.Transaction, 
-    ownerType entity.AttachmentListOwnerType,
-    ownerID uint64,
+	ct context.Context,
+	tx *transaction.Transaction,
+	ownerType entity.AttachmentListOwnerType,
+	ownerID uint64,
 ) ([]entity.AttachmentList, *errs.Error) {
 	var attachmentLists []entity.AttachmentList
 	rows, err := tx.SQLTx().QueryContext(
@@ -98,7 +102,13 @@ func (a *AttachmentList) FindAttachmentListsByOwnerIDAndOwnerTypeWithTx(
 	return attachmentLists, nil
 }
 
-func (a *AttachmentList) FindAttachmentListsWithTx(ct context.Context, tx *transaction.Transaction, ownerID uint64, ownerType entity.AttachmentListOwnerType, ListLabel string) ([]entity.AttachmentList, *errs.Error) {
+func (a *AttachmentList) FindAttachmentListsWithTx(
+	ct context.Context,
+	tx *transaction.Transaction,
+	ownerType entity.AttachmentListOwnerType,
+	ownerID uint64,
+	ListLabel string,
+) ([]entity.AttachmentList, *errs.Error) {
 	var attachmentLists []entity.AttachmentList
 	rows, err := tx.SQLTx().QueryContext(
 		ct,

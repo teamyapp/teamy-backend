@@ -43,14 +43,14 @@ func (a *Attachment) FindAttachmentListByID(ct context.Context, listID uint64) (
 }
 
 func (a *Attachment) FindAttachmentList(
-    ct context.Context,
-    ownerType entity.AttachmentListOwnerType,
-    ownerID uint64,  
-    listLabel string,
+	ct context.Context,
+	ownerType entity.AttachmentListOwnerType,
+	ownerID uint64,
+	listLabel string,
 ) (*entity.AttachmentList, *errs.Error) {
 	var attachmentList *entity.AttachmentList
 	err := a.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
-		attachmentLists, internalErr := a.attachmentListDao.FindAttachmentListsWithTx(ct, tx, ownerID, ownerType, listLabel)
+		attachmentLists, internalErr := a.attachmentListDao.FindAttachmentListsWithTx(ct, tx, ownerType, ownerID, listLabel)
 		if internalErr != nil {
 			return internalErr
 		}

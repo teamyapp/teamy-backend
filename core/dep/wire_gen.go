@@ -302,10 +302,10 @@ func newAttachmentService(
 	taskDao dao.Task,
 ) *service.Attachment {
 	return service.NewAttachment(
+		logger,
 		cloudClientRegistry,
 		transactionGroupFactory,
 		string(cloudWebAPIExternalBaseURL),
-		logger,
 		stateSyncer,
 		attachmentListDao,
 		attachmentDao,
