@@ -102,18 +102,18 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 	ct context.Context,
 	attachmentListID uint64,
 	fileUploadSessionID uint64,
-) (entity.AttachmentList, *errs.Error) {
+) (entity.Attachment, *errs.Error) {
 	findUploadSessionReq := proto.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
 	uploadSession, rpcErr := a.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
-		return entity.AttachmentList{}, internalErr
+		return entity.Attachment{}, internalErr
 	}
 
 	var attachmentFileUploadSession entity.AttachmentFileUploadSession
-	var attachmentList entity.AttachmentList
+	var attachment entity.Attachment
 	err := a.transactionGroupFactory.WithTransactionGroup(
 		ct,
 		false,
@@ -142,11 +142,6 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 				return internalErr
 			}
 
-			attachmentList, internalErr = a.attachmentListDao.FindAttachmentListByIDWithTx(ct, tx, attachmentListID)
-			if internalErr != nil {
-				return internalErr
-			}
-
 			attachmentURL := io.GetFileURL(a.cloudWebAPIExternalBaseURL, uploadSession.FileId)
 
 			var attachmentType entity.AttachmentType
@@ -157,7 +152,7 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("unsupported attachment type: %v", uploadSession.MimeType))
 			}
 
-			attachment := entity.Attachment{
+			attachment = entity.Attachment{
 				ID:               uploadSession.FileId,
 				Type:             attachmentType,
 				URL:              attachmentURL,
@@ -184,7 +179,7 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 			return nil
 		})
 
-	return attachmentList, err
+	return attachment, err
 }
 
 func NewAttachment(

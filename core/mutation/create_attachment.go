@@ -73,7 +73,7 @@ func (c *CreateAttachment) GetClientNotifiers() []*realtime.ClientNotifier {
 func (c *CreateAttachment) ToMessage() realtime.MutationMessage {
 	return realtime.MutationMessage{
 		ID:             c.id,
-		CollectionType: realtime.ImageCollectionType,
+		CollectionType: realtime.AttachmentCollectionType,
 		MutationType:   realtime.CreateMutationType,
 		Payload:        c.attachment,
 	}

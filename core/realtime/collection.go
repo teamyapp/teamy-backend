@@ -22,5 +22,5 @@ const (
 	SprintParticipantCollectionType    CollectionType = "SprintParticipant"
 	StoryCollectionType                CollectionType = "Story"
 	AttachmentListCollectionType       CollectionType = "AttachmentList"
-	ImageCollectionType                CollectionType = "Image"
+	AttachmentCollectionType           CollectionType = "Attachment"
 )

@@ -67,7 +67,7 @@ func (i *Attachment) CreateAttachment(ct context.Context, tx *transaction.Transa
 	_, err := tx.SQLTx().ExecContext(
 		ct,
 		`
-		INSERT INTO image (id, type, url, size, attachment_list_id, created_at)
+		INSERT INTO attachment (id, type, url, size, attachment_list_id, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		`,
 		attachment.ID,

@@ -85,7 +85,7 @@ func (m Mutation) CreateAttachmentListFileUploadSession(
 func (m Mutation) FinishAttachmentListFileUploadSession(ct context.Context, args struct {
 	AttachmentListID    graphql.ID
 	FileUploadSessionID graphql.ID
-}) (AttachmentList, error) {
+}) (Attachment, error) {
 	attachmentListID, argErr := fromGraphQLID(args.AttachmentListID)
 	if argErr != nil {
 		internalErr := errs.NewError(
@@ -93,7 +93,7 @@ func (m Mutation) FinishAttachmentListFileUploadSession(ct context.Context, args
 			argErr.Error(),
 		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
-		return AttachmentList{}, errs.ToResolverErr(internalErr)
+		return Attachment{}, errs.ToResolverErr(internalErr)
 	}
 
 	fileUploadSessionID, argErr := fromGraphQLID(args.FileUploadSessionID)
@@ -103,14 +103,14 @@ func (m Mutation) FinishAttachmentListFileUploadSession(ct context.Context, args
 			argErr.Error(),
 		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
-		return AttachmentList{}, errs.ToResolverErr(internalErr)
+		return Attachment{}, errs.ToResolverErr(internalErr)
 	}
 
-	attachmentList, err := m.deps.attachmentService.FinishAttachmentListFileUploadSession(ct, attachmentListID, fileUploadSessionID)
+	attachment, err := m.deps.attachmentService.FinishAttachmentListFileUploadSession(ct, attachmentListID, fileUploadSessionID)
 	if err != nil {
 		m.deps.logger.ErrorWithContext(ct, err)
-		return AttachmentList{}, errs.ToResolverErr(err)
+		return Attachment{}, errs.ToResolverErr(err)
 	}
 
-	return newAttachmentList(m.deps, attachmentList), nil
+	return newAttachment(m.deps, attachment), nil
 }

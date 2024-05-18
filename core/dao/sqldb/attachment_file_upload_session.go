@@ -100,12 +100,12 @@ func (t AttachmentFileUploadSession) UpdateAttachmentFileUploadSession(
 			is_completed = $1,
 			created_at= $2,
 			updated_at = $3
-		WHERE attachment_id = $4 AND file_upload_session_id = $5;`,
-		attachmentFileUploadSession.AttachmentListID,
-		attachmentFileUploadSession.FileUploadSessionID,
+		WHERE attachment_list_id = $4 AND file_upload_session_id = $5;`,
 		attachmentFileUploadSession.IsCompleted,
 		attachmentFileUploadSession.CreatedAt,
 		attachmentFileUploadSession.UpdatedAt,
+		attachmentFileUploadSession.AttachmentListID,
+		attachmentFileUploadSession.FileUploadSessionID,
 	)
 
 	if err != nil {
