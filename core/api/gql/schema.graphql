@@ -201,6 +201,9 @@ type Mutation {
 	removeStoryFromPhase(phaseId: ID!, storyId: ID!): Phase!
 	removeStoriesFromPhase(phaseId: ID!, storyIds: [ID!]!): Phase!
 	deletePhase(phaseId: ID!): Phase!
+
+	createAttachmentListFileUploadSession(attachmentListId: ID!): ID!
+	finishAttachmentListFileUploadSession(attachmentListId: ID!, fileUploadSessionId: ID!): Attachment!
 }
 
 type Project {
@@ -267,6 +270,27 @@ type Task {
 	availableActions: [TaskAction!]!
 	awaitForTasks: [Task!]!
 	links: [TaskLink!]!
+	contextAttachmentList: AttachmentList
+}
+
+type AttachmentList {
+	ownerType: AttachmentListOwnerType!
+	ownerId: ID!
+	listLabel: String!
+	listId: ID!
+	createdAt: Time!
+	updatedAt: Time
+	attachments: [Attachment!]!
+}
+
+type Attachment {
+	id: ID!
+    type: AttachmentType!
+	url: String!
+	size: Int!
+	createdAt: Time!
+	updatedAt: Time
+	attachmentList: AttachmentList!
 }
 
 type TaskLink {
@@ -945,6 +969,14 @@ enum ActivatorType {
 enum VersionSelectorType {
 	STATIC
 	EXPERIMENT
+}
+
+enum AttachmentListOwnerType {
+	TASK
+}
+
+enum AttachmentType {
+	IMAGE
 }
 
 scalar Duration

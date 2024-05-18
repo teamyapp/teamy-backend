@@ -81,6 +81,7 @@ type Task struct {
 	sprintParticipantDao    dao.SprintParticipant
 	sprintTaskRelationDao   dao.SprintTaskRelation
 	storyTaskRelationDao    dao.StoryTaskRelation
+	attachmentListDao       dao.AttachmentList
 }
 
 func (t Task) FindTaskByID(ct context.Context, taskID uint64) (entity.Task, *errs.Error) {
@@ -408,6 +409,13 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 		return entity.Task{}, internalErr
 	}
 
+	genAttachmentListIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "attachmentListID"}
+	genAttachmentListIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAttachmentListIDReq)
+	if rpcErr != nil {
+		internalErr := errs.FromGRPCErr(rpcErr)
+		return entity.Task{}, internalErr
+	}
+
 	var task entity.Task
 	internalErr := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
@@ -419,6 +427,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 				return internalErr
 			}
 
+			now := time.Now().UTC()
 			task = entity.Task{
 				ID:               genTaskIDRes.UniqueNumber,
 				Goal:             taskInput.Goal,
@@ -431,7 +440,7 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 				Effort:           taskInput.Effort,
 				OwnerUserID:      taskInput.OwnerUserID,
 				CommentsThreadID: threadID,
-				CreatedAt:        time.Now().UTC(),
+				CreatedAt:        now,
 				DueAt:            taskInput.DueAt,
 				DeliveredAt:      taskInput.DeliveredAt,
 			}
@@ -449,6 +458,26 @@ func (t Task) createTask(ct context.Context, teamID uint64, taskInput createTask
 			}
 
 			rtTx.AppendMutation(createTaskMutation)
+			attachmentList := entity.AttachmentList{
+				OwnerID:   task.ID,
+				OwnerType: entity.AttachmentListOwnerTypeTask,
+				ListID:    genAttachmentListIDRes.UniqueNumber,
+				ListLabel: "context",
+				CreatedAt: now,
+			}
+			createAttachmentListMutation := mutation.NewCreateAttachmentList(
+				t.logger,
+				t.stateSyncer,
+				t.attachmentListDao,
+				t.taskDao,
+				attachmentList,
+			)
+			internalErr = createAttachmentListMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(createAttachmentListMutation)
 			return nil
 		})
 
@@ -1332,6 +1361,7 @@ func NewTask(
 	sprintParticipantDao dao.SprintParticipant,
 	sprintTaskRelationDao dao.SprintTaskRelation,
 	storyTaskRelationDao dao.StoryTaskRelation,
+	attachmentListDao dao.AttachmentList,
 ) Task {
 	return Task{
 		logger:                  logger,
@@ -1350,6 +1380,7 @@ func NewTask(
 		sprintParticipantDao:    sprintParticipantDao,
 		sprintTaskRelationDao:   sprintTaskRelationDao,
 		storyTaskRelationDao:    storyTaskRelationDao,
+		attachmentListDao:       attachmentListDao,
 	}
 }
 

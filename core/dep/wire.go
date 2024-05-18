@@ -96,6 +96,9 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.StoryTaskRelation), new(*sqldb.StoryTaskRelation)),
 	wire.Bind(new(dao.ProjectPhaseRelation), new(*sqldb.ProjectPhaseRelation)),
 	wire.Bind(new(dao.ProjectStoryRelation), new(*sqldb.ProjectStoryRelation)),
+	wire.Bind(new(dao.AttachmentFileUploadSession), new(*sqldb.AttachmentFileUploadSession)),
+	wire.Bind(new(dao.AttachmentList), new(*sqldb.AttachmentList)),
+	wire.Bind(new(dao.Attachment), new(*sqldb.Attachment)),
 	sqldb.NewTask,
 	sqldb.NewTaskLink,
 	sqldb.NewTaskAwaitForRelation,
@@ -142,6 +145,9 @@ var daoSet = wire.NewSet(
 	sqldb.NewProjectStoryRelation,
 	sqldb.NewPhaseStoryRelation,
 	sqldb.NewStoryTaskRelation,
+	sqldb.NewAttachmentFileUploadSession,
+	sqldb.NewAttachmentList,
+	sqldb.NewAttachment,
 )
 
 var repositorySet = wire.NewSet(
@@ -169,6 +175,7 @@ var serviceSet = wire.NewSet(
 	service.NewStory,
 	service.NewGroup,
 	service.NewRollout,
+	newAttachmentService,
 )
 
 func newJWTAuthority(logger telemetry.Logger, signingKey JWTSigningKey) security.JWTAuthority {
@@ -244,6 +251,7 @@ func InitTaskRPCAPI(
 	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
 	timeBasedCacheTTL TimeBasedCacheTTL,
 	sqlDB *sql.DB,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
 ) (api.TaskRPC, error) {
 	wire.Build(
 		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
@@ -367,6 +375,30 @@ func newUserService(
 		userDao,
 		teamMember,
 		userFileUploadSessionDao,
+	)
+}
+
+func newAttachmentService(
+	logger telemetry.Logger,
+	transactionGroupFactory transaction.GroupFactory,
+	cloudClientRegistry *client.Registry,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+	stateSyncer *realtime.StateSyncer,
+	attachmentListDao dao.AttachmentList,
+	attachmentDao dao.Attachment,
+	attachmentFileUploadSessionDao dao.AttachmentFileUploadSession,
+	taskDao dao.Task,
+) *service.Attachment {
+	return service.NewAttachment(
+		logger,
+		cloudClientRegistry,
+		transactionGroupFactory,
+		string(cloudWebAPIExternalBaseURL),
+		stateSyncer,
+		attachmentListDao,
+		attachmentDao,
+		attachmentFileUploadSessionDao,
+		taskDao,
 	)
 }
 

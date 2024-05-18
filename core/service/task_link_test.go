@@ -98,6 +98,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.ThreadTableName)
 	teamyBackendDB.CreateTable(daotest.TaskTableName)
+	teamyBackendDB.CreateTable((daotest.AttachmentListTableName))
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
@@ -110,6 +111,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
+	attachmentListDao := daotest.NewAttachmentList(teamyBackendDB)
 	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
 	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
@@ -161,6 +163,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		sprintParticipantDao,
 		sprintTaskRelationDao,
 		storyTaskRelationDao,
+		attachmentListDao,
 	)
 
 	teamyBackendDB.CreateTable(daotest.TaskLinkTableName)

@@ -20,6 +20,7 @@ type Dependencies struct {
 	projectService    *service.Project
 	phaseService      *service.Phase
 	storyService      *service.Story
+	attachmentService *service.Attachment
 }
 
 func NewDependencies(
@@ -37,6 +38,7 @@ func NewDependencies(
 	projectService *service.Project,
 	phaseService *service.Phase,
 	storyService *service.Story,
+	attachmentService *service.Attachment,
 ) *Dependencies {
 	return &Dependencies{
 		logger:            logger,
@@ -53,5 +55,6 @@ func NewDependencies(
 		projectService:    projectService,
 		phaseService:      phaseService,
 		storyService:      storyService,
+		attachmentService: attachmentService,
 	}
 }

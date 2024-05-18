@@ -264,6 +264,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.ThreadTableName)
 	teamyBackendDB.CreateTable(daotest.TaskTableName)
+	teamyBackendDB.CreateTable((daotest.AttachmentListTableName))
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
@@ -276,6 +277,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	storyTaskRelationDao := daotest.NewStoryTaskRelation(teamyBackendDB)
+	attachmentListDao := daotest.NewAttachmentList(teamyBackendDB)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
 	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
 	timeBasedCache, err := cache.NewTimeBasedCache[string, any](logger, noopMetrics, lruFactory, 1000, 10)
@@ -300,6 +302,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 		sprintParticipantDao,
 		sprintTaskRelationDao,
 		storyTaskRelationDao,
+		attachmentListDao,
 	)
 	return TaskTestRef{
 		taskService:  taskService,
