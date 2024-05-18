@@ -98,6 +98,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.ThreadTableName)
 	teamyBackendDB.CreateTable(daotest.TaskTableName)
+	teamyBackendDB.CreateTable((daotest.AttachmentListTableName))
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)

@@ -264,6 +264,7 @@ func prepareTaskTestRef(t *testing.T, toggles feature.Toggles) (TaskTestRef, boo
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.ThreadTableName)
 	teamyBackendDB.CreateTable(daotest.TaskTableName)
+	teamyBackendDB.CreateTable((daotest.AttachmentListTableName))
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
