@@ -57,15 +57,17 @@ func newTaskLink(deps *Dependencies, taskLink entity.TaskLink) TaskLink {
 	}
 }
 
-func (m Mutation) createTaskLink(
+func (m Mutation) CreateTaskLink(
 	ctx context.Context,
 	args struct {
-		TaskID       graphql.ID
-		Title        string
-		PreviewTitle string
-		URL          string
-		IconURL      *string
-		IconHoverURL *string
+		TaskID graphql.ID
+		Input  struct {
+			Title        string
+			PreviewTitle string
+			URL          string
+			IconURL      *string
+			IconHoverURL *string
+		}
 	},
 ) (TaskLink, error) {
 	taskID, argErr := fromGraphQLID(args.TaskID)
@@ -80,11 +82,11 @@ func (m Mutation) createTaskLink(
 
 	taskLink := service.CreateTaskLinkInput{
 		TaskID:       taskID,
-		Title:        args.Title,
-		PreviewTitle: args.PreviewTitle,
-		URL:          args.URL,
-		IconURL:      args.IconURL,
-		IconHoverURL: args.IconHoverURL,
+		Title:        args.Input.Title,
+		PreviewTitle: args.Input.PreviewTitle,
+		URL:          args.Input.URL,
+		IconURL:      args.Input.IconURL,
+		IconHoverURL: args.Input.IconHoverURL,
 	}
 	taskLinkRes, err := m.deps.taskLinkService.CreateTaskLink(
 		ctx,
