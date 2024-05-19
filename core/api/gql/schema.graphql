@@ -728,7 +728,6 @@ input CreateTaskInput {
 }
 
 input CreateTaskLinkInput {
-	taskId: ID!
 	title: String!
 	previewTitle: String!
 	url: String!
