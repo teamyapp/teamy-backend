@@ -78,7 +78,7 @@ func (m Mutation) createTaskLink(
 		return TaskLink{}, errs.ToResolverErr(internalErr)
 	}
 
-	taskLinkEntity := service.CreateTaskLinkInput{
+	taskLink := service.CreateTaskLinkInput{
 		TaskID:       taskID,
 		Title:        args.Title,
 		PreviewTitle: args.PreviewTitle,
@@ -86,7 +86,6 @@ func (m Mutation) createTaskLink(
 		IconURL:      args.IconURL,
 		IconHoverURL: args.IconHoverURL,
 	}
-
 	taskLink, err := m.deps.taskLinkService.CreateTaskLink(
 		ctx,
 		taskLinkEntity,
