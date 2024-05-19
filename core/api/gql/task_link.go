@@ -86,9 +86,9 @@ func (m Mutation) createTaskLink(
 		IconURL:      args.IconURL,
 		IconHoverURL: args.IconHoverURL,
 	}
-	taskLink, err := m.deps.taskLinkService.CreateTaskLink(
+	taskLinkRes, err := m.deps.taskLinkService.CreateTaskLink(
 		ctx,
-		taskLinkEntity,
+		taskLink,
 	)
 
 	if err != nil {
@@ -96,7 +96,7 @@ func (m Mutation) createTaskLink(
 		return TaskLink{}, errs.ToResolverErr(err)
 	}
 
-	return newTaskLink(m.deps, taskLink), nil
+	return newTaskLink(m.deps, taskLinkRes), nil
 }
 
 func (m Mutation) DeleteTaskLink(
