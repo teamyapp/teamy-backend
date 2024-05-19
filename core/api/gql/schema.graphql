@@ -30,6 +30,10 @@ type Mutation {
 	startDraggingTask(taskId: ID!, clientId: ID!): ID!
 	stopDraggingTask(taskId: ID!, clientId: ID!): ID!
 
+	# Task Link
+	createTaskLink(taskId: ID!, input: CreateTaskLinkInput!): TaskLink!
+	deleteTaskLink(id: ID!): TaskLink!
+
 	# Message
 	createMessage(threadId: ID!, message: CreateMessageInput!): Message!
 	updateMessage(messageId: ID!, input: UpdateMessageInput!): Message!
@@ -721,6 +725,15 @@ input CreateTaskInput {
 	dueAt: Time
 	isScheduled: Boolean!
 	isPlanned: Boolean!
+}
+
+input CreateTaskLinkInput {
+	taskId: ID!
+	title: String!
+	previewTitle: String!
+	url: String!
+	iconUrl: String
+	iconHoverUrl: String
 }
 
 input UpdateTaskInput {

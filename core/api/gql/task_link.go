@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/graph-gophers/graphql-go"
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/teamy-backend/core/entity"
+	"github.com/teamyapp/teamy-backend/core/service"
 )
 
 type TaskLink struct {
@@ -53,4 +55,71 @@ func newTaskLink(deps *Dependencies, taskLink entity.TaskLink) TaskLink {
 		deps:     deps,
 		taskLink: taskLink,
 	}
+}
+
+func (m Mutation) createTaskLink(
+	ctx context.Context,
+	args struct {
+		TaskID       graphql.ID
+		Title        string
+		PreviewTitle string
+		URL          string
+		IconURL      *string
+		IconHoverURL *string
+	},
+) (TaskLink, error) {
+	taskID, argErr := fromGraphQLID(args.TaskID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return TaskLink{}, errs.ToResolverErr(internalErr)
+	}
+
+	taskLink := service.CreateTaskLinkInput{
+		TaskID:       taskID,
+		Title:        args.Title,
+		PreviewTitle: args.PreviewTitle,
+		URL:          args.URL,
+		IconURL:      args.IconURL,
+		IconHoverURL: args.IconHoverURL,
+	}
+	taskLinkRes, err := m.deps.taskLinkService.CreateTaskLink(
+		ctx,
+		taskLink,
+	)
+
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return TaskLink{}, errs.ToResolverErr(err)
+	}
+
+	return newTaskLink(m.deps, taskLinkRes), nil
+}
+
+func (m Mutation) DeleteTaskLink(
+	ctx context.Context,
+	args struct {
+		ID graphql.ID
+	},
+) (TaskLink, error) {
+	id, argErr := fromGraphQLID(args.ID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ctx, internalErr)
+		return TaskLink{}, errs.ToResolverErr(internalErr)
+	}
+
+	task, err := m.deps.taskLinkService.DeleteTaskLink(ctx, id)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ctx, err)
+		return TaskLink{}, errs.ToResolverErr(err)
+	}
+
+	return newTaskLink(m.deps, task), nil
 }
