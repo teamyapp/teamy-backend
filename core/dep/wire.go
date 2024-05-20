@@ -210,7 +210,6 @@ func InitBackfillService(
 		serviceSet,
 		service.NewBackfill,
 	)
-
 	return &service.Backfill{}, nil
 }
 
