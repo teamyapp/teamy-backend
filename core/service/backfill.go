@@ -37,23 +37,26 @@ func (b *Backfill) backfillAttachmentListForTaskContext(ct context.Context) *err
 			}
 
 			if len(attachmentLists) > 0 {
-			   continue;
+				continue
 			}
-				genAttachmentListIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "attachmentListID"}
-				genAttachmentListIDRes, rpcErr := b.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAttachmentListIDReq)
-				if rpcErr != nil {
-					return errs.FromGRPCErr(rpcErr)
-				}
+			genAttachmentListIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "attachmentListID"}
+			genAttachmentListIDRes, rpcErr := b.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAttachmentListIDReq)
+			if rpcErr != nil {
+				return errs.FromGRPCErr(rpcErr)
+			}
 
-				attachmentList := entity.AttachmentList{
-					OwnerType: entity.AttachmentListOwnerTypeTask,
-					OwnerID:   task.ID,
-					ListLabel: "context",
-					ListID:    genAttachmentListIDRes.UniqueNumber,
-					CreatedAt: time.Now().UTC(),
-				}
+			attachmentList := entity.AttachmentList{
+				OwnerType: entity.AttachmentListOwnerTypeTask,
+				OwnerID:   task.ID,
+				ListLabel: "context",
+				ListID:    genAttachmentListIDRes.UniqueNumber,
+				CreatedAt: time.Now().UTC(),
+			}
 
-				return b.attachmentListDao.CreateAttachmentList(ct, tx, attachmentList)
+			internalErr = b.attachmentListDao.CreateAttachmentList(ct, tx, attachmentList)
+			if internalErr != nil {
+				return internalErr
+			}
 		}
 
 		return nil
@@ -61,7 +64,7 @@ func (b *Backfill) backfillAttachmentListForTaskContext(ct context.Context) *err
 }
 
 func (b *Backfill) BackfillData(ct context.Context) *errs.Error {
-	return b.addAttachmentListToTaskContext(ct)
+	return b.backfillAttachmentListForTaskContext(ct)
 }
 
 func NewBackfill(

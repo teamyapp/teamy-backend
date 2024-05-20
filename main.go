@@ -284,7 +284,7 @@ func startServiceRunner(
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	internalErr = backfillService.Run(ct)
+	internalErr = backfillService.BackfillData(ct)
 	if internalErr != nil {
 		return internalErr
 	}
