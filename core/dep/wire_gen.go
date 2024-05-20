@@ -41,6 +41,15 @@ func InitRealTimeStateSyncer(logger telemetry.Logger, prometheus instrument.Prom
 	return stateSyncer
 }
 
+func InitBackfillService(logger telemetry.Logger, realTimeStateSyncer *realtime.StateSyncer, cloudClientRegistry *client.Registry, prometheus instrument.Prometheus, sqlDB *sql.DB) (*service.Backfill, error) {
+	factory := transaction.NewFactory(sqlDB)
+	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
+	task := sqldb.NewTask(prometheus, factory)
+	attachmentList := sqldb.NewAttachmentList(prometheus, factory)
+	backfill := service.NewBackfill(logger, groupFactory, cloudClientRegistry, task, attachmentList)
+	return backfill, nil
+}
+
 func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.Environment, logger telemetry.Logger, prometheus instrument.Prometheus, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL, mapServerURL MapServerURL, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, jwtSigningKey JWTSigningKey, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (gql.Service[gql2.Resolver], error) {
 	prometheusTracer := newPrometheusTracer(appName, serviceName, environment)
 	factory := transaction.NewFactory(sqlDB)

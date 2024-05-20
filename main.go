@@ -197,7 +197,9 @@ func startServiceRunner(
 	realTimeStateSyncAPI := dep.InitRealTimeStateSyncAPI(
 		logger,
 		realTimeStateSyncer)
+
 	mapServerURL := dep.MapServerURL(fmt.Sprintf("%s/stream", cfg.CloudWebAPIExternalBaseURL))
+
 	graphQLAPI, err := dep.InitGraphQLAPI(
 		appName,
 		serviceName,
@@ -270,6 +272,21 @@ func startServiceRunner(
 		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL))
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	backfillService, err := dep.InitBackfillService(
+		logger,
+		realTimeStateSyncer, cloudClientRegistry,
+		prom,
+		sqlDB,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	internalErr = backfillService.BackfillData(ct)
+	if internalErr != nil {
+		return internalErr
 	}
 
 	rn := runner.NewServiceRunnerBuilder(
