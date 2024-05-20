@@ -274,7 +274,7 @@ type Task {
 	availableActions: [TaskAction!]!
 	awaitForTasks: [Task!]!
 	links: [TaskLink!]!
-	contextAttachmentList: AttachmentList
+	contextAttachmentList: AttachmentList!
 }
 
 type AttachmentList {

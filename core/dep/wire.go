@@ -196,6 +196,30 @@ func InitRealTimeStateSyncer(
 	return nil
 }
 
+func InitBackfillService(
+	logger telemetry.Logger,
+	// transactionGroupFactory transaction.GroupFactory,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cloudClientRegistry *client.Registry,
+	prometheus instrument.Prometheus,
+	sqlDB *sql.DB,
+) (*service.Backfill, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		// wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		// cacheSet,
+		daoSet,
+		serviceSet,
+		// client.NewAuthorizer,
+		// feature.NewStaticToggles,
+		// activity.NewActivity,
+		service.NewBackfill,
+	)
+
+	return &service.Backfill{}, nil
+}
+
 func InitGraphQLAPI(
 	appName AppMame,
 	serviceName ServiceName,

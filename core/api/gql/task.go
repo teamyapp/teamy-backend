@@ -158,19 +158,14 @@ func (t Task) Links(ct context.Context) ([]TaskLink, error) {
 	}), nil
 }
 
-func (t Task) ContextAttachmentList(ct context.Context) (*AttachmentList, error) {
+func (t Task) ContextAttachmentList(ct context.Context) (AttachmentList, error) {
 	attachmentList, err := t.deps.attachmentService.FindAttachmentList(ct, entity.AttachmentListOwnerTypeTask, t.task.ID, "context")
 	if err != nil {
 		t.deps.logger.ErrorWithContext(ct, err)
-		return nil, errs.ToResolverErr(err)
+		return AttachmentList{}, errs.ToResolverErr(err)
 	}
 
-	if attachmentList == nil {
-		return nil, nil
-	}
-
-	attachmentListGql := newAttachmentList(t.deps, *attachmentList)
-	return &attachmentListGql, nil
+	return newAttachmentList(t.deps, attachmentList), nil
 }
 
 func newTask(deps *Dependencies, task entity.Task) Task {

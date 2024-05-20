@@ -47,8 +47,8 @@ func (a *Attachment) FindAttachmentList(
 	ownerType entity.AttachmentListOwnerType,
 	ownerID uint64,
 	listLabel string,
-) (*entity.AttachmentList, *errs.Error) {
-	var attachmentList *entity.AttachmentList
+) (entity.AttachmentList, *errs.Error) {
+	var attachmentList entity.AttachmentList
 	err := a.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		attachmentLists, internalErr := a.attachmentListDao.FindAttachmentListsWithTx(ct, tx, ownerType, ownerID, listLabel)
 		if internalErr != nil {
@@ -56,14 +56,14 @@ func (a *Attachment) FindAttachmentList(
 		}
 
 		if len(attachmentLists) == 0 {
-			return nil
+			return errs.NewError(errs.NotFound, "Attachment list not found")
 		}
 
 		if len(attachmentLists) > 1 {
 			return errs.NewError(errs.Unknown, "Found multiple attachment lists")
 		}
 
-		attachmentList = &attachmentLists[0]
+		attachmentList = attachmentLists[0]
 		return internalErr
 	})
 
