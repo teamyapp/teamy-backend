@@ -23,7 +23,7 @@ type Backfill struct {
 	attachmentListDao       dao.AttachmentList
 }
 
-func (b *Backfill) addAttachmentListToTaskContext(ct context.Context) *errs.Error {
+func (b *Backfill) backfillAttachmentListForTaskContext(ct context.Context) *errs.Error {
 	return b.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 		tasks, internalErr := b.taskDao.FindAllTasksWithTx(ct, tx)
 		if internalErr != nil {
@@ -36,12 +36,13 @@ func (b *Backfill) addAttachmentListToTaskContext(ct context.Context) *errs.Erro
 				return internalErr
 			}
 
-			if len(attachmentLists) == 0 {
+			if len(attachmentLists) > 0 {
+			   continue;
+			}
 				genAttachmentListIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "attachmentListID"}
 				genAttachmentListIDRes, rpcErr := b.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAttachmentListIDReq)
 				if rpcErr != nil {
-					internalErr = errs.FromGRPCErr(rpcErr)
-					return internalErr
+					return errs.FromGRPCErr(rpcErr)
 				}
 
 				attachmentList := entity.AttachmentList{
@@ -49,22 +50,17 @@ func (b *Backfill) addAttachmentListToTaskContext(ct context.Context) *errs.Erro
 					OwnerID:   task.ID,
 					ListLabel: "context",
 					ListID:    genAttachmentListIDRes.UniqueNumber,
-					CreatedAt: time.Now(),
+					CreatedAt: time.Now().UTC(),
 				}
 
-				internalErr = b.attachmentListDao.CreateAttachmentList(ct, tx, attachmentList)
-				if internalErr != nil {
-					return internalErr
-				}
-			}
-
+				return b.attachmentListDao.CreateAttachmentList(ct, tx, attachmentList)
 		}
 
 		return nil
 	})
 }
 
-func (b *Backfill) Run(ct context.Context) *errs.Error {
+func (b *Backfill) BackfillData(ct context.Context) *errs.Error {
 	return b.addAttachmentListToTaskContext(ct)
 }
 

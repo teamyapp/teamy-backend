@@ -280,14 +280,13 @@ func startServiceRunner(
 		prom,
 		sqlDB,
 	)
-
 	if err != nil {
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	serviceError := backfillService.Run(ct)
-	if serviceError != nil {
-		return serviceError
+	internalErr = backfillService.Run(ct)
+	if internalErr != nil {
+		return internalErr
 	}
 
 	rn := runner.NewServiceRunnerBuilder(
