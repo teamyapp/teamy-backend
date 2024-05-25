@@ -184,6 +184,24 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 	return attachment, err
 }
 
+func (a *Attachment) DeleteAttachment(ct context.Context, attachmentID uint64) (entity.Attachment, *errs.Error) {
+	var attachment entity.Attachment
+	err := a.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			attachment, internalErr = a.attachmentDao.FindAttachmentByIDWithTx(ct, tx, attachmentID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			return a.attachmentDao.DeleteAttachment(ct, tx, attachmentID)
+		})
+
+	return attachment, err
+}
+
 func NewAttachment(
 	logger telemetry.Logger,
 	cloudClientRegistry *client.Registry,
