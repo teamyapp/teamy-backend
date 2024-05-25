@@ -114,3 +114,25 @@ func (m Mutation) FinishAttachmentListFileUploadSession(ct context.Context, args
 
 	return newAttachment(m.deps, attachment), nil
 }
+
+func (m Mutation) DeleteAttachmentListFile(ct context.Context, args struct {
+	AttachmentID graphql.ID
+}) (Attachment, error) {
+	attachmentID, argErr := fromGraphQLID(args.AttachmentID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Attachment{}, errs.ToResolverErr(internalErr)
+	}
+
+	attachment, err := m.deps.attachmentService.DeleteAttachment(ct, attachmentID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Attachment{}, errs.ToResolverErr(err)
+	}
+
+	return newAttachment(m.deps, attachment), nil
+}

@@ -208,6 +208,7 @@ type Mutation {
 
 	createAttachmentListFileUploadSession(attachmentListId: ID!): ID!
 	finishAttachmentListFileUploadSession(attachmentListId: ID!, fileUploadSessionId: ID!): Attachment!
+	deleteAttachmentListFile(attachmentId: ID!): Attachment!
 }
 
 type Project {
