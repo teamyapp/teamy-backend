@@ -1080,6 +1080,68 @@ func (t Team) RemoveUserFromTeamMemberGroup(ct context.Context, memberGroupID ui
 	return user, err
 }
 
+func (t Team) OrderTeamMemberGroups(ct context.Context, teamID uint64, orderedGroupIDs []uint64) ([]entity.TeamMemberGroup, *errs.Error) {
+	var teamMemberGroups []daoEntity.TeamMemberGroup
+	err := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			teamMemberGroups, internalErr = t.teamMemberGroupDao.FindMemberGroupsByTeamID(ct, tx, teamID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			if len(teamMemberGroups) != len(orderedGroupIDs) {
+				return errs.NewError(errs.InvalidOperation, fmt.Sprintf("group count mismatch: teamID=%v, orderedGroupIDs=%v",
+					teamID,
+					orderedGroupIDs))
+			}
+
+			groupIDToGroup := make(map[uint64]daoEntity.TeamMemberGroup)
+			for _, group := range teamMemberGroups {
+				groupIDToGroup[group.ID] = group
+			}
+
+			orderedGroups := make([]daoEntity.TeamMemberGroup, 0, len(orderedGroupIDs))
+			for _, groupID := range orderedGroupIDs {
+				group, ok := groupIDToGroup[groupID]
+				if !ok {
+					return errs.NewError(errs.InvalidOperation, fmt.Sprintf("group not found: teamID=%v, groupID=%v",
+						teamID,
+						groupID))
+				}
+
+				orderedGroups = append(orderedGroups, group)
+			}
+
+			now := time.Now().UTC()
+			for index, teamMemberGroup := range orderedGroups {
+				teamMemberGroup.Order = index
+				teamMemberGroup.UpdatedAt = &now
+				updateTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
+					t.logger,
+					t.stateSyncer,
+					t.teamMemberGroupDao,
+					teamMemberGroup,
+				)
+
+				internalErr = updateTeamMemberGroupMutation.Execute(ct, tx)
+				if internalErr != nil {
+					return internalErr
+				}
+
+				rtTx.AppendMutation(updateTeamMemberGroupMutation)
+			}
+
+			return nil
+		})
+
+	return collect.Map(teamMemberGroups, func(group daoEntity.TeamMemberGroup, _ int) entity.TeamMemberGroup {
+		return repository.GetTeamMemberGroupFromRawTeamMemberGroup(group)
+	}), err
+}
+
 func NewTeam(
 	logger telemetry.Logger,
 	transactionGroupFactory transaction.GroupFactory,

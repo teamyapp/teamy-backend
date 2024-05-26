@@ -33,6 +33,10 @@ func (m TeamMemberGroup) Team(ct context.Context) Team {
 	return newTeam(m.deps, team)
 }
 
+func (m TeamMemberGroup) Order() int32 {
+	return int32(m.memberGroup.Order)
+}
+
 func (m TeamMemberGroup) Members(ct context.Context) ([]User, error) {
 	users, err := m.deps.userService.FindUsersByIDs(ct, m.memberGroup.MemberUserIDs)
 	if err != nil {
@@ -205,4 +209,47 @@ func (m Mutation) RemoveUserFromTeamMemberGroup(ct context.Context, args struct 
 	}
 
 	return newUser(m.deps, user), nil
+}
+
+func (m Mutation) OrderTeamMemberGroups(
+	ct context.Context,
+	args struct {
+		TeamID         graphql.ID
+		MemberGroupIDs []graphql.ID
+	},
+) ([]TeamMemberGroup, error) {
+	teamID, argErr := fromGraphQLID(args.TeamID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return nil, errs.ToResolverErr(internalErr)
+	}
+
+	teamMemberGroupIDs := make([]uint64, len(args.MemberGroupIDs))
+	for index, id := range args.MemberGroupIDs {
+		groupID, err := fromGraphQLID(id)
+		if err != nil {
+			internalErr := errs.NewError(
+				errs.InvalidArgument,
+				err.Error(),
+			)
+			m.deps.logger.ErrorWithContext(ct, internalErr)
+			return nil, errs.ToResolverErr(internalErr)
+		}
+
+		teamMemberGroupIDs[index] = groupID
+	}
+
+	teamMemberGroups, err := m.deps.teamService.OrderTeamMemberGroups(ct, teamID, teamMemberGroupIDs)
+	if err != nil {
+		m.deps.logger.Error(err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(teamMemberGroups, func(group entity.TeamMemberGroup, _ int) TeamMemberGroup {
+		return newTeamMemberGroup(m.deps, group)
+	}), nil
 }

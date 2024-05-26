@@ -59,6 +59,7 @@ type Mutation {
 	deleteTeamMemberGroup(id: ID!): TeamMemberGroup!
 	addUserToTeamMemberGroup(id: ID!, userId: ID!): User!
 	removeUserFromTeamMemberGroup(id: ID!, userId: ID!): User!
+	orderTeamMemberGroups(teamId: ID!, memberGroupIds: [ID!]!): [TeamMemberGroup!]!
 
 	# User
 	createUser(user: CreateUserInput!): User!
@@ -373,6 +374,7 @@ type TeamMember {
 type TeamMemberGroup {
 	id: ID!
 	name: String!
+	order: Int!
 	team: Team!
 	members: [User!]!
 	createdAt: Time!

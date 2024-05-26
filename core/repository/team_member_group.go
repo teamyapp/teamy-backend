@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"sort"
 
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/transaction"
@@ -33,6 +34,7 @@ func (t TeamMemberGroup) FindMemberGroupByID(
 	return entity.TeamMemberGroup{
 		ID:                       teamMemberGroup.ID,
 		Name:                     teamMemberGroup.Name,
+		Order:                    teamMemberGroup.Order,
 		TeamID:                   teamMemberGroup.TeamID,
 		AuthorizationUserGroupID: teamMemberGroup.AuthorizationUserGroupID,
 		MemberUserIDs:            memberUserIDs,
@@ -58,12 +60,17 @@ func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transa
 			ID:                       rawTeamMemberGroup.ID,
 			Name:                     rawTeamMemberGroup.Name,
 			TeamID:                   rawTeamMemberGroup.TeamID,
+			Order:                    rawTeamMemberGroup.Order,
 			AuthorizationUserGroupID: rawTeamMemberGroup.AuthorizationUserGroupID,
 			MemberUserIDs:            memberUserIDs,
 			CreatedAt:                rawTeamMemberGroup.CreatedAt,
 			UpdatedAt:                rawTeamMemberGroup.UpdatedAt,
 		})
 	}
+
+	sort.Slice(teamMemberGroups, func(i, j int) bool {
+		return teamMemberGroups[i].Order < teamMemberGroups[j].Order
+	})
 
 	return teamMemberGroups, nil
 }
@@ -72,6 +79,7 @@ func GetTeamMemberGroupFromRawTeamMemberGroup(teamMemberGroup daoEntity.TeamMemb
 	return entity.TeamMemberGroup{
 		ID:                       teamMemberGroup.ID,
 		TeamID:                   teamMemberGroup.TeamID,
+		Order:                    teamMemberGroup.Order,
 		Name:                     teamMemberGroup.Name,
 		AuthorizationUserGroupID: teamMemberGroup.AuthorizationUserGroupID,
 		MemberUserIDs:            []uint64{},

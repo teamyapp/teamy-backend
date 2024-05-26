@@ -6,6 +6,7 @@ type TeamMemberGroup struct {
 	ID                       uint64
 	Name                     string
 	TeamID                   uint64
+	Order                    int
 	AuthorizationUserGroupID uint64
 	CreatedAt                time.Time
 	UpdatedAt                *time.Time
