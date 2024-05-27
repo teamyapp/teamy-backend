@@ -375,7 +375,7 @@ type TeamMember {
 type TeamMemberGroup {
 	id: ID!
 	name: String!
-	order: Int!
+	orderIndex: Int!
 	team: Team!
 	members: [User!]!
 	createdAt: Time!

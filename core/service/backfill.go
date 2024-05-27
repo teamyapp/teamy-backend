@@ -42,7 +42,7 @@ func (b *Backfill) backfillTeamMemberGroupOrder(ct context.Context) *errs.Error 
 			}
 
 			for index, memberGroup := range memberGroups {
-				if memberGroup.Order == index {
+				if memberGroup.OrderIndex == index {
 					continue
 				}
 
@@ -51,7 +51,7 @@ func (b *Backfill) backfillTeamMemberGroupOrder(ct context.Context) *errs.Error 
 					return internalErr
 				}
 
-				rawTeamMemberGroup.Order = index
+				rawTeamMemberGroup.OrderIndex = index
 				rawTeamMemberGroup.UpdatedAt = &now
 				internalErr = b.teamMemberGroupDao.UpdateMemberGroup(ct, tx, rawTeamMemberGroup)
 				if internalErr != nil {

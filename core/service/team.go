@@ -1101,14 +1101,14 @@ func (t Team) MoveUpTeamMemberGroup(
 				return internalErr
 			}
 
-			currentOrderIndex := rawTeamMemberGroup.Order
+			currentOrderIndex := rawTeamMemberGroup.OrderIndex
 			if currentOrderIndex == len(teamMemberGroups)-1 {
 				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the top: teamMemberGroupID=%v", teamMemberGroupID))
 				return nil
 			}
 
 			nextOrderIndex := currentOrderIndex + 1
-			rawTeamMemberGroup.Order = nextOrderIndex
+			rawTeamMemberGroup.OrderIndex = nextOrderIndex
 			rawTeamMemberGroup.UpdatedAt = &now
 			updateTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
 				t.logger,
@@ -1124,7 +1124,7 @@ func (t Team) MoveUpTeamMemberGroup(
 
 			rtTx.AppendMutation(updateTeamMemberGroupMutation)
 			nextTeamMemberGroups := collect.Filter(teamMemberGroups, func(group entity.TeamMemberGroup) bool {
-				return group.Order == nextOrderIndex
+				return group.OrderIndex == nextOrderIndex
 			})
 			if len(nextTeamMemberGroups) != 1 {
 				return errs.NewError(errs.Unknown, fmt.Sprintf("team member group not found: teamMemberGroupID=%v", teamMemberGroupID))
@@ -1136,7 +1136,7 @@ func (t Team) MoveUpTeamMemberGroup(
 				return internalErr
 			}
 
-			rawNextTeamMemberGroup.Order = currentOrderIndex
+			rawNextTeamMemberGroup.OrderIndex = currentOrderIndex
 			rawNextTeamMemberGroup.UpdatedAt = &now
 			updateNextTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
 				t.logger,
@@ -1179,14 +1179,14 @@ func (t Team) MoveDownTeamMemberGroup(
 				return internalErr
 			}
 
-			currentOrderIndex := rawTeamMemberGroup.Order
+			currentOrderIndex := rawTeamMemberGroup.OrderIndex
 			if currentOrderIndex == 0 {
 				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the bottom: teamMemberGroupID=%v", teamMemberGroupID))
 				return nil
 			}
 
 			prevOrderIndex := currentOrderIndex - 1
-			rawTeamMemberGroup.Order = prevOrderIndex
+			rawTeamMemberGroup.OrderIndex = prevOrderIndex
 			rawTeamMemberGroup.UpdatedAt = &now
 			updateTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
 				t.logger,
@@ -1202,7 +1202,7 @@ func (t Team) MoveDownTeamMemberGroup(
 
 			rtTx.AppendMutation(updateTeamMemberGroupMutation)
 			prevTeamMemberGroups := collect.Filter(teamMemberGroups, func(group entity.TeamMemberGroup) bool {
-				return group.Order == prevOrderIndex
+				return group.OrderIndex == prevOrderIndex
 			})
 			if len(prevTeamMemberGroups) != 1 {
 				return errs.NewError(errs.Unknown, fmt.Sprintf("team member group not found: teamMemberGroupID=%v", teamMemberGroupID))
@@ -1214,7 +1214,7 @@ func (t Team) MoveDownTeamMemberGroup(
 				return internalErr
 			}
 
-			rawPrevTeamMemberGroup.Order = currentOrderIndex
+			rawPrevTeamMemberGroup.OrderIndex = currentOrderIndex
 			rawPrevTeamMemberGroup.UpdatedAt = &now
 			updatePrevTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
 				t.logger,

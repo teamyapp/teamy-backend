@@ -33,8 +33,8 @@ func (m TeamMemberGroup) Team(ct context.Context) Team {
 	return newTeam(m.deps, team)
 }
 
-func (m TeamMemberGroup) Order() int32 {
-	return int32(m.memberGroup.Order)
+func (m TeamMemberGroup) OrderIndex() int32 {
+	return int32(m.memberGroup.OrderIndex)
 }
 
 func (m TeamMemberGroup) Members(ct context.Context) ([]User, error) {
