@@ -59,8 +59,8 @@ type Mutation {
 	deleteTeamMemberGroup(id: ID!): TeamMemberGroup!
 	addUserToTeamMemberGroup(id: ID!, userId: ID!): User!
 	removeUserFromTeamMemberGroup(id: ID!, userId: ID!): User!
-	moveUpTeamMemberGroup(id: ID!): [TeamMemberGroup!]!
-	moveDownTeamMemberGroup(id: ID!): [TeamMemberGroup!]!
+	moveUpTeamMemberGroup(id: ID!): TeamMemberGroup!
+	moveDownTeamMemberGroup(id: ID!): TeamMemberGroup!
 
 	# User
 	createUser(user: CreateUserInput!): User!
