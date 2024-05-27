@@ -105,7 +105,12 @@ func (b *Backfill) backfillAttachmentListForTaskContext(ct context.Context) *err
 }
 
 func (b *Backfill) BackfillData(ct context.Context) *errs.Error {
-	return b.backfillAttachmentListForTaskContext(ct)
+	err := b.backfillAttachmentListForTaskContext(ct)
+	if err != nil {
+		return err
+	}
+
+	return b.backfillTeamMemberGroupOrder(ct)
 }
 
 func NewBackfill(

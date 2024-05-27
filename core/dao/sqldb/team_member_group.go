@@ -24,7 +24,7 @@ func (t TeamMemberGroup) FindMemberGroupByID(ct context.Context, tx *transaction
 			id,
 			team_id,
 			name,
-			order,
+			"order",
 			authorization_user_group_id,
 			created_at,
 			updated_at
@@ -59,7 +59,7 @@ func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transa
 			id,
 			team_id,
 			name,
-			order,
+			"order",
 			authorization_user_group_id,
 			created_at,
 			updated_at
@@ -102,7 +102,7 @@ func (t TeamMemberGroup) CreateMemberGroup(ct context.Context, tx *transaction.T
 			 id,
 			 team_id,
 			 name,
-			 order,
+			 "order",
 			 authorization_user_group_id,
 			 created_at,
 			 updated_at)
@@ -132,7 +132,7 @@ func (t TeamMemberGroup) UpdateMemberGroup(ct context.Context, tx *transaction.T
 		SET
 			name = $1,
 			team_id = $2,
-			order = $3,
+			"order" = $3,
 			authorization_user_group_id = $4,
 			created_at = $5,
 			updated_at = $6
