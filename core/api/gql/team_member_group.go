@@ -211,45 +211,52 @@ func (m Mutation) RemoveUserFromTeamMemberGroup(ct context.Context, args struct 
 	return newUser(m.deps, user), nil
 }
 
-func (m Mutation) OrderTeamMemberGroups(
+func (m Mutation) MoveUpTeamMemberGroup(
 	ct context.Context,
 	args struct {
-		TeamID         graphql.ID
-		MemberGroupIDs []graphql.ID
+		ID graphql.ID
 	},
-) ([]TeamMemberGroup, error) {
-	teamID, argErr := fromGraphQLID(args.TeamID)
+) (TeamMemberGroup, error) {
+	id, argErr := fromGraphQLID(args.ID)
 	if argErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,
 			argErr.Error(),
 		)
 		m.deps.logger.ErrorWithContext(ct, internalErr)
-		return nil, errs.ToResolverErr(internalErr)
+		return TeamMemberGroup{}, errs.ToResolverErr(internalErr)
 	}
 
-	teamMemberGroupIDs := make([]uint64, len(args.MemberGroupIDs))
-	for index, id := range args.MemberGroupIDs {
-		groupID, err := fromGraphQLID(id)
-		if err != nil {
-			internalErr := errs.NewError(
-				errs.InvalidArgument,
-				err.Error(),
-			)
-			m.deps.logger.ErrorWithContext(ct, internalErr)
-			return nil, errs.ToResolverErr(internalErr)
-		}
-
-		teamMemberGroupIDs[index] = groupID
-	}
-
-	teamMemberGroups, err := m.deps.teamService.OrderTeamMemberGroups(ct, teamID, teamMemberGroupIDs)
+	teamMemberGroup, err := m.deps.teamService.MoveUpTeamMemberGroup(ct, id)
 	if err != nil {
 		m.deps.logger.Error(err)
-		return nil, errs.ToResolverErr(err)
+		return TeamMemberGroup{}, errs.ToResolverErr(err)
 	}
 
-	return collect.Map(teamMemberGroups, func(group entity.TeamMemberGroup, _ int) TeamMemberGroup {
-		return newTeamMemberGroup(m.deps, group)
-	}), nil
+	return newTeamMemberGroup(m.deps, teamMemberGroup), nil
+}
+
+func (m Mutation) MoveDownTeamMemberGroup(
+	ct context.Context,
+	args struct {
+		ID graphql.ID
+	},
+) (TeamMemberGroup, error) {
+	id, argErr := fromGraphQLID(args.ID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return TeamMemberGroup{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamMemberGroup, err := m.deps.teamService.MoveDownTeamMemberGroup(ct, id)
+	if err != nil {
+		m.deps.logger.Error(err)
+		return TeamMemberGroup{}, errs.ToResolverErr(err)
+	}
+
+	return newTeamMemberGroup(m.deps, teamMemberGroup), nil
 }

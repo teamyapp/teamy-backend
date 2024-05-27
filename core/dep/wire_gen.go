@@ -45,8 +45,12 @@ func InitBackfillService(logger telemetry.Logger, realTimeStateSyncer *realtime.
 	factory := transaction.NewFactory(sqlDB)
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
 	task := sqldb.NewTask(prometheus, factory)
+	team := sqldb.NewTeam(prometheus, factory)
 	attachmentList := sqldb.NewAttachmentList(prometheus, factory)
-	backfill := service.NewBackfill(logger, groupFactory, cloudClientRegistry, task, attachmentList)
+	teamMemberGroup := sqldb.NewTeamMemberGroup(prometheus)
+	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation(prometheus)
+	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
+	backfill := service.NewBackfill(logger, groupFactory, cloudClientRegistry, task, team, attachmentList, teamMemberGroup, repositoryTeamMemberGroup)
 	return backfill, nil
 }
 

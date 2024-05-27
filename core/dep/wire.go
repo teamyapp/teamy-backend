@@ -208,6 +208,7 @@ func InitBackfillService(
 		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
 		daoSet,
 		serviceSet,
+		repositorySet,
 		service.NewBackfill,
 	)
 	return &service.Backfill{}, nil
