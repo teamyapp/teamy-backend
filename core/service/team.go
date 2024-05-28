@@ -1080,7 +1080,7 @@ func (t Team) RemoveUserFromTeamMemberGroup(ct context.Context, memberGroupID ui
 	return user, err
 }
 
-func (t Team) MoveUpTeamMemberGroup(
+func (t Team) MoveDownTeamMemberGroup(
 	ct context.Context,
 	teamMemberGroupID uint64,
 ) (entity.TeamMemberGroup, *errs.Error) {
@@ -1103,7 +1103,7 @@ func (t Team) MoveUpTeamMemberGroup(
 
 			currentOrderIndex := rawTeamMemberGroup.OrderIndex
 			if currentOrderIndex == len(teamMemberGroups)-1 {
-				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the top: teamMemberGroupID=%v", teamMemberGroupID))
+				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the bottom: teamMemberGroupID=%v", teamMemberGroupID))
 				return nil
 			}
 
@@ -1158,7 +1158,7 @@ func (t Team) MoveUpTeamMemberGroup(
 	return teamMemberGroup, err
 }
 
-func (t Team) MoveDownTeamMemberGroup(
+func (t Team) MoveUpTeamMemberGroup(
 	ct context.Context,
 	teamMemberGroupID uint64,
 ) (entity.TeamMemberGroup, *errs.Error) {
@@ -1181,7 +1181,7 @@ func (t Team) MoveDownTeamMemberGroup(
 
 			currentOrderIndex := rawTeamMemberGroup.OrderIndex
 			if currentOrderIndex == 0 {
-				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the bottom: teamMemberGroupID=%v", teamMemberGroupID))
+				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the top: teamMemberGroupID=%v", teamMemberGroupID))
 				return nil
 			}
 
