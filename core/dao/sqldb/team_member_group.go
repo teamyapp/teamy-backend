@@ -24,6 +24,7 @@ func (t TeamMemberGroup) FindMemberGroupByID(ct context.Context, tx *transaction
 			id,
 			team_id,
 			name,
+			order_index,
 			authorization_user_group_id,
 			created_at,
 			updated_at
@@ -35,6 +36,7 @@ func (t TeamMemberGroup) FindMemberGroupByID(ct context.Context, tx *transaction
 			&teamMemberGroup.ID,
 			&teamMemberGroup.TeamID,
 			&teamMemberGroup.Name,
+			&teamMemberGroup.OrderIndex,
 			&teamMemberGroup.AuthorizationUserGroupID,
 			&teamMemberGroup.CreatedAt,
 			&teamMemberGroup.UpdatedAt,
@@ -57,6 +59,7 @@ func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transa
 			id,
 			team_id,
 			name,
+			order_index,
 			authorization_user_group_id,
 			created_at,
 			updated_at
@@ -76,6 +79,7 @@ func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transa
 			&memberGroup.ID,
 			&memberGroup.TeamID,
 			&memberGroup.Name,
+			&memberGroup.OrderIndex,
 			&memberGroup.AuthorizationUserGroupID,
 			&memberGroup.CreatedAt,
 			&memberGroup.UpdatedAt,
@@ -98,16 +102,18 @@ func (t TeamMemberGroup) CreateMemberGroup(ct context.Context, tx *transaction.T
 			 id,
 			 team_id,
 			 name,
+			 order_index,
 			 authorization_user_group_id,
 			 created_at,
 			 updated_at)
 		VALUES
-			($1, $2, $3, $4, $5, $6)`
+			($1, $2, $3, $4, $5, $6, $7)`
 	_, err := tx.SQLTx().Exec(
 		statement,
 		memberGroup.ID,
 		memberGroup.TeamID,
 		memberGroup.Name,
+		memberGroup.OrderIndex,
 		memberGroup.AuthorizationUserGroupID,
 		memberGroup.CreatedAt,
 		memberGroup.UpdatedAt,
@@ -126,14 +132,16 @@ func (t TeamMemberGroup) UpdateMemberGroup(ct context.Context, tx *transaction.T
 		SET
 			name = $1,
 			team_id = $2,
-			authorization_user_group_id = $3,
-			created_at = $4,
-			updated_at = $5
-		WHERE id = $6`
+			order_index = $3,
+			authorization_user_group_id = $4,
+			created_at = $5,
+			updated_at = $6
+		WHERE id = $7`
 	_, err := tx.SQLTx().Exec(
 		statement,
 		memberGroup.Name,
 		memberGroup.TeamID,
+		memberGroup.OrderIndex,
 		memberGroup.AuthorizationUserGroupID,
 		memberGroup.CreatedAt,
 		memberGroup.UpdatedAt,

@@ -12,6 +12,7 @@ import (
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
+	"github.com/teamyapp/teamy-backend/core/repository"
 	"github.com/teamyapp/teamy-backend/core/transaction"
 )
 
@@ -20,7 +21,47 @@ type Backfill struct {
 	transactionGroupFactory transaction.GroupFactory
 	cloudClientRegistry     *client.Registry
 	taskDao                 dao.Task
+	teamDao                 dao.Team
 	attachmentListDao       dao.AttachmentList
+	teamMemberGroupDao      dao.TeamMemberGroup
+	teamMemberGroupRepo     repository.TeamMemberGroup
+}
+
+func (b *Backfill) backfillTeamMemberGroupOrder(ct context.Context) *errs.Error {
+	return b.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		teams, internalErr := b.teamDao.FindAllTeamsWithTx(ct, tx)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		now := time.Now().UTC()
+		for _, team := range teams {
+			memberGroups, internalErr := b.teamMemberGroupRepo.FindMemberGroupsByTeamID(ct, tx, team.ID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			for index, memberGroup := range memberGroups {
+				if memberGroup.OrderIndex == index {
+					continue
+				}
+
+				rawTeamMemberGroup, internalErr := b.teamMemberGroupDao.FindMemberGroupByID(ct, tx, memberGroup.ID)
+				if internalErr != nil {
+					return internalErr
+				}
+
+				rawTeamMemberGroup.OrderIndex = index
+				rawTeamMemberGroup.UpdatedAt = &now
+				internalErr = b.teamMemberGroupDao.UpdateMemberGroup(ct, tx, rawTeamMemberGroup)
+				if internalErr != nil {
+					return internalErr
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
 func (b *Backfill) backfillAttachmentListForTaskContext(ct context.Context) *errs.Error {
@@ -64,7 +105,12 @@ func (b *Backfill) backfillAttachmentListForTaskContext(ct context.Context) *err
 }
 
 func (b *Backfill) BackfillData(ct context.Context) *errs.Error {
-	return b.backfillAttachmentListForTaskContext(ct)
+	err := b.backfillAttachmentListForTaskContext(ct)
+	if err != nil {
+		return err
+	}
+
+	return b.backfillTeamMemberGroupOrder(ct)
 }
 
 func NewBackfill(
@@ -72,13 +118,19 @@ func NewBackfill(
 	transactionGroupFactory transaction.GroupFactory,
 	cloudClientRegistry *client.Registry,
 	taskDao dao.Task,
+	teamDao dao.Team,
 	attachmentListDao dao.AttachmentList,
+	teamMemberGroupDao dao.TeamMemberGroup,
+	teamMemberGroupRepo repository.TeamMemberGroup,
 ) *Backfill {
 	return &Backfill{
 		logger:                  logger,
 		transactionGroupFactory: transactionGroupFactory,
 		cloudClientRegistry:     cloudClientRegistry,
 		taskDao:                 taskDao,
+		teamDao:                 teamDao,
 		attachmentListDao:       attachmentListDao,
+		teamMemberGroupDao:      teamMemberGroupDao,
+		teamMemberGroupRepo:     teamMemberGroupRepo,
 	}
 }

@@ -1080,6 +1080,162 @@ func (t Team) RemoveUserFromTeamMemberGroup(ct context.Context, memberGroupID ui
 	return user, err
 }
 
+func (t Team) MoveDownTeamMemberGroup(
+	ct context.Context,
+	teamMemberGroupID uint64,
+) (entity.TeamMemberGroup, *errs.Error) {
+	var teamMemberGroup entity.TeamMemberGroup
+	now := time.Now().UTC()
+	err := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			rawTeamMemberGroup, internalErr := t.teamMemberGroupDao.FindMemberGroupByID(ct, tx, teamMemberGroupID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			teamMemberGroups, internalErr := t.teamMemberGroupRepo.FindMemberGroupsByTeamID(ct, tx, rawTeamMemberGroup.TeamID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			currentOrderIndex := rawTeamMemberGroup.OrderIndex
+			if currentOrderIndex == len(teamMemberGroups)-1 {
+				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the bottom: teamMemberGroupID=%v", teamMemberGroupID))
+				return nil
+			}
+
+			nextOrderIndex := currentOrderIndex + 1
+			rawTeamMemberGroup.OrderIndex = nextOrderIndex
+			rawTeamMemberGroup.UpdatedAt = &now
+			updateTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
+				t.logger,
+				t.stateSyncer,
+				t.teamMemberGroupDao,
+				rawTeamMemberGroup,
+			)
+
+			internalErr = updateTeamMemberGroupMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(updateTeamMemberGroupMutation)
+			nextTeamMemberGroups := collect.Filter(teamMemberGroups, func(group entity.TeamMemberGroup) bool {
+				return group.OrderIndex == nextOrderIndex
+			})
+			if len(nextTeamMemberGroups) != 1 {
+				return errs.NewError(errs.Unknown, fmt.Sprintf("team member group not found: teamMemberGroupID=%v", teamMemberGroupID))
+			}
+
+			nextTeamMemberGroupId := nextTeamMemberGroups[0].ID
+			rawNextTeamMemberGroup, internalErr := t.teamMemberGroupDao.FindMemberGroupByID(ct, tx, nextTeamMemberGroupId)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rawNextTeamMemberGroup.OrderIndex = currentOrderIndex
+			rawNextTeamMemberGroup.UpdatedAt = &now
+			updateNextTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
+				t.logger,
+				t.stateSyncer,
+				t.teamMemberGroupDao,
+				rawNextTeamMemberGroup,
+			)
+
+			internalErr = updateNextTeamMemberGroupMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(updateNextTeamMemberGroupMutation)
+			teamMemberGroup = repository.GetTeamMemberGroupFromRawTeamMemberGroup(rawNextTeamMemberGroup)
+			return nil
+		})
+
+	return teamMemberGroup, err
+}
+
+func (t Team) MoveUpTeamMemberGroup(
+	ct context.Context,
+	teamMemberGroupID uint64,
+) (entity.TeamMemberGroup, *errs.Error) {
+	var teamMemberGroup entity.TeamMemberGroup
+	now := time.Now().UTC()
+	err := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		false,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var internalErr *errs.Error
+			rawTeamMemberGroup, internalErr := t.teamMemberGroupDao.FindMemberGroupByID(ct, tx, teamMemberGroupID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			teamMemberGroups, internalErr := t.teamMemberGroupRepo.FindMemberGroupsByTeamID(ct, tx, rawTeamMemberGroup.TeamID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			currentOrderIndex := rawTeamMemberGroup.OrderIndex
+			if currentOrderIndex == 0 {
+				t.logger.WarningWithContext(ct, fmt.Sprintf("team member group is already at the top: teamMemberGroupID=%v", teamMemberGroupID))
+				return nil
+			}
+
+			prevOrderIndex := currentOrderIndex - 1
+			rawTeamMemberGroup.OrderIndex = prevOrderIndex
+			rawTeamMemberGroup.UpdatedAt = &now
+			updateTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
+				t.logger,
+				t.stateSyncer,
+				t.teamMemberGroupDao,
+				rawTeamMemberGroup,
+			)
+
+			internalErr = updateTeamMemberGroupMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(updateTeamMemberGroupMutation)
+			prevTeamMemberGroups := collect.Filter(teamMemberGroups, func(group entity.TeamMemberGroup) bool {
+				return group.OrderIndex == prevOrderIndex
+			})
+			if len(prevTeamMemberGroups) != 1 {
+				return errs.NewError(errs.Unknown, fmt.Sprintf("team member group not found: teamMemberGroupID=%v", teamMemberGroupID))
+			}
+
+			prevTeamMemberGroupId := prevTeamMemberGroups[0].ID
+			rawPrevTeamMemberGroup, internalErr := t.teamMemberGroupDao.FindMemberGroupByID(ct, tx, prevTeamMemberGroupId)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rawPrevTeamMemberGroup.OrderIndex = currentOrderIndex
+			rawPrevTeamMemberGroup.UpdatedAt = &now
+			updatePrevTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
+				t.logger,
+				t.stateSyncer,
+				t.teamMemberGroupDao,
+				rawPrevTeamMemberGroup,
+			)
+
+			internalErr = updatePrevTeamMemberGroupMutation.Execute(ct, tx)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			rtTx.AppendMutation(updatePrevTeamMemberGroupMutation)
+			teamMemberGroup = repository.GetTeamMemberGroupFromRawTeamMemberGroup(rawPrevTeamMemberGroup)
+			return nil
+		})
+
+	return teamMemberGroup, err
+}
+
 func NewTeam(
 	logger telemetry.Logger,
 	transactionGroupFactory transaction.GroupFactory,

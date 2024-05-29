@@ -33,6 +33,10 @@ func (m TeamMemberGroup) Team(ct context.Context) Team {
 	return newTeam(m.deps, team)
 }
 
+func (m TeamMemberGroup) OrderIndex() int32 {
+	return int32(m.memberGroup.OrderIndex)
+}
+
 func (m TeamMemberGroup) Members(ct context.Context) ([]User, error) {
 	users, err := m.deps.userService.FindUsersByIDs(ct, m.memberGroup.MemberUserIDs)
 	if err != nil {
@@ -205,4 +209,54 @@ func (m Mutation) RemoveUserFromTeamMemberGroup(ct context.Context, args struct 
 	}
 
 	return newUser(m.deps, user), nil
+}
+
+func (m Mutation) MoveUpTeamMemberGroup(
+	ct context.Context,
+	args struct {
+		ID graphql.ID
+	},
+) (TeamMemberGroup, error) {
+	id, argErr := fromGraphQLID(args.ID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return TeamMemberGroup{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamMemberGroup, err := m.deps.teamService.MoveUpTeamMemberGroup(ct, id)
+	if err != nil {
+		m.deps.logger.Error(err)
+		return TeamMemberGroup{}, errs.ToResolverErr(err)
+	}
+
+	return newTeamMemberGroup(m.deps, teamMemberGroup), nil
+}
+
+func (m Mutation) MoveDownTeamMemberGroup(
+	ct context.Context,
+	args struct {
+		ID graphql.ID
+	},
+) (TeamMemberGroup, error) {
+	id, argErr := fromGraphQLID(args.ID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return TeamMemberGroup{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamMemberGroup, err := m.deps.teamService.MoveDownTeamMemberGroup(ct, id)
+	if err != nil {
+		m.deps.logger.Error(err)
+		return TeamMemberGroup{}, errs.ToResolverErr(err)
+	}
+
+	return newTeamMemberGroup(m.deps, teamMemberGroup), nil
 }
