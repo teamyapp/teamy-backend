@@ -59,7 +59,11 @@ func (t TeamMemberGroupInvitationRelation) CreateTeamMemberGroupInvitationRelati
 	t.metrics.ReportDaoOperation(teamMemberGroupInvitationRelationDaoName, "CreateTeamMemberGroupInvitationRelation")
 	statement := `
 		INSERT INTO team_member_group_invitation_relation
-		(group_id, invitation_id, created_at)
+		(
+		    group_id, 
+		    invitation_id, 
+		    created_at,
+		)
 		VALUES ($1, $2, $3);
 	`
 	_, err := tx.SQLTx().ExecContext(ct,
@@ -81,7 +85,6 @@ func (t TeamMemberGroupInvitationRelation) DeleteTeamMemberGroupInvitationRelati
 	relation entity.TeamMemberGroupInvitationRelation,
 ) *errs.Error {
 	t.metrics.ReportDaoOperation(teamMemberGroupInvitationRelationDaoName, "DeleteTeamMemberGroupInvitationRelation")
-
 	statement := `
 		DELETE FROM team_member_group_invitation_relation
 		WHERE group_id = $1 AND invitation_id = $2;
@@ -105,7 +108,6 @@ func (t TeamMemberGroupInvitationRelation) DeleteTeamMemberGroupInvitationRelati
 	groupID uint64,
 ) *errs.Error {
 	t.metrics.ReportDaoOperation(teamMemberGroupInvitationRelationDaoName, "DeleteTeamMemberGroupInvitationRelationsByGroupID")
-
 	statement := `
 		DELETE FROM team_member_group_invitation_relation
 		WHERE group_id = $1;

@@ -42,7 +42,6 @@ func (i Invitation) FindInvitationsByIDsWithTx(ct context.Context, tx *transacti
 	}
 
 	idsString := toIDsString(invitationIDs)
-
 	query := fmt.Sprintf(
 		`
 		SELECT

@@ -490,7 +490,6 @@ func (i Invitation) AddInvitationToTeamMemberGroup(ct context.Context, invitatio
 			InvitationID: invitationID,
 			CreatedAt:    time.Now().UTC(),
 		}
-
 		createTeamMemberGroupInvitationRelationMutation := mutation.NewCreateTeamMemberGroupInvitationRelation(
 			i.logger,
 			i.stateSyncer,
