@@ -1030,6 +1030,7 @@ func (t Team) UpdateTeamMemberGroup(ct context.Context, input UpdateTeamMemberGr
 
 func (t Team) DeleteTeamMemberGroup(ct context.Context, id uint64) (entity.TeamMemberGroup, *errs.Error) {
 	var teamMemberGroup entity.TeamMemberGroup
+	now := time.Now().UTC()
 	internalErr := t.transactionGroupFactory.WithTransactionGroup(
 		ct,
 		false,
@@ -1061,6 +1062,7 @@ func (t Team) DeleteTeamMemberGroup(ct context.Context, id uint64) (entity.TeamM
 				}
 
 				group.OrderIndex--
+				group.UpdatedAt = &now
 				updateTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
 					t.logger,
 					t.stateSyncer,
