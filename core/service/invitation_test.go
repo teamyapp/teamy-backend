@@ -101,14 +101,19 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationT
 	teamyBackendDB := dbtest.NewInMemoryDB()
 	teamyBackendDB.CreateTable(daotest.InvitationTableName)
 	teamyBackendDB.CreateTable(daotest.TeamMemberTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupTableName)
 	teamyBackendDB.CreateTable(daotest.SprintTableName)
+	teamyBackendDB.CreateTable(daotest.TeamTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupInvitationRelationTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
 
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
-
+	teamDao := daotest.NewTeam(teamyBackendDB, transactionFactory)
 	invitationDao := daotest.NewInvitation(teamyBackendDB, transactionFactory)
+	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
+	teamMemberGroupInvitationRelationDao := daotest.NewTeamMemberGroupInvitationRelation(teamyBackendDB, transactionFactory)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
 	invitationService := NewInvitation(
@@ -120,10 +125,14 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationT
 		stateSyncer,
 		transactionFactory,
 		invitationDao,
+		teamMemberGroupInvitationRelationDao,
 		teamMemberDao,
+		teamMemberGroupDao,
 		sprintParticipantDao,
 		sprintDao,
+		teamDao,
 	)
+
 	return InvitationTestRef{
 		invitationService:  invitationService,
 		invitationDao:      invitationDao,

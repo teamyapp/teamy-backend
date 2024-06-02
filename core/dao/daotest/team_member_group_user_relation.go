@@ -144,6 +144,45 @@ func (t TeamMemberGroupUserRelation) DeleteMemberGroupUserRelation(ct context.Co
 	})
 }
 
+func (t TeamMemberGroupUserRelation) DeleteTeamMemberGroupUserRelationsByGroupID(ct context.Context, tx *transaction.Transaction, groupID uint64) *errs.Error {
+	deletedGroupMemberUserRelations := make([]entity.TeamMemberGroupUserRelation, 0)
+	return tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := t.db.GetTable(TeamMemberGroupUserRelationTableName)
+			if err != nil {
+				return err
+			}
+
+			rows := make([]interface{}, 0)
+			for _, rawRow := range table.Rows {
+				currGroupMemberUserRelation := rawRow.(entity.TeamMemberGroupUserRelation)
+				if currGroupMemberUserRelation.GroupID != groupID {
+					rows = append(rows, currGroupMemberUserRelation)
+				} else {
+					deletedGroupMemberUserRelations = append(deletedGroupMemberUserRelations, currGroupMemberUserRelation)
+				}
+			}
+
+			table.Rows = rows
+			return nil
+		},
+		Undo: func() *errs.Error {
+			table, err := t.db.GetTable(TeamMemberGroupUserRelationTableName)
+			if err != nil {
+				return err
+			}
+
+			rows := make([]interface{}, 0)
+			for _, groupMemberUserRelation := range deletedGroupMemberUserRelations {
+				rows = append(rows, groupMemberUserRelation)
+			}
+
+			table.Rows = append(table.Rows, rows...)
+			return nil
+		},
+	})
+}
+
 func NewTeamMemberGroupUserRelation(
 	db *dbtest.InMemoryDB,
 	transactionFactory transaction.Factory,

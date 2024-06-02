@@ -32,6 +32,30 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 	return i.FindInvitationByIDWithTx(ct, tx, invitationID)
 }
 
+func (i Invitation) FindInvitationsByIDsWithTx(ct context.Context, tx *transaction.Transaction, invitationIDs []uint64) ([]entity.Invitation, *errs.Error) {
+	var invitations []entity.Invitation
+	err := tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := i.db.GetTable(InvitationTableName)
+			if err != nil {
+				return err
+			}
+
+			for _, rawRow := range table.Rows {
+				currInvitation := rawRow.(entity.Invitation)
+				for _, id := range invitationIDs {
+					if currInvitation.ID == id {
+						invitations = append(invitations, currInvitation)
+					}
+				}
+			}
+
+			return nil
+		},
+	})
+	return invitations, err
+}
+
 func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, *errs.Error) {
 	opt := sql.TxOptions{
 		ReadOnly: true,
