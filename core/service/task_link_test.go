@@ -99,6 +99,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	teamyBackendDB.CreateTable(daotest.ThreadTableName)
 	teamyBackendDB.CreateTable(daotest.TaskTableName)
 	teamyBackendDB.CreateTable((daotest.AttachmentListTableName))
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupInvitationRelationTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
@@ -117,6 +118,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
 	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
 	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
+	teamMemberGroupInvitationRelationDao := daotest.NewTeamMemberGroupInvitationRelation(teamyBackendDB, transactionFactory)
 	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
 	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
@@ -144,6 +146,7 @@ func prepareTaskLinkTestRef(t *testing.T, toggles feature.Toggles) (TaskLinkTest
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,
 		teamMemberGroupUserRelationDao,
+		teamMemberGroupInvitationRelationDao,
 		teamMemberGroupRepo,
 	)
 	taskService := NewTask(

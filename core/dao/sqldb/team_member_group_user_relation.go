@@ -133,6 +133,27 @@ func (t TeamMemberGroupUserRelation) DeleteMemberGroupUserRelation(
 	return nil
 }
 
+func (t TeamMemberGroupUserRelation) DeleteTeamMemberGroupUserRelationsByGroupID(
+	ct context.Context,
+	tx *transaction.Transaction,
+	groupID uint64,
+) *errs.Error {
+	t.metrics.ReportDaoOperation(teamMemberGroupUserRelationDaoName, "DeleteTeamMemberGroupUserRelationsByGroupID")
+	statement := `
+		DELETE FROM team_member_group_user_relation
+		WHERE group_id = $1;
+	`
+	_, err := tx.SQLTx().Exec(
+		statement,
+		groupID,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	return nil
+}
+
 func NewTeamMemberGroupUserRelation(metrics dao.Metrics) TeamMemberGroupUserRelation {
 	return TeamMemberGroupUserRelation{
 		metrics: metrics,

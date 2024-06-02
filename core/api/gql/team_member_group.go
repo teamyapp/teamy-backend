@@ -57,6 +57,18 @@ func (m TeamMemberGroup) UpdatedAt() *graphql.Time {
 	return toGraphQLTimePtr(m.memberGroup.UpdatedAt)
 }
 
+func (m TeamMemberGroup) Invitations(ct context.Context) ([]Invitation, error) {
+	invitations, err := m.deps.invitationService.FindInvitationsByTeamMemberGroupID(ct, m.memberGroup.ID)
+	if err != nil {
+		m.deps.logger.Error(err)
+		return nil, errs.ToResolverErr(err)
+	}
+
+	return collect.Map(invitations, func(invitation entity.Invitation, _ int) Invitation {
+		return newInvitation(m.deps, invitation)
+	}), nil
+}
+
 func newTeamMemberGroup(deps *Dependencies, memberGroup entity.TeamMemberGroup) TeamMemberGroup {
 	return TeamMemberGroup{
 		deps:        deps,

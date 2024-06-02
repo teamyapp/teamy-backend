@@ -29,4 +29,9 @@ type TeamMemberGroupUserRelation interface {
 		tx *transaction.Transaction,
 		relation daoEntity.TeamMemberGroupUserRelation,
 	) *errs.Error
+	DeleteTeamMemberGroupUserRelationsByGroupID(
+		ct context.Context,
+		tx *transaction.Transaction,
+		groupID uint64,
+	) *errs.Error
 }

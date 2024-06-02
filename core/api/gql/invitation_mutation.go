@@ -139,3 +139,69 @@ func (m Mutation) DeclineInvitation(ct context.Context, args struct {
 
 	return newInvitation(m.deps, invitation), nil
 }
+
+func (m Mutation) AddInvitationToTeamMemberGroup(ct context.Context, args struct {
+	InvitationID      graphql.ID
+	TeamMemberGroupID graphql.ID
+}) (Invitation, error) {
+	invitationID, argErr := fromGraphQLID(args.InvitationID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamMemberGroupID, argErr := fromGraphQLID(args.TeamMemberGroupID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
+	}
+
+	invitation, err := m.deps.invitationService.AddInvitationToTeamMemberGroup(ct, invitationID, teamMemberGroupID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Invitation{}, errs.ToResolverErr(err)
+	}
+
+	return newInvitation(m.deps, invitation), nil
+}
+
+func (m Mutation) RemoveInvitationFromTeamMemberGroup(ct context.Context, args struct {
+	InvitationID      graphql.ID
+	TeamMemberGroupID graphql.ID
+}) (Invitation, error) {
+	invitationID, argErr := fromGraphQLID(args.InvitationID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
+	}
+
+	teamMemberGroupID, argErr := fromGraphQLID(args.TeamMemberGroupID)
+	if argErr != nil {
+		internalErr := errs.NewError(
+			errs.InvalidArgument,
+			argErr.Error(),
+		)
+		m.deps.logger.ErrorWithContext(ct, internalErr)
+		return Invitation{}, errs.ToResolverErr(internalErr)
+	}
+
+	invitation, err := m.deps.invitationService.RemoveInvitationFromTeamMemberGroup(ct, invitationID, teamMemberGroupID)
+	if err != nil {
+		m.deps.logger.ErrorWithContext(ct, err)
+		return Invitation{}, errs.ToResolverErr(err)
+	}
+
+	return newInvitation(m.deps, invitation), nil
+}

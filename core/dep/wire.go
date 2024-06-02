@@ -60,6 +60,7 @@ var daoSet = wire.NewSet(
 	wire.Bind(new(dao.TeamMember), new(sqldb.TeamMember)),
 	wire.Bind(new(dao.TeamMemberGroup), new(sqldb.TeamMemberGroup)),
 	wire.Bind(new(dao.TeamMemberGroupUserRelation), new(sqldb.TeamMemberGroupUserRelation)),
+	wire.Bind(new(dao.TeamMemberGroupInvitationRelation), new(sqldb.TeamMemberGroupInvitationRelation)),
 	wire.Bind(new(dao.User), new(sqldb.User)),
 	wire.Bind(new(dao.UserFileUploadSession), new(sqldb.UserFileUploadSession)),
 	wire.Bind(new(dao.Team), new(sqldb.Team)),
@@ -109,6 +110,7 @@ var daoSet = wire.NewSet(
 	sqldb.NewTeamMember,
 	sqldb.NewTeamMemberGroup,
 	sqldb.NewTeamMemberGroupUserRelation,
+	sqldb.NewTeamMemberGroupInvitationRelation,
 	sqldb.NewUser,
 	sqldb.NewUserFileUploadSession,
 	sqldb.NewTeam,
@@ -439,6 +441,7 @@ func newTeamService(
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberGroupDao dao.TeamMemberGroup,
 	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation,
+	teamMemberGroupInvitationRelationDao dao.TeamMemberGroupInvitationRelation,
 	teamMemberGroupRepo repository.TeamMemberGroup,
 ) service.Team {
 	return service.NewTeam(
@@ -460,6 +463,7 @@ func newTeamService(
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,
 		teamMemberGroupUserRelationDao,
+		teamMemberGroupInvitationRelationDao,
 		teamMemberGroupRepo)
 }
 

@@ -80,6 +80,14 @@ type Mutation {
 	acceptInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	declineInvitation(invitationId: ID!, invitationCode: String!): Invitation!
 	deleteInvitation(invitationId: ID!): Invitation!
+	addInvitationToTeamMemberGroup(
+		invitationId: ID!
+		teamMemberGroupId: ID!
+	): Invitation!
+	removeInvitationFromTeamMemberGroup(
+		invitationId: ID!
+		teamMemberGroupId: ID!
+	): Invitation!
 
 	# Sprint
 	createSprint(teamId: ID!, sprint: CreateSprintInput!): Sprint!
@@ -380,6 +388,7 @@ type TeamMemberGroup {
 	members: [User!]!
 	createdAt: Time!
 	updatedAt: Time
+	invitations: [Invitation!]!
 }
 
 type TaskActivity {

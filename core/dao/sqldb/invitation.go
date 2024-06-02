@@ -35,6 +35,66 @@ func (i Invitation) FindInvitationByID(ct context.Context, invitationID uint64) 
 	return i.FindInvitationByIDWithTx(ct, tx, invitationID)
 }
 
+func (i Invitation) FindInvitationsByIDsWithTx(ct context.Context, tx *transaction.Transaction, invitationIDs []uint64) ([]entity.Invitation, *errs.Error) {
+	i.metrics.ReportDaoOperation(invitationDaoName, "FindInvitationsByIDsWithTx")
+	if len(invitationIDs) == 0 {
+		return nil, nil
+	}
+
+	idsString := toIDsString(invitationIDs)
+	query := fmt.Sprintf(
+		`
+		SELECT
+			id,
+			sender_user_id,
+			receiver_first_name,
+			receiver_last_name,
+			receiver_user_id,
+			receiver_email,
+			team_id,
+			expire_at,
+			status,
+			code,
+			created_at,
+			updated_at
+		FROM invitation
+		WHERE id IN (%s);
+	`, idsString,
+	)
+
+	rows, err := tx.SQLTx().QueryContext(ct, query)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	invitations := make([]entity.Invitation, 0)
+	for rows.Next() {
+		invitation := entity.Invitation{}
+		err = rows.Scan(
+			&invitation.ID,
+			&invitation.SenderUserID,
+			&invitation.ReceiverFirstName,
+			&invitation.ReceiverLastName,
+			&invitation.ReceiverUserID,
+			&invitation.ReceiverEmail,
+			&invitation.TeamID,
+			&invitation.ExpireAt,
+			&invitation.Status,
+			&invitation.Code,
+			&invitation.CreatedAt,
+			&invitation.UpdatedAt,
+		)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		invitations = append(invitations, invitation)
+	}
+
+	return invitations, nil
+}
+
 func (i Invitation) FindInvitationsByTeamID(ct context.Context, teamID uint64) ([]entity.Invitation, *errs.Error) {
 	i.metrics.ReportDaoOperation(invitationDaoName, "FindInvitationsByTeamID")
 	opt := sql.TxOptions{

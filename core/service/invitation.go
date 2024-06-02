@@ -26,17 +26,20 @@ import (
 const invitationCodeLen = 20
 
 type Invitation struct {
-	logger                  telemetry.Logger
-	transactionGroupFactory transaction.GroupFactory
-	cloudClientRegistry     *client.Registry
-	authorizer              client.Authorizer
-	featureToggles          feature.Toggles
-	stateSyncer             *realtime.StateSyncer
-	transactionFactory      cloudTransaction.Factory
-	invitationDao           dao.Invitation
-	teamMemberDao           dao.TeamMember
-	sprintParticipantDao    dao.SprintParticipant
-	sprintDao               dao.Sprint
+	logger                               telemetry.Logger
+	transactionGroupFactory              transaction.GroupFactory
+	cloudClientRegistry                  *client.Registry
+	authorizer                           client.Authorizer
+	featureToggles                       feature.Toggles
+	stateSyncer                          *realtime.StateSyncer
+	transactionFactory                   cloudTransaction.Factory
+	invitationDao                        dao.Invitation
+	teamMemberGroupInvitationRelationDao dao.TeamMemberGroupInvitationRelation
+	teamMemberDao                        dao.TeamMember
+	teamMemberGroupDao                   dao.TeamMemberGroup
+	sprintParticipantDao                 dao.SprintParticipant
+	sprintDao                            dao.Sprint
+	teamDao                              dao.Team
 }
 
 type CreateInvitationInput struct {
@@ -453,6 +456,81 @@ func (i Invitation) DeclineInvitation(ct context.Context, invitationID uint64, i
 	return invitation, nil
 }
 
+func (i Invitation) FindInvitationsByTeamMemberGroupID(ct context.Context, teamMemberGroupID uint64) ([]entity.Invitation, *errs.Error) {
+	var invitations []entity.Invitation
+	err := i.transactionGroupFactory.WithTransactionGroup(ct, true, func(tx *cloudTransaction.Transaction, _ *realtime.Transaction) *errs.Error {
+		invitationIDs, internalErr := i.teamMemberGroupInvitationRelationDao.FindInvitationIDsByTeamMemberGroupID(ct, tx, teamMemberGroupID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		invitations, internalErr = i.invitationDao.FindInvitationsByIDsWithTx(ct, tx, invitationIDs)
+		return internalErr
+	})
+
+	return invitations, err
+}
+
+func (i Invitation) AddInvitationToTeamMemberGroup(ct context.Context, invitationID uint64, teamMemberGroupID uint64) (entity.Invitation, *errs.Error) {
+	var invitation entity.Invitation
+	err := i.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		invitation, internalErr = i.invitationDao.FindInvitationByID(ct, invitationID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		_, internalErr = i.teamMemberGroupDao.FindMemberGroupByID(ct, tx, teamMemberGroupID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		teamMemberGroupInvitationRelation := entity.TeamMemberGroupInvitationRelation{
+			GroupID:      teamMemberGroupID,
+			InvitationID: invitationID,
+			CreatedAt:    time.Now().UTC(),
+		}
+		createTeamMemberGroupInvitationRelationMutation := mutation.NewCreateTeamMemberGroupInvitationRelation(
+			i.logger,
+			i.stateSyncer,
+			i.teamMemberGroupInvitationRelationDao,
+			i.teamMemberGroupDao,
+			i.teamDao,
+			teamMemberGroupInvitationRelation,
+		)
+
+		internalErr = createTeamMemberGroupInvitationRelationMutation.Execute(ct, tx)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		rtTx.AppendMutation(createTeamMemberGroupInvitationRelationMutation)
+		return nil
+	})
+
+	return invitation, err
+}
+
+func (i Invitation) RemoveInvitationFromTeamMemberGroup(ct context.Context, invitationID uint64, teamMemberGroupID uint64) (entity.Invitation, *errs.Error) {
+	var invitation entity.Invitation
+	err := i.transactionGroupFactory.WithTransactionGroup(ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+		var internalErr *errs.Error
+		invitation, internalErr = i.invitationDao.FindInvitationByID(ct, invitationID)
+		if internalErr != nil {
+			return internalErr
+		}
+
+		teamMemberGroupInvitationRelation := entity.TeamMemberGroupInvitationRelation{
+			GroupID:      teamMemberGroupID,
+			InvitationID: invitationID,
+		}
+
+		return i.teamMemberGroupInvitationRelationDao.DeleteTeamMemberGroupInvitationRelation(ct, tx, teamMemberGroupInvitationRelation)
+	})
+
+	return invitation, err
+}
+
 func (i Invitation) canRespondToInvitation(
 	ct context.Context,
 	invitationID uint64,
@@ -508,21 +586,27 @@ func NewInvitation(
 	stateSyncer *realtime.StateSyncer,
 	transactionFactory cloudTransaction.Factory,
 	invitationDao dao.Invitation,
+	teamMemberGroupInvitationRelationDao dao.TeamMemberGroupInvitationRelation,
 	teamMemberDao dao.TeamMember,
+	teamMemberGroupDao dao.TeamMemberGroup,
 	sprintParticipantDao dao.SprintParticipant,
 	sprintDao dao.Sprint,
+	teamDao dao.Team,
 ) Invitation {
 	return Invitation{
-		logger:                  logger,
-		transactionGroupFactory: transactionGroupFactory,
-		cloudClientRegistry:     cloudClientRegistry,
-		authorizer:              authorizer,
-		featureToggles:          featureToggles,
-		stateSyncer:             stateSyncer,
-		transactionFactory:      transactionFactory,
-		invitationDao:           invitationDao,
-		teamMemberDao:           teamMemberDao,
-		sprintParticipantDao:    sprintParticipantDao,
-		sprintDao:               sprintDao,
+		logger:                               logger,
+		transactionGroupFactory:              transactionGroupFactory,
+		cloudClientRegistry:                  cloudClientRegistry,
+		authorizer:                           authorizer,
+		featureToggles:                       featureToggles,
+		stateSyncer:                          stateSyncer,
+		transactionFactory:                   transactionFactory,
+		invitationDao:                        invitationDao,
+		teamMemberGroupInvitationRelationDao: teamMemberGroupInvitationRelationDao,
+		teamMemberDao:                        teamMemberDao,
+		teamMemberGroupDao:                   teamMemberGroupDao,
+		sprintParticipantDao:                 sprintParticipantDao,
+		sprintDao:                            sprintDao,
+		teamDao:                              teamDao,
 	}
 }

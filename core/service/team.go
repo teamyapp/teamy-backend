@@ -53,25 +53,26 @@ type UpdateTeamMemberGroupInput struct {
 }
 
 type Team struct {
-	logger                         telemetry.Logger
-	transactionGroupFactory        transaction.GroupFactory
-	cloudWebAPIExternalBaseURL     string
-	cloudClientRegistry            *client.Registry
-	authorizer                     client.Authorizer
-	featureToggles                 feature.Toggles
-	stateSyncer                    *realtime.StateSyncer
-	transactionFactory             cloudTransaction.Factory
-	cache                          *cache.TimeBasedCache[string, any]
-	taskDao                        dao.Task
-	sprintDao                      dao.Sprint
-	sprintParticipantDao           dao.SprintParticipant
-	teamDao                        dao.Team
-	userDao                        dao.User
-	teamMemberDao                  dao.TeamMember
-	teamFileUploadSessionDao       dao.TeamFileUploadSession
-	teamMemberGroupDao             dao.TeamMemberGroup
-	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation
-	teamMemberGroupRepo            repository.TeamMemberGroup
+	logger                               telemetry.Logger
+	transactionGroupFactory              transaction.GroupFactory
+	cloudWebAPIExternalBaseURL           string
+	cloudClientRegistry                  *client.Registry
+	authorizer                           client.Authorizer
+	featureToggles                       feature.Toggles
+	stateSyncer                          *realtime.StateSyncer
+	transactionFactory                   cloudTransaction.Factory
+	cache                                *cache.TimeBasedCache[string, any]
+	taskDao                              dao.Task
+	sprintDao                            dao.Sprint
+	sprintParticipantDao                 dao.SprintParticipant
+	teamDao                              dao.Team
+	userDao                              dao.User
+	teamMemberDao                        dao.TeamMember
+	teamFileUploadSessionDao             dao.TeamFileUploadSession
+	teamMemberGroupDao                   dao.TeamMemberGroup
+	teamMemberGroupUserRelationDao       dao.TeamMemberGroupUserRelation
+	teamMemberGroupInvitationRelationDao dao.TeamMemberGroupInvitationRelation
+	teamMemberGroupRepo                  repository.TeamMemberGroup
 }
 
 func (t Team) FindTeamByID(ct context.Context, teamID uint64) (entity.Team, *errs.Error) {
@@ -1033,6 +1034,16 @@ func (t Team) DeleteTeamMemberGroup(ct context.Context, id uint64) (entity.TeamM
 				return internalErr
 			}
 
+			internalErr = t.teamMemberGroupUserRelationDao.DeleteTeamMemberGroupUserRelationsByGroupID(ct, tx, id)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			internalErr = t.teamMemberGroupInvitationRelationDao.DeleteTeamMemberGroupInvitationRelationsByGroupID(ct, tx, id)
+			if internalErr != nil {
+				return internalErr
+			}
+
 			return t.teamMemberGroupDao.DeleteMemberGroup(ct, tx, id)
 		})
 	return teamMemberGroup, internalErr
@@ -1255,28 +1266,30 @@ func NewTeam(
 	teamFileUploadSessionDao dao.TeamFileUploadSession,
 	teamMemberGroupDao dao.TeamMemberGroup,
 	teamMemberGroupUserRelationDao dao.TeamMemberGroupUserRelation,
+	teamMemberGroupInvitationRelationDao dao.TeamMemberGroupInvitationRelation,
 	teamMemberGroupRepo repository.TeamMemberGroup,
 ) Team {
 	return Team{
-		logger:                         logger,
-		transactionGroupFactory:        transactionGroupFactory,
-		cloudWebAPIExternalBaseURL:     cloudWebAPIExternalBaseURL,
-		cloudClientRegistry:            cloudClientRegistry,
-		authorizer:                     authorizer,
-		featureToggles:                 featureToggles,
-		stateSyncer:                    stateSyncer,
-		transactionFactory:             transactionFactory,
-		cache:                          cache,
-		taskDao:                        taskDao,
-		sprintDao:                      sprintDao,
-		sprintParticipantDao:           sprintParticipantDao,
-		teamMemberDao:                  teamMemberDao,
-		teamDao:                        teamDao,
-		userDao:                        userDao,
-		teamFileUploadSessionDao:       teamFileUploadSessionDao,
-		teamMemberGroupDao:             teamMemberGroupDao,
-		teamMemberGroupUserRelationDao: teamMemberGroupUserRelationDao,
-		teamMemberGroupRepo:            teamMemberGroupRepo,
+		logger:                               logger,
+		transactionGroupFactory:              transactionGroupFactory,
+		cloudWebAPIExternalBaseURL:           cloudWebAPIExternalBaseURL,
+		cloudClientRegistry:                  cloudClientRegistry,
+		authorizer:                           authorizer,
+		featureToggles:                       featureToggles,
+		stateSyncer:                          stateSyncer,
+		transactionFactory:                   transactionFactory,
+		cache:                                cache,
+		taskDao:                              taskDao,
+		sprintDao:                            sprintDao,
+		sprintParticipantDao:                 sprintParticipantDao,
+		teamMemberDao:                        teamMemberDao,
+		teamDao:                              teamDao,
+		userDao:                              userDao,
+		teamFileUploadSessionDao:             teamFileUploadSessionDao,
+		teamMemberGroupDao:                   teamMemberGroupDao,
+		teamMemberGroupUserRelationDao:       teamMemberGroupUserRelationDao,
+		teamMemberGroupInvitationRelationDao: teamMemberGroupInvitationRelationDao,
+		teamMemberGroupRepo:                  teamMemberGroupRepo,
 	}
 }
 
