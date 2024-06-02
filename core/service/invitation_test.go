@@ -104,7 +104,7 @@ func prepareInvitationTestRef(t *testing.T, toggles feature.Toggles) InvitationT
 	teamyBackendDB.CreateTable(daotest.TeamMemberGroupTableName)
 	teamyBackendDB.CreateTable(daotest.SprintTableName)
 	teamyBackendDB.CreateTable(daotest.TeamTableName)
-	teamyBackendDB.CreateTable(daotest.TeamMemberGroupInvitationRelationTableName
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupInvitationRelationTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	stateSyncer := realtime.NewStateSyncer(logger, teamMemberDao)
