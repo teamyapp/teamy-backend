@@ -686,6 +686,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	teamyBackendDB.CreateTable(daotest.TeamFileUploadSessionTableName)
 	teamyBackendDB.CreateTable(daotest.TeamMemberGroupTableName)
 	teamyBackendDB.CreateTable(daotest.TeamMemberGroupUserRelationTableName)
+	teamyBackendDB.CreateTable(daotest.TeamMemberGroupInvitationRelationTableName)
 	teamyBackendDB.CreateTable(daotest.SprintTableName)
 
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
@@ -699,6 +700,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 	teamFileUploadSessionDao := daotest.NewTeamFileUploadSession(teamyBackendDB)
 	teamMemberGroupDao := daotest.NewTeamMemberGroup(teamyBackendDB, transactionFactory)
 	teamMemberGroupUserRelationDao := daotest.NewTeamMemberGroupUserRelation(teamyBackendDB, transactionFactory)
+	teamMemberGroupInvitationRelation := daotest.NewTeamMemberGroupInvitationRelation(teamyBackendDB, transactionFactory)
 	teamMemberGroupRepo := repository.NewTeamMemberGroup(teamMemberGroupDao, teamMemberGroupUserRelationDao)
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
 	lruFactory := cache.NewLRUFactory[string, any](logger, noopMetrics, 1000)
@@ -726,6 +728,7 @@ func prepareTeamTestRef(t *testing.T, toggles feature.Toggles) (TeamTestRef, boo
 		teamFileUploadSessionDao,
 		teamMemberGroupDao,
 		teamMemberGroupUserRelationDao,
+		teamMemberGroupInvitationRelation,
 		teamMemberGroupRepo,
 	)
 	return TeamTestRef{
