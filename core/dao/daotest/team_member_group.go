@@ -44,6 +44,30 @@ func (t TeamMemberGroup) FindMemberGroupByID(ct context.Context, tx *transaction
 	return teamMemberGroup, err
 }
 
+func (t TeamMemberGroup) FindMaxTeamMemberGroupOrderIndexByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) (int, *errs.Error) {
+	var maxOrderIndex int
+	err := tx.ExecuteCommand(transaction.Command{
+		Execute: func() *errs.Error {
+			table, err := t.db.GetTable(TeamMemberGroupTableName)
+			if err != nil {
+				return err
+			}
+
+			maxOrderIndex := 0
+
+			for _, rawRow := range table.Rows {
+				currGroup := rawRow.(entity.TeamMemberGroup)
+				if currGroup.TeamID == teamID && currGroup.OrderIndex > maxOrderIndex {
+					maxOrderIndex = currGroup.OrderIndex
+				}
+			}
+
+			return nil
+		},
+	})
+	return maxOrderIndex, err
+}
+
 func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transaction.Transaction, teamID uint64) ([]entity.TeamMemberGroup, *errs.Error) {
 	var teamMemberGroups []entity.TeamMemberGroup
 	err := tx.ExecuteCommand(transaction.Command{

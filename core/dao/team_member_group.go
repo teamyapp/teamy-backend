@@ -19,6 +19,11 @@ type TeamMemberGroup interface {
 		tx *transaction.Transaction,
 		teamID uint64,
 	) ([]entity.TeamMemberGroup, *errs.Error)
+	FindMaxTeamMemberGroupOrderIndexByTeamID(
+		ct context.Context,
+		tx *transaction.Transaction,
+		teamID uint64,
+	) (int, *errs.Error)
 	CreateMemberGroup(
 		ct context.Context,
 		tx *transaction.Transaction,

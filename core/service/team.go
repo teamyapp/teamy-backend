@@ -996,6 +996,12 @@ func (t Team) CreateTeamMemberGroup(ct context.Context, input CreateTeamMemberGr
 		ct,
 		false,
 		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			teamMemberGroupMaxOrderIndex, internalErr := t.teamMemberGroupDao.FindMaxTeamMemberGroupOrderIndexByTeamID(ct, tx, input.TeamID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			teamMemberGroupPartial.OrderIndex = teamMemberGroupMaxOrderIndex + 1
 			return t.teamMemberGroupDao.CreateMemberGroup(ct, tx, teamMemberGroupPartial)
 		})
 	return repository.GetTeamMemberGroupFromRawTeamMemberGroup(teamMemberGroupPartial), internalErr
@@ -1042,6 +1048,31 @@ func (t Team) DeleteTeamMemberGroup(ct context.Context, id uint64) (entity.TeamM
 			internalErr = t.teamMemberGroupInvitationRelationDao.DeleteTeamMemberGroupInvitationRelationsByGroupID(ct, tx, id)
 			if internalErr != nil {
 				return internalErr
+			}
+
+			teamMemberGroups, internalErr := t.teamMemberGroupDao.FindMemberGroupsByTeamID(ct, tx, teamMemberGroup.TeamID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			for _, group := range teamMemberGroups {
+				if group.OrderIndex <= teamMemberGroup.OrderIndex {
+					continue
+				}
+
+				group.OrderIndex--
+				updateTeamMemberGroupMutation := mutation.NewUpdateTeamMemberGroup(
+					t.logger,
+					t.stateSyncer,
+					t.teamMemberGroupDao,
+					group,
+				)
+				internalErr = updateTeamMemberGroupMutation.Execute(ct, tx)
+				if internalErr != nil {
+					return internalErr
+				}
+
+				rtTx.AppendMutation(updateTeamMemberGroupMutation)
 			}
 
 			return t.teamMemberGroupDao.DeleteMemberGroup(ct, tx, id)
