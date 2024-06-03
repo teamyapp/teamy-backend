@@ -101,8 +101,7 @@ func (t TeamMemberGroup) FindMaxTeamMemberGroupOrderIndexByTeamID(
 ) (int, *errs.Error) {
 	t.metrics.ReportDaoOperation("TeamMemberGroup", "FindMaxTeamMemberGroupOrderIndexByTeamID")
 	query := `
-		SELECT
-			COALESCE(MAX(order_index), 0)
+		SELECT COALESCE(MAX(order_index), 0)
 		FROM team_member_group
 		WHERE team_id = $1`
 	var orderIndex int

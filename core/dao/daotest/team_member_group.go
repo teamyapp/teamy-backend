@@ -54,7 +54,6 @@ func (t TeamMemberGroup) FindMaxTeamMemberGroupOrderIndexByTeamID(ct context.Con
 			}
 
 			maxOrderIndex := 0
-
 			for _, rawRow := range table.Rows {
 				currGroup := rawRow.(entity.TeamMemberGroup)
 				if currGroup.TeamID == teamID && currGroup.OrderIndex > maxOrderIndex {
