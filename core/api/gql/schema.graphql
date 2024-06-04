@@ -360,6 +360,7 @@ type Team {
 	createdAt: Time!
 	creator: User!
 	owner: User!
+	maxGroupOrderIndex: Int!
 	members: [TeamMember!]!
 	tasks(filter: TaskFilter): [Task!]!
 	invitations(filter: InvitationFilter): [Invitation!]!

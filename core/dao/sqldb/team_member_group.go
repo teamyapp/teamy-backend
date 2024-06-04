@@ -94,25 +94,6 @@ func (t TeamMemberGroup) FindMemberGroupsByTeamID(ct context.Context, tx *transa
 	return memberGroups, nil
 }
 
-func (t TeamMemberGroup) FindMaxTeamMemberGroupOrderIndexByTeamID(
-	ct context.Context,
-	tx *transaction.Transaction,
-	teamID uint64,
-) (int, *errs.Error) {
-	t.metrics.ReportDaoOperation("TeamMemberGroup", "FindMaxTeamMemberGroupOrderIndexByTeamID")
-	query := `
-		SELECT COALESCE(MAX(order_index), 0)
-		FROM team_member_group
-		WHERE team_id = $1`
-	var orderIndex int
-	err := tx.SQLTx().QueryRowContext(ct, query, teamID).Scan(&orderIndex)
-	if err != nil {
-		return 0, errs.NewError(errs.Unknown, err.Error())
-	}
-
-	return orderIndex, nil
-}
-
 func (t TeamMemberGroup) CreateMemberGroup(ct context.Context, tx *transaction.Transaction, memberGroup entity.TeamMemberGroup) *errs.Error {
 	t.metrics.ReportDaoOperation("TeamMemberGroup", "CreateMemberGroup")
 	statement := `

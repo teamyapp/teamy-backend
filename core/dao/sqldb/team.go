@@ -58,6 +58,7 @@ func (t Team) FindAllTeamsWithTx(ct context.Context, tx *transaction.Transaction
 		icon_url,
 		creator_id,
 		owner_id,
+		max_group_order_index,
 		created_at,
 		updated_at
 	FROM team;
@@ -78,6 +79,7 @@ func (t Team) FindAllTeamsWithTx(ct context.Context, tx *transaction.Transaction
 			&team.IconURL,
 			&team.CreatorUserID,
 			&team.OwnerUserID,
+			&team.MaxGroupOrderIndex,
 			&team.CreatedAt,
 			&team.UpdatedAt,
 		)
@@ -100,6 +102,7 @@ func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction
 		icon_url,
 		creator_id,
 		owner_id,
+		max_group_order_index,
 		active_sprint_id,
 		created_at,
 		updated_at
@@ -114,6 +117,7 @@ func (t Team) FindTeamByIDWithTx(ct context.Context, tx *transaction.Transaction
 			&team.IconURL,
 			&team.CreatorUserID,
 			&team.OwnerUserID,
+			&team.MaxGroupOrderIndex,
 			&team.ActiveSprintID,
 			&team.CreatedAt,
 			&team.UpdatedAt,
@@ -144,6 +148,7 @@ func (t Team) FindTeamsByIDsWithTx(ct context.Context, tx *transaction.Transacti
 		icon_url,
 		creator_id,
 		owner_id,
+		max_group_order_index,
 		created_at,
 		updated_at
 	FROM team
@@ -165,6 +170,7 @@ func (t Team) FindTeamsByIDsWithTx(ct context.Context, tx *transaction.Transacti
 				&team.IconURL,
 				&team.CreatorUserID,
 				&team.OwnerUserID,
+				&team.MaxGroupOrderIndex,
 				&team.CreatedAt,
 				&team.UpdatedAt,
 			)
@@ -187,13 +193,15 @@ func (t Team) CreateTeam(ct context.Context, tx *transaction.Transaction, team e
 				 name,
 				 creator_id,
 				 owner_id,
+				 max_group_order_index,
 				 created_at
 		    )
-		VALUES ($1, $2, $3, $4, $5);`,
+		VALUES ($1, $2, $3, $4, $5, $6);`,
 		team.ID,
 		team.Name,
 		team.CreatorUserID,
 		team.OwnerUserID,
+		team.MaxGroupOrderIndex,
 		team.CreatedAt,
 	)
 	if err != nil {
@@ -211,12 +219,14 @@ func (t Team) UpdateTeam(ct context.Context, tx *transaction.Transaction, team e
 			name = $1,
 			icon_url = $2,
 			owner_id = $3,
-			active_sprint_id = $4,
-			updated_at = $5
-		WHERE id = $6;`,
+			max_group_order_index = $4,
+			active_sprint_id = $5,
+			updated_at = $6
+		WHERE id = $7;`,
 		team.Name,
 		team.IconURL,
 		team.OwnerUserID,
+		team.MaxGroupOrderIndex,
 		team.ActiveSprintID,
 		team.UpdatedAt,
 		team.ID,
