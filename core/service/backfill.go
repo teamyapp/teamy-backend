@@ -41,6 +41,15 @@ func (b *Backfill) backfillTeamMemberGroupOrder(ct context.Context) *errs.Error 
 				return internalErr
 			}
 
+			if team.MaxGroupOrderIndex == -1 {
+				team.MaxGroupOrderIndex = len(memberGroups)
+				team.UpdatedAt = &now
+				internalErr = b.teamDao.UpdateTeam(ct, tx, team)
+				if internalErr != nil {
+					return internalErr
+				}
+			}
+
 			for index, memberGroup := range memberGroups {
 				if memberGroup.OrderIndex == index {
 					continue

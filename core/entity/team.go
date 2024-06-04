@@ -5,12 +5,13 @@ import (
 )
 
 type Team struct {
-	ID             uint64
-	Name           string
-	IconURL        *string
-	CreatorUserID  uint64
-	OwnerUserID    uint64
-	ActiveSprintID *uint64
-	CreatedAt      time.Time
-	UpdatedAt      *time.Time
+	ID                 uint64
+	Name               string
+	IconURL            *string
+	CreatorUserID      uint64
+	OwnerUserID        uint64
+	MaxGroupOrderIndex int
+	ActiveSprintID     *uint64
+	CreatedAt          time.Time
+	UpdatedAt          *time.Time
 }

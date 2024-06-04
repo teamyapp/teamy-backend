@@ -62,7 +62,7 @@ func (t TeamMemberGroupInvitationRelation) CreateTeamMemberGroupInvitationRelati
 		(
 		    group_id, 
 		    invitation_id, 
-		    created_at,
+		    created_at
 		)
 		VALUES ($1, $2, $3);
 	`

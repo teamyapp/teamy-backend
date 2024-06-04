@@ -30,6 +30,10 @@ func (t Team) CreatedAt(ct context.Context) graphql.Time {
 	return toGraphQLTime(t.team.CreatedAt)
 }
 
+func (t Team) MaxGroupOrderIndex(ct context.Context) int32 {
+	return int32(t.team.MaxGroupOrderIndex)
+}
+
 func (t Team) Creator(ct context.Context) (User, error) {
 	user, err := t.deps.userService.FindUserByID(ct, t.team.CreatorUserID)
 	if err != nil {
