@@ -5,7 +5,6 @@
 .env
 .repo.env
 
-*.json
 *.log
 
 # Secrets and certificates
