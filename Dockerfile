@@ -6,6 +6,8 @@ RUN apk add --no-cache bash
 
 COPY bin/main main
 
+COPY doc/ doc/
+
 COPY migrations/ migrations/
 
 COPY .repo.env .repo.env
