@@ -7,7 +7,6 @@ window.onload = function() {
     url: "/doc/api.json",
     dom_id: '#swagger-ui',
     deepLinking: true,
-    filter: false,
     presets: [
       SwaggerUIBundle.presets.apis,
       SwaggerUIStandalonePreset
