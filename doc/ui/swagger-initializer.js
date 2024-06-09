@@ -3,8 +3,8 @@ window.onload = function() {
 
   // the following lines will be replaced by docker/configurator, when it runs in a docker-container
   window.ui = SwaggerUIBundle({
-    // this url should call the backend golang, which will return the api.json
-    url: "/doc/api.json",
+    // this url should call the backend golang, which will return the api.yml
+    url: "/doc/api.yml",
     dom_id: '#swagger-ui',
     deepLinking: true,
     presets: [
