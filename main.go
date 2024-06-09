@@ -304,7 +304,14 @@ func startServiceRunner(
 			sprintRPCAPI,
 			teamRPCAPI,
 		}).
+		ServeDirs([]runner.DirRoute{
+			{
+				WebPath:        "/doc/",
+				FileSystemPath: "doc",
+			},
+		}).
 		Build()
+
 	rn.Start(nil)
 	return nil
 }
