@@ -10,7 +10,7 @@ require (
 	github.com/graph-gophers/graphql-go v1.5.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
-	github.com/teamyapp/cloud v0.0.0-20240611064407-5192d19165e1
+	github.com/teamyapp/cloud v0.0.0-20240611065920-4c9b8585ec95
 	github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240611063249-feca64038138
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
