@@ -8,7 +8,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/teamy-backend/core/api/proto"
+	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
@@ -19,27 +19,27 @@ import (
 type TaskRPC struct {
 	logger      telemetry.Logger
 	taskService service.Task
-	proto.UnimplementedTaskServer
+	pbteamy.UnimplementedTaskServer
 }
 
 var _ runner.Service = (*TaskRPC)(nil)
-var _ proto.TaskServer = (*TaskRPC)(nil)
+var _ pbteamy.TaskServer = (*TaskRPC)(nil)
 
 func (t TaskRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
-		proto.RegisterTaskServer(server, t)
+		pbteamy.RegisterTaskServer(server, t)
 	})
 	return nil
 }
 
-func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.TaskMsg, error) {
+func (t TaskRPC) GetTask(ct context.Context, req *pbteamy.GetTaskRequest) (*pbteamy.TaskMsg, error) {
 	task, err := t.taskService.FindTaskByID(ct, req.TaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &proto.TaskMsg{
+	return &pbteamy.TaskMsg{
 		TaskId:          task.ID,
 		Goal:            task.Goal,
 		Context:         task.Context,
@@ -56,15 +56,15 @@ func (t TaskRPC) GetTask(ct context.Context, req *proto.GetTaskRequest) (*proto.
 	}, nil
 }
 
-func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *proto.GetAwaitForTasksRequest) (*proto.GetAwaitForTasksResponse, error) {
+func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *pbteamy.GetAwaitForTasksRequest) (*pbteamy.GetAwaitForTasksResponse, error) {
 	tasks, err := t.taskService.FindAwaitForTasks(ct, req.AwaitingTaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	taskMsgs := collect.Map(tasks, func(task entity.Task, _ int) *proto.TaskMsg {
-		return &proto.TaskMsg{
+	taskMsgs := collect.Map(tasks, func(task entity.Task, _ int) *pbteamy.TaskMsg {
+		return &pbteamy.TaskMsg{
 			TaskId:          task.ID,
 			Goal:            task.Goal,
 			Context:         task.Context,
@@ -81,10 +81,10 @@ func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *proto.GetAwaitForTask
 		}
 	})
 
-	return &proto.GetAwaitForTasksResponse{Tasks: taskMsgs}, nil
+	return &pbteamy.GetAwaitForTasksResponse{Tasks: taskMsgs}, nil
 }
 
-func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*proto.CreateTaskResponse, error) {
+func (t TaskRPC) CreateTask(ct context.Context, req *pbteamy.CreateTaskRequest) (*pbteamy.CreateTaskResponse, error) {
 	input := service.CreateTaskInput{
 		Goal:        req.Goal,
 		Context:     req.Context,
@@ -97,10 +97,10 @@ func (t TaskRPC) CreateTask(ct context.Context, req *proto.CreateTaskRequest) (*
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &proto.CreateTaskResponse{TaskId: task.ID}, nil
+	return &pbteamy.CreateTaskResponse{TaskId: task.ID}, nil
 }
 
-func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) UpdateTask(ct context.Context, req *pbteamy.UpdateTaskRequest) (*emptypb.Empty, error) {
 	input := service.UpdateTaskInput{
 		Goal:         req.Goal,
 		Context:      req.Context,
@@ -119,7 +119,7 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *proto.UpdateTaskRequest) (*
 	return &emptypb.Empty{}, nil
 }
 
-func (t TaskRPC) DeleteTask(ct context.Context, req *proto.DeleteTaskRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) DeleteTask(ct context.Context, req *pbteamy.DeleteTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.DeleteTask(ct, req.TaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
@@ -129,7 +129,7 @@ func (t TaskRPC) DeleteTask(ct context.Context, req *proto.DeleteTaskRequest) (*
 	return &emptypb.Empty{}, nil
 }
 
-func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *proto.MoveTaskToUpcomingRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *pbteamy.MoveTaskToUpcomingRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToUpcoming(ct, req.TaskId, true)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
@@ -139,7 +139,7 @@ func (t TaskRPC) MoveTaskToUpcoming(ct context.Context, req *proto.MoveTaskToUpc
 	return &emptypb.Empty{}, nil
 }
 
-func (t TaskRPC) MoveTaskToInProgress(ct context.Context, req *proto.MoveTaskToInProgressRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) MoveTaskToInProgress(ct context.Context, req *pbteamy.MoveTaskToInProgressRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToInProgress(ct, req.TaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
@@ -149,7 +149,7 @@ func (t TaskRPC) MoveTaskToInProgress(ct context.Context, req *proto.MoveTaskToI
 	return &emptypb.Empty{}, nil
 }
 
-func (t TaskRPC) MoveTaskToDelivered(ct context.Context, req *proto.MoveTaskToDeliveredRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) MoveTaskToDelivered(ct context.Context, req *pbteamy.MoveTaskToDeliveredRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToDelivered(ct, req.TaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
@@ -159,7 +159,7 @@ func (t TaskRPC) MoveTaskToDelivered(ct context.Context, req *proto.MoveTaskToDe
 	return &emptypb.Empty{}, nil
 }
 
-func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *proto.MoveTaskToBlockedRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *pbteamy.MoveTaskToBlockedRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.MoveTaskToBlocked(ct, req.TaskId, req.Reason)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
@@ -169,7 +169,7 @@ func (t TaskRPC) MoveTaskToBlocked(ct context.Context, req *proto.MoveTaskToBloc
 	return &emptypb.Empty{}, nil
 }
 
-func (t TaskRPC) AddAwaitForTask(ct context.Context, req *proto.AddAwaitForTaskRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) AddAwaitForTask(ct context.Context, req *pbteamy.AddAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.AddAwaitForTask(ct, req.AwaitingTaskId, req.AwaitForTaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
@@ -179,7 +179,7 @@ func (t TaskRPC) AddAwaitForTask(ct context.Context, req *proto.AddAwaitForTaskR
 	return &emptypb.Empty{}, nil
 }
 
-func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *proto.RemoveAwaitForTaskRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *pbteamy.RemoveAwaitForTaskRequest) (*emptypb.Empty, error) {
 	_, err := t.taskService.RemoveAwaitForTask(ct, req.AwaitForTaskId, req.AwaitForTaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)

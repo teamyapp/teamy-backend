@@ -7,7 +7,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/teamy-backend/core/api/proto"
+	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -17,27 +17,27 @@ import (
 type SprintRPC struct {
 	logger        telemetry.Logger
 	sprintService service.Sprint
-	proto.UnimplementedSprintServer
+	pbteamy.UnimplementedSprintServer
 }
 
 var _ runner.Service = (*SprintRPC)(nil)
-var _ proto.SprintServer = (*SprintRPC)(nil)
+var _ pbteamy.SprintServer = (*SprintRPC)(nil)
 
 func (s SprintRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
-		proto.RegisterSprintServer(server, s)
+		pbteamy.RegisterSprintServer(server, s)
 	})
 	return nil
 }
 
-func (s SprintRPC) GetActiveSprint(ct context.Context, req *proto.GetActiveSprintRequest) (*proto.SprintMsg, error) {
+func (s SprintRPC) GetActiveSprint(ct context.Context, req *pbteamy.GetActiveSprintRequest) (*pbteamy.SprintMsg, error) {
 	sprint, err := s.sprintService.GetActiveSprint(ct, req.TeamId)
 	if err != nil {
 		s.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &proto.SprintMsg{
+	return &pbteamy.SprintMsg{
 		Id:           sprint.ID,
 		StartAt:      timestamppb.New(sprint.StartAt),
 		EndAt:        timestamppb.New(sprint.EndAt),
@@ -46,7 +46,7 @@ func (s SprintRPC) GetActiveSprint(ct context.Context, req *proto.GetActiveSprin
 	}, nil
 }
 
-func (s SprintRPC) AddTaskToSprint(ct context.Context, req *proto.AddTaskToSprintRequest) (*emptypb.Empty, error) {
+func (s SprintRPC) AddTaskToSprint(ct context.Context, req *pbteamy.AddTaskToSprintRequest) (*emptypb.Empty, error) {
 	_, err := s.sprintService.AddTaskToSprint(ct, req.SprintId, req.TaskId)
 	if err != nil {
 		s.logger.ErrorWithContext(ct, err)
