@@ -25,12 +25,12 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/web"
+	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/apps/github/client"
 	githubEntity "github.com/teamyapp/teamy-backend/apps/github/entity"
 	appsProto "github.com/teamyapp/teamy-backend/apps/proto"
-	"github.com/teamyapp/teamy-backend/core/api/proto"
 	teamyClient "github.com/teamyapp/teamy-backend/core/client"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -452,7 +452,7 @@ func (a AppAPI) webListTeamMembers(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	listTeamMembersReq := &proto.ListTeamMembersRequest{TeamId: teamID}
+	listTeamMembersReq := &pbteamy.ListTeamMembersRequest{TeamId: teamID}
 	listTeamMembersRes, err := a.teamyClientRegistry.TeamClient().ListTeamMembers(ct, listTeamMembersReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
@@ -505,7 +505,7 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	listTeamMemberGroupsReq := &proto.ListMemberGroupsRequest{TeamId: teamID}
+	listTeamMemberGroupsReq := &pbteamy.ListMemberGroupsRequest{TeamId: teamID}
 	listTeamMemberGroupsRes, err := a.teamyClientRegistry.TeamClient().ListMemberGroups(ct, listTeamMemberGroupsReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
@@ -514,7 +514,7 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	teamMemberGroups := collect.Map(listTeamMemberGroupsRes.Groups, func(group *proto.TeamMemberGroup, _ int) entity.TeamMemberGroup {
+	teamMemberGroups := collect.Map(listTeamMemberGroupsRes.Groups, func(group *pbteamy.TeamMemberGroup, _ int) entity.TeamMemberGroup {
 		return entity.TeamMemberGroup{
 			ID:            group.GroupId,
 			Name:          group.Name,
@@ -781,7 +781,7 @@ func (a AppAPI) movePullRequestToDelivered(ct context.Context, prEvt githubEntit
 }
 
 func (a AppAPI) moveTaskToDelivered(ct context.Context, taskID uint64) *errs.Error {
-	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+	moveTaskToDeliveredRequest := &pbteamy.MoveTaskToDeliveredRequest{
 		TaskId: taskID,
 	}
 	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
@@ -834,7 +834,7 @@ func (a AppAPI) closePullRequest(ct context.Context, teamID uint64, prEvt github
 }
 
 func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskID uint64) *errs.Error {
-	getAwaitForTasksRequest := &proto.GetAwaitForTasksRequest{
+	getAwaitForTasksRequest := &pbteamy.GetAwaitForTasksRequest{
 		AwaitingTaskId: awaitingTaskID,
 	}
 
@@ -845,8 +845,8 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 	}
 
 	for _, awaitForTask := range getAwaitForTasksResponse.Tasks {
-		if awaitForTask.Status != proto.TaskStatus_Delivered {
-			_, rpcErr = a.teamyClientRegistry.TaskClient().DeleteTask(ct, &proto.DeleteTaskRequest{
+		if awaitForTask.Status != pbteamy.TaskStatus_Delivered {
+			_, rpcErr = a.teamyClientRegistry.TaskClient().DeleteTask(ct, &pbteamy.DeleteTaskRequest{
 				TaskId: awaitForTask.TaskId,
 			})
 			if rpcErr != nil {
@@ -859,8 +859,8 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 	return nil
 }
 
-func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[uint64]*proto.TaskMsg, *errs.Error) {
-	protoTasks := map[uint64]*proto.TaskMsg{}
+func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[uint64]*pbteamy.TaskMsg, *errs.Error) {
+	protoTasks := map[uint64]*pbteamy.TaskMsg{}
 	allMatches := taskIDWithTaskLinkPattern.FindAllStringSubmatch(body, -1)
 	for _, matches := range allMatches {
 		taskID, err := strconv.ParseUint(matches[1], 10, 64)
@@ -868,7 +868,7 @@ func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[
 			return nil, errs.NewError(errs.Unknown, err.Error())
 		}
 
-		getTaskReq := &proto.GetTaskRequest{
+		getTaskReq := &pbteamy.GetTaskRequest{
 			TaskId: taskID,
 		}
 		protoTask, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
@@ -889,7 +889,7 @@ func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[
 }
 
 func (a AppAPI) moveTaskToInProgress(ct context.Context, taskID uint64, teamID uint64) *errs.Error {
-	moveTaskToInProgressReq := &proto.MoveTaskToInProgressRequest{TaskId: taskID}
+	moveTaskToInProgressReq := &pbteamy.MoveTaskToInProgressRequest{TaskId: taskID}
 	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToInProgress(ct, moveTaskToInProgressReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -911,7 +911,7 @@ func (a AppAPI) createPullRequestTaskRelation(
 ) *errs.Error {
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
-	createTaskLinkReq := &proto.CreateTaskLinkRequest{
+	createTaskLinkReq := &pbteamy.CreateTaskLinkRequest{
 		TaskId:       taskID,
 		Title:        pullRequestTitle,
 		PreviewTitle: "View pull request on Github",
@@ -941,7 +941,7 @@ func (a AppAPI) removePullRequestTaskRelationAndCleanup(
 	ct context.Context,
 	prTaskRelation entity.GithubPullRequestInternalTaskRelation,
 ) *errs.Error {
-	deleteTaskLinkReq := &proto.DeleteTaskLinkRequest{
+	deleteTaskLinkReq := &pbteamy.DeleteTaskLinkRequest{
 		LinkId: prTaskRelation.InternalTaskLinkID,
 	}
 	_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
@@ -953,7 +953,7 @@ func (a AppAPI) removePullRequestTaskRelationAndCleanup(
 	}
 
 	if prTaskRelation.AutomaticTracking {
-		deleteTaskReq := &proto.DeleteTaskRequest{
+		deleteTaskReq := &pbteamy.DeleteTaskRequest{
 			TaskId: prTaskRelation.InternalTaskID,
 		}
 		_, rpcErr := a.teamyClientRegistry.TaskClient().DeleteTask(ct, deleteTaskReq)
@@ -975,7 +975,7 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 	}
 
 	for _, prTaskRelation := range prTaskRelations {
-		deleteTaskLinkReq := &proto.DeleteTaskLinkRequest{
+		deleteTaskLinkReq := &pbteamy.DeleteTaskLinkRequest{
 			LinkId: prTaskRelation.InternalTaskLinkID,
 		}
 		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
@@ -1143,7 +1143,7 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 		return err
 	}
 
-	mentionedTaskMap := map[uint64]*proto.TaskMsg{}
+	mentionedTaskMap := map[uint64]*pbteamy.TaskMsg{}
 	for _, mentionedTask := range mentionedTasks {
 		mentionedTaskMap[mentionedTask.TaskId] = mentionedTask
 	}
@@ -1183,7 +1183,7 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 		}
 
 		if oldPPTaskRelation.AutomaticTracking {
-			updateTaskReq := &proto.UpdateTaskRequest{
+			updateTaskReq := &pbteamy.UpdateTaskRequest{
 				TaskId:       mentionedTask.TaskId,
 				OwningTeamId: teamID,
 				Goal:         fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
@@ -1270,7 +1270,7 @@ func (a AppAPI) createAutomaticTrackingTask(
 		return 0, err
 	}
 
-	createTaskReq := &proto.CreateTaskRequest{
+	createTaskReq := &pbteamy.CreateTaskRequest{
 		TeamId:      teamID,
 		Goal:        fmt.Sprintf("[%v][PR #%v] %v", repositoryName, pullRequestNumber, pullRequestTitle),
 		Context:     &pullRequestBody,
@@ -1327,7 +1327,7 @@ func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64,
 	}
 
 	a.logger.InfoWithContext(ct, fmt.Sprintf("moved review task to delivered: taskID=%v", codeReview.InternalCodeReviewTaskID))
-	moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+	moveTaskToDeliveredRequest := &pbteamy.MoveTaskToDeliveredRequest{
 		TaskId: codeReview.InternalCodeReviewTaskID,
 	}
 	_, rpcErr := a.teamyClientRegistry.TaskClient().MoveTaskToDelivered(ct, moveTaskToDeliveredRequest)
@@ -1354,7 +1354,7 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 				return err
 			}
 
-			createTaskReq := &proto.CreateTaskRequest{
+			createTaskReq := &pbteamy.CreateTaskRequest{
 				TeamId: teamID,
 				Goal: fmt.Sprintf(
 					"[%v][PR #%v] Address round %v code review feedback from %v",
@@ -1387,7 +1387,7 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 			}
 
 			for _, prTaskRelation := range prTaskRelations {
-				addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
+				addAwaitForTaskReq := &pbteamy.AddAwaitForTaskRequest{
 					AwaitingTaskId: prTaskRelation.InternalTaskID,
 					AwaitForTaskId: addressFeedbackTaskID,
 				}
@@ -1447,7 +1447,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			),
 		)
 
-		getTaskReq := &proto.GetTaskRequest{TaskId: pullRequest.InternalTaskID}
+		getTaskReq := &pbteamy.GetTaskRequest{TaskId: pullRequest.InternalTaskID}
 		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
 		if rpcErr != nil {
 			if err == nil {
@@ -1561,7 +1561,7 @@ func (a AppAPI) tryCreateTaskForPullRequestReviewer(
 
 		// TODO: ensure author resolved at least 1 thread or pushed new commit
 		// before feedback can be considered as addressed.
-		moveTaskToDeliveredRequest := &proto.MoveTaskToDeliveredRequest{
+		moveTaskToDeliveredRequest := &pbteamy.MoveTaskToDeliveredRequest{
 			TaskId: *codeReview.InternalAddressFeedbackTaskID,
 		}
 		createdTaskID, err := a.createCodeReviewTask(ct, teamID, pullRequestTaskID, githubReviewerNodeID, codeReview.Round+1, evt, prEvt)
@@ -1618,7 +1618,7 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	}
 
 	dueAt := time.Now().UTC().Add(codeReviewMaxWait)
-	createTaskReq := &proto.CreateTaskRequest{
+	createTaskReq := &pbteamy.CreateTaskRequest{
 		TeamId:      teamID,
 		Goal:        fmt.Sprintf("[%v][PR #%v] Code review round %v", evt.Repository.Name, prEvt.PullRequest.Number, round),
 		OwnerUserId: &codeReviewerInternalUserID,
@@ -1637,7 +1637,7 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
-	createTaskLinkReq := &proto.CreateTaskLinkRequest{
+	createTaskLinkReq := &pbteamy.CreateTaskLinkRequest{
 		TaskId:       createTaskRes.TaskId,
 		Title:        prEvt.PullRequest.Title,
 		PreviewTitle: "View pull request on Github",
@@ -1651,7 +1651,7 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 		return 0, internalErr
 	}
 
-	addAwaitForTaskReq := &proto.AddAwaitForTaskRequest{
+	addAwaitForTaskReq := &pbteamy.AddAwaitForTaskRequest{
 		AwaitingTaskId: pullRequestTaskID,
 		AwaitForTaskId: createTaskRes.TaskId,
 	}
@@ -1670,7 +1670,7 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 }
 
 func (a AppAPI) tryAddTaskToActiveSprint(ct context.Context, teamID uint64, taskID uint64) *errs.Error {
-	getActiveSprintReq := &proto.GetActiveSprintRequest{TeamId: teamID}
+	getActiveSprintReq := &pbteamy.GetActiveSprintRequest{TeamId: teamID}
 	getActiveSprintRes, rpcErr := a.teamyClientRegistry.SprintClient().GetActiveSprint(ct, getActiveSprintReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -1681,7 +1681,7 @@ func (a AppAPI) tryAddTaskToActiveSprint(ct context.Context, teamID uint64, task
 		return internalErr
 	}
 
-	addTaskToSprintReq := &proto.AddTaskToSprintRequest{TaskId: taskID, SprintId: getActiveSprintRes.Id}
+	addTaskToSprintReq := &pbteamy.AddTaskToSprintRequest{TaskId: taskID, SprintId: getActiveSprintRes.Id}
 	_, rpcErr = a.teamyClientRegistry.SprintClient().AddTaskToSprint(ct, addTaskToSprintReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)

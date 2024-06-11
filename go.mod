@@ -10,9 +10,10 @@ require (
 	github.com/graph-gophers/graphql-go v1.5.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
-	github.com/teamyapp/cloud v0.0.0-20240609011439-edef307f6a2e
-	google.golang.org/grpc v1.57.0
-	google.golang.org/protobuf v1.31.0
+	github.com/teamyapp/cloud v0.0.0-20240611064407-5192d19165e1
+	github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240611063249-feca64038138
+	google.golang.org/grpc v1.64.0
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -28,7 +29,7 @@ require (
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.2 // indirect
@@ -65,8 +66,8 @@ require (
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230807174057-1744710a1577 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	nhooyr.io/websocket v1.8.6 // indirect
 )
