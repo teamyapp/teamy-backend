@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -93,7 +93,7 @@ func (p *Phase) CreatePhase(ct context.Context, projectID uint64, input CreatePh
 		return entity.Phase{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	genPhaseIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "phaseID"}
+	genPhaseIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "phaseID"}
 	genPhaseIDRes, rpcErr := p.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genPhaseIDReq)
 	if rpcErr != nil {
 		return entity.Phase{}, errs.FromGRPCErr(rpcErr)

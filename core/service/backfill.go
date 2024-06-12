@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -89,7 +89,7 @@ func (b *Backfill) backfillAttachmentListForTaskContext(ct context.Context) *err
 			if len(attachmentLists) > 0 {
 				continue
 			}
-			genAttachmentListIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "attachmentListID"}
+			genAttachmentListIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "attachmentListID"}
 			genAttachmentListIDRes, rpcErr := b.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAttachmentListIDReq)
 			if rpcErr != nil {
 				return errs.FromGRPCErr(rpcErr)

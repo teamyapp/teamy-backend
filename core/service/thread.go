@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -40,7 +40,7 @@ type Thread struct {
 
 func (t Thread) CreateThread(ct context.Context) (uint64, *errs.Error) {
 	// TODO: add authorization logic
-	genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
+	genThreadIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "threadID"}
 	genThreadIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -69,7 +69,7 @@ func (t Thread) CreateMessage(ct context.Context, threadID uint64, input CreateM
 	}
 
 	// TODO: add authorization logic
-	genMessageIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "messageID"}
+	genMessageIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "messageID"}
 	genMessageIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genMessageIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)

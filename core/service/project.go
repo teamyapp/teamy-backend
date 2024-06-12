@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/feature"
@@ -125,7 +125,7 @@ func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateP
 		return entity.Project{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	genProjectIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "projectID"}
+	genProjectIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "projectID"}
 	genProjectIDRes, rpcErr := p.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genProjectIDReq)
 	if rpcErr != nil {
 		return entity.Project{}, errs.FromGRPCErr(rpcErr)

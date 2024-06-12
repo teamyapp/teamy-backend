@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -29,6 +28,7 @@ import (
 	"github.com/teamyapp/cloud/libs/storage"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -199,7 +199,7 @@ func (a App) CreateAppSecret(ct context.Context, appID uint64, input CreateAppSe
 		return entity.AppSecret{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	genAppSecretIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "appSecretID"}
+	genAppSecretIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "appSecretID"}
 	genAppSecretIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppSecretIDReq)
 	if rpcErr != nil {
 		return entity.AppSecret{}, errs.FromGRPCErr(rpcErr)
@@ -260,7 +260,7 @@ func (a App) DeleteAppSecret(ct context.Context, appSecretID uint64) (entity.App
 }
 
 func (a App) InstallAppToTeam(ct context.Context, appID uint64, teamID uint64) (entity.TeamAppInstallation, *errs.Error) {
-	genTeamAppInstallationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamAppInstallationID"}
+	genTeamAppInstallationIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "teamAppInstallationID"}
 	genTeamAppInstallationIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamAppInstallationIDReq)
 	if rpcErr != nil {
 		return entity.TeamAppInstallation{}, errs.FromGRPCErr(rpcErr)
@@ -363,7 +363,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		return entity.App{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	genAppIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "appID"}
+	genAppIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "appID"}
 	genAppIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppIDReq)
 	if rpcErr != nil {
 		return entity.App{}, errs.FromGRPCErr(rpcErr)
@@ -388,7 +388,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		CreatedAt:       now,
 	}
 
-	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
+	genGroupIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "groupID"}
 	genGroupIDRes, rpcErr := a.cloudClientRegistry.
 		GeneratorClient().
 		GenerateUniqueNumber(ct, genGroupIDReq)
@@ -429,7 +429,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		Filter: "true;",
 	}
 
-	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
+	genActivatorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
 	genActivatorIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActivatorIDReq)
 	if rpcErr != nil {
 		return entity.App{}, errs.FromGRPCErr(rpcErr)
@@ -444,7 +444,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		},
 	}
 
-	genVersionSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "versionSelectorID"}
+	genVersionSelectorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "versionSelectorID"}
 	genVersionSelectorIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genVersionSelectorIDReq)
 	if rpcErr != nil {
 		return entity.App{}, errs.FromGRPCErr(rpcErr)
@@ -460,7 +460,7 @@ func (a App) CreateApp(ct context.Context, teamID uint64, createAppInput CreateA
 		VersionNumber: defaultAppVersionNumber,
 	}
 
-	genRolloutIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "rolloutID"}
+	genRolloutIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "rolloutID"}
 	genRolloutIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genRolloutIDReq)
 	if rpcErr != nil {
 		return entity.App{}, errs.FromGRPCErr(rpcErr)
@@ -647,7 +647,7 @@ func (a App) AddTagToApp(ct context.Context, appID uint64, value string) (entity
 				return internalErr
 			}
 
-			genTagIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "tagID"}
+			genTagIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "tagID"}
 			genTagIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTagIDReq)
 			if rpcErr != nil {
 				return errs.FromGRPCErr(rpcErr)
@@ -973,7 +973,7 @@ func (a App) FinishAppPackageFileUploadSession(ct context.Context, appID uint64,
 		}
 	}
 
-	findUploadSessionReq := proto.FindUploadSessionRequest{
+	findUploadSessionReq := pbcloud.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
 	uploadSession, rpcErr := a.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
@@ -1194,7 +1194,7 @@ func (a App) uploadAppPackageFiles(
 	userID uint64,
 	appID uint64,
 	versionNumber int,
-	uploadSession *proto.UploadSession,
+	uploadSession *pbcloud.UploadSession,
 ) *errs.Error {
 	fileReader, internalErr := a.objectStore.Get(ct, strconv.FormatInt(int64(uploadSession.FileId), 10))
 	if internalErr != nil {
@@ -1337,7 +1337,7 @@ func (a App) processManifestFile(ct context.Context, userID uint64, appID uint64
 		}
 
 		for _, change := range manifestData.Changes {
-			genAppSecretIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "appVersionChangeID"}
+			genAppSecretIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "appVersionChangeID"}
 			genAppSecretIDRes, rpcErr := a.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAppSecretIDReq)
 			if rpcErr != nil {
 				return errs.FromGRPCErr(rpcErr)

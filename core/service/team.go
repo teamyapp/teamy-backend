@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -15,6 +14,7 @@ import (
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -233,7 +233,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 		return entity.Team{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	genTeamIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamID"}
+	genTeamIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "teamID"}
 	genTeamIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -324,7 +324,7 @@ func (t Team) CreateTeam(ct context.Context, input CreateTeamInput) (entity.Team
 
 	var teamMemberGroups []daoEntity.TeamMemberGroup
 	if t.featureToggles.EnableAuthorization {
-		genUniqueNumReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamMemberGroupID"}
+		genUniqueNumReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "teamMemberGroupID"}
 		ownerTeamMemberGroupIDRes, err := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genUniqueNumReq)
 		if err != nil {
 			return entity.Team{}, errs.FromGRPCErr(err)
@@ -594,7 +594,7 @@ func (t Team) FinishTeamIconUploadSession(ct context.Context, teamID uint64, fil
 		}
 	}
 
-	findUploadSessionReq := proto.FindUploadSessionRequest{
+	findUploadSessionReq := pbcloud.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
 	uploadSession, rpcErr := t.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)
@@ -969,14 +969,14 @@ func (t Team) FindTeamMemberGroupByID(ct context.Context, id uint64) (entity.Tea
 }
 
 func (t Team) CreateTeamMemberGroup(ct context.Context, input CreateTeamMemberGroupInput) (entity.TeamMemberGroup, *errs.Error) {
-	genTeamMemberGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "teamMemberGroupID"}
+	genTeamMemberGroupIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "teamMemberGroupID"}
 	genTeamMemberGroupIDRes, rpcErr := t.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTeamMemberGroupIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
 		return entity.TeamMemberGroup{}, internalErr
 	}
 
-	createUserGroupRes, rpcErr := t.cloudClientRegistry.AuthorizationClient().CreateUserGroup(ct, &proto.CreateUserGroupRequest{
+	createUserGroupRes, rpcErr := t.cloudClientRegistry.AuthorizationClient().CreateUserGroup(ct, &pbcloud.CreateUserGroupRequest{
 		Name: fmt.Sprintf("Team(%d)/%s", input.TeamID, input.Name),
 	})
 	if rpcErr != nil {
