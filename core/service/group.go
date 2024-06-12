@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/delta"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -62,7 +62,7 @@ func (g *Group) CreateAppStaticGroup(
 	appID uint64,
 	input CreateStaticGroupInput,
 ) (entity.StaticGroup, *errs.Error) {
-	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
+	genGroupIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "groupID"}
 	genGroupIDRes, rpcErr := g.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -327,7 +327,7 @@ func (g *Group) CreateFilterGroup(
 	appID uint64,
 	input CreateFilterGroupInput,
 ) (entity.FilterGroup, *errs.Error) {
-	genGroupIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "groupID"}
+	genGroupIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "groupID"}
 	genGroupIDRes, rpcErr := g.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genGroupIDReq)
 	if rpcErr != nil {
 		return entity.FilterGroup{}, errs.FromGRPCErr(rpcErr)

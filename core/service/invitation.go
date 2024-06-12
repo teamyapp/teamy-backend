@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -14,6 +13,7 @@ import (
 	"github.com/teamyapp/cloud/libs/randgen"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -155,7 +155,7 @@ func (i Invitation) CreateInvitation(ct context.Context, teamID uint64, input Cr
 		}
 	}
 
-	genInvitationIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
+	genInvitationIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "invitationID"}
 	genInvitationIDRes, rpcErr := i.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genInvitationIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)

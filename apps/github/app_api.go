@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/ctx"
@@ -25,6 +24,7 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	"github.com/teamyapp/cloud/libs/web"
+	cloudProto "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"

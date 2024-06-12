@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	cloudProto "github.com/teamyapp/cloud/app/api/proto"
 	cloudClient "github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/app/dao/sqldb"
 	"github.com/teamyapp/cloud/libs/env"
@@ -25,6 +24,7 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
+	"github.com/teamyapp/protocol/pb/pbgo/cloud"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDI "github.com/teamyapp/teamy-backend/apps/inject"
@@ -143,7 +143,7 @@ func startServiceRunner(
 	}
 
 	authorizationClient := cloudClientRegistry.AuthorizationClient()
-	applyAuthorizationCfgReq := &cloudProto.ApplyAuthorizationConfigRequest{
+	applyAuthorizationCfgReq := &pbcloud.ApplyAuthorizationConfigRequest{
 		ConfigContent: core.AuthorizationConfig,
 	}
 	ct := context.Background()

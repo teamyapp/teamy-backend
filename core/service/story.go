@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/ctx"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
@@ -122,7 +122,7 @@ func (s *Story) CreateStory(ct context.Context, projectID uint64, input CreateSt
 		return entity.Story{}, errs.NewError(errs.Unauthenticated, "user ID not found")
 	}
 
-	genStoryIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "storyID"}
+	genStoryIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "storyID"}
 	genStoryIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genStoryIDReq)
 	if rpcErr != nil {
 		return entity.Story{}, errs.FromGRPCErr(rpcErr)

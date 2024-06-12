@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/io"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/mutation"
@@ -107,7 +107,7 @@ func (a *Attachment) FinishAttachmentListFileUploadSession(
 	attachmentListID uint64,
 	fileUploadSessionID uint64,
 ) (entity.Attachment, *errs.Error) {
-	findUploadSessionReq := proto.FindUploadSessionRequest{
+	findUploadSessionReq := pbcloud.FindUploadSessionRequest{
 		UploadSessionId: fileUploadSessionID,
 	}
 	uploadSession, rpcErr := a.cloudClientRegistry.FileClient().FindUploadSession(ct, &findUploadSessionReq)

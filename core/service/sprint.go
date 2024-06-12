@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	cloudAuthorization "github.com/teamyapp/cloud/libs/authorization"
 	"github.com/teamyapp/cloud/libs/collect"
@@ -15,6 +14,7 @@ import (
 	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/authorization"
 	"github.com/teamyapp/teamy-backend/core/cache"
 	"github.com/teamyapp/teamy-backend/core/dao"
@@ -442,7 +442,7 @@ func (s Sprint) CreateSprint(ct context.Context, teamID uint64, input CreateSpri
 		}
 	}
 
-	genSprintIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "sprintID"}
+	genSprintIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "sprintID"}
 	genSprintIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSprintIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -834,14 +834,14 @@ func (s Sprint) CopyTasksToSprint(
 	var newThreadIDs []uint64
 	// TODO(magicoder10): these genID requests should be batched in a single RPC
 	for range taskIDs {
-		genTaskIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "taskID"}
+		genTaskIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "taskID"}
 		genTaskIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genTaskIDReq)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)
 			return nil, internalErr
 		}
 
-		genThreadIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "threadID"}
+		genThreadIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "threadID"}
 		genThreadIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genThreadIDReq)
 		if rpcErr != nil {
 			internalErr := errs.FromGRPCErr(rpcErr)

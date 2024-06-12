@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
-	"github.com/teamyapp/cloud/app/api/proto"
 	"github.com/teamyapp/cloud/app/client"
 	"github.com/teamyapp/cloud/libs/collect"
 	"github.com/teamyapp/cloud/libs/delta"
@@ -18,6 +17,7 @@ import (
 	"github.com/teamyapp/cloud/libs/rollout"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	cloudTransaction "github.com/teamyapp/cloud/libs/transaction"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	"github.com/teamyapp/teamy-backend/core/dao"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/realtime"
@@ -107,7 +107,7 @@ func (r *Rollout) CreateAppRollout(
 	appRolloutRelationType entity.AppRolloutRelationType,
 	input CreateRolloutInput,
 ) (entity.Rollout, *errs.Error) {
-	genRolloutIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "rolloutID"}
+	genRolloutIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "rolloutID"}
 	genRolloutRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genRolloutIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -502,7 +502,7 @@ func (r *Rollout) FindActivatorByID(ct context.Context, activatorID uint64) (ent
 }
 
 func (r *Rollout) CreateStaticActivator(ct context.Context) (entity.StaticActivator, *errs.Error) {
-	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
+	genActivatorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
 	genActivatorRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActivatorIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -525,7 +525,7 @@ func (r *Rollout) CreateStaticActivator(ct context.Context) (entity.StaticActiva
 }
 
 func (r *Rollout) CreateTimeRangeActivator(ct context.Context, startAt *time.Time, endAt *time.Time) (entity.TimeRangeActivator, *errs.Error) {
-	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
+	genActivatorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
 	genActivatorRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActivatorIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -549,7 +549,7 @@ func (r *Rollout) CreateTimeRangeActivator(ct context.Context, startAt *time.Tim
 }
 
 func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) (entity.MaxViewersActivator, *errs.Error) {
-	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
+	genActivatorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
 	genActivatorRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActivatorIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -573,7 +573,7 @@ func (r *Rollout) CreateMaxViewersActivator(ct context.Context, maxViewers int) 
 }
 
 func (r *Rollout) CreatePercentageActivator(ct context.Context, percentage int) (entity.PercentageActivator, *errs.Error) {
-	genActivatorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
+	genActivatorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "activatorID"}
 	genActivatorRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genActivatorIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -702,7 +702,7 @@ func (r *Rollout) FindVersionSelectorByID(ct context.Context, selectorID uint64)
 }
 
 func (r *Rollout) CreateStaticVersionSelector(ct context.Context, appID uint64, versionNumber int) (entity.StaticVersionSelector, *errs.Error) {
-	genSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
+	genSelectorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
 	genSelectorIDRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSelectorIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
@@ -802,7 +802,7 @@ func (r *Rollout) UpdateVersionSelector(ct context.Context, appID uint64, select
 }
 
 func (r *Rollout) CreateExperimentVersionSelector(ct context.Context, appID uint64, versionNumbers []int) (entity.ExperimentVersionSelector, *errs.Error) {
-	genSelectorIDReq := &proto.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
+	genSelectorIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "selectorID"}
 	genSelectorIDRes, rpcErr := r.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genSelectorIDReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)
