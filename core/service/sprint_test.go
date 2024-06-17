@@ -108,6 +108,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	teamyBackendDB.CreateTable(daotest.SprintTaskRelationTableName)
 	teamyBackendDB.CreateTable(daotest.SprintParticipantTableName)
 	teamyBackendDB.CreateTable(daotest.TaskTableName)
+	teamyBackendDB.CreateTable((daotest.AttachmentListTableName))
 	teamMemberDao := daotest.NewTeamMember(teamyBackendDB, transactionFactory)
 	sprintDao := daotest.NewSprint(teamyBackendDB, transactionFactory)
 	taskDao := daotest.NewTask(teamyBackendDB, transactionFactory)
@@ -116,6 +117,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 	sprintTaskRelationDao := daotest.NewSprintTaskRelation(teamyBackendDB)
 	sprintParticipantDao := daotest.NewSprintParticipant(teamyBackendDB, transactionFactory)
 	threadDao := daotest.NewThread(teamyBackendDB)
+	attachmentListDao := daotest.NewAttachmentList(teamyBackendDB)
 	userDao := daotest.NewUser(teamyBackendDB, transactionFactory)
 
 	transactionGroupFactory := transaction.NewGroupFactory(logger, noopMetrics, transactionFactory, stateSyncer)
@@ -141,6 +143,7 @@ func prepareSprintTestRef(t *testing.T, toggles feature.Toggles) (SprintTestRef,
 		sprintParticipantDao,
 		teamMemberDao,
 		threadDao,
+		attachmentListDao,
 	)
 
 	return SprintTestRef{

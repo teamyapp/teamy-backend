@@ -86,7 +86,7 @@ func InitGraphQLAPI(appName AppMame, serviceName ServiceName, environment env.En
 	teamMemberGroupInvitationRelation := sqldb.NewTeamMemberGroupInvitationRelation(prometheus)
 	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
 	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, user, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, teamMemberGroupInvitationRelation, repositoryTeamMemberGroup)
-	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, timeBasedCache, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
+	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, timeBasedCache, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread, attachmentList)
 	userFileUploadSession := sqldb.NewUserFileUploadSession(prometheus)
 	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, timeBasedCache, user, teamMember, userFileUploadSession)
 	httpClient := newHTTPClient(mapServerURL)
@@ -188,7 +188,8 @@ func InitSprintRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus,
 	sprintParticipant := sqldb.NewSprintParticipant(prometheus, factory)
 	teamMember := sqldb.NewTeamMember(prometheus, factory)
 	thread := sqldb.NewThread(prometheus)
-	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, timeBasedCache, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread)
+	attachmentList := sqldb.NewAttachmentList(prometheus, factory)
+	serviceSprint := service.NewSprint(logger, groupFactory, cloudAPIClientRegistry, realTimeStateSyncer, authorizer, toggles, factory, timeBasedCache, task, sprint, team, sprintTaskRelation, sprintParticipant, teamMember, thread, attachmentList)
 	sprintRPC := api.NewSprintRPC(logger, serviceSprint)
 	return sprintRPC, nil
 }

@@ -52,6 +52,7 @@ type Sprint struct {
 	sprintParticipantDao    dao.SprintParticipant
 	teamMemberDao           dao.TeamMember
 	threadDao               dao.Thread
+	attachmentListDao       dao.AttachmentList
 	db                      *sql.DB
 }
 
@@ -832,6 +833,7 @@ func (s Sprint) CopyTasksToSprint(
 	var tasks []entity.Task
 	var newTaskIDs []uint64
 	var newThreadIDs []uint64
+	var newAttachmentListIDs []uint64
 	// TODO(magicoder10): these genID requests should be batched in a single RPC
 	for range taskIDs {
 		genTaskIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "taskID"}
@@ -848,8 +850,12 @@ func (s Sprint) CopyTasksToSprint(
 			return nil, internalErr
 		}
 
+		genAttachmentListIDReq := &pbcloud.GenerateUniqueNumberRequest{SequenceName: "attachmentListID"}
+		genAttachmentListIDRes, rpcErr := s.cloudClientRegistry.GeneratorClient().GenerateUniqueNumber(ct, genAttachmentListIDReq)
+
 		newTaskIDs = append(newTaskIDs, genTaskIDRes.UniqueNumber)
 		newThreadIDs = append(newThreadIDs, genThreadIDRes.UniqueNumber)
+		newAttachmentListIDs = append(newAttachmentListIDs, genAttachmentListIDRes.UniqueNumber)
 	}
 
 	var err *errs.Error
@@ -857,7 +863,7 @@ func (s Sprint) CopyTasksToSprint(
 		ct, false, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
 			for idx, taskID := range taskIDs {
 				var task entity.Task
-				task, err = s.copyTaskToSprint(ct, tx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx])
+				task, err = s.copyTaskToSprint(ct, tx, rtTx, toSprintID, taskID, newTaskIDs[idx], newThreadIDs[idx], newAttachmentListIDs[idx])
 				if err != nil {
 					continue
 				}
@@ -971,6 +977,7 @@ func (s Sprint) copyTaskToSprint(
 	taskID uint64,
 	newTaskID uint64,
 	newThreadID uint64,
+	newAttachmentListID uint64,
 ) (entity.Task, *errs.Error) {
 	task, err := s.taskDao.FindTaskByIDWithTx(ct, tx, taskID)
 	if err != nil {
@@ -993,6 +1000,7 @@ func (s Sprint) copyTaskToSprint(
 		return entity.Task{}, err
 	}
 
+	now := time.Now().UTC()
 	newTask := entity.Task{
 		ID:               newTaskID,
 		Goal:             task.Goal,
@@ -1006,7 +1014,7 @@ func (s Sprint) copyTaskToSprint(
 		Priority:         task.Priority,
 		OwnerUserID:      task.OwnerUserID,
 		CommentsThreadID: newThreadID,
-		CreatedAt:        time.Now().UTC(),
+		CreatedAt:        now,
 		DueAt:            task.DueAt,
 		DeliveredAt:      task.DeliveredAt,
 	}
@@ -1023,6 +1031,26 @@ func (s Sprint) copyTaskToSprint(
 	}
 
 	rtTx.AppendMutation(createTaskMutation)
+	attachmentList := entity.AttachmentList{
+		OwnerID:   task.ID,
+		OwnerType: entity.AttachmentListOwnerTypeTask,
+		ListID:    newAttachmentListID,
+		ListLabel: "context",
+		CreatedAt: now,
+	}
+	createAttachmentListMutation := mutation.NewCreateAttachmentList(
+		s.logger,
+		s.stateSyncer,
+		s.attachmentListDao,
+		s.taskDao,
+		attachmentList,
+	)
+	err = createAttachmentListMutation.Execute(ct, tx)
+	if err != nil {
+		return entity.Task{}, err
+	}
+
+	rtTx.AppendMutation(createAttachmentListMutation)
 	relation := entity.SprintTaskRelation{
 		SprintID:  toSprintID,
 		TaskID:    newTaskID,
@@ -1270,6 +1298,7 @@ func NewSprint(
 	sprintParticipantDao dao.SprintParticipant,
 	teamMemberDao dao.TeamMember,
 	threadDao dao.Thread,
+	attachmentListDao dao.AttachmentList,
 ) Sprint {
 	return Sprint{
 		logger:                  logger,
@@ -1287,6 +1316,7 @@ func NewSprint(
 		sprintParticipantDao:    sprintParticipantDao,
 		teamMemberDao:           teamMemberDao,
 		threadDao:               threadDao,
+		attachmentListDao:       attachmentListDao,
 	}
 }
 
