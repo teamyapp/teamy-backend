@@ -16,15 +16,15 @@ import (
 type TaskLinkRPC struct {
 	logger          telemetry.Logger
 	taskLinkService service.TaskLink
-	pbteamy.UnimplementedTaskLinkServer
+	pbteamy.UnimplementedTaskLinkServiceServer
 }
 
 var _ runner.Service = (*TaskLinkRPC)(nil)
-var _ pbteamy.TaskLinkServer = (*TaskLinkRPC)(nil)
+var _ pbteamy.TaskLinkServiceServer = (*TaskLinkRPC)(nil)
 
 func (t TaskLinkRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
-		pbteamy.RegisterTaskLinkServer(server, t)
+		pbteamy.RegisterTaskLinkServiceServer(server, t)
 	})
 	return nil
 }

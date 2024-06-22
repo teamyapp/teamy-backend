@@ -12,40 +12,58 @@ import (
 )
 
 type Registry struct {
-	conn           *grpc.ClientConn
-	teamClient     pbteamy.TeamClient
-	sprintClient   pbteamy.SprintClient
-	taskClient     pbteamy.TaskClient
-	taskLinkClient pbteamy.TaskLinkClient
+	conn                  *grpc.ClientConn
+	userClient            pbteamy.UserServiceClient
+	teamClient            pbteamy.TeamServiceClient
+	teamMemberGroupClient pbteamy.TeamMemberGroupServiceClient
+	sprintClient          pbteamy.SprintServiceClient
+	taskClient            pbteamy.TaskServiceClient
+	taskLinkClient        pbteamy.TaskLinkServiceClient
 }
 
-func (r *Registry) TeamClient() pbteamy.TeamClient {
+func (r *Registry) TeamClient() pbteamy.TeamServiceClient {
 	if r.teamClient == nil {
-		r.teamClient = pbteamy.NewTeamClient(r.conn)
+		r.teamClient = pbteamy.NewTeamServiceClient(r.conn)
 	}
 
 	return r.teamClient
 }
 
-func (r *Registry) SprintClient() pbteamy.SprintClient {
+func (r *Registry) TeamMemberGroupClient() pbteamy.TeamMemberGroupServiceClient {
+	if r.teamMemberGroupClient == nil {
+		r.teamMemberGroupClient = pbteamy.NewTeamMemberGroupServiceClient(r.conn)
+	}
+
+	return r.teamMemberGroupClient
+}
+
+func (r *Registry) UserClient() pbteamy.UserServiceClient {
+	if r.userClient == nil {
+		r.userClient = pbteamy.NewUserServiceClient(r.conn)
+	}
+
+	return r.userClient
+}
+
+func (r *Registry) SprintClient() pbteamy.SprintServiceClient {
 	if r.sprintClient == nil {
-		r.sprintClient = pbteamy.NewSprintClient(r.conn)
+		r.sprintClient = pbteamy.NewSprintServiceClient(r.conn)
 	}
 
 	return r.sprintClient
 }
 
-func (r *Registry) TaskClient() pbteamy.TaskClient {
+func (r *Registry) TaskClient() pbteamy.TaskServiceClient {
 	if r.taskClient == nil {
-		r.taskClient = pbteamy.NewTaskClient(r.conn)
+		r.taskClient = pbteamy.NewTaskServiceClient(r.conn)
 	}
 
 	return r.taskClient
 }
 
-func (r *Registry) TaskLinkClient() pbteamy.TaskLinkClient {
+func (r *Registry) TaskLinkClient() pbteamy.TaskLinkServiceClient {
 	if r.taskLinkClient == nil {
-		r.taskLinkClient = pbteamy.NewTaskLinkClient(r.conn)
+		r.taskLinkClient = pbteamy.NewTaskLinkServiceClient(r.conn)
 	}
 
 	return r.taskLinkClient

@@ -210,6 +210,50 @@ func InitTaskLinkRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheu
 	return taskLinkRPC, nil
 }
 
+func InitTeamMemberGroupRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL) (api.TeamMemberGroupRPC, error) {
+	factory := transaction.NewFactory(sqlDB)
+	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
+	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return api.TeamMemberGroupRPC{}, err
+	}
+	task := sqldb.NewTask(prometheus, factory)
+	sprint := sqldb.NewSprint(prometheus, factory)
+	sprintParticipant := sqldb.NewSprintParticipant(prometheus, factory)
+	team := sqldb.NewTeam(prometheus, factory)
+	user := sqldb.NewUser(prometheus, factory)
+	teamMember := sqldb.NewTeamMember(prometheus, factory)
+	teamFileUploadSession := sqldb.NewTeamFileUploadSession(prometheus)
+	teamMemberGroup := sqldb.NewTeamMemberGroup(prometheus)
+	teamMemberGroupUserRelation := sqldb.NewTeamMemberGroupUserRelation(prometheus)
+	teamMemberGroupInvitationRelation := sqldb.NewTeamMemberGroupInvitationRelation(prometheus)
+	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
+	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, user, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, teamMemberGroupInvitationRelation, repositoryTeamMemberGroup)
+	teamMemberGroupRPC := api.NewTeamMemberGroupRPC(serviceTeam)
+	return teamMemberGroupRPC, nil
+}
+
+func InitUserRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL) (api.UserRPC, error) {
+	factory := transaction.NewFactory(sqlDB)
+	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
+	toggles := feature.NewStaticToggles()
+	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return api.UserRPC{}, err
+	}
+	user := sqldb.NewUser(prometheus, factory)
+	teamMember := sqldb.NewTeamMember(prometheus, factory)
+	userFileUploadSession := sqldb.NewUserFileUploadSession(prometheus)
+	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, timeBasedCache, user, teamMember, userFileUploadSession)
+	userRPC := api.NewUserRPC(serviceUser)
+	return userRPC, nil
+}
+
 func InitTeamRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB, cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL) (api.TeamRPC, error) {
 	factory := transaction.NewFactory(sqlDB)
 	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
@@ -232,9 +276,7 @@ func InitTeamRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, c
 	teamMemberGroupInvitationRelation := sqldb.NewTeamMemberGroupInvitationRelation(prometheus)
 	repositoryTeamMemberGroup := repository.NewTeamMemberGroup(teamMemberGroup, teamMemberGroupUserRelation)
 	serviceTeam := newTeamService(logger, groupFactory, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, toggles, realTimeStateSyncer, factory, timeBasedCache, task, sprint, sprintParticipant, team, user, teamMember, teamFileUploadSession, teamMemberGroup, teamMemberGroupUserRelation, teamMemberGroupInvitationRelation, repositoryTeamMemberGroup)
-	userFileUploadSession := sqldb.NewUserFileUploadSession(prometheus)
-	serviceUser := newUserService(logger, groupFactory, toggles, cloudWebAPIExternalBaseURL, cloudAPIClientRegistry, authorizer, realTimeStateSyncer, factory, timeBasedCache, user, teamMember, userFileUploadSession)
-	teamRPC := api.NewTeamRPC(serviceTeam, serviceUser)
+	teamRPC := api.NewTeamRPC(serviceTeam)
 	return teamRPC, nil
 }
 

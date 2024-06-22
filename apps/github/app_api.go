@@ -26,6 +26,7 @@ import (
 	"github.com/teamyapp/cloud/libs/web"
 	cloudProto "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
+	pbmessage "github.com/teamyapp/protocol/pb/pbgo/teamy/message"
 	"github.com/teamyapp/teamy-backend/apps/dao"
 	"github.com/teamyapp/teamy-backend/apps/entity"
 	"github.com/teamyapp/teamy-backend/apps/github/client"
@@ -461,6 +462,27 @@ func (a AppAPI) webListTeamMembers(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
+	userIDs := collect.Map(listTeamMembersRes.TeamMembers, func(member *pbmessage.TeamMember, _ int) uint64 {
+		return member.UserId
+	})
+
+	listUsersReq := &pbteamy.ListUsersRequest{
+		UserIds: userIDs,
+	}
+
+	listUsersRes, err := a.teamyClientRegistry.UserClient().ListUsers(ct, listUsersReq)
+	if err != nil {
+		internalErr := errs.FromGRPCErr(err)
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	users := map[uint64]*pbmessage.User{}
+	for _, user := range listUsersRes.Users {
+		users[user.Id] = user
+	}
+
 	teamMembers := make([]entity.TeamMember, 0)
 	for _, member := range listTeamMembersRes.TeamMembers {
 		userLinks, internalErr := a.listUserLinks(ct, member.UserId)
@@ -474,11 +496,12 @@ func (a AppAPI) webListTeamMembers(writer http.ResponseWriter, request *http.Req
 			return userLink.AuthProvider == authProvider
 		})
 
+		user := users[member.UserId]
 		teamMembers = append(teamMembers, entity.TeamMember{
 			UserID:           member.UserId,
-			FirstName:        member.FirstName,
-			LastName:         member.LastName,
-			ProfileURL:       member.ProfileUrl,
+			FirstName:        user.FirstName,
+			LastName:         user.LastName,
+			ProfileURL:       user.ProfileUrl,
 			HasGithubAccount: len(githubUserLinks) > 0,
 		})
 	}
@@ -506,7 +529,7 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 	}
 
 	listTeamMemberGroupsReq := &pbteamy.ListMemberGroupsRequest{TeamId: teamID}
-	listTeamMemberGroupsRes, err := a.teamyClientRegistry.TeamClient().ListMemberGroups(ct, listTeamMemberGroupsReq)
+	listTeamMemberGroupsRes, err := a.teamyClientRegistry.TeamMemberGroupClient().ListMemberGroups(ct, listTeamMemberGroupsReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
 		a.logger.ErrorWithContext(ct, internalErr)
@@ -514,9 +537,9 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	teamMemberGroups := collect.Map(listTeamMemberGroupsRes.Groups, func(group *pbteamy.TeamMemberGroup, _ int) entity.TeamMemberGroup {
+	teamMemberGroups := collect.Map(listTeamMemberGroupsRes.Groups, func(group *pbmessage.TeamMemberGroup, _ int) entity.TeamMemberGroup {
 		return entity.TeamMemberGroup{
-			ID:            group.GroupId,
+			ID:            group.Id,
 			Name:          group.Name,
 			MemberUserIDs: group.MemberUserIds,
 		}
@@ -845,9 +868,9 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 	}
 
 	for _, awaitForTask := range getAwaitForTasksResponse.Tasks {
-		if awaitForTask.Status != pbteamy.TaskStatus_Delivered {
+		if awaitForTask.Status != pbmessage.TaskStatus_TASK_STATUS_DELIVERED {
 			_, rpcErr = a.teamyClientRegistry.TaskClient().DeleteTask(ct, &pbteamy.DeleteTaskRequest{
-				TaskId: awaitForTask.TaskId,
+				TaskId: awaitForTask.Id,
 			})
 			if rpcErr != nil {
 				internalErr := errs.FromGRPCErr(rpcErr)
@@ -859,8 +882,8 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 	return nil
 }
 
-func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[uint64]*pbteamy.TaskMsg, *errs.Error) {
-	protoTasks := map[uint64]*pbteamy.TaskMsg{}
+func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[uint64]*pbmessage.Task, *errs.Error) {
+	protoTasks := map[uint64]*pbmessage.Task{}
 	allMatches := taskIDWithTaskLinkPattern.FindAllStringSubmatch(body, -1)
 	for _, matches := range allMatches {
 		taskID, err := strconv.ParseUint(matches[1], 10, 64)
@@ -882,7 +905,7 @@ func (a AppAPI) tryGetValidMentionedTasks(ct context.Context, body string) (map[
 			return nil, internalErr
 		}
 
-		protoTasks[protoTask.TaskId] = protoTask
+		protoTasks[protoTask.Task.Id] = protoTask.Task
 	}
 
 	return protoTasks, nil
@@ -1102,17 +1125,17 @@ func (a AppAPI) createTasksForPullRequest(ct context.Context, teamID uint64, evt
 
 	for _, task := range mentionedTasks {
 		// A task can only be related to one pull request
-		err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, task.TaskId)
+		err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, task.Id)
 		if err != nil {
 			return err
 		}
 
-		err = a.createPullRequestTaskRelation(ct, task.TaskId, false, *pr.URL, pr.NodeID, prEvt.PullRequest.Title)
+		err = a.createPullRequestTaskRelation(ct, task.Id, false, *pr.URL, pr.NodeID, prEvt.PullRequest.Title)
 		if err != nil {
 			return err
 		}
 
-		err = a.moveTaskToInProgress(ct, task.TaskId, teamID)
+		err = a.moveTaskToInProgress(ct, task.Id, teamID)
 		if err != nil {
 			return err
 		}
@@ -1143,9 +1166,9 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 		return err
 	}
 
-	mentionedTaskMap := map[uint64]*pbteamy.TaskMsg{}
+	mentionedTaskMap := map[uint64]*pbmessage.Task{}
 	for _, mentionedTask := range mentionedTasks {
-		mentionedTaskMap[mentionedTask.TaskId] = mentionedTask
+		mentionedTaskMap[mentionedTask.Id] = mentionedTask
 	}
 
 	for _, oldPRTaskRelation := range oldPRTaskRelationMap {
@@ -1159,17 +1182,17 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 	}
 
 	for _, mentionedTask := range mentionedTaskMap {
-		oldPPTaskRelation, ok := oldPRTaskRelationMap[mentionedTask.TaskId]
+		oldPPTaskRelation, ok := oldPRTaskRelationMap[mentionedTask.Id]
 		if !ok {
 			// A task can only be related to one pull request
-			err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, mentionedTask.TaskId)
+			err = a.removePullRequestTaskRelationsByTaskID(ct, installation, teamID, mentionedTask.Id)
 			if err != nil {
 				return err
 			}
 
 			err = a.createPullRequestTaskRelation(
 				ct,
-				mentionedTask.TaskId,
+				mentionedTask.Id,
 				false,
 				prEvt.PullRequest.HtmlURL,
 				prEvt.PullRequest.NodeID,
@@ -1183,10 +1206,11 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 		}
 
 		if oldPPTaskRelation.AutomaticTracking {
+			goal := fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title)
 			updateTaskReq := &pbteamy.UpdateTaskRequest{
-				TaskId:       mentionedTask.TaskId,
-				OwningTeamId: teamID,
-				Goal:         fmt.Sprintf("[%v][PR #%v] %v", evt.Repository.Name, prEvt.Number, prEvt.PullRequest.Title),
+				TaskId:       mentionedTask.Id,
+				OwningTeamId: &teamID,
+				Goal:         &goal,
 				Context:      &prEvt.PullRequest.Body,
 				OwnerUserId:  mentionedTask.OwnerUserId,
 				Effort:       mentionedTask.Effort,
@@ -1204,7 +1228,7 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 		switch prEvt.PullRequest.State {
 		case githubEntity.OpenPullRequestState:
 			{
-				err = a.moveTaskToInProgress(ct, mentionedTask.TaskId, teamID)
+				err = a.moveTaskToInProgress(ct, mentionedTask.Id, teamID)
 				if err != nil {
 					return err
 				}
@@ -1212,7 +1236,7 @@ func (a AppAPI) updateTasksForPullRequest(ct context.Context, teamID uint64, evt
 		case githubEntity.ClosedPullRequestState:
 			{
 				if prEvt.PullRequest.Merged {
-					err = a.moveTaskToDelivered(ct, mentionedTask.TaskId)
+					err = a.moveTaskToDelivered(ct, mentionedTask.Id)
 					if err != nil {
 						return err
 					}
@@ -1448,7 +1472,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 		)
 
 		getTaskReq := &pbteamy.GetTaskRequest{TaskId: pullRequest.InternalTaskID}
-		task, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
+		taskRes, rpcErr := a.teamyClientRegistry.TaskClient().GetTask(ct, getTaskReq)
 		if rpcErr != nil {
 			if err == nil {
 				err = errs.FromGRPCErr(rpcErr)
@@ -1458,7 +1482,7 @@ func (a AppAPI) BackfillPullRequestMetadata(ct context.Context, empty *emptypb.E
 			continue
 		}
 
-		installationID, sqlErr := a.githubAppInstallationDao.FindInstallationIDByTeamID(ct, task.OwningTeamId)
+		installationID, sqlErr := a.githubAppInstallationDao.FindInstallationIDByTeamID(ct, taskRes.Task.OwningTeamId)
 		if sqlErr != nil {
 			if err == nil {
 				err = sqlErr
@@ -1681,7 +1705,7 @@ func (a AppAPI) tryAddTaskToActiveSprint(ct context.Context, teamID uint64, task
 		return internalErr
 	}
 
-	addTaskToSprintReq := &pbteamy.AddTaskToSprintRequest{TaskId: taskID, SprintId: getActiveSprintRes.Id}
+	addTaskToSprintReq := &pbteamy.AddTaskToSprintRequest{TaskId: taskID, SprintId: getActiveSprintRes.Sprint.Id}
 	_, rpcErr = a.teamyClientRegistry.SprintClient().AddTaskToSprint(ct, addTaskToSprintReq)
 	if rpcErr != nil {
 		internalErr := errs.FromGRPCErr(rpcErr)

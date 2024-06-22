@@ -9,6 +9,8 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
+	"github.com/teamyapp/protocol/pb/pbgo/teamy/message"
+	pbmessage "github.com/teamyapp/protocol/pb/pbgo/teamy/message"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
@@ -19,53 +21,29 @@ import (
 type TaskRPC struct {
 	logger      telemetry.Logger
 	taskService service.Task
-	pbteamy.UnimplementedTaskServer
+	pbteamy.UnimplementedTaskServiceServer
 }
 
 var _ runner.Service = (*TaskRPC)(nil)
-var _ pbteamy.TaskServer = (*TaskRPC)(nil)
+var _ pbteamy.TaskServiceServer = (*TaskRPC)(nil)
 
 func (t TaskRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 	runner.WithGRPCServer(func(server *grpc.Server) {
-		pbteamy.RegisterTaskServer(server, t)
+		pbteamy.RegisterTaskServiceServer(server, t)
 	})
 	return nil
 }
 
-func (t TaskRPC) GetTask(ct context.Context, req *pbteamy.GetTaskRequest) (*pbteamy.TaskMsg, error) {
+func (t TaskRPC) GetTask(ct context.Context, req *pbteamy.GetTaskRequest) (*pbteamy.GetTaskResponse, error) {
 	task, err := t.taskService.FindTaskByID(ct, req.TaskId)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &pbteamy.TaskMsg{
-		TaskId:          task.ID,
-		Goal:            task.Goal,
-		Context:         task.Context,
-		Effort:          toProtoDurationPtr(task.Effort),
-		Priority:        toProtoPriorityPtr(task.Priority),
-		DueAt:           toProtoTimePtr(task.DueAt),
-		Status:          protoTaskStatuses[task.Status],
-		CreatedAt:       timestamppb.New(task.CreatedAt),
-		UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
-		OwnerUserId:     task.OwnerUserID,
-		OwningTeamId:    task.OwningTeamID,
-		CreatorUserId:   task.CreatorUserID,
-		CommentThreadId: task.CommentsThreadID,
-	}, nil
-}
-
-func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *pbteamy.GetAwaitForTasksRequest) (*pbteamy.GetAwaitForTasksResponse, error) {
-	tasks, err := t.taskService.FindAwaitForTasks(ct, req.AwaitingTaskId)
-	if err != nil {
-		t.logger.ErrorWithContext(ct, err)
-		return nil, errs.ToGRPCErr(err)
-	}
-
-	taskMsgs := collect.Map(tasks, func(task entity.Task, _ int) *pbteamy.TaskMsg {
-		return &pbteamy.TaskMsg{
-			TaskId:          task.ID,
+	return &pbteamy.GetTaskResponse{
+		Task: &pbmessage.Task{
+			Id:              task.ID,
 			Goal:            task.Goal,
 			Context:         task.Context,
 			Effort:          toProtoDurationPtr(task.Effort),
@@ -76,7 +54,33 @@ func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *pbteamy.GetAwaitForTa
 			UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
 			OwnerUserId:     task.OwnerUserID,
 			OwningTeamId:    task.OwningTeamID,
-			CreatorUserId:   task.CreatorUserID,
+			CreatorId:       task.CreatorUserID,
+			CommentThreadId: task.CommentsThreadID,
+		},
+	}, nil
+}
+
+func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *pbteamy.GetAwaitForTasksRequest) (*pbteamy.GetAwaitForTasksResponse, error) {
+	tasks, err := t.taskService.FindAwaitForTasks(ct, req.AwaitingTaskId)
+	if err != nil {
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	taskMsgs := collect.Map(tasks, func(task entity.Task, _ int) *pbmessage.Task {
+		return &pbmessage.Task{
+			Id:              task.ID,
+			Goal:            task.Goal,
+			Context:         task.Context,
+			Effort:          toProtoDurationPtr(task.Effort),
+			Priority:        toProtoPriorityPtr(task.Priority),
+			DueAt:           toProtoTimePtr(task.DueAt),
+			Status:          protoTaskStatuses[task.Status],
+			CreatedAt:       timestamppb.New(task.CreatedAt),
+			UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
+			OwnerUserId:     task.OwnerUserID,
+			OwningTeamId:    task.OwningTeamID,
+			CreatorId:       task.CreatorUserID,
 			CommentThreadId: task.CommentsThreadID,
 		}
 	})
@@ -100,23 +104,39 @@ func (t TaskRPC) CreateTask(ct context.Context, req *pbteamy.CreateTaskRequest) 
 	return &pbteamy.CreateTaskResponse{TaskId: task.ID}, nil
 }
 
-func (t TaskRPC) UpdateTask(ct context.Context, req *pbteamy.UpdateTaskRequest) (*emptypb.Empty, error) {
+func (t TaskRPC) UpdateTask(ct context.Context, req *pbteamy.UpdateTaskRequest) (*pbteamy.UpdateTaskResponse, error) {
 	input := service.UpdateTaskInput{
-		Goal:         req.Goal,
+		Goal:         *req.Goal,
 		Context:      req.Context,
 		OwnerUserID:  req.OwnerUserId,
-		OwningTeamID: req.OwningTeamId,
+		OwningTeamID: *req.OwningTeamId,
 		Effort:       fromProtoDurationPtr(req.Effort),
 		Priority:     fromProtoPriorityPtr(req.Priority),
 		DueAt:        fromProtoTimePtr(req.DueAt),
 	}
-	_, err := t.taskService.UpdateTask(ct, req.TaskId, input)
+	updatedTask, err := t.taskService.UpdateTask(ct, req.TaskId, input)
 	if err != nil {
 		t.logger.ErrorWithContext(ct, err)
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &emptypb.Empty{}, nil
+	return &pbteamy.UpdateTaskResponse{
+		Task: &message.Task{
+			Id:              updatedTask.ID,
+			Goal:            updatedTask.Goal,
+			Context:         updatedTask.Context,
+			Effort:          toProtoDurationPtr(updatedTask.Effort),
+			Priority:        toProtoPriorityPtr(updatedTask.Priority),
+			DueAt:           toProtoTimePtr(updatedTask.DueAt),
+			Status:          protoTaskStatuses[updatedTask.Status],
+			CreatedAt:       timestamppb.New(updatedTask.CreatedAt),
+			UpdatedAt:       toProtoTimePtr(updatedTask.UpdatedAt),
+			OwnerUserId:     updatedTask.OwnerUserID,
+			OwningTeamId:    updatedTask.OwningTeamID,
+			CreatorId:       updatedTask.CreatorUserID,
+			CommentThreadId: updatedTask.CommentsThreadID,
+		},
+	}, nil
 }
 
 func (t TaskRPC) DeleteTask(ct context.Context, req *pbteamy.DeleteTaskRequest) (*emptypb.Empty, error) {

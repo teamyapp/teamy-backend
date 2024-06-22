@@ -3,33 +3,33 @@ package api
 import (
 	"time"
 
-	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
+	"github.com/teamyapp/protocol/pb/pbgo/teamy/message"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var protoTaskStatuses = map[entity.TaskStatus]pbteamy.TaskStatus{
-	entity.TaskStatusTodo:       pbteamy.TaskStatus_Todo,
-	entity.TaskStatusInProgress: pbteamy.TaskStatus_InProgress,
-	entity.TaskStatusPaused:     pbteamy.TaskStatus_Paused,
-	entity.TaskStatusAwaiting:   pbteamy.TaskStatus_Awaiting,
-	entity.TaskStatusBlocked:    pbteamy.TaskStatus_Blocked,
-	entity.TaskStatusDelivered:  pbteamy.TaskStatus_Delivered,
+var protoTaskStatuses = map[entity.TaskStatus]message.TaskStatus{
+	entity.TaskStatusTodo:       message.TaskStatus_TASK_STATUS_TODO,
+	entity.TaskStatusInProgress: message.TaskStatus_TASK_STATUS_IN_PROGRESS,
+	entity.TaskStatusPaused:     message.TaskStatus_TASK_STATUS_PAUSED,
+	entity.TaskStatusAwaiting:   message.TaskStatus_TASK_STATUS_AWAITING,
+	entity.TaskStatusBlocked:    message.TaskStatus_TASK_STATUS_BLOCKED,
+	entity.TaskStatusDelivered:  message.TaskStatus_TASK_STATUS_DELIVERED,
 }
 
-var protoPriorities = map[entity.Priority]pbteamy.Priority{
-	entity.UrgentPriority: pbteamy.Priority_Urgent,
-	entity.HighPriority:   pbteamy.Priority_High,
-	entity.MediumPriority: pbteamy.Priority_Medium,
-	entity.LowPriority:    pbteamy.Priority_Low,
+var protoPriorities = map[entity.Priority]message.Priority{
+	entity.UrgentPriority: message.Priority_PRIORITY_URGENT,
+	entity.HighPriority:   message.Priority_PRIORITY_HIGH,
+	entity.MediumPriority: message.Priority_PRIORITY_MEDIUM,
+	entity.LowPriority:    message.Priority_PRIORITY_LOW,
 }
 
-var priorities = map[pbteamy.Priority]entity.Priority{
-	pbteamy.Priority_Urgent: entity.UrgentPriority,
-	pbteamy.Priority_High:   entity.HighPriority,
-	pbteamy.Priority_Medium: entity.MediumPriority,
-	pbteamy.Priority_Low:    entity.LowPriority,
+var priorities = map[message.Priority]entity.Priority{
+	message.Priority_PRIORITY_URGENT: entity.UrgentPriority,
+	message.Priority_PRIORITY_HIGH:   entity.HighPriority,
+	message.Priority_PRIORITY_MEDIUM: entity.MediumPriority,
+	message.Priority_PRIORITY_LOW:    entity.LowPriority,
 }
 
 func fromProtoTimePtr(ts *timestamppb.Timestamp) *time.Time {
@@ -84,7 +84,7 @@ func toProtoDurationPtr(duration *time.Duration) *durationpb.Duration {
 	return durationpb.New(*duration)
 }
 
-func toProtoPriorityPtr(priority *entity.Priority) *pbteamy.Priority {
+func toProtoPriorityPtr(priority *entity.Priority) *message.Priority {
 	if priority == nil {
 		return nil
 	}
@@ -93,7 +93,7 @@ func toProtoPriorityPtr(priority *entity.Priority) *pbteamy.Priority {
 	return &protoPriority
 }
 
-func fromProtoPriorityPtr(protoPriority *pbteamy.Priority) *entity.Priority {
+func fromProtoPriorityPtr(protoPriority *message.Priority) *entity.Priority {
 	if protoPriority == nil {
 		return nil
 	}
