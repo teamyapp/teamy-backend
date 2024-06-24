@@ -8,6 +8,7 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/telemetry"
 	pbteamy "github.com/teamyapp/protocol/pb/pbgo/teamy"
+	pbmessage "github.com/teamyapp/protocol/pb/pbgo/teamy/message"
 	"github.com/teamyapp/teamy-backend/core/service"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -27,6 +28,31 @@ func (t TaskLinkRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 		pbteamy.RegisterTaskLinkServiceServer(server, t)
 	})
 	return nil
+}
+
+func (t TaskLinkRPC) ListTaskLinks(ct context.Context, in *pbteamy.ListTaskLinksRequest) (*pbteamy.ListTaskLinksResponse, error) {
+	taskLinks, err := t.taskLinkService.FindLinksByTaskID(ct, in.TaskId)
+	if err != nil {
+		t.logger.ErrorWithContext(ct, err)
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	var pbTaskLinks []*pbmessage.TaskLink
+	for _, taskLink := range taskLinks {
+		pbTaskLinks = append(pbTaskLinks, &pbmessage.TaskLink{
+			Id:           taskLink.ID,
+			TaskId:       taskLink.TaskID,
+			Title:        taskLink.Title,
+			PreviewTitle: taskLink.PreviewTitle,
+			Url:          taskLink.URL,
+			IconUrl:      taskLink.IconURL,
+			IconHoverUrl: taskLink.IconHoverURL,
+		})
+	}
+
+	return &pbteamy.ListTaskLinksResponse{
+		TaskLinks: pbTaskLinks,
+	}, nil
 }
 
 func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *pbteamy.CreateTaskLinkRequest) (*pbteamy.CreateTaskLinkResponse, error) {

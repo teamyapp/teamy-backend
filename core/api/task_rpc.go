@@ -19,8 +19,10 @@ import (
 )
 
 type TaskRPC struct {
-	logger      telemetry.Logger
-	taskService service.Task
+	logger            telemetry.Logger
+	taskService       service.Task
+	taskLinkService   service.TaskLink
+	attachmentService *service.Attachment
 	pbteamy.UnimplementedTaskServiceServer
 }
 
@@ -43,19 +45,19 @@ func (t TaskRPC) GetTask(ct context.Context, req *pbteamy.GetTaskRequest) (*pbte
 
 	return &pbteamy.GetTaskResponse{
 		Task: &pbmessage.Task{
-			Id:              task.ID,
-			Goal:            task.Goal,
-			Context:         task.Context,
-			Effort:          toProtoDurationPtr(task.Effort),
-			Priority:        toProtoPriorityPtr(task.Priority),
-			DueAt:           toProtoTimePtr(task.DueAt),
-			Status:          protoTaskStatuses[task.Status],
-			CreatedAt:       timestamppb.New(task.CreatedAt),
-			UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
-			OwnerUserId:     task.OwnerUserID,
-			OwningTeamId:    task.OwningTeamID,
-			CreatorId:       task.CreatorUserID,
-			CommentThreadId: task.CommentsThreadID,
+			Id:               task.ID,
+			Goal:             task.Goal,
+			Context:          task.Context,
+			Effort:           toProtoDurationPtr(task.Effort),
+			Priority:         toProtoPriorityPtr(task.Priority),
+			DueAt:            toProtoTimePtr(task.DueAt),
+			Status:           protoTaskStatuses[task.Status],
+			CreatedAt:        timestamppb.New(task.CreatedAt),
+			UpdatedAt:        toProtoTimePtr(task.UpdatedAt),
+			OwnerUserId:      task.OwnerUserID,
+			OwningTeamId:     task.OwningTeamID,
+			CreatorUserId:    task.CreatorUserID,
+			CommentsThreadId: task.CommentsThreadID,
 		},
 	}, nil
 }
@@ -69,19 +71,19 @@ func (t TaskRPC) GetAwaitForTasks(ct context.Context, req *pbteamy.GetAwaitForTa
 
 	taskMsgs := collect.Map(tasks, func(task entity.Task, _ int) *pbmessage.Task {
 		return &pbmessage.Task{
-			Id:              task.ID,
-			Goal:            task.Goal,
-			Context:         task.Context,
-			Effort:          toProtoDurationPtr(task.Effort),
-			Priority:        toProtoPriorityPtr(task.Priority),
-			DueAt:           toProtoTimePtr(task.DueAt),
-			Status:          protoTaskStatuses[task.Status],
-			CreatedAt:       timestamppb.New(task.CreatedAt),
-			UpdatedAt:       toProtoTimePtr(task.UpdatedAt),
-			OwnerUserId:     task.OwnerUserID,
-			OwningTeamId:    task.OwningTeamID,
-			CreatorId:       task.CreatorUserID,
-			CommentThreadId: task.CommentsThreadID,
+			Id:               task.ID,
+			Goal:             task.Goal,
+			Context:          task.Context,
+			Effort:           toProtoDurationPtr(task.Effort),
+			Priority:         toProtoPriorityPtr(task.Priority),
+			DueAt:            toProtoTimePtr(task.DueAt),
+			Status:           protoTaskStatuses[task.Status],
+			CreatedAt:        timestamppb.New(task.CreatedAt),
+			UpdatedAt:        toProtoTimePtr(task.UpdatedAt),
+			OwnerUserId:      task.OwnerUserID,
+			OwningTeamId:     task.OwningTeamID,
+			CreatorUserId:    task.CreatorUserID,
+			CommentsThreadId: task.CommentsThreadID,
 		}
 	})
 
@@ -122,19 +124,19 @@ func (t TaskRPC) UpdateTask(ct context.Context, req *pbteamy.UpdateTaskRequest) 
 
 	return &pbteamy.UpdateTaskResponse{
 		Task: &message.Task{
-			Id:              updatedTask.ID,
-			Goal:            updatedTask.Goal,
-			Context:         updatedTask.Context,
-			Effort:          toProtoDurationPtr(updatedTask.Effort),
-			Priority:        toProtoPriorityPtr(updatedTask.Priority),
-			DueAt:           toProtoTimePtr(updatedTask.DueAt),
-			Status:          protoTaskStatuses[updatedTask.Status],
-			CreatedAt:       timestamppb.New(updatedTask.CreatedAt),
-			UpdatedAt:       toProtoTimePtr(updatedTask.UpdatedAt),
-			OwnerUserId:     updatedTask.OwnerUserID,
-			OwningTeamId:    updatedTask.OwningTeamID,
-			CreatorId:       updatedTask.CreatorUserID,
-			CommentThreadId: updatedTask.CommentsThreadID,
+			Id:               updatedTask.ID,
+			Goal:             updatedTask.Goal,
+			Context:          updatedTask.Context,
+			Effort:           toProtoDurationPtr(updatedTask.Effort),
+			Priority:         toProtoPriorityPtr(updatedTask.Priority),
+			DueAt:            toProtoTimePtr(updatedTask.DueAt),
+			Status:           protoTaskStatuses[updatedTask.Status],
+			CreatedAt:        timestamppb.New(updatedTask.CreatedAt),
+			UpdatedAt:        toProtoTimePtr(updatedTask.UpdatedAt),
+			OwnerUserId:      updatedTask.OwnerUserID,
+			OwningTeamId:     updatedTask.OwningTeamID,
+			CreatorUserId:    updatedTask.CreatorUserID,
+			CommentsThreadId: updatedTask.CommentsThreadID,
 		},
 	}, nil
 }
@@ -209,9 +211,11 @@ func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *pbteamy.RemoveAwait
 	return &emptypb.Empty{}, nil
 }
 
-func NewTaskRPC(logger telemetry.Logger, taskService service.Task) TaskRPC {
+func NewTaskRPC(logger telemetry.Logger, taskService service.Task, taskLinkService service.TaskLink, attachmentService *service.Attachment) TaskRPC {
 	return TaskRPC{
-		logger:      logger,
-		taskService: taskService,
+		logger:            logger,
+		taskService:       taskService,
+		taskLinkService:   taskLinkService,
+		attachmentService: attachmentService,
 	}
 }

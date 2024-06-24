@@ -14,7 +14,6 @@ import (
 
 type TeamMemberGroupRPC struct {
 	teamService service.Team
-	userService service.User
 	pbteamy.UnimplementedTeamMemberGroupServiceServer
 }
 

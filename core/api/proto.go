@@ -9,6 +9,18 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+var attachmentListOwnerTypes = map[entity.AttachmentListOwnerType]message.AttachmentListOwnerType{
+	entity.AttachmentListOwnerTypeTask: message.AttachmentListOwnerType_ATTACHMENT_LIST_OWNER_TYPE_TASK,
+}
+
+var protoAttachmentListOwnerTypes = map[message.AttachmentListOwnerType]entity.AttachmentListOwnerType{
+	message.AttachmentListOwnerType_ATTACHMENT_LIST_OWNER_TYPE_TASK: entity.AttachmentListOwnerTypeTask,
+}
+
+var attachmentTypes = map[entity.AttachmentType]message.AttachmentType{
+	entity.AttachmentTypeImage: message.AttachmentType_ATTACHMENT_TYPE_IMAGE,
+}
+
 var protoTaskStatuses = map[entity.TaskStatus]message.TaskStatus{
 	entity.TaskStatusTodo:       message.TaskStatus_TASK_STATUS_TODO,
 	entity.TaskStatusInProgress: message.TaskStatus_TASK_STATUS_IN_PROGRESS,
