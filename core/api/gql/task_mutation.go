@@ -60,10 +60,10 @@ func (m Mutation) CreateTask(ct context.Context, args struct {
 func (m Mutation) UpdateTask(ct context.Context, args struct {
 	TaskID graphql.ID
 	Input  struct {
-		Goal         string
+		Goal         *string
 		Context      *string
 		OwnerUserID  *graphql.ID
-		OwningTeamID graphql.ID
+		OwningTeamID *graphql.ID
 		Effort       *scalar.Duration
 		Priority     *entity.Priority
 		DueAt        *graphql.Time
@@ -89,7 +89,7 @@ func (m Mutation) UpdateTask(ct context.Context, args struct {
 		return Task{}, errs.ToResolverErr(internalErr)
 	}
 
-	owningTeamID, argErr := fromGraphQLID(args.Input.OwningTeamID)
+	owningTeamID, argErr := fromGraphQLIDPtr(args.Input.OwningTeamID)
 	if argErr != nil {
 		internalErr := errs.NewError(
 			errs.InvalidArgument,

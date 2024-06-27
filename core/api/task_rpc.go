@@ -108,10 +108,10 @@ func (t TaskRPC) CreateTask(ct context.Context, req *pbteamy.CreateTaskRequest) 
 
 func (t TaskRPC) UpdateTask(ct context.Context, req *pbteamy.UpdateTaskRequest) (*pbteamy.UpdateTaskResponse, error) {
 	input := service.UpdateTaskInput{
-		Goal:         *req.Goal,
+		Goal:         req.Goal,
 		Context:      req.Context,
 		OwnerUserID:  req.OwnerUserId,
-		OwningTeamID: *req.OwningTeamId,
+		OwningTeamID: req.OwningTeamId,
 		Effort:       fromProtoDurationPtr(req.Effort),
 		Priority:     fromProtoPriorityPtr(req.Priority),
 		DueAt:        fromProtoTimePtr(req.DueAt),

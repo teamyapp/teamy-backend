@@ -466,11 +466,11 @@ func (a AppAPI) webListTeamMembers(writer http.ResponseWriter, request *http.Req
 		return member.UserId
 	})
 
-	listUsersReq := &pbteamy.ListUsersRequest{
+	getUsersReq := &pbteamy.GetUsersRequest{
 		UserIds: userIDs,
 	}
 
-	listUsersRes, err := a.teamyClientRegistry.UserClient().ListUsers(ct, listUsersReq)
+	listUsersRes, err := a.teamyClientRegistry.UserClient().GetUsers(ct, getUsersReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
 		a.logger.ErrorWithContext(ct, internalErr)

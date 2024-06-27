@@ -750,10 +750,10 @@ input CreateTaskLinkInput {
 }
 
 input UpdateTaskInput {
-	goal: String!
+	goal: String
 	context: String
 	ownerUserId: ID
-	owningTeamId: ID!
+	owningTeamId: ID
 	effort: Duration
 	priority: Priority
 	dueAt: Time
