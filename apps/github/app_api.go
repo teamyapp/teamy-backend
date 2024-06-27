@@ -465,11 +465,9 @@ func (a AppAPI) webListTeamMembers(writer http.ResponseWriter, request *http.Req
 	userIDs := collect.Map(listTeamMembersRes.TeamMembers, func(member *pbmessage.TeamMember, _ int) uint64 {
 		return member.UserId
 	})
-
 	getUsersReq := &pbteamy.GetUsersRequest{
 		UserIds: userIDs,
 	}
-
 	listUsersRes, err := a.teamyClientRegistry.UserClient().GetUsers(ct, getUsersReq)
 	if err != nil {
 		internalErr := errs.FromGRPCErr(err)
