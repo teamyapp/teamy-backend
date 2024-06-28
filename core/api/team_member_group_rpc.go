@@ -36,9 +36,13 @@ func (t TeamMemberGroupRPC) ListMemberGroups(ctx context.Context, request *pbtea
 	groups := make([]*pbmessage.TeamMemberGroup, 0)
 	for _, group := range teamMemberGroups {
 		groups = append(groups, &pbmessage.TeamMemberGroup{
-			Id:            group.ID,
-			Name:          group.Name,
-			MemberUserIds: group.MemberUserIDs,
+			Id:                       group.ID,
+			Name:                     group.Name,
+			OrderIndex:               int32(group.OrderIndex),
+			TeamId:                   group.TeamID,
+			CreatedAt:                toProtoTimePtr(&group.CreatedAt),
+			UpdatedAt:                toProtoTimePtr(group.UpdatedAt),
+			AuthorizationUserGroupId: group.AuthorizationUserGroupID,
 		})
 	}
 

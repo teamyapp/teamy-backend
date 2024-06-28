@@ -10,38 +10,38 @@ import (
 )
 
 var attachmentListOwnerTypes = map[entity.AttachmentListOwnerType]message.AttachmentListOwnerType{
-	entity.AttachmentListOwnerTypeTask: message.AttachmentListOwnerType_ATTACHMENT_LIST_OWNER_TYPE_TASK,
+	entity.AttachmentListOwnerTypeTask: message.AttachmentListOwnerType_TASK,
 }
 
 var protoAttachmentListOwnerTypes = map[message.AttachmentListOwnerType]entity.AttachmentListOwnerType{
-	message.AttachmentListOwnerType_ATTACHMENT_LIST_OWNER_TYPE_TASK: entity.AttachmentListOwnerTypeTask,
+	message.AttachmentListOwnerType_TASK: entity.AttachmentListOwnerTypeTask,
 }
 
 var attachmentTypes = map[entity.AttachmentType]message.AttachmentType{
-	entity.AttachmentTypeImage: message.AttachmentType_ATTACHMENT_TYPE_IMAGE,
+	entity.AttachmentTypeImage: message.AttachmentType_IMAGE,
 }
 
 var protoTaskStatuses = map[entity.TaskStatus]message.TaskStatus{
-	entity.TaskStatusTodo:       message.TaskStatus_TASK_STATUS_TODO,
-	entity.TaskStatusInProgress: message.TaskStatus_TASK_STATUS_IN_PROGRESS,
-	entity.TaskStatusPaused:     message.TaskStatus_TASK_STATUS_PAUSED,
-	entity.TaskStatusAwaiting:   message.TaskStatus_TASK_STATUS_AWAITING,
-	entity.TaskStatusBlocked:    message.TaskStatus_TASK_STATUS_BLOCKED,
-	entity.TaskStatusDelivered:  message.TaskStatus_TASK_STATUS_DELIVERED,
+	entity.TaskStatusTodo:       message.TaskStatus_TODO,
+	entity.TaskStatusInProgress: message.TaskStatus_IN_PROGRESS,
+	entity.TaskStatusPaused:     message.TaskStatus_PAUSED,
+	entity.TaskStatusAwaiting:   message.TaskStatus_AWAITING,
+	entity.TaskStatusBlocked:    message.TaskStatus_BLOCKED,
+	entity.TaskStatusDelivered:  message.TaskStatus_DELIVERED,
 }
 
 var protoPriorities = map[entity.Priority]message.Priority{
-	entity.UrgentPriority: message.Priority_PRIORITY_URGENT,
-	entity.HighPriority:   message.Priority_PRIORITY_HIGH,
-	entity.MediumPriority: message.Priority_PRIORITY_MEDIUM,
-	entity.LowPriority:    message.Priority_PRIORITY_LOW,
+	entity.UrgentPriority: message.Priority_URGENT,
+	entity.HighPriority:   message.Priority_HIGH,
+	entity.MediumPriority: message.Priority_MEDIUM,
+	entity.LowPriority:    message.Priority_LOW,
 }
 
 var priorities = map[message.Priority]entity.Priority{
-	message.Priority_PRIORITY_URGENT: entity.UrgentPriority,
-	message.Priority_PRIORITY_HIGH:   entity.HighPriority,
-	message.Priority_PRIORITY_MEDIUM: entity.MediumPriority,
-	message.Priority_PRIORITY_LOW:    entity.LowPriority,
+	message.Priority_URGENT: entity.UrgentPriority,
+	message.Priority_HIGH:   entity.HighPriority,
+	message.Priority_MEDIUM: entity.MediumPriority,
+	message.Priority_LOW:    entity.LowPriority,
 }
 
 func fromProtoTimePtr(ts *timestamppb.Timestamp) *time.Time {

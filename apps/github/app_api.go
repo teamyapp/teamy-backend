@@ -535,11 +535,24 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 		return
 	}
 
+	listTeamMembersReq := &pbteamy.ListTeamMembersRequest{TeamId: teamID}
+	listTeamMembersRes, err := a.teamyClientRegistry.TeamClient().ListTeamMembers(ct, listTeamMembersReq)
+	if err != nil {
+		internalErr := errs.FromGRPCErr(err)
+		a.logger.ErrorWithContext(ct, internalErr)
+		errs.SetHTTPErr(internalErr, writer)
+		return
+	}
+
+	memberUserIDs := collect.Map(listTeamMembersRes.TeamMembers, func(member *pbmessage.TeamMember, _ int) uint64 {
+		return member.UserId
+	})
+
 	teamMemberGroups := collect.Map(listTeamMemberGroupsRes.Groups, func(group *pbmessage.TeamMemberGroup, _ int) entity.TeamMemberGroup {
 		return entity.TeamMemberGroup{
 			ID:            group.Id,
 			Name:          group.Name,
-			MemberUserIDs: group.MemberUserIds,
+			MemberUserIDs: memberUserIDs,
 		}
 	})
 	web.WriteJSONToResponse(writer, teamMemberGroups)
@@ -866,7 +879,7 @@ func (a AppAPI) deleteNonDeliveredWaitForTasks(ct context.Context, awaitingTaskI
 	}
 
 	for _, awaitForTask := range getAwaitForTasksResponse.Tasks {
-		if awaitForTask.Status != pbmessage.TaskStatus_TASK_STATUS_DELIVERED {
+		if awaitForTask.Status != pbmessage.TaskStatus_DELIVERED {
 			_, rpcErr = a.teamyClientRegistry.TaskClient().DeleteTask(ct, &pbteamy.DeleteTaskRequest{
 				TaskId: awaitForTask.Id,
 			})
