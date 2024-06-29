@@ -962,7 +962,7 @@ func (a AppAPI) createPullRequestTaskRelation(
 	pullRequestInternalTaskRelation := entity.GithubPullRequestInternalTaskRelation{
 		PullRequestNodeID:  pullRequestNodeID,
 		InternalTaskID:     taskID,
-		InternalTaskLinkID: createTaskLinkRes.LinkId,
+		InternalTaskLinkID: createTaskLinkRes.TaskLink.Id,
 		AutomaticTracking:  automaticTracking,
 	}
 	return a.githubPullRequestInternalTaskRelationDao.CreatePullRequestInternalTaskRelation(
@@ -976,7 +976,7 @@ func (a AppAPI) removePullRequestTaskRelationAndCleanup(
 	prTaskRelation entity.GithubPullRequestInternalTaskRelation,
 ) *errs.Error {
 	deleteTaskLinkReq := &pbteamy.DeleteTaskLinkRequest{
-		LinkId: prTaskRelation.InternalTaskLinkID,
+		Id: prTaskRelation.InternalTaskLinkID,
 	}
 	_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
 	if rpcErr != nil {
@@ -1010,7 +1010,7 @@ func (a AppAPI) removePullRequestTaskRelationsByTaskID(ct context.Context, insta
 
 	for _, prTaskRelation := range prTaskRelations {
 		deleteTaskLinkReq := &pbteamy.DeleteTaskLinkRequest{
-			LinkId: prTaskRelation.InternalTaskLinkID,
+			Id: prTaskRelation.InternalTaskLinkID,
 		}
 		_, rpcErr := a.teamyClientRegistry.TaskLinkClient().DeleteTaskLink(ct, deleteTaskLinkReq)
 		if rpcErr != nil {
