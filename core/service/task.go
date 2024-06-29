@@ -55,10 +55,10 @@ type createTaskInput struct {
 }
 
 type UpdateTaskInput struct {
-	Goal         string
+	Goal         *string
 	Context      *string
 	OwnerUserID  *uint64
-	OwningTeamID uint64
+	OwningTeamID *uint64
 	Effort       *time.Duration
 	Priority     *entity.Priority
 	DueAt        *time.Time
@@ -562,10 +562,16 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 
 			oldEffort := task.Effort
 			oldOwnerID := task.OwnerUserID
-			task.Goal = input.Goal
+			if input.Goal != nil {
+				task.Goal = *input.Goal
+			}
+			
 			task.Context = input.Context
 			task.OwnerUserID = input.OwnerUserID
-			task.OwningTeamID = input.OwningTeamID
+			if input.OwningTeamID != nil {
+				task.OwningTeamID = *input.OwningTeamID
+			}
+			
 			task.Effort = input.Effort
 			task.Priority = input.Priority
 			task.DueAt = input.DueAt

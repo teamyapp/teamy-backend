@@ -336,6 +336,57 @@ func InitTaskLinkRPCAPI(
 	return api.TaskLinkRPC{}, nil
 }
 
+func InitTeamMemberGroupRPCAPI(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
+	sqlDB *sql.DB,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+) (api.TeamMemberGroupRPC, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		cacheSet,
+		daoSet,
+		repositorySet,
+		serviceSet,
+		client.NewAuthorizer,
+		feature.NewStaticToggles,
+		api.NewTeamMemberGroupRPC,
+	)
+	return api.TeamMemberGroupRPC{}, nil
+}
+
+func InitUserRPCAPI(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
+	sqlDB *sql.DB,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+) (api.UserRPC, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		cacheSet,
+		daoSet,
+		serviceSet,
+		client.NewAuthorizer,
+		feature.NewStaticToggles,
+		api.NewUserRPC,
+	)
+	return api.UserRPC{}, nil
+}
+
 func InitTeamRPCAPI(
 	logger telemetry.Logger,
 	prometheus instrument.Prometheus,
@@ -360,6 +411,27 @@ func InitTeamRPCAPI(
 		api.NewTeamRPC,
 	)
 	return api.TeamRPC{}, nil
+}
+
+func InitAttachmentRPCAPI(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
+	sqlDB *sql.DB,
+	cloudWebAPIExternalBaseURL CloudWebAPIExternalBaseURL,
+) (api.AttachmentRPC, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		daoSet,
+		serviceSet,
+		api.NewAttachmentRPC,
+	)
+	return api.AttachmentRPC{}, nil
 }
 
 func newHTTPClient(

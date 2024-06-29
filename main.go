@@ -24,7 +24,7 @@ import (
 	"github.com/teamyapp/cloud/libs/runner"
 	"github.com/teamyapp/cloud/libs/runtime"
 	"github.com/teamyapp/cloud/libs/telemetry"
-	"github.com/teamyapp/protocol/pb/pbgo/cloud"
+	pbcloud "github.com/teamyapp/protocol/pb/pbgo/cloud"
 	appsDep "github.com/teamyapp/teamy-backend/apps/dep"
 	"github.com/teamyapp/teamy-backend/apps/github"
 	appsDI "github.com/teamyapp/teamy-backend/apps/inject"
@@ -247,6 +247,21 @@ func startServiceRunner(
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
+	attachmentRPCAPI, err := dep.InitAttachmentRPCAPI(
+		logger,
+		prom,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
+		sqlDB,
+		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL),
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
 	sprintRPCAPI, err := dep.InitSprintRPCAPI(
 		logger,
 		prom,
@@ -261,6 +276,20 @@ func startServiceRunner(
 	}
 
 	teamRPCAPI, err := dep.InitTeamRPCAPI(
+		logger,
+		prom,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
+		sqlDB,
+		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL))
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	teamMemberGroupRPCAPI, err := dep.InitTeamMemberGroupRPCAPI(
 		logger,
 		prom,
 		cloudClientRegistry,
@@ -303,6 +332,8 @@ func startServiceRunner(
 			taskLinkRPCAPI,
 			sprintRPCAPI,
 			teamRPCAPI,
+			attachmentRPCAPI,
+			teamMemberGroupRPCAPI,
 		}).
 		ServeDirs([]runner.DirRoute{
 			{
