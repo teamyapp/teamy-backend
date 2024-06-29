@@ -565,11 +565,13 @@ func (t Task) UpdateTask(ct context.Context, taskID uint64, input UpdateTaskInpu
 			if input.Goal != nil {
 				task.Goal = *input.Goal
 			}
+			
 			task.Context = input.Context
 			task.OwnerUserID = input.OwnerUserID
 			if input.OwningTeamID != nil {
 				task.OwningTeamID = *input.OwningTeamID
 			}
+			
 			task.Effort = input.Effort
 			task.Priority = input.Priority
 			task.DueAt = input.DueAt

@@ -211,7 +211,12 @@ func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *pbteamy.RemoveAwait
 	return &emptypb.Empty{}, nil
 }
 
-func NewTaskRPC(logger telemetry.Logger, taskService service.Task, taskLinkService service.TaskLink, attachmentService *service.Attachment) TaskRPC {
+func NewTaskRPC(
+    logger telemetry.Logger, 
+    taskService service.Task, 
+    taskLinkService service.TaskLink, 
+    attachmentService *service.Attachment,
+) TaskRPC {
 	return TaskRPC{
 		logger:            logger,
 		taskService:       taskService,
