@@ -96,6 +96,8 @@ func (t TaskRPC) CreateTask(ct context.Context, req *pbteamy.CreateTaskRequest) 
 		Context:     req.Context,
 		OwnerUserID: req.OwnerUserId,
 		DueAt:       fromProtoTimePtr(req.DueAt),
+		IsScheduled: req.IsScheduled,
+		IsPlanned:   req.IsPlanned,
 	}
 	task, err := t.taskService.CreateTask(ct, req.TeamId, input)
 	if err != nil {
@@ -103,7 +105,22 @@ func (t TaskRPC) CreateTask(ct context.Context, req *pbteamy.CreateTaskRequest) 
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &pbteamy.CreateTaskResponse{TaskId: task.ID}, nil
+	return &pbteamy.CreateTaskResponse{
+		Task: &message.Task{
+			Id:               task.ID,
+			Goal:             task.Goal,
+			Context:          task.Context,
+			Effort:           toProtoDurationPtr(task.Effort),
+			Priority:         toProtoPriorityPtr(task.Priority),
+			DueAt:            toProtoTimePtr(task.DueAt),
+			Status:           protoTaskStatuses[task.Status],
+			CreatedAt:        timestamppb.New(task.CreatedAt),
+			UpdatedAt:        toProtoTimePtr(task.UpdatedAt),
+			OwnerUserId:      task.OwnerUserID,
+			OwningTeamId:     task.OwningTeamID,
+			CreatorUserId:    task.CreatorUserID,
+			CommentsThreadId: task.CommentsThreadID,
+		}}, nil
 }
 
 func (t TaskRPC) UpdateTask(ct context.Context, req *pbteamy.UpdateTaskRequest) (*pbteamy.UpdateTaskResponse, error) {
@@ -212,10 +229,10 @@ func (t TaskRPC) RemoveAwaitForTask(ct context.Context, req *pbteamy.RemoveAwait
 }
 
 func NewTaskRPC(
-    logger telemetry.Logger, 
-    taskService service.Task, 
-    taskLinkService service.TaskLink, 
-    attachmentService *service.Attachment,
+	logger telemetry.Logger,
+	taskService service.Task,
+	taskLinkService service.TaskLink,
+	attachmentService *service.Attachment,
 ) TaskRPC {
 	return TaskRPC{
 		logger:            logger,

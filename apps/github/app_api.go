@@ -1310,6 +1310,8 @@ func (a AppAPI) createAutomaticTrackingTask(
 		Goal:        fmt.Sprintf("[%v][PR #%v] %v", repositoryName, pullRequestNumber, pullRequestTitle),
 		Context:     &pullRequestBody,
 		OwnerUserId: &prAuthorUserID,
+		IsScheduled: false,
+		IsPlanned:   false,
 	}
 	createTaskRes, rpcErr := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 	if rpcErr != nil {
@@ -1322,11 +1324,11 @@ func (a AppAPI) createAutomaticTrackingTask(
 		telemetry.MessageProp: fmt.Sprintf("pull request task created: repo=%v prNumber=%v taskID=%v",
 			repositoryName,
 			pullRequestNumber,
-			createTaskRes.TaskId),
+			createTaskRes.Task.Id),
 	})
 	err = a.createPullRequestTaskRelation(
 		ct,
-		createTaskRes.TaskId,
+		createTaskRes.Task.Id,
 		true,
 		pullRequestURL,
 		pullRequestNodeID,
@@ -1336,7 +1338,7 @@ func (a AppAPI) createAutomaticTrackingTask(
 		return 0, err
 	}
 
-	return createTaskRes.TaskId, nil
+	return createTaskRes.Task.Id, nil
 }
 
 func (a AppAPI) processPullRequestReviewEvent(ct context.Context, teamID uint64, evt githubEntity.Event, payload []byte) *errs.Error {
@@ -1399,6 +1401,8 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 					prReviewerID),
 				Context:     &prReviewEvt.Review.Body,
 				OwnerUserId: &prAuthorUserID,
+				IsScheduled: false,
+				IsPlanned:   false,
 			}
 			createTaskRes, rpcErr := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 			if rpcErr != nil {
@@ -1406,11 +1410,11 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 				return err
 			}
 
-			addressFeedbackTaskID := createTaskRes.TaskId
+			addressFeedbackTaskID := createTaskRes.Task.Id
 			a.logger.InfoWithContext(ct, fmt.Sprintf("address feedback task created: repo=%v, prNumber=%v, taskID=%v",
 				evt.Repository.Name,
 				prReviewEvt.PullRequest.Number,
-				createTaskRes.TaskId))
+				createTaskRes.Task.Id))
 			pr, err := a.githubPullRequestDao.FindPullRequestByGithubNodeID(ct, prReviewEvt.PullRequest.NodeID)
 			if err != nil {
 				return err
@@ -1436,7 +1440,7 @@ func (a AppAPI) processGithubCodeReviewFeedback(ct context.Context, teamID uint6
 			a.logger.InfoWithContext(ct, fmt.Sprintf("pull request is waiting for address feedback task: repo=%v, prNumber=%v, taskID=%v",
 				evt.Repository.Name,
 				prReviewEvt.PullRequest.Number,
-				createTaskRes.TaskId))
+				createTaskRes.Task.Id))
 			codeReview.InternalAddressFeedbackTaskID = &addressFeedbackTaskID
 			return a.githubCodeReviewDao.UpdateCodeReview(ct, codeReview)
 		case githubEntity.ApprovedPullRequestReviewState:
@@ -1658,6 +1662,8 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 		Goal:        fmt.Sprintf("[%v][PR #%v] Code review round %v", evt.Repository.Name, prEvt.PullRequest.Number, round),
 		OwnerUserId: &codeReviewerInternalUserID,
 		DueAt:       timestamppb.New(dueAt),
+		IsScheduled: false,
+		IsPlanned:   false,
 	}
 	createTaskRes, rpcErr := a.teamyClientRegistry.TaskClient().CreateTask(ct, createTaskReq)
 	if rpcErr != nil {
@@ -1668,12 +1674,12 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	a.logger.InfoWithContext(ct, fmt.Sprintf("review task created: repo=%v, prNumber=%v, taskID=%v",
 		evt.Repository.Name,
 		prEvt.PullRequest.Number,
-		createTaskRes.TaskId))
+		createTaskRes.Task.Id))
 
 	iconURL := pullRequestIconURL
 	iconHoverURL := pullRequestIconHoverURL
 	createTaskLinkReq := &pbteamy.CreateTaskLinkRequest{
-		TaskId:       createTaskRes.TaskId,
+		TaskId:       createTaskRes.Task.Id,
 		Title:        prEvt.PullRequest.Title,
 		PreviewTitle: "View pull request on Github",
 		Url:          prEvt.PullRequest.HtmlURL,
@@ -1688,7 +1694,7 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 
 	addAwaitForTaskReq := &pbteamy.AddAwaitForTaskRequest{
 		AwaitingTaskId: pullRequestTaskID,
-		AwaitForTaskId: createTaskRes.TaskId,
+		AwaitForTaskId: createTaskRes.Task.Id,
 	}
 
 	_, rpcErr = a.teamyClientRegistry.TaskClient().AddAwaitForTask(ct, addAwaitForTaskReq)
@@ -1700,8 +1706,8 @@ func (a AppAPI) createCodeReviewTask(ct context.Context, teamID uint64, pullRequ
 	a.logger.InfoWithContext(ct, fmt.Sprintf("pull request is waiting for review task: prTaskID=%v, GithubReviewerID=%v, reviewTaskID=%v",
 		pullRequestTaskID,
 		githubReviewerNodeID,
-		createTaskRes.TaskId))
-	return createTaskRes.TaskId, nil
+		createTaskRes.Task.Id))
+	return createTaskRes.Task.Id, nil
 }
 
 func (a AppAPI) tryAddTaskToActiveSprint(ct context.Context, teamID uint64, taskID uint64) *errs.Error {

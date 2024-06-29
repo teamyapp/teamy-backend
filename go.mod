@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/teamyapp/cloud v0.0.0-20240611065920-4c9b8585ec95
-	github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240628001952-f364de23907d
+	github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240629181848-355887c01b8f
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
