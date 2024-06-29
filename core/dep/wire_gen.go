@@ -297,6 +297,18 @@ func InitAttachmentRPCAPI(logger telemetry.Logger, prometheus instrument.Prometh
 	return attachmentRPC, nil
 }
 
+func InitMessageRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (api.MessageRPC, error) {
+	factory := transaction.NewFactory(sqlDB)
+	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
+	toggles := feature.NewStaticToggles()
+	task := sqldb.NewTask(prometheus, factory)
+	thread := sqldb.NewThread(prometheus)
+	message := sqldb.NewMessage(prometheus, factory)
+	serviceThread := service.NewThread(logger, groupFactory, toggles, cloudAPIClientRegistry, realTimeStateSyncer, factory, task, thread, message)
+	messageRPC := api.NewMessageRPC(logger, serviceThread)
+	return messageRPC, nil
+}
+
 // wire.go:
 
 type AppMame string

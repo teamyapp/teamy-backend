@@ -23,7 +23,7 @@ type CreateMessageInput struct {
 }
 
 type UpdateMessageInput struct {
-	Body string
+	Body *string
 }
 
 type Thread struct {
@@ -116,7 +116,9 @@ func (t Thread) UpdateMessage(ct context.Context, messageID uint64, input Update
 		return entity.Message{}, err
 	}
 
-	message.Body = input.Body
+	if input.Body != nil {
+		message.Body = *input.Body
+	}
 	now := time.Now().UTC()
 	message.UpdatedAt = &now
 	err = t.transactionGroupFactory.WithTransactionGroup(

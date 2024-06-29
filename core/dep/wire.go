@@ -434,6 +434,27 @@ func InitAttachmentRPCAPI(
 	return api.AttachmentRPC{}, nil
 }
 
+func InitMessageRPCAPI(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
+	sqlDB *sql.DB,
+) (api.MessageRPC, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		daoSet,
+		serviceSet,
+		feature.NewStaticToggles,
+		api.NewMessageRPC,
+	)
+	return api.MessageRPC{}, nil
+}
+
 func newHTTPClient(
 	mapServerURL MapServerURL,
 ) *storage.HTTPClient {

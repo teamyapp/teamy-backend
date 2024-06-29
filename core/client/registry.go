@@ -14,6 +14,7 @@ import (
 type Registry struct {
 	conn                  *grpc.ClientConn
 	attachmentClient      pbteamy.AttachmentServiceClient
+	messageClient         pbteamy.MessageServiceClient
 	userClient            pbteamy.UserServiceClient
 	teamClient            pbteamy.TeamServiceClient
 	teamMemberGroupClient pbteamy.TeamMemberGroupServiceClient
@@ -28,6 +29,14 @@ func (r *Registry) AttachmentClient() pbteamy.AttachmentServiceClient {
 	}
 
 	return r.attachmentClient
+}
+
+func (r *Registry) MessageClient() pbteamy.MessageServiceClient {
+	if r.messageClient == nil {
+		r.messageClient = pbteamy.NewMessageServiceClient(r.conn)
+	}
+
+	return r.messageClient
 }
 
 func (r *Registry) TeamClient() pbteamy.TeamServiceClient {
