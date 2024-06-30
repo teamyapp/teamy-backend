@@ -71,11 +71,21 @@ func (t TaskLinkRPC) CreateTaskLink(ct context.Context, in *pbteamy.CreateTaskLi
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	return &pbteamy.CreateTaskLinkResponse{LinkId: taskLink.ID}, nil
+	return &pbteamy.CreateTaskLinkResponse{
+		TaskLink: &pbmessage.TaskLink{
+			Id:           taskLink.ID,
+			TaskId:       taskLink.TaskID,
+			Title:        taskLink.Title,
+			PreviewTitle: taskLink.PreviewTitle,
+			Url:          taskLink.URL,
+			IconUrl:      taskLink.IconURL,
+			IconHoverUrl: taskLink.IconHoverURL,
+		},
+	}, nil
 }
 
 func (t TaskLinkRPC) DeleteTaskLink(ct context.Context, in *pbteamy.DeleteTaskLinkRequest) (*emptypb.Empty, error) {
-	_, err := t.taskLinkService.DeleteTaskLink(ct, in.LinkId)
+	_, err := t.taskLinkService.DeleteTaskLink(ct, in.Id)
 	if err != nil {
 		t.logger.LogWithContext(ct, telemetry.Error, telemetry.Props{telemetry.CauseProp: err})
 		return nil, errs.ToGRPCErr(err)
