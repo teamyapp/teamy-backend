@@ -37,7 +37,7 @@ func (m Mutation) CreateMessage(ct context.Context, args struct {
 func (m Mutation) UpdateMessage(ct context.Context, args struct {
 	MessageID graphql.ID
 	Input     struct {
-		Body string
+		Body *string
 	}
 }) (Message, error) {
 	messageID, argErr := fromGraphQLID(args.MessageID)

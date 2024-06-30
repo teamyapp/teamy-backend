@@ -299,10 +299,11 @@ func TestTeamService_UpdateMessage(t *testing.T) {
 	err = threadRef.messageDao.CreateMessage(ct, tx, message)
 	require.Nil(t, err)
 
+	updatedBody := "Updated"
 	input := UpdateMessageInput{
-		Body: "Updated",
+		Body: &updatedBody,
 	}
-	message.Body = input.Body
+	message.Body = updatedBody
 	updated, err := threadRef.threadService.UpdateMessage(ct, messageID, input)
 	require.Nil(t, err)
 	require.True(t, areMessagesEqual(updated, message))
