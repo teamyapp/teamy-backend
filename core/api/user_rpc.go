@@ -27,8 +27,7 @@ func (u UserRPC) Start(runner *runner.ServiceRunner) *errs.Error {
 }
 
 func (u UserRPC) GetUsers(ct context.Context, getUsersRequest *pbteamy.GetUsersRequest) (*pbteamy.GetUsersResponse, error) {
-	userIDs := make([]uint64, 0, len(getUsersRequest.UserIds))
-	users, err := u.userService.FindUsersByIDs(ct, userIDs)
+	users, err := u.userService.FindUsersByIDs(ct, getUsersRequest.UserIds)
 	if err != nil {
 		return nil, errs.ToGRPCErr(err)
 	}
