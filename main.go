@@ -316,6 +316,20 @@ func startServiceRunner(
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
+	userRPCAPI, err := dep.InitUserRPCAPI(
+		logger,
+		prom,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
+		sqlDB,
+		dep.CloudWebAPIExternalBaseURL(cfg.CloudWebAPIExternalBaseURL))
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
 	backfillService, err := dep.InitBackfillService(
 		logger,
 		realTimeStateSyncer, cloudClientRegistry,
@@ -348,6 +362,7 @@ func startServiceRunner(
 			attachmentRPCAPI,
 			teamMemberGroupRPCAPI,
 			messageRPCAPI,
+			userRPCAPI,
 		}).
 		ServeDirs([]runner.DirRoute{
 			{
