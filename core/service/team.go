@@ -675,26 +675,8 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 
 func (t Team) FindTeamMemberUsersByGroupID(
 	ct context.Context,
-	teamID uint64,
 	groupID uint64,
 ) ([]entity.User, *errs.Error) {
-	userID, ok := ctx.UserIDFromContext(ct)
-	if !ok {
-		return nil, errs.NewError(errs.Unauthenticated, "user ID not found")
-	}
-
-	if t.featureToggles.EnableAuthorization {
-		query := authorization.NewReadMembersInTeamQuery(userID, teamID)
-		hasPermission, err := t.authorizer.HasPermission(ct, query)
-		if err != nil {
-			return nil, err
-		}
-
-		if !hasPermission {
-			return nil, errs.NewError(errs.PermissionDenied, fmt.Sprintf("permission denied: authorization query=%v", query))
-		}
-	}
-
 	var users []entity.User
 	err := t.transactionGroupFactory.WithTransactionGroup(
 		ct,

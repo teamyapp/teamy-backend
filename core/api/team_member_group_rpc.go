@@ -55,7 +55,7 @@ func (t TeamMemberGroupRPC) ListGroupMembers(
 	ctx context.Context,
 	request *pbteamy.ListGroupMembersRequest,
 ) (*pbteamy.ListGroupMembersResponse, error) {
-	memberUsers, err := t.teamService.FindTeamMemberUsersByGroupID(ctx, request.TeamId, request.GroupId)
+	memberUsers, err := t.teamService.FindTeamMemberUsersByGroupID(ctx, request.GroupId)
 	if err != nil {
 		return nil, errs.ToGRPCErr(err)
 	}

@@ -543,7 +543,6 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 	for _, group := range listTeamMemberGroupsRes.Groups {
 		memberUsers, err := a.teamyClientRegistry.TeamMemberGroupClient().ListGroupMembers(ct, &pbteamy.ListGroupMembersRequest{
 			GroupId: group.Id,
-			TeamId:  teamID,
 		})
 		if err != nil {
 			internalErr := errs.FromGRPCErr(err)
