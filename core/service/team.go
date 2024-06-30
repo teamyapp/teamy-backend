@@ -673,7 +673,7 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 	return t.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 }
 
-func (t Team) FindTeamMemberUsersByGroupID(
+func (t Team) FindTeamMmebersByGroupID(
 	ct context.Context,
 	groupID uint64,
 ) ([]entity.User, *errs.Error) {
