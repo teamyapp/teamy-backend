@@ -11,14 +11,14 @@ require (
 	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/teamyapp/cloud v0.0.0-20240630044527-873f5841ddc8
-	github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240630013018-6b8be2f7b023
+	github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240630205717-7b22616f567f
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 // replace github.com/teamyapp/cloud => ../cloud
-replace github.com/teamyapp/protocol/pb/pbgo => ../protocol/pb/pbgo
+// replace github.com/teamyapp/protocol/pb/pbgo => ../protocol/pb/pbgo
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
