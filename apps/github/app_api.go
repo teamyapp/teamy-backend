@@ -495,6 +495,10 @@ func (a AppAPI) webListTeamMembers(writer http.ResponseWriter, request *http.Req
 		})
 
 		user := users[member.UserId]
+		if user == nil {
+			continue
+		}
+
 		teamMembers = append(teamMembers, entity.TeamMember{
 			UserID:           member.UserId,
 			FirstName:        user.FirstName,
