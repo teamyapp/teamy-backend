@@ -400,8 +400,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/teamyapp/cloud v0.0.0-20240611065920-4c9b8585ec95 h1:lY9vvGCUzHdF9jspdpmLQaYuppxUucfF8trAzypNRrI=
-github.com/teamyapp/cloud v0.0.0-20240611065920-4c9b8585ec95/go.mod h1:U/O14qcRzAld1LPc76Xto8+GtCca3LcgkHOLYyjYwRE=
+github.com/teamyapp/cloud v0.0.0-20240630044527-873f5841ddc8 h1:sLYPFM6RMsUFZcUsECsjhTGgbRjKc+Ucp1VA9OaOLmo=
+github.com/teamyapp/cloud v0.0.0-20240630044527-873f5841ddc8/go.mod h1:U/O14qcRzAld1LPc76Xto8+GtCca3LcgkHOLYyjYwRE=
 github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240630013018-6b8be2f7b023 h1:iK0khok+nk8PO6G/pa7GYsmxcGJpxjFwLiIsVDDP+rE=
 github.com/teamyapp/protocol/pb/pbgo v0.0.0-20240630013018-6b8be2f7b023/go.mod h1:4c9aj/6zz/0QobkEhvyuZeUS8ym6qdwvtl/4ls5SVAo=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
