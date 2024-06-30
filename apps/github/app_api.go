@@ -539,26 +539,29 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	listTeamMembersReq := &pbteamy.ListTeamMembersRequest{TeamId: teamID}
-	listTeamMembersRes, err := a.teamyClientRegistry.TeamClient().ListTeamMembers(ct, listTeamMembersReq)
-	if err != nil {
-		internalErr := errs.FromGRPCErr(err)
-		a.logger.ErrorWithContext(ct, internalErr)
-		errs.SetHTTPErr(internalErr, writer)
-		return
-	}
+	teamMemberGroups := make([]entity.TeamMemberGroup, 0)
+	for _, group := range listTeamMemberGroupsRes.Groups {
+		memberUsers, err := a.teamyClientRegistry.TeamMemberGroupClient().ListGroupMemberUsers(ct, &pbteamy.ListGroupMemberUsersRequest{
+			GroupId: group.Id,
+			TeamId:  teamID,
+		})
+		if err != nil {
+			internalErr := errs.FromGRPCErr(err)
+			a.logger.ErrorWithContext(ct, internalErr)
+			errs.SetHTTPErr(internalErr, writer)
+			return
+		}
 
-	memberUserIDs := collect.Map(listTeamMembersRes.TeamMembers, func(member *pbmessage.TeamMember, _ int) uint64 {
-		return member.UserId
-	})
-
-	teamMemberGroups := collect.Map(listTeamMemberGroupsRes.Groups, func(group *pbmessage.TeamMemberGroup, _ int) entity.TeamMemberGroup {
-		return entity.TeamMemberGroup{
+		memberUserIDs := collect.Map(memberUsers.Users, func(user *pbmessage.User, _ int) uint64 {
+			return user.Id
+		})
+		teamMemberGroups = append(teamMemberGroups, entity.TeamMemberGroup{
 			ID:            group.Id,
 			Name:          group.Name,
 			MemberUserIDs: memberUserIDs,
-		}
-	})
+		})
+	}
+
 	web.WriteJSONToResponse(writer, teamMemberGroups)
 }
 
