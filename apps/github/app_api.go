@@ -541,7 +541,7 @@ func (a AppAPI) webListTeamMemberGroups(writer http.ResponseWriter, request *htt
 
 	teamMemberGroups := make([]entity.TeamMemberGroup, 0)
 	for _, group := range listTeamMemberGroupsRes.Groups {
-		memberUsers, err := a.teamyClientRegistry.TeamMemberGroupClient().ListGroupMemberUsers(ct, &pbteamy.ListGroupMemberUsersRequest{
+		memberUsers, err := a.teamyClientRegistry.TeamMemberGroupClient().ListGroupMembers(ct, &pbteamy.ListGroupMembersRequest{
 			GroupId: group.Id,
 			TeamId:  teamID,
 		})

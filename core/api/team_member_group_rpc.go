@@ -51,10 +51,10 @@ func (t TeamMemberGroupRPC) ListMemberGroups(ctx context.Context, request *pbtea
 	}, nil
 }
 
-func (t TeamMemberGroupRPC) ListGroupMemberUsers(
+func (t TeamMemberGroupRPC) ListGroupMembers(
 	ctx context.Context,
-	request *pbteamy.ListGroupMemberUsersRequest,
-) (*pbteamy.ListGroupMemberUsersResponse, error) {
+	request *pbteamy.ListGroupMembersRequest,
+) (*pbteamy.ListGroupMembersResponse, error) {
 	memberUsers, err := t.teamService.FindTeamMemberUsersByGroupID(ctx, request.TeamId, request.GroupId)
 	if err != nil {
 		return nil, errs.ToGRPCErr(err)
@@ -72,7 +72,7 @@ func (t TeamMemberGroupRPC) ListGroupMemberUsers(
 		})
 	}
 
-	return &pbteamy.ListGroupMemberUsersResponse{
+	return &pbteamy.ListGroupMembersResponse{
 		Users: users,
 	}, nil
 }
