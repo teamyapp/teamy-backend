@@ -32,7 +32,7 @@ func (u UserRPC) GetUsers(ct context.Context, getUsersRequest *pbteamy.GetUsersR
 		return nil, errs.ToGRPCErr(err)
 	}
 
-	pbUsers := make([]*pbmessage.User, 0, len(users))
+	pbUsers := make([]*pbmessage.User, 0)
 	for _, user := range users {
 		pbUsers = append(pbUsers, &pbmessage.User{
 			Id:         user.ID,
