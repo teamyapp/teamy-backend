@@ -51,6 +51,32 @@ func (t TeamMemberGroupRPC) ListMemberGroups(ctx context.Context, request *pbtea
 	}, nil
 }
 
+func (t TeamMemberGroupRPC) ListGroupMembers(
+	ctx context.Context,
+	request *pbteamy.ListGroupMembersRequest,
+) (*pbteamy.ListGroupMembersResponse, error) {
+	memberUsers, err := t.teamService.FindTeamMmebersByGroupID(ctx, request.GroupId)
+	if err != nil {
+		return nil, errs.ToGRPCErr(err)
+	}
+
+	users := make([]*pbmessage.User, 0)
+	for _, memberUser := range memberUsers {
+		users = append(users, &pbmessage.User{
+			Id:         memberUser.ID,
+			FirstName:  memberUser.FirstName,
+			LastName:   memberUser.LastName,
+			ProfileUrl: memberUser.ProfileURL,
+			CreatedAt:  toProtoTimePtr(&memberUser.CreatedAt),
+			UpdatedAt:  toProtoTimePtr(memberUser.UpdatedAt),
+		})
+	}
+
+	return &pbteamy.ListGroupMembersResponse{
+		Users: users,
+	}, nil
+}
+
 func (t TeamMemberGroupRPC) CreateMemberGroup(ctx context.Context, request *pbteamy.CreateTeamMemberGroupRequest) (*pbteamy.CreateTeamMemberGroupResponse, error) {
 	teamMemberGroup, err := t.teamService.CreateTeamMemberGroup(ctx, service.CreateTeamMemberGroupInput{
 		Name:   request.Name,

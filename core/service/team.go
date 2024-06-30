@@ -673,6 +673,27 @@ func (t Team) FindTeamMembers(ct context.Context, teamID uint64) ([]entity.TeamM
 	return t.teamMemberDao.FindTeamMembersByTeamID(ct, teamID)
 }
 
+func (t Team) FindTeamMmebersByGroupID(
+	ct context.Context,
+	groupID uint64,
+) ([]entity.User, *errs.Error) {
+	var users []entity.User
+	err := t.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			userIDs, internalErr := t.teamMemberGroupUserRelationDao.FindMemberGroupUserIDsByMemberGroupID(ct, tx, groupID)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			users, internalErr = t.userDao.FindUsersByIDsWithTx(ct, tx, userIDs)
+			return internalErr
+		})
+
+	return users, err
+}
+
 func (t Team) AddMemberToTeam(ct context.Context, teamID uint64, memberUserID uint64) (entity.TeamMember, *errs.Error) {
 	userID, ok := ctx.UserIDFromContext(ct)
 	if !ok {
