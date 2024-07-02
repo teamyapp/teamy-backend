@@ -25,12 +25,12 @@ type CreatePhaseInput struct {
 }
 
 type UpdatePhaseInput struct {
-	Name            string
-	ExpectedStartAt time.Time
+	Name            *string
+	ExpectedStartAt *time.Time
 	ActualStartAt   *time.Time
-	ExpectedEndAt   time.Time
+	ExpectedEndAt   *time.Time
 	ActualEndAt     *time.Time
-	Status          entity.PhaseStatus
+	Status          *entity.PhaseStatus
 }
 
 type Phase struct {
@@ -71,6 +71,18 @@ func (p *Phase) FindPhases(ct context.Context, phaseFilter *PhaseFilter) ([]enti
 	return phases, transactionErr
 }
 
+func (p *Phase) FindPhaseByID(ct context.Context, phaseID uint64) (entity.Phase, *errs.Error) {
+	var phase entity.Phase
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			phase, err = p.phaseDao.FindPhaseByIDWithTx(ct, tx, phaseID)
+			return err
+		})
+
+	return phase, transactionErr
+}
+
 func (p *Phase) FindStoriesByPhaseID(ct context.Context, phaseID uint64) ([]entity.Story, *errs.Error) {
 	var stories []entity.Story
 	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
@@ -99,6 +111,7 @@ func (p *Phase) CreatePhase(ct context.Context, projectID uint64, input CreatePh
 		return entity.Phase{}, errs.FromGRPCErr(rpcErr)
 	}
 
+	now := time.Now()
 	phase := entity.Phase{
 		ID:              genPhaseIDRes.UniqueNumber,
 		Name:            input.Name,
@@ -106,7 +119,7 @@ func (p *Phase) CreatePhase(ct context.Context, projectID uint64, input CreatePh
 		ExpectedStartAt: input.ExpectedStartAt,
 		ExpectedEndAt:   input.ExpectedEndAt,
 		CreatorID:       userID,
-		CreatedAt:       time.Now(),
+		CreatedAt:       now,
 	}
 
 	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
@@ -116,7 +129,7 @@ func (p *Phase) CreatePhase(ct context.Context, projectID uint64, input CreatePh
 				return err
 			}
 
-			_, err = p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
+			project, err := p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
 			if err != nil {
 				return err
 			}
@@ -126,7 +139,15 @@ func (p *Phase) CreatePhase(ct context.Context, projectID uint64, input CreatePh
 				PhaseID:   phase.ID,
 			}
 
-			return p.projectPhaseRelationDao.CreateProjectPhaseRelation(ct, tx, projectPhaseRelation)
+			err = p.projectPhaseRelationDao.CreateProjectPhaseRelation(ct, tx, projectPhaseRelation)
+			if err != nil {
+				return err
+			}
+
+			project.UpdatedAt = &now
+			project.TotalPhaseCount++
+
+			return p.projectDao.UpdateProject(ct, tx, project)
 		})
 
 	return phase, transactionErr
@@ -143,12 +164,51 @@ func (p *Phase) UpdatePhase(ct context.Context, phaseID uint64, input UpdatePhas
 			}
 
 			now := time.Now()
-			phase.Name = input.Name
-			phase.ExpectedStartAt = input.ExpectedStartAt
-			phase.ActualStartAt = input.ActualStartAt
-			phase.ExpectedEndAt = input.ExpectedEndAt
+			if input.Name != nil {
+				phase.Name = *input.Name
+			}
+
+			if input.ExpectedStartAt != nil {
+				phase.ExpectedStartAt = *input.ExpectedStartAt
+			}
+
+			if input.ExpectedEndAt != nil {
+				phase.ExpectedEndAt = *input.ExpectedEndAt
+			}
+
 			phase.ActualEndAt = input.ActualEndAt
-			phase.Status = input.Status
+			phase.ActualStartAt = input.ActualStartAt
+			if input.Status != nil {
+				step := 0
+				if *input.Status == entity.CompletedPhaseStatus && phase.Status != entity.CompletedPhaseStatus {
+					step += 1
+				} else if *input.Status != entity.CompletedPhaseStatus && phase.Status == entity.CompletedPhaseStatus {
+					step -= 1
+				}
+
+				if step != 0 {
+					projectPhaseRelations, err := p.projectPhaseRelationDao.FindProjectIDsByPhaseIDWithTx(ct, tx, phaseID)
+					if err != nil {
+						return err
+					}
+
+					for _, projectID := range projectPhaseRelations {
+						project, err := p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
+						if err != nil {
+							return err
+						}
+
+						project.CompletedPhaseCount += step
+						project.UpdatedAt = &now
+						err = p.projectDao.UpdateProject(ct, tx, project)
+						if err != nil {
+							return err
+						}
+					}
+				}
+
+				phase.Status = *input.Status
+			}
 			phase.UpdatedAt = &now
 
 			return p.phaseDao.UpdatePhase(ct, tx, phase)
@@ -354,7 +414,7 @@ func (p *Phase) RemoveStoriesFromPhase(ct context.Context, phaseID uint64, story
 					return err
 				}
 
-				return p.phaseStoryRelationDao.DeletePhaseStoryRelation(ct, tx, phaseID, storyID)
+				p.phaseStoryRelationDao.DeletePhaseStoryRelation(ct, tx, phaseID, storyID)
 			}
 
 			return nil

@@ -29,10 +29,15 @@ type CreateStoryInput struct {
 }
 
 type UpdateStoryInput struct {
-	Name     string
+	Name     *string
 	OwnerID  *uint64
-	Status   entity.StoryStatus
+	Status   *entity.StoryStatus
 	Priority *entity.Priority
+}
+
+type StoryQuery struct {
+	ProjectID *uint64
+	PhaseID   *uint64
 }
 
 type Story struct {
@@ -51,6 +56,67 @@ type Story struct {
 	storyTaskRelationDao    dao.StoryTaskRelation
 	userDao                 dao.User
 	taskDao                 dao.Task
+}
+
+func (s *Story) FindStoryByID(ct context.Context, storyID uint64) (entity.Story, *errs.Error) {
+	var story entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			story, err = s.storyDao.FindStoryByIDWithTx(ct, tx, storyID)
+			return err
+		})
+
+	return story, transactionErr
+}
+
+func (s *Story) GetTasksByStory(ct context.Context, storyID uint64) ([]entity.Task, *errs.Error) {
+	var tasks []entity.Task
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			taskIDs, err := s.storyTaskRelationDao.FindTaskIDsByStoryIDWithTx(ct, tx, storyID)
+			if err != nil {
+				return err
+			}
+
+			tasks, err = s.taskDao.FindTasksByIDsWithTx(ct, tx, taskIDs)
+			return err
+		})
+
+	return tasks, transactionErr
+}
+
+func (s *Story) ListStories(ct context.Context, storyQuery StoryQuery) ([]entity.Story, *errs.Error) {
+	var stories []entity.Story
+	transactionErr := s.transactionGroupFactory.WithTransactionGroup(
+		ct,
+		true,
+		func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			var storyIDs []uint64
+			if storyQuery.ProjectID != nil {
+				storyIDs, err = s.projectStoryRelationDao.FindStoryIDsByProjectIDWithTx(ct, tx, *storyQuery.ProjectID)
+				if err != nil {
+					return err
+				}
+			}
+
+			if storyQuery.PhaseID != nil {
+				storyIDs, err = s.phaseStoryRelationDao.FindStoryIDsByPhaseIDWithTx(ct, tx, *storyQuery.PhaseID)
+				if err != nil {
+					return err
+				}
+			}
+
+			stories, err = s.storyDao.FindStoriesByIDsWithTx(ct, tx, storyIDs)
+			return err
+		})
+
+	return stories, transactionErr
 }
 
 func (s *Story) FindStories(ct context.Context, storyFilter *StoryFilter) ([]entity.Story, *errs.Error) {
@@ -187,9 +253,15 @@ func (s *Story) UpdateStory(ct context.Context, storyID uint64, input UpdateStor
 			}
 
 			now := time.Now()
-			story.Name = input.Name
+			if input.Name != nil {
+				story.Name = *input.Name
+			}
+
 			story.OwnerID = input.OwnerID
-			story.Status = input.Status
+			if input.Status != nil {
+				story.Status = *input.Status
+			}
+
 			story.Priority = input.Priority
 			story.UpdatedAt = &now
 			updateStoryMutation := mutation.NewUpdateStory(

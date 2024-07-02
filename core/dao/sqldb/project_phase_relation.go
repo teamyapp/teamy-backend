@@ -45,6 +45,32 @@ func (p *ProjectPhaseRelation) FindPhaseIDsByProjectIDWithTx(ct context.Context,
 	return phaseIDs, nil
 }
 
+func (p *ProjectPhaseRelation) FindProjectIDsByPhaseIDWithTx(ct context.Context, tx *transaction.Transaction, phaseID uint64) ([]uint64, *errs.Error) {
+	var projectIDs []uint64
+	rows, err := tx.SQLTx().QueryContext(ct, `
+		SELECT
+			project_id
+		FROM project_phase_relation
+		WHERE phase_id = $1
+	`, phaseID)
+	if err != nil {
+		return nil, errs.NewError(errs.Unknown, err.Error())
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var projectID uint64
+		err := rows.Scan(&projectID)
+		if err != nil {
+			return nil, errs.NewError(errs.Unknown, err.Error())
+		}
+
+		projectIDs = append(projectIDs, projectID)
+	}
+
+	return projectIDs, nil
+}
+
 func (p *ProjectPhaseRelation) CreateProjectPhaseRelation(ct context.Context, tx *transaction.Transaction, projectPhaseRelation entity.ProjectPhaseRelation) *errs.Error {
 	p.metrics.ReportDaoOperation(projectPhaseRelationDaoName, "CreateProjectPhaseRelation")
 	_, err := tx.SQLTx().ExecContext(ct, `

@@ -26,7 +26,7 @@ type CreateProjectInput struct {
 }
 
 type UpdateProjectInput struct {
-	Name            string
+	Name            *string
 	ExpectedStartAt *time.Time
 	ActualStartAt   *time.Time
 	ExpectedEndAt   *time.Time
@@ -73,6 +73,18 @@ func (p *Project) FindProjects(ct context.Context, projectFilter *ProjectFilter)
 		})
 
 	return projects, transactionErr
+}
+
+func (p *Project) FindProjectByID(ct context.Context, projectID uint64) (entity.Project, *errs.Error) {
+	var project entity.Project
+	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
+		ct, true, func(tx *cloudTransaction.Transaction, rtTx *realtime.Transaction) *errs.Error {
+			var err *errs.Error
+			project, err = p.projectDao.FindProjectByIDWithTx(ct, tx, projectID)
+			return err
+		})
+
+	return project, transactionErr
 }
 
 func (p *Project) FindProjectsByTeamID(ct context.Context, teamID uint64) ([]entity.Project, *errs.Error) {
@@ -132,15 +144,17 @@ func (p *Project) CreateProject(ct context.Context, teamID uint64, input CreateP
 	}
 
 	project := entity.Project{
-		ID:              genProjectIDRes.UniqueNumber,
-		Name:            input.Name,
-		ExpectedStartAt: input.ExpectedStartAt,
-		ExpectedEndAt:   input.ExpectedEndAt,
-		CreatorID:       userID,
-		CreatedAt:       time.Now(),
-		TeamID:          teamID,
-		Color:           input.Color,
-		IconURL:         input.IconURL,
+		ID:                  genProjectIDRes.UniqueNumber,
+		Name:                input.Name,
+		ExpectedStartAt:     input.ExpectedStartAt,
+		ExpectedEndAt:       input.ExpectedEndAt,
+		CreatorID:           userID,
+		CreatedAt:           time.Now(),
+		TeamID:              teamID,
+		Color:               input.Color,
+		IconURL:             input.IconURL,
+		TotalPhaseCount:     0,
+		CompletedPhaseCount: 0,
 	}
 
 	transactionErr := p.transactionGroupFactory.WithTransactionGroup(
@@ -166,7 +180,9 @@ func (p *Project) UpdateProject(ct context.Context, projectID uint64, input Upda
 			}
 
 			now := time.Now()
-			project.Name = input.Name
+			if input.Name != nil {
+				project.Name = *input.Name
+			}
 			project.ExpectedStartAt = input.ExpectedStartAt
 			project.ActualStartAt = input.ActualStartAt
 			project.ExpectedEndAt = input.ExpectedEndAt

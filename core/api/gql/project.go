@@ -139,7 +139,7 @@ func (m Mutation) CreateProject(ct context.Context, args struct {
 func (m Mutation) UpdateProject(ct context.Context, args struct {
 	ProjectID graphql.ID
 	Input     struct {
-		Name            string
+		Name            *string
 		ExpectedStartAt *graphql.Time
 		ActualStartAt   *graphql.Time
 		ExpectedEndAt   *graphql.Time

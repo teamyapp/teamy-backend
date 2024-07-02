@@ -455,6 +455,74 @@ func InitMessageRPCAPI(
 	return api.MessageRPC{}, nil
 }
 
+func InitProjectRPCAPI(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
+	sqlDB *sql.DB,
+) (api.ProjectRPC, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		daoSet,
+		client.NewAuthorizer,
+		feature.NewStaticToggles,
+		serviceSet,
+		api.NewProjectRPC,
+	)
+	return api.ProjectRPC{}, nil
+}
+
+func InitPhaseRPCAPI(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
+	sqlDB *sql.DB,
+) (api.PhaseRPC, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		daoSet,
+		client.NewAuthorizer,
+		feature.NewStaticToggles,
+		serviceSet,
+		api.NewPhaseRPC,
+	)
+	return api.PhaseRPC{}, nil
+}
+
+func InitStoryRPCAPI(
+	logger telemetry.Logger,
+	prometheus instrument.Prometheus,
+	cloudAPIClientRegistry *client.Registry,
+	realTimeStateSyncer *realtime.StateSyncer,
+	cacheCapacity CacheCapacity,
+	timeBasedCacheBucketCount TimeBasedCacheBucketCount,
+	timeBasedCacheTTL TimeBasedCacheTTL,
+	sqlDB *sql.DB,
+) (api.StoryRPC, error) {
+	wire.Build(
+		wire.Bind(new(transaction.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(dao.Metrics), new(instrument.Prometheus)),
+		wire.Bind(new(cache.Metrics), new(instrument.Prometheus)),
+		cacheSet,
+		daoSet,
+		serviceSet,
+		client.NewAuthorizer,
+		feature.NewStaticToggles,
+		api.NewStoryRPC,
+	)
+	return api.StoryRPC{}, nil
+}
+
 func newHTTPClient(
 	mapServerURL MapServerURL,
 ) *storage.HTTPClient {

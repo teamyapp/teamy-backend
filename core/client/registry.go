@@ -21,6 +21,33 @@ type Registry struct {
 	sprintClient          pbteamy.SprintServiceClient
 	taskClient            pbteamy.TaskServiceClient
 	taskLinkClient        pbteamy.TaskLinkServiceClient
+	projectClient         pbteamy.ProjectServiceClient
+	phaseClient           pbteamy.PhaseServiceClient
+	storyClient           pbteamy.StoryServiceClient
+}
+
+func (r *Registry) StoryClient() pbteamy.StoryServiceClient {
+	if r.storyClient == nil {
+		r.storyClient = pbteamy.NewStoryServiceClient(r.conn)
+	}
+
+	return r.storyClient
+}
+
+func (r *Registry) PhaseClient() pbteamy.PhaseServiceClient {
+	if r.phaseClient == nil {
+		r.phaseClient = pbteamy.NewPhaseServiceClient(r.conn)
+	}
+
+	return r.phaseClient
+}
+
+func (r *Registry) ProjectClient() pbteamy.ProjectServiceClient {
+	if r.projectClient == nil {
+		r.projectClient = pbteamy.NewProjectServiceClient(r.conn)
+	}
+
+	return r.projectClient
 }
 
 func (r *Registry) AttachmentClient() pbteamy.AttachmentServiceClient {

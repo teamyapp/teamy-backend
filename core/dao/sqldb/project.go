@@ -34,7 +34,9 @@ func (p *Project) FindProjectsWithTx(ct context.Context, tx *transaction.Transac
 			updated_at,
 			icon_url,
 			color,
-			team_id
+			team_id,
+			total_phase_count,
+			completed_phase_count
 		FROM project;
 	`)
 	if err != nil {
@@ -59,6 +61,8 @@ func (p *Project) FindProjectsWithTx(ct context.Context, tx *transaction.Transac
 			&project.IconURL,
 			&project.Color,
 			&project.TeamID,
+			&project.TotalPhaseCount,
+			&project.CompletedPhaseCount,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -85,7 +89,9 @@ func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction
 			updated_at,
 			icon_url,
 			color,
-			team_id
+			team_id,
+			total_phase_count,
+			completed_phase_count
 			FROM project
 		WHERE team_id = $1;
 	`, teamID)
@@ -111,6 +117,8 @@ func (p *Project) FindProjectsByTeamIDWithTx(ct context.Context, tx *transaction
 			&project.IconURL,
 			&project.Color,
 			&project.TeamID,
+			&project.TotalPhaseCount,
+			&project.CompletedPhaseCount,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -143,7 +151,9 @@ func (p *Project) FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Tr
 			updated_at,
 			icon_url,
 			color,
-			team_id
+			team_id,
+			total_phase_count,
+			completed_phase_count
 		FROM project
 		WHERE id IN (%s)
 	`, idsStr)
@@ -168,6 +178,8 @@ func (p *Project) FindProjectsByIDsWithTx(ct context.Context, tx *transaction.Tr
 			&project.IconURL,
 			&project.Color,
 			&project.TeamID,
+			&project.TotalPhaseCount,
+			&project.CompletedPhaseCount,
 		)
 		if err != nil {
 			return nil, errs.NewError(errs.Unknown, err.Error())
@@ -195,7 +207,9 @@ func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Tran
 			updated_at,
 			icon_url,
 			color,
-			team_id
+			team_id,
+			total_phase_count,
+			completed_phase_count
 		FROM project
 		WHERE id = $1
 	`, projectID).Scan(
@@ -211,6 +225,8 @@ func (p *Project) FindProjectByIDWithTx(ct context.Context, tx *transaction.Tran
 		&project.IconURL,
 		&project.Color,
 		&project.TeamID,
+		&project.TotalPhaseCount,
+		&project.CompletedPhaseCount,
 	)
 
 	if err != nil {
@@ -236,9 +252,11 @@ func (p *Project) CreateProject(ct context.Context, tx *transaction.Transaction,
 			updated_at,
 			icon_url,
 			color,
-			team_id
+			team_id,
+			total_phase_count,
+			completed_phase_count
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
 	`,
 		project.ID,
 		project.Name,
@@ -252,6 +270,8 @@ func (p *Project) CreateProject(ct context.Context, tx *transaction.Transaction,
 		project.IconURL,
 		project.Color,
 		project.TeamID,
+		project.TotalPhaseCount,
+		project.CompletedPhaseCount,
 	)
 
 	if err != nil {
@@ -276,8 +296,10 @@ func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction,
 			updated_at = $8,
 			icon_url = $9,
 			color = $10,
-			team_id = $11
-		WHERE id = $12;
+			team_id = $11,
+			total_phase_count = $12,
+			completed_phase_count = $13
+		WHERE id = $14;
 	`,
 		project.Name,
 		project.ExpectedStartAt,
@@ -290,6 +312,8 @@ func (p *Project) UpdateProject(ct context.Context, tx *transaction.Transaction,
 		project.IconURL,
 		project.Color,
 		project.TeamID,
+		project.TotalPhaseCount,
+		project.CompletedPhaseCount,
 		project.ID,
 	)
 

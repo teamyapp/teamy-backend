@@ -690,7 +690,7 @@ input CreateProjectInput {
 }
 
 input UpdateProjectInput {
-	name: String!
+	name: String
 	expectedStartAt: Time
 	actualStartAt: Time
 	expectedEndAt: Time
@@ -706,12 +706,12 @@ input CreatePhaseInput {
 }
 
 input UpdatePhaseInput {
-	name: String!
-	expectedStartAt: Time!
+	name: String
+	expectedStartAt: Time
 	actualStartAt: Time
-	expectedEndAt: Time!
+	expectedEndAt: Time
 	actualEndAt: Time
-	status: PhaseStatus!
+	status: PhaseStatus
 }
 
 input CreateStoryInput {
@@ -722,9 +722,9 @@ input CreateStoryInput {
 }
 
 input UpdateStoryInput {
-	name: String!
+	name: String
 	ownerId: ID
-	status: StoryStatus!
+	status: StoryStatus
 	priority: Priority
 }
 

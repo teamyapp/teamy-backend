@@ -128,9 +128,9 @@ func (m Mutation) CreateStory(ct context.Context, args struct {
 func (m Mutation) UpdateStory(ct context.Context, args struct {
 	StoryID graphql.ID
 	Input   struct {
-		Name     string
+		Name     *string
 		OwnerID  *graphql.ID
-		Status   entity.StoryStatus
+		Status   *entity.StoryStatus
 		Priority *entity.Priority
 	}
 }) (Story, error) {

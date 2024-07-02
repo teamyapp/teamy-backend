@@ -18,7 +18,7 @@ require (
 )
 
 // replace github.com/teamyapp/cloud => ../cloud
-// replace github.com/teamyapp/protocol/pb/pbgo => ../protocol/pb/pbgo
+replace github.com/teamyapp/protocol/pb/pbgo => ../protocol/pb/pbgo
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

@@ -109,12 +109,12 @@ func (m Mutation) CreatePhase(ct context.Context, args struct {
 func (m Mutation) UpdatePhase(ct context.Context, args struct {
 	PhaseID graphql.ID
 	Input   struct {
-		Name            string
-		ExpectedStartAt graphql.Time
-		ExpectedEndAt   graphql.Time
+		Name            *string
+		ExpectedStartAt *graphql.Time
+		ExpectedEndAt   *graphql.Time
 		ActualStartAt   *graphql.Time
 		ActualEndAt     *graphql.Time
-		Status          entity.PhaseStatus
+		Status          *entity.PhaseStatus
 	}
 }) (Phase, error) {
 	phaseID, internalErr := fromGraphQLID(args.PhaseID)
@@ -129,8 +129,8 @@ func (m Mutation) UpdatePhase(ct context.Context, args struct {
 
 	updatePhaseInput := service.UpdatePhaseInput{
 		Name:            args.Input.Name,
-		ExpectedStartAt: fromGraphQLTime(args.Input.ExpectedStartAt),
-		ExpectedEndAt:   fromGraphQLTime(args.Input.ExpectedEndAt),
+		ExpectedStartAt: fromGraphQLTimePtr(args.Input.ExpectedStartAt),
+		ExpectedEndAt:   fromGraphQLTimePtr(args.Input.ExpectedEndAt),
 		ActualStartAt:   fromGraphQLTimePtr(args.Input.ActualStartAt),
 		ActualEndAt:     fromGraphQLTimePtr(args.Input.ActualEndAt),
 		Status:          args.Input.Status,

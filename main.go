@@ -330,6 +330,48 @@ func startServiceRunner(
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
+	projectRPCAPI, err := dep.InitProjectRPCAPI(
+		logger,
+		prom,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
+		sqlDB,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	phaseRPCAPI, err := dep.InitPhaseRPCAPI(
+		logger,
+		prom,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
+		sqlDB,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
+	storyRPCAPI, err := dep.InitStoryRPCAPI(
+		logger,
+		prom,
+		cloudClientRegistry,
+		realTimeStateSyncer,
+		dep.CacheCapacity(cfg.CacheCapacity),
+		dep.TimeBasedCacheBucketCount(cfg.TimeBasedCacheBucketCount),
+		dep.TimeBasedCacheTTL(cfg.TimeBasedCacheTTL),
+		sqlDB,
+	)
+	if err != nil {
+		return errs.NewError(errs.Unknown, err.Error())
+	}
+
 	backfillService, err := dep.InitBackfillService(
 		logger,
 		realTimeStateSyncer, cloudClientRegistry,
@@ -363,6 +405,9 @@ func startServiceRunner(
 			teamMemberGroupRPCAPI,
 			messageRPCAPI,
 			userRPCAPI,
+			projectRPCAPI,
+			phaseRPCAPI,
+			storyRPCAPI,
 		}).
 		ServeDirs([]runner.DirRoute{
 			{

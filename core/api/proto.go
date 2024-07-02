@@ -3,6 +3,7 @@ package api
 import (
 	"time"
 
+	"github.com/teamyapp/cloud/libs/errs"
 	"github.com/teamyapp/protocol/pb/pbgo/teamy/message"
 	"github.com/teamyapp/teamy-backend/core/entity"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -15,6 +16,34 @@ var attachmentListOwnerTypes = map[entity.AttachmentListOwnerType]message.Attach
 
 var protoAttachmentListOwnerTypes = map[message.AttachmentListOwnerType]entity.AttachmentListOwnerType{
 	message.AttachmentListOwnerType_TASK: entity.AttachmentListOwnerTypeTask,
+}
+
+var protoPhaseStatuses = map[entity.PhaseStatus]message.PhaseStatus{
+	entity.TodoPhaseStatus:       message.PhaseStatus_PHASE_TODO,
+	entity.InProgressPhaseStatus: message.PhaseStatus_PHASE_IN_PROGRESS,
+	entity.PausedPhaseStatus:     message.PhaseStatus_PHASE_PAUSED,
+	entity.CompletedPhaseStatus:  message.PhaseStatus_PHASE_COMPLETED,
+}
+
+var protoStoryStatuses = map[entity.StoryStatus]message.StoryStatus{
+	entity.TodoStoryStatus:       message.StoryStatus_STORY_TODO,
+	entity.InProgressStoryStatus: message.StoryStatus_STORY_IN_PROGRESS,
+	entity.PausedStoryStatus:     message.StoryStatus_STORY_PAUSED,
+	entity.CompletedStoryStatus:  message.StoryStatus_STORY_COMPLETED,
+}
+
+var phaseStatuses = map[message.PhaseStatus]entity.PhaseStatus{
+	message.PhaseStatus_PHASE_TODO:        entity.TodoPhaseStatus,
+	message.PhaseStatus_PHASE_IN_PROGRESS: entity.InProgressPhaseStatus,
+	message.PhaseStatus_PHASE_PAUSED:      entity.PausedPhaseStatus,
+	message.PhaseStatus_PHASE_COMPLETED:   entity.CompletedPhaseStatus,
+}
+
+var storyStatuses = map[message.StoryStatus]entity.StoryStatus{
+	message.StoryStatus_STORY_TODO:        entity.TodoStoryStatus,
+	message.StoryStatus_STORY_IN_PROGRESS: entity.InProgressStoryStatus,
+	message.StoryStatus_STORY_PAUSED:      entity.PausedStoryStatus,
+	message.StoryStatus_STORY_COMPLETED:   entity.CompletedStoryStatus,
 }
 
 var attachmentTypes = map[entity.AttachmentType]message.AttachmentType{
@@ -51,6 +80,14 @@ func fromProtoTimePtr(ts *timestamppb.Timestamp) *time.Time {
 
 	tm := ts.AsTime()
 	return &tm
+}
+
+func fromProtoTime(ts *timestamppb.Timestamp) (time.Time, *errs.Error) {
+	if ts == nil {
+		return time.Time{}, errs.NewError(errs.InvalidArgument, "time is nil")
+	}
+
+	return ts.AsTime(), nil
 }
 
 func toProtoTimePtr(tm *time.Time) *timestamppb.Timestamp {
@@ -112,4 +149,22 @@ func fromProtoPriorityPtr(protoPriority *message.Priority) *entity.Priority {
 
 	priority := priorities[*protoPriority]
 	return &priority
+}
+
+func fromProtoPhaseStatusPtr(protoPhaseStatus *message.PhaseStatus) *entity.PhaseStatus {
+	if protoPhaseStatus == nil {
+		return nil
+	}
+
+	phaseStatus := phaseStatuses[*protoPhaseStatus]
+	return &phaseStatus
+}
+
+func fromProtoStoryStatusPtr(protoStoryStatus *message.StoryStatus) *entity.StoryStatus {
+	if protoStoryStatus == nil {
+		return nil
+	}
+
+	storyStatus := storyStatuses[*protoStoryStatus]
+	return &storyStatus
 }

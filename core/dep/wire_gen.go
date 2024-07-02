@@ -309,6 +309,66 @@ func InitMessageRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus
 	return messageRPC, nil
 }
 
+func InitProjectRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (api.ProjectRPC, error) {
+	factory := transaction.NewFactory(sqlDB)
+	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
+	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
+	project := sqldb.NewProject(prometheus, factory)
+	team := sqldb.NewTeam(prometheus, factory)
+	phase := sqldb.NewPhase(prometheus, factory)
+	story := sqldb.NewStory(prometheus, factory)
+	projectPhaseRelation := sqldb.NewProjectPhaseRelation(prometheus, factory)
+	projectStoryRelation := sqldb.NewProjectStoryRelation(prometheus, factory)
+	user := sqldb.NewUser(prometheus, factory)
+	task := sqldb.NewTask(prometheus, factory)
+	serviceProject := service.NewProject(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, team, phase, story, projectPhaseRelation, projectStoryRelation, user, task)
+	projectRPC := api.NewProjectRPC(logger, serviceProject)
+	return projectRPC, nil
+}
+
+func InitPhaseRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (api.PhaseRPC, error) {
+	factory := transaction.NewFactory(sqlDB)
+	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
+	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
+	project := sqldb.NewProject(prometheus, factory)
+	phase := sqldb.NewPhase(prometheus, factory)
+	story := sqldb.NewStory(prometheus, factory)
+	projectPhaseRelation := sqldb.NewProjectPhaseRelation(prometheus, factory)
+	projectStoryRelation := sqldb.NewProjectStoryRelation(prometheus, factory)
+	phaseStoryRelation := sqldb.NewPhaseStoryRelation(prometheus, factory)
+	servicePhase := service.NewPhase(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, phase, story, projectPhaseRelation, projectStoryRelation, phaseStoryRelation)
+	team := sqldb.NewTeam(prometheus, factory)
+	user := sqldb.NewUser(prometheus, factory)
+	task := sqldb.NewTask(prometheus, factory)
+	serviceProject := service.NewProject(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, project, team, phase, story, projectPhaseRelation, projectStoryRelation, user, task)
+	phaseRPC := api.NewPhaseRPC(logger, servicePhase, serviceProject)
+	return phaseRPC, nil
+}
+
+func InitStoryRPCAPI(logger telemetry.Logger, prometheus instrument.Prometheus, cloudAPIClientRegistry *client.Registry, realTimeStateSyncer *realtime.StateSyncer, cacheCapacity CacheCapacity, timeBasedCacheBucketCount TimeBasedCacheBucketCount, timeBasedCacheTTL TimeBasedCacheTTL, sqlDB *sql.DB) (api.StoryRPC, error) {
+	factory := transaction.NewFactory(sqlDB)
+	groupFactory := transaction2.NewGroupFactory(logger, prometheus, factory, realTimeStateSyncer)
+	authorizer := client.NewAuthorizer(logger, cloudAPIClientRegistry)
+	toggles := feature.NewStaticToggles()
+	lruFactory := newLRUCacheFactory(logger, prometheus, cacheCapacity)
+	timeBasedCache, err := newTimeBasedCache(logger, prometheus, lruFactory, timeBasedCacheBucketCount, timeBasedCacheTTL)
+	if err != nil {
+		return api.StoryRPC{}, err
+	}
+	project := sqldb.NewProject(prometheus, factory)
+	story := sqldb.NewStory(prometheus, factory)
+	projectStoryRelation := sqldb.NewProjectStoryRelation(prometheus, factory)
+	phaseStoryRelation := sqldb.NewPhaseStoryRelation(prometheus, factory)
+	storyTaskRelation := sqldb.NewStoryTaskRelation(prometheus, factory)
+	user := sqldb.NewUser(prometheus, factory)
+	task := sqldb.NewTask(prometheus, factory)
+	serviceStory := service.NewStory(logger, groupFactory, cloudAPIClientRegistry, authorizer, toggles, factory, realTimeStateSyncer, timeBasedCache, project, story, projectStoryRelation, phaseStoryRelation, storyTaskRelation, user, task)
+	storyRPC := api.NewStoryRPC(logger, serviceStory)
+	return storyRPC, nil
+}
+
 // wire.go:
 
 type AppMame string
