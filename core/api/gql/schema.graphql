@@ -362,7 +362,7 @@ type Team {
 	owner: User!
 	maxGroupOrderIndex: Int!
 	members: [TeamMember!]!
-	tasks(filter: TaskFilter): [Task!]!
+	tasks(filter: TaskFilter, sort: TaskSort, pagination: Pagination): Tasks!
 	invitations(filter: InvitationFilter): [Invitation!]!
 	sprints(filter: SprintFilter): [Sprint!]!
 	appInstallations: [TeamAppInstallation!]!
@@ -371,6 +371,41 @@ type Team {
 	activeSprint: Sprint
 	projects: [Project!]!
 	memberGroups: [TeamMemberGroup!]!
+}
+
+type Pagination {
+	pageSize: Int!
+	afterCursor: String
+}
+
+
+type Tasks {
+	edges: [TaskEdge!]!
+	pageInfo: PageInfo!
+}
+
+type PageInfo {
+	hasNextPage: Boolean!
+	endCursor: String
+}
+
+type TaskSort {
+	order: SortOrder!
+	field: TaskSortField!
+}
+
+enum SortOrder {
+	ASC
+	DESC
+}
+
+enum TaskSortField {
+	Priority
+}
+
+type TaskEdge {
+	cursor: String!
+	node: Task!
 }
 
 type TeamMember {

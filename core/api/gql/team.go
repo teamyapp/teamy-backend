@@ -102,7 +102,15 @@ func (t Team) Projects(ct context.Context) ([]Project, error) {
 
 func (t Team) Tasks(ct context.Context, args struct {
 	Filter *TaskFilter
-}) ([]Task, error) {
+	Sort   *struct {
+		Field TaskSortField
+		Order SortOrder
+	}
+	Pagination *struct {
+		PageSize    int32
+		AfterCursor *string
+	}
+}) (Tasks, error) {
 	filter, argErr := fromGraphQLTaskFilterPtr(args.Filter)
 	if argErr != nil {
 		internalErr := errs.NewError(
