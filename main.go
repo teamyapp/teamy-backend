@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
+	systemRuntime "runtime"
+	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -43,6 +46,42 @@ const serviceName = "backend"
 var serviceLabels = []string{appName, serviceName}
 var fullServiceName = strings.Join(serviceLabels, "-")
 
+func dumpMemoryProfile(fileName string) error {
+	f, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	//runtime.GC() // get up-to-date statistics
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func monitorMemoryUsage(threshold uint64) {
+	count := 0
+	var m systemRuntime.MemStats
+	for {
+		systemRuntime.ReadMemStats(&m)
+		log.Printf("Alloc: %vMB, TotalAlloc:%vMB\n", m.Alloc/1024/1024, m.TotalAlloc/1024/1024)
+		if m.Alloc > threshold {
+			count++
+			if count > 10 {
+				if err := dumpMemoryProfile("high_memory_profile.prof"); err != nil {
+					log.Printf("could not write memory profile: %v", err)
+				}
+
+				return
+			}
+		}
+
+		time.Sleep(500 * time.Millisecond) // adjust the interval as needed
+	}
+}
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -330,20 +369,22 @@ func startServiceRunner(
 		return errs.NewError(errs.Unknown, err.Error())
 	}
 
-	backfillService, err := dep.InitBackfillService(
-		logger,
-		realTimeStateSyncer, cloudClientRegistry,
-		prom,
-		sqlDB,
-	)
-	if err != nil {
-		return errs.NewError(errs.Unknown, err.Error())
-	}
+	// backfillService, err := dep.InitBackfillService(
+	// 	logger,
+	// 	realTimeStateSyncer, cloudClientRegistry,
+	// 	prom,
+	// 	sqlDB,
+	// )
+	// if err != nil {
+	// 	return errs.NewError(errs.Unknown, err.Error())
+	// }
 
-	internalErr = backfillService.BackfillData(ct)
-	if internalErr != nil {
-		return internalErr
-	}
+	// internalErr = backfillService.BackfillData(ct)
+	// if internalErr != nil {
+	// 	return internalErr
+	// }
+
+	go monitorMemoryUsage(1024 * 1024 * 1024 / 2) // 512MB
 
 	rn := runner.NewServiceRunnerBuilder(
 		logger,

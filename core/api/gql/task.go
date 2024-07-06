@@ -174,3 +174,45 @@ func newTask(deps *Dependencies, task entity.Task) Task {
 		task: task,
 	}
 }
+
+type TaskEdge struct {
+	deps *Dependencies
+	edge entity.TaskEdge
+}
+
+func (t TaskEdge) Cursor(ct context.Context) string {
+	return t.edge.Cursor
+}
+
+func (t TaskEdge) Node(ct context.Context) Task {
+	return newTask(t.deps, t.edge.Node)
+}
+
+func newTaskEdge(deps *Dependencies, edge entity.TaskEdge) TaskEdge {
+	return TaskEdge{
+		deps: deps,
+		edge: edge,
+	}
+}
+
+type Tasks struct {
+	deps  *Dependencies
+	tasks entity.Tasks
+}
+
+func (t Tasks) Edges(ct context.Context) []TaskEdge {
+	return collect.Map(t.tasks.Edges, func(edge entity.TaskEdge, _ int) TaskEdge {
+		return newTaskEdge(t.deps, edge)
+	})
+}
+
+func (t Tasks) PageInfo(ct context.Context) PageInfo {
+
+}
+
+func newTasks(deps *Dependencies, tasks entity.Tasks) Tasks {
+	return Tasks{
+		deps:  deps,
+		tasks: tasks,
+	}
+}
